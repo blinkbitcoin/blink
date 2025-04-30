@@ -44,6 +44,8 @@ export type Scalars = {
   Feedback: { input: string; output: string; }
   /** Hex-encoded string of 32 bytes */
   Hex32Bytes: { input: string; output: string; }
+  /** Unique value used to identify a contact (e.g., username or lnAddress) */
+  Identifier: { input: string; output: string; }
   Language: { input: string; output: string; }
   LnPaymentPreImage: { input: string; output: string; }
   /** BOLT11 lightning invoice payment request with the amount included */
@@ -139,6 +141,12 @@ export type AccountTransactionsArgs = {
 
 export type AccountWalletByIdArgs = {
   walletId: Scalars['WalletId']['input'];
+};
+
+export type AccountContactUpsertInput = {
+  readonly alias?: InputMaybe<Scalars['ContactAlias']['input']>;
+  readonly identifier?: InputMaybe<Scalars['Identifier']['input']>;
+  readonly type: ContactType;
 };
 
 export type AccountDeletePayload = {
@@ -458,6 +466,12 @@ export const ContactType = {
 } as const;
 
 export type ContactType = typeof ContactType[keyof typeof ContactType];
+export type ContactUpdateOrCreatePayload = {
+  readonly __typename: 'ContactUpdateOrCreatePayload';
+  readonly contact?: Maybe<Contact>;
+  readonly errors: ReadonlyArray<Error>;
+};
+
 export type Coordinates = {
   readonly __typename: 'Coordinates';
   readonly latitude: Scalars['Float']['output'];
@@ -929,6 +943,7 @@ export type MobileVersions = {
 
 export type Mutation = {
   readonly __typename: 'Mutation';
+  readonly accountContactUpsert: ContactUpdateOrCreatePayload;
   readonly accountDelete: AccountDeletePayload;
   readonly accountDisableNotificationCategory: AccountUpdateNotificationSettingsPayload;
   readonly accountDisableNotificationChannel: AccountUpdateNotificationSettingsPayload;
@@ -1055,6 +1070,11 @@ export type Mutation = {
   readonly userUpdateLanguage: UserUpdateLanguagePayload;
   /** @deprecated Username will be moved to @Handle in Accounts. Also SetUsername naming should be used instead of UpdateUsername to reflect the idempotency of Handles */
   readonly userUpdateUsername: UserUpdateUsernamePayload;
+};
+
+
+export type MutationAccountContactUpsertArgs = {
+  input: AccountContactUpsertInput;
 };
 
 

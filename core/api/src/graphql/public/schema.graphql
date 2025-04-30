@@ -43,6 +43,12 @@ interface Account {
   wallets: [Wallet!]!
 }
 
+input AccountContactUpsertInput {
+  alias: ContactAlias
+  identifier: Identifier
+  type: ContactType!
+}
+
 type AccountDeletePayload {
   errors: [Error!]!
   success: Boolean!
@@ -496,6 +502,9 @@ type GraphQLApplicationError implements Error {
 """Hex-encoded string of 32 bytes"""
 scalar Hex32Bytes
 
+"""Unique value used to identify a contact (e.g., username or lnAddress)"""
+scalar Identifier
+
 union InitiationVia = InitiationViaIntraLedger | InitiationViaLn | InitiationViaOnChain
 
 type InitiationViaIntraLedger {
@@ -922,6 +931,7 @@ type MobileVersions {
 }
 
 type Mutation {
+  accountContactUpsert(input: AccountContactUpsertInput!): ContactUpdateOrCreatePayload!
   accountDelete: AccountDeletePayload!
   accountDisableNotificationCategory(input: AccountDisableNotificationCategoryInput!): AccountUpdateNotificationSettingsPayload!
   accountDisableNotificationChannel(input: AccountDisableNotificationChannelInput!): AccountUpdateNotificationSettingsPayload!
