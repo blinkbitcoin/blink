@@ -32,10 +32,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: ["javascript-typescript", "python", "go", "java-kotlin", "actions"]
+        language: ["javascript-typescript", "python", "actions"]
         # CodeQL supports [ 'cpp', 'csharp', 'go', 'java', 'javascript', 'python' ]
         # Learn more:
         # https://docs.github.com/en/free-pro-team@latest/github/finding-security-vulnerabilities-and-errors-in-your-code/configuring-code-scanning#changing-the-languages-that-are-analyzed
+        # Note: java-kotlin and go have been removed as they're not present in the repository
 
     steps:
       - name: Checkout repository
@@ -51,15 +52,9 @@ jobs:
           # Prefix the list here with "+" to use these queries and those in the config file.
           # queries: ./path/to/local/query, your-org/your-repo/queries@main
 
-      # Skip autobuild for Java-Kotlin as it's failing
+      # Standard autobuild step
       - name: Autobuild
-        if: matrix.language != 'java-kotlin'
         uses: github/codeql-action/autobuild@v2
-
-      # For Java, we'll just do a basic analysis without building
-      - name: No build for Java
-        if: matrix.language == 'java-kotlin'
-        run: echo "Skipping build for Java, proceeding with analysis of existing code"
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v2
