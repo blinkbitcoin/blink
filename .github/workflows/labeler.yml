@@ -3,13 +3,16 @@ name: labeler
 on:
   - pull_request_target
 
+permissions: write-all
+
 jobs:
   label:
-    permissions:
-      contents: read
-      pull-requests: write
+    permissions: write-all
     runs-on: ubuntu-latest
     steps:
       - uses: actions/labeler@v5
         with:
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
+          sync-labels: false
+          configuration-path: .github/labeler.yml
+          dot: true
