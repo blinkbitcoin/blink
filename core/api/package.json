@@ -67,7 +67,7 @@
     "basic-auth": "^2.0.1",
     "bignumber.js": "^9.1.2",
     "bip32": "^4.0.0",
-    "bitcoin-cli-ts": "^26.1.0",
+    "bitcoin-cli-ts": "^28.0.0",
     "bitcoinjs-lib": "^6.1.7",
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
