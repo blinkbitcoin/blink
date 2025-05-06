@@ -6,7 +6,7 @@ directories:
   contents:
   - path: galoy-quickstart
     git:
-      url: https://github.com/GaloyMoney/galoy.git
+      url: https://github.com/blinkbitcoin/blink.git
       ref: main
     includePaths:
     - quickstart/docker-compose.yml

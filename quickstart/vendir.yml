@@ -5,7 +5,7 @@ directories:
   contents:
   - path: ./
     git:
-      url: https://github.com/GaloyMoney/galoy.git
+      url: https://github.com/blinkbitcoin/blink.git
       ref: 41666a505897940b1782a7f2efdf918dadbde246
     includePaths:
     - dev/**/*
@@ -17,7 +17,7 @@ directories:
   contents:
   - path: schemas/
     git:
-      url: https://github.com/GaloyMoney/galoy.git
+      url: https://github.com/blinkbitcoin/blink.git
       ref: 41666a505897940b1782a7f2efdf918dadbde246
     includePaths:
     - core/api/src/graphql/public/schema.graphql
@@ -25,7 +25,7 @@ directories:
     newRootPath: core/api/src/graphql
   - path: gql/
     git:
-      url: https://github.com/GaloyMoney/galoy.git
+      url: https://github.com/blinkbitcoin/blink.git
       ref: 41666a505897940b1782a7f2efdf918dadbde246
     includePaths:
     - bats/gql/**/*

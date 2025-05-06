@@ -8,7 +8,7 @@ export trigger_digest=$(cat ./api-trigger-edge-image/digest)
 export cron_digest=$(cat ./api-cron-edge-image/digest)
 export migrate_digest=$(cat ./api-migrate-edge-image/digest)
 export websocket_digest=$(cat ./api-ws-server-edge-image/digest)
-export github_url=https://github.com/GaloyMoney/galoy
+export github_url=https://github.com/blinkbitcoin/blink
 
 pushd charts-repo
 
