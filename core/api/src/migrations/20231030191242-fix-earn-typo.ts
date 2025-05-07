@@ -3,7 +3,7 @@
 module.exports = {
   async up(db) {
     const incorrectSpelling = "moneySocialAggrement"
-    const correctSpelling = "moneySocialAgreement" // spelling fixed in this pr https://github.com/GaloyMoney/galoy/pull/3306/files
+    const correctSpelling = "moneySocialAgreement" // spelling fixed in this pr https://github.com/blinkbitcoin/blink/pull/3306/files
 
     try {
       await db
