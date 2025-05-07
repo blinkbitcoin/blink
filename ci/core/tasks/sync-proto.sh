@@ -16,10 +16,10 @@ if [[ -n "${BUF_CONFIG_PATH:-}" ]]; then
 fi
 
 if [[ -z $(git config --global user.email) ]]; then
-  git config --global user.email "bot@galoy.io"
+  git config --global user.email "202112752+blinkbitcoinbot@users.noreply.github.com"
 fi
 if [[ -z $(git config --global user.name) ]]; then
-  git config --global user.name "CI Bot"
+  git config --global user.name "blinkbitcoinbot"
 fi
 
 (

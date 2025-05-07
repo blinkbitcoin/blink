@@ -11,4 +11,4 @@ gh pr create \
   --body "" \
   --base ${BRANCH} \
   --head ${BOT_BRANCH} \
-  --label galoybot || true
+  --label blinkbitcoinbot || true

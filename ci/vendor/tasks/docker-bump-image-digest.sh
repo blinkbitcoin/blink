@@ -16,10 +16,10 @@ yq -i e '.image.git_ref = strenv(ref)' ./charts/${CHARTS_SUBDIR}/values.yaml
 yq -i e '.appVersion = strenv(app_version)' ./charts/${CHARTS_SUBDIR}/Chart.yaml
 
 if [[ -z $(git config --global user.email) ]]; then
-  git config --global user.email "bot@galoy.io"
+  git config --global user.email "202112752+blinkbitcoinbot@users.noreply.github.com"
 fi
 if [[ -z $(git config --global user.name) ]]; then
-  git config --global user.name "CI Bot"
+  git config --global user.name "blinkbitcoinbot"
 fi
 
 (

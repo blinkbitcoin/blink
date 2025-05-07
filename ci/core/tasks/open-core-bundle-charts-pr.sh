@@ -19,10 +19,10 @@ old_ref=$(yq e '.galoy.images.app.git_ref' charts/galoy/values.yaml)
 pushd ../repo
 
 if [[ -z $(git config --global user.email) ]]; then
-  git config --global user.email "bot@galoy.io"
+  git config --global user.email "202112752+blinkbitcoinbot@users.noreply.github.com"
 fi
 if [[ -z $(git config --global user.name) ]]; then
-  git config --global user.name "CI Bot"
+  git config --global user.name "blinkbitcoinbot"
 fi
 
 export GH_TOKEN="$(gh-token generate -b "${GH_APP_PRIVATE_KEY}" -i "${GH_APP_ID}" | jq -r '.token')"
@@ -150,5 +150,5 @@ gh pr create \
   --body-file ../body.md \
   --base ${BRANCH} \
   --head ${BOT_BRANCH} \
-  --label galoybot \
+  --label blinkbitcoinbot \
   --label galoy ${breaking}
