@@ -1,0 +1,40 @@
+.mainContainer {
+  width: 100vw;
+}
+
+.navBar {
+  width: 100%;
+  border-bottom: 1.5px solid var(--lightGrey);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 1;
+  position: relative;
+}
+
+.navHomeContent {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  justify-content: space-between;
+  width: 50em;
+  margin: 0 auto;
+  padding: 0.8em;
+}
+
+.username {
+  display: none;
+}
+
+@media (max-width: 768px), (max-height: 785px) {
+  .navBar {
+    border-bottom: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .username {
+    display: block;
+    font-size: 4vw;
+  }
+}
