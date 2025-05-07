@@ -134,6 +134,7 @@ ensure_username_is_present() {
 
 is_contact() {
   local owner_token_name="$1"
+<<<<<<< HEAD
   local other_token_or_handle="$2"
 
   local contact_handle
@@ -156,4 +157,28 @@ is_contact() {
   match=$(graphql_output ".data.me.contacts[] | select(.username == \"$contact_handle\")")
 
   [[ -n "$match" ]]
+=======
+  local other_token_name="$2"
+
+  local owner_account_id
+  owner_account_id=$(read_value "$owner_token_name.account_id")
+  [[ -n "$owner_account_id" ]] || return 1
+
+  local contact_identifier
+  contact_identifier=$(read_value "$other_token_name.username")
+  [[ -n "$contact_identifier" ]] || return 1
+
+  local mongo_query
+  mongo_query=$(echo "db.contacts.findOne(
+    {
+      accountId: \"$owner_account_id\",
+      identifier: \"$contact_identifier\"
+    }
+  );" | tr -d '[:space:]')
+
+  local result
+  result=$(mongo_cli "$mongo_query" 2>&1)
+
+  [[ "$result" != "null" && -n "$result" ]]
+>>>>>>> e8ca37ca6 (refactor: move contact storage from accounts collection to dedicated contacts collection)
 }
