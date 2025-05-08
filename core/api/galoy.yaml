@@ -35,8 +35,8 @@ bria:
   queueNames:
     fast: dev-queue
   coldStorage:
-    rebalanceWalletName: cold
     hotToColdRebalanceQueueName: dev-queue
+    rebalanceWalletName: cold
     wallets:
       - cold
 lndScbBackupBucketName: lnd-static-channel-backups
