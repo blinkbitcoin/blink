@@ -132,9 +132,9 @@ export const OnChainService = (): IOnChainService => {
   const getColdBalance = async (
     walletName: string,
   ): Promise<BtcPaymentAmount | OnChainServiceError> => {
-    // Handle the case where walletName is "default" or empty string
+    // Handle the case where walletName is undefined, "default" or empty string
     // by getting the balance of all cold wallets
-    if (walletName === "default" || walletName === "") {
+    if (!walletName || walletName === "default" || walletName === "") {
       // Iterate over all cold wallets and sum their balances
       let totalAmount = 0
 
