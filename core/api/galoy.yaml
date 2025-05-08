@@ -35,11 +35,10 @@ bria:
   queueNames:
     fast: dev-queue
   coldStorage:
-    activeRebalanceWalletName: cold
+    rebalanceWalletName: cold
     hotToColdRebalanceQueueName: dev-queue
-    coldWallets:
-      - name: cold
-        walletName: cold
+    wallets:
+      - cold
 lndScbBackupBucketName: lnd-static-channel-backups
 admin_accounts:
   - role: dealer

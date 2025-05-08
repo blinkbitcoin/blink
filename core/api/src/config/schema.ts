@@ -197,17 +197,11 @@ export const configSchema = {
           type: "object",
           properties: {
             hotToColdRebalanceQueueName: { type: "string" },
-            activeRebalanceWalletName: { type: "string" },
-            coldWallets: {
+            rebalanceWalletName: { type: "string" },
+            wallets: {
               type: "array",
               items: {
-                type: "object",
-                properties: {
-                  name: { type: "string" },
-                  walletName: { type: "string" },
-                },
-                required: ["name", "walletName"],
-                additionalProperties: false,
+                type: "string",
               },
               minItems: 1,
               uniqueItems: true,
@@ -215,18 +209,13 @@ export const configSchema = {
           },
           required: [
             "hotToColdRebalanceQueueName",
-            "activeRebalanceWalletName",
-            "coldWallets",
+            "rebalanceWalletName",
+            "wallets",
           ],
           default: {
             hotToColdRebalanceQueueName: "dev-queue",
-            activeRebalanceWalletName: "cold",
-            coldWallets: [
-              {
-                name: "cold",
-                walletName: "cold",
-              },
-            ],
+            rebalanceWalletName: "cold",
+            wallets: ["cold"],
           },
         },
       },

@@ -102,7 +102,7 @@ type OnChainEventHandler = (event: OnChainEvent) => true | ApplicationError
 
 interface IOnChainService {
   getHotBalance(): Promise<BtcPaymentAmount | OnChainServiceError>
-  getColdBalance(walletName?: string): Promise<BtcPaymentAmount | OnChainServiceError>
+  getColdBalance(walletName: string): Promise<BtcPaymentAmount | OnChainServiceError>
   getAddressForWallet(args: {
     walletDescriptor: WalletDescriptor<WalletCurrency>
     requestId?: OnChainAddressRequestId
@@ -117,7 +117,7 @@ interface IOnChainService {
   queuePayoutToAddress(
     args: QueuePayoutToAddressArgs,
   ): Promise<OnChainPayout | OnChainServiceError>
-  rebalanceToColdWallet(amount: BtcPaymentAmount): Promise<PayoutId | OnChainServiceError>
+  rebalanceToColdWallet(amount: BtcPaymentAmount, walletName: string): Promise<PayoutId | OnChainServiceError>
   estimateFeeForPayout(
     args: EstimatePayoutFeeArgs,
   ): Promise<BtcPaymentAmount | OnChainServiceError>

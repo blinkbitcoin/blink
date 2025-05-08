@@ -58,11 +58,8 @@ type YamlSchema = {
     }
     coldStorage: {
       hotToColdRebalanceQueueName: string
-      activeRebalanceWalletName: string
-      coldWallets: {
-        name: string
-        walletName: string
-      }[]
+      rebalanceWalletName: string
+      wallets: string[]
     }
   }
   lndScbBackupBucketName: string
