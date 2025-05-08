@@ -367,12 +367,14 @@ export const OnChainService = (): IOnChainService => {
 
     request.setDestinationWalletName(destinationWalletName)
     request.setSatoshis(Number(amount.amount))
-    request.setMetadata(constructMetadata({
-      galoy: {
-        rebalanceToColdWallet: true,
-        destinationWallet: destinationWalletName
-      }
-    }))
+    request.setMetadata(
+      constructMetadata({
+        galoy: {
+          rebalanceToColdWallet: true,
+          destinationWallet: destinationWalletName,
+        },
+      }),
+    )
 
     try {
       const response = await submitPayout(request, metadata)

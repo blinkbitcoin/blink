@@ -117,7 +117,10 @@ interface IOnChainService {
   queuePayoutToAddress(
     args: QueuePayoutToAddressArgs,
   ): Promise<OnChainPayout | OnChainServiceError>
-  rebalanceToColdWallet(amount: BtcPaymentAmount, walletName: string): Promise<PayoutId | OnChainServiceError>
+  rebalanceToColdWallet(
+    amount: BtcPaymentAmount,
+    walletName: string,
+  ): Promise<PayoutId | OnChainServiceError>
   estimateFeeForPayout(
     args: EstimatePayoutFeeArgs,
   ): Promise<BtcPaymentAmount | OnChainServiceError>

@@ -28,7 +28,9 @@ const briaConfig = getBriaConfig()
 
 const rebalance = async () => {
   // Use the rebalance wallet from config
-  const result = await OnChain.rebalanceToColdWallet(briaConfig.coldStorage.rebalanceWalletName)
+  const result = await OnChain.rebalanceToColdWallet(
+    briaConfig.coldStorage.rebalanceWalletName,
+  )
   if (result instanceof Error) throw result
 }
 

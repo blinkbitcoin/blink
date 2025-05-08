@@ -207,11 +207,7 @@ export const configSchema = {
               uniqueItems: true,
             },
           },
-          required: [
-            "hotToColdRebalanceQueueName",
-            "rebalanceWalletName",
-            "wallets",
-          ],
+          required: ["hotToColdRebalanceQueueName", "rebalanceWalletName", "wallets"],
           default: {
             hotToColdRebalanceQueueName: "dev-queue",
             rebalanceWalletName: "cold",
