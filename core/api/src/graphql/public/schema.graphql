@@ -315,10 +315,51 @@ type ConsumerAccount implements Account {
   wallets: [Wallet!]!
 }
 
+type Contact {
+  """Alias name the user assigns to the contact."""
+  alias: ContactAlias
+
+  """
+  Unix timestamp (number of seconds elapsed since January 1, 1970 00:00:00 UTC)
+  """
+  createdAt: Timestamp!
+
+  """ID of the contact user or external identifier."""
+  id: ContactId!
+
+  """Username or lnAddress that identifies the contact."""
+  identifier: Identifier!
+
+  """Total number of transactions with this contact."""
+  transactionsCount: Int!
+
+  """Type of the contact (intraledger, lnaddress, etc.)."""
+  type: ContactType!
+}
+
 """
 An alias name that a user can set for a wallet (with which they have transactions)
 """
 scalar ContactAlias
+
+input ContactCreateInput {
+  alias: ContactAlias
+  identifier: Identifier
+  type: ContactType!
+}
+
+"""Unique identifier of a contact"""
+scalar ContactId
+
+enum ContactType {
+  INTRALEDGER
+  LNADDRESS
+}
+
+type ContactUpdateOrCreatePayload {
+  contact: Contact
+  errors: [Error!]!
+}
 
 type Coordinates {
   latitude: Float!
@@ -448,6 +489,9 @@ type GraphQLApplicationError implements Error {
 
 """Hex-encoded string of 32 bytes"""
 scalar Hex32Bytes
+
+"""Unique value used to identify a contact (e.g., username or lnAddress)"""
+scalar Identifier
 
 union InitiationVia = InitiationViaIntraLedger | InitiationViaLn | InitiationViaOnChain
 
@@ -884,6 +928,7 @@ type Mutation {
   callbackEndpointDelete(input: CallbackEndpointDeleteInput!): SuccessPayload!
   captchaCreateChallenge: CaptchaCreateChallengePayload!
   captchaRequestAuthCode(input: CaptchaRequestAuthCodeInput!): SuccessPayload!
+  contactCreate(input: ContactCreateInput!): ContactUpdateOrCreatePayload!
   deviceNotificationTokenCreate(input: DeviceNotificationTokenCreateInput!): SuccessPayload!
   feedbackSubmit(input: FeedbackSubmitInput!): SuccessPayload!
 
