@@ -5,9 +5,15 @@ mutation contactCreate($input: ContactCreateInput!) {
     }
     contact {
       id
+<<<<<<< HEAD
       handle
       type
       displayName
+=======
+      identifier
+      type
+      alias
+>>>>>>> 350269fcf (chore: renamin contact with upsert references)
       transactionsCount
       createdAt
     }

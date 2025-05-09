@@ -1,4 +1,4 @@
-import Contact from "../object/account-contact-upsert"
+import Contact from "../object/contact-create"
 
 import IError from "@/graphql/shared/types/abstract/error"
 import { GT } from "@/graphql/index"

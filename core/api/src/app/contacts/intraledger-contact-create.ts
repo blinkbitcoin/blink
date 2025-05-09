@@ -1,8 +1,8 @@
-import { upserContact } from "./upsert-contact"
+import { contactCreate } from "./contact-create"
 
 import { ContactType } from "@/domain/contacts"
 
-export const upsertIntraledgerContacts = async ({
+export const IntraledgerContactCreate = async ({
   senderAccount,
   recipientAccount,
 }: {
@@ -14,7 +14,7 @@ export const upsertIntraledgerContacts = async ({
   }
 
   if (recipientAccount.username) {
-    const contactToPayerResult = await upserContact({
+    const contactToPayerResult = await contactCreate({
       accountId: senderAccount.id,
       identifier: recipientAccount.username,
       alias: recipientAccount.username,
@@ -24,7 +24,7 @@ export const upsertIntraledgerContacts = async ({
   }
 
   if (senderAccount.username) {
-    const contactToPayeeResult = await upserContact({
+    const contactToPayeeResult = await contactCreate({
       accountId: recipientAccount.id,
       identifier: senderAccount.username,
       alias: senderAccount.username,

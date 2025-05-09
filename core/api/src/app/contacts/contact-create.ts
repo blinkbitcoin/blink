@@ -1,7 +1,7 @@
 import { CouldNotFindContactFromAccountIdError } from "@/domain/errors"
 import { ContactsRepository } from "@/services/mongoose"
 
-export const upserContact = async ({
+export const contactCreate = async ({
   accountId,
   identifier,
   alias,
