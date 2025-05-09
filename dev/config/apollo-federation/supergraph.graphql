@@ -68,14 +68,6 @@ interface Account
   wallets: [Wallet!]!
 }
 
-input AccountContactUpsertInput
-  @join__type(graph: PUBLIC)
-{
-  alias: ContactAlias
-  identifier: Identifier
-  type: ContactType!
-}
-
 type AccountDeletePayload
   @join__type(graph: PUBLIC)
 {
@@ -1287,7 +1279,6 @@ type Mutation
   apiKeyCreate(input: ApiKeyCreateInput!): ApiKeyCreatePayload! @join__field(graph: API_KEYS)
   apiKeyRevoke(input: ApiKeyRevokeInput!): ApiKeyRevokePayload! @join__field(graph: API_KEYS)
   statefulNotificationAcknowledge(input: StatefulNotificationAcknowledgeInput!): StatefulNotificationAcknowledgePayload! @join__field(graph: NOTIFICATIONS)
-  accountContactUpsert(input: AccountContactUpsertInput!): ContactUpdateOrCreatePayload! @join__field(graph: PUBLIC)
   accountDelete: AccountDeletePayload! @join__field(graph: PUBLIC)
   accountDisableNotificationCategory(input: AccountDisableNotificationCategoryInput!): AccountUpdateNotificationSettingsPayload! @join__field(graph: PUBLIC)
   accountDisableNotificationChannel(input: AccountDisableNotificationChannelInput!): AccountUpdateNotificationSettingsPayload! @join__field(graph: PUBLIC)

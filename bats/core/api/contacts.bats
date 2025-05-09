@@ -26,10 +26,10 @@ setup_file() {
   exec_graphql "$ALICE" "account-contact-upsert" "$variables"
 
   # Validate GraphQL response
-  contact_id="$(graphql_output '.data.accountContactUpsert.contact.id')"
+  contact_id="$(graphql_output '.data.contactCreate.contact.id')"
   [[ -n "$contact_id" ]] || fail "Expected contact to be created"
 
-  contact_alias="$(graphql_output '.data.accountContactUpsert.contact.alias')"
+  contact_alias="$(graphql_output '.data.contactCreate.contact.alias')"
   [[ "$contact_alias" == "$alias" ]] || fail "Expected identifier to be $alias"
 
   # Validate contains the contact
@@ -52,10 +52,10 @@ setup_file() {
   exec_graphql "$ALICE" "account-contact-upsert" "$variables"
 
   # Validate GraphQL response
-  contact_id="$(graphql_output '.data.accountContactUpsert.contact.id')"
+  contact_id="$(graphql_output '.data.contactCreate.contact.id')"
   [[ -n "$contact_id" ]] || fail "Expected contact to be created"
 
-  contact_alias="$(graphql_output '.data.accountContactUpsert.contact.alias')"
+  contact_alias="$(graphql_output '.data.contactCreate.contact.alias')"
   [[ "$contact_alias" == "$alias" ]] || fail "Expected type to be $alias"
 
   # Verify contact is persisted

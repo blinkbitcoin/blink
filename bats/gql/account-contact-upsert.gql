@@ -1,5 +1,5 @@
-mutation accountContactUpsert($input: AccountContactUpsertInput!) {
-  accountContactUpsert(input: $input) {
+mutation contactCreate($input: ContactCreateInput!) {
+  contactCreate(input: $input) {
     errors {
       message
     }
