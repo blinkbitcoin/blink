@@ -1,4 +1,5 @@
 import { parseRepositoryError } from "./utils"
+import { ContactsRepository } from "./contacts"
 
 import { AccountStatus } from "@/domain/accounts"
 import {
