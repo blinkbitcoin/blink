@@ -11,7 +11,7 @@ export const getHotBalance = async (): Promise<BtcPaymentAmount | ApplicationErr
 
 export const getColdBalance = async (): Promise<BtcPaymentAmount | ApplicationError> => {
   const service = OnChainService()
-  return service.getColdBalance("default")
+  return service.getColdBalance()
 }
 
 export const getBatchInclusionEstimatedAt = async ({

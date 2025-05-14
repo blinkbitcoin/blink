@@ -130,10 +130,9 @@ export const OnChainService = (): IOnChainService => {
   }
 
   const getColdBalance = async (): Promise<BtcPaymentAmount | OnChainServiceError> => {
-    // Iterate over all cold wallets and sum their balances
     let totalAmount = 0
 
-    // Iterate through all cold wallets in the config
+    // Iterate over all cold wallets and sum their balances
     for (const walletName of briaConfig.coldStorage.wallets) {
       const request = new GetWalletBalanceSummaryRequest()
       request.setWalletName(walletName)
@@ -146,7 +145,6 @@ export const OnChainService = (): IOnChainService => {
       }
     }
 
-    // Return the combined balance
     return paymentAmountFromNumber({
       amount: totalAmount,
       currency: WalletCurrency.Btc,
