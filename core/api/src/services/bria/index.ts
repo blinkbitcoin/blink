@@ -132,7 +132,6 @@ export const OnChainService = (): IOnChainService => {
   const getColdBalance = async (): Promise<BtcPaymentAmount | OnChainServiceError> => {
     let totalAmount = 0
 
-    // Iterate over all cold wallets and sum their balances
     for (const walletName of briaConfig.coldStorage.wallets) {
       const request = new GetWalletBalanceSummaryRequest()
       request.setWalletName(walletName)
@@ -154,7 +153,7 @@ export const OnChainService = (): IOnChainService => {
   // Helper function to get the default cold wallet name (active rebalance wallet)
   const getDefaultColdWalletName = (): string => {
     // Return the rebalance wallet name from config
-    return briaConfig.coldStorage.wallets.rebalanceWallet
+    return briaConfig.coldStorage.rebalanceWalletName
   }
 
   const getAddressForWallet = async ({
@@ -318,7 +317,7 @@ export const OnChainService = (): IOnChainService => {
   ): Promise<PayoutId | OnChainServiceError> => {
     const request = new SubmitPayoutRequest()
     request.setWalletName(briaConfig.hotWalletName)
-    request.setPayoutQueueName(briaConfig.coldStorage.hotToColdRebalanceQueueName)
+    request.setPayoutQueueName(briaConfig.coldStorage.rebalanceQueueName)
 
     // Use the default cold wallet name for the destination
     const destinationWalletName = getDefaultColdWalletName()

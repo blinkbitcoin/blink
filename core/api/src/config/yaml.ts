@@ -94,12 +94,12 @@ export const USER_ACTIVENESS_MONTHLY_VOLUME_THRESHOLD = toCents(
 )
 
 export const getBriaPartialConfigFromYaml = () => {
+  const coldStorageWallets = new Set(yamlConfig.bria.coldStorage.wallets)
+  coldStorageWallets.add(yamlConfig.bria.coldStorage.rebalanceWalletName)
   const coldStorage = {
-    hotToColdRebalanceQueueName: yamlConfig.bria.coldStorage.hotToColdRebalanceQueueName,
-    wallets: {
-      ...yamlConfig.bria.coldStorage.wallets,
-      rebalanceWallet: yamlConfig.bria.coldStorage.rebalanceWalletName,
-    },
+    rebalanceQueueName: yamlConfig.bria.coldStorage.hotToColdRebalanceQueueName,
+    rebalanceWalletName: yamlConfig.bria.coldStorage.rebalanceWalletName,
+    wallets: [...coldStorageWallets],
   }
 
   return {
