@@ -1,6 +1,6 @@
 import { OnChain, Lightning, Wallets, Payments } from "@/app"
 
-import { getCronConfig, TWO_MONTHS_IN_MS, getBriaConfig } from "@/config"
+import { getCronConfig, TWO_MONTHS_IN_MS } from "@/config"
 
 import { ErrorLevel } from "@/domain/shared"
 import { OperationInterruptedError } from "@/domain/errors"
@@ -24,13 +24,9 @@ import { elapsedSinceTimestamp, sleep } from "@/utils"
 import { rebalancingInternalChannels } from "@/services/lnd/rebalancing"
 
 const logger = baseLogger.child({ module: "cron" })
-const briaConfig = getBriaConfig()
 
 const rebalance = async () => {
-  // Use the rebalance wallet from config
-  const result = await OnChain.rebalanceToColdWallet(
-    briaConfig.coldStorage.rebalanceWalletName,
-  )
+  const result = await OnChain.rebalanceToColdWallet()
   if (result instanceof Error) throw result
 }
 
