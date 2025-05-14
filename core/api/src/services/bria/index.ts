@@ -129,49 +129,28 @@ export const OnChainService = (): IOnChainService => {
     }
   }
 
-  const getColdBalance = async (
-    walletName: string,
-  ): Promise<BtcPaymentAmount | OnChainServiceError> => {
-    // Handle the case where walletName is undefined, "default" or empty string
-    // by getting the balance of all cold wallets
-    if (!walletName || walletName === "default" || walletName === "") {
-      // Iterate over all cold wallets and sum their balances
-      let totalAmount = 0
+  const getColdBalance = async (): Promise<BtcPaymentAmount | OnChainServiceError> => {
+    // Iterate over all cold wallets and sum their balances
+    let totalAmount = 0
 
-      // Iterate through all cold wallets in the config
-      for (const walletName of briaConfig.coldStorage.wallets) {
-        const request = new GetWalletBalanceSummaryRequest()
-        request.setWalletName(walletName)
+    // Iterate through all cold wallets in the config
+    for (const walletName of briaConfig.coldStorage.wallets) {
+      const request = new GetWalletBalanceSummaryRequest()
+      request.setWalletName(walletName)
 
-        try {
-          const response = await getWalletBalanceSummary(request, metadata)
-          totalAmount += response.getEffectiveSettled()
-        } catch (error) {
-          return new UnknownOnChainServiceError(error)
-        }
+      try {
+        const response = await getWalletBalanceSummary(request, metadata)
+        totalAmount += response.getEffectiveSettled()
+      } catch (error) {
+        return new UnknownOnChainServiceError(error)
       }
-
-      // Return the combined balance
-      return paymentAmountFromNumber({
-        amount: totalAmount,
-        currency: WalletCurrency.Btc,
-      })
     }
 
-    // For a specific wallet name, get balance for that wallet only
-    const request = new GetWalletBalanceSummaryRequest()
-    const targetWalletName = findColdWalletName(walletName)
-    request.setWalletName(targetWalletName)
-
-    try {
-      const response = await getWalletBalanceSummary(request, metadata)
-      return paymentAmountFromNumber({
-        amount: response.getEffectiveSettled(),
-        currency: WalletCurrency.Btc,
-      })
-    } catch (error) {
-      return new UnknownOnChainServiceError(error)
-    }
+    // Return the combined balance
+    return paymentAmountFromNumber({
+      amount: totalAmount,
+      currency: WalletCurrency.Btc,
+    })
   }
 
   // Helper function to get the default cold wallet name (active rebalance wallet)
