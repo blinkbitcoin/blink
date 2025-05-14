@@ -13,9 +13,7 @@ import { LndService } from "@/services/lnd"
 import { OnChainService } from "@/services/bria"
 import { addAttributesToCurrentSpan } from "@/services/tracing"
 
-export const rebalanceToColdWallet = async (
-  walletName: string,
-): Promise<boolean | ApplicationError> => {
+export const rebalanceToColdWallet = async (): Promise<boolean | ApplicationError> => {
   const coldStorageConfig = getColdStorageConfig()
 
   const onChainService = OnChainService()
@@ -55,7 +53,7 @@ export const rebalanceToColdWallet = async (
   })
   if (amount instanceof Error) return amount
 
-  const payoutId = await onChainService.rebalanceToColdWallet(amount, walletName)
+  const payoutId = await onChainService.rebalanceToColdWallet(amount)
   if (payoutId instanceof Error) return payoutId
 
   return true
