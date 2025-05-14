@@ -130,19 +130,30 @@ export const OnChainService = (): IOnChainService => {
   }
 
   const getColdBalance = async (): Promise<BtcPaymentAmount | OnChainServiceError> => {
-    const request = new GetWalletBalanceSummaryRequest()
-    request.setWalletName(briaConfig.coldStorage.walletName)
+    let totalAmount = 0
 
-    try {
-      const response = await getWalletBalanceSummary(request, metadata)
+    for (const walletName of briaConfig.coldStorage.wallets) {
+      const request = new GetWalletBalanceSummaryRequest()
+      request.setWalletName(walletName)
 
-      return paymentAmountFromNumber({
-        amount: response.getEffectiveSettled(),
-        currency: WalletCurrency.Btc,
-      })
-    } catch (error) {
-      return new UnknownOnChainServiceError(error)
+      try {
+        const response = await getWalletBalanceSummary(request, metadata)
+        totalAmount += response.getEffectiveSettled()
+      } catch (error) {
+        return new UnknownOnChainServiceError(error)
+      }
     }
+
+    return paymentAmountFromNumber({
+      amount: totalAmount,
+      currency: WalletCurrency.Btc,
+    })
+  }
+
+  // Helper function to get the default cold wallet name (active rebalance wallet)
+  const getDefaultColdWalletName = (): string => {
+    // Return the rebalance wallet name from config
+    return briaConfig.coldStorage.rebalanceWalletName
   }
 
   const getAddressForWallet = async ({
@@ -306,10 +317,21 @@ export const OnChainService = (): IOnChainService => {
   ): Promise<PayoutId | OnChainServiceError> => {
     const request = new SubmitPayoutRequest()
     request.setWalletName(briaConfig.hotWalletName)
-    request.setPayoutQueueName(briaConfig.coldStorage.hotToColdRebalanceQueueName)
-    request.setDestinationWalletName(briaConfig.coldStorage.walletName)
+    request.setPayoutQueueName(briaConfig.coldStorage.rebalanceQueueName)
+
+    // Use the default cold wallet name for the destination
+    const destinationWalletName = getDefaultColdWalletName()
+
+    request.setDestinationWalletName(destinationWalletName)
     request.setSatoshis(Number(amount.amount))
-    request.setMetadata(constructMetadata({ galoy: { rebalanceToColdWallet: true } }))
+    request.setMetadata(
+      constructMetadata({
+        galoy: {
+          rebalanceToColdWallet: true,
+          destinationWallet: destinationWalletName,
+        },
+      }),
+    )
 
     try {
       const response = await submitPayout(request, metadata)
