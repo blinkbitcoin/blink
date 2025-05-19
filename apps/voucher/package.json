@@ -35,7 +35,7 @@
     "@ndustrial/node-distributed-lock": "^1.0.3",
     "@opentelemetry/api": "1.8.0",
     "@opentelemetry/core": "1.24.1",
-    "@opentelemetry/exporter-trace-otlp-http": "0.51.1",
+    "@opentelemetry/exporter-trace-otlp-http": "0.201.1",
     "@opentelemetry/instrumentation-graphql": "0.40.0",
     "@opentelemetry/instrumentation-http": "0.51.1",
     "@opentelemetry/instrumentation-net": "0.36.0",
