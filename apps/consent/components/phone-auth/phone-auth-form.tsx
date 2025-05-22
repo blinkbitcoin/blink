@@ -130,7 +130,7 @@ const PhoneAuthForm: React.FC<AuthFormProps> = ({
           data-testid="phone_number_input"
           value={phoneNumber}
           required
-          placeholder="Phone Number"
+          placeholder="Phone number"
           id="phone"
           name="phone"
           onChange={handlePhoneNumberChange}

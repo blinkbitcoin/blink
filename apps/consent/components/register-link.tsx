@@ -13,7 +13,7 @@ const RegisterLink: React.FC<RegisterLinkProp> = ({ href }) => {
           <p className="font-medium text-sm">
             Don&apos;t have an Account?{" "}
             <span className="font-semibold text-[var(--primaryButtonBackground)] dark:text-[var(--primaryButtonBackground)] hover:underline">
-              Register Here.
+              Register here.
             </span>
           </p>
         </Link>
