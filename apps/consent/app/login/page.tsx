@@ -55,7 +55,7 @@ const Login = async ({ searchParams }: { searchParams: LoginProps }) => {
     <MainContent>
       <Card>
         <Logo />
-        <Heading>Login In with Blink</Heading>
+        <Heading>Log in with Blink</Heading>
         <SubHeading>
           Enter your registered email to log in to this application.
         </SubHeading>
