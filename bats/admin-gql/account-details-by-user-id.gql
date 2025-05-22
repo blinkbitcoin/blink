@@ -3,6 +3,11 @@ query accountDetailsByUserId($userId: ID!) {
     id
     owner {
       id
+      phone
+      email {
+        address
+        verified
+      }
     }
   }
 }

@@ -1,6 +1,6 @@
 import { isAxiosError } from "axios"
 
-import { UpdateIdentityBody } from "@ory/client"
+import { JsonPatch, UpdateIdentityBody } from "@ory/client"
 
 import { kratosAdmin, kratosPublic, toDomainIdentityEmailPhone } from "./private"
 import { SchemaIdType } from "./schema"
@@ -442,7 +442,7 @@ export const AuthWithEmailPasswordlessService = (): IAuthWithEmailPasswordlessSe
     }
 
     if (identity.state === undefined) {
-      return new KratosError("state undefined, probably impossible state") // type issue
+      return new KratosError("state undefined, probably impossible state")
     }
 
     identity.traits = { ...identity.traits, email }
@@ -461,6 +461,44 @@ export const AuthWithEmailPasswordlessService = (): IAuthWithEmailPasswordlessSe
         id: kratosUserId,
         updateIdentityBody: adminIdentity,
       })
+
+      const patchOperations: JsonPatch[] = []
+
+      // Update verifiable_addresses to mark it as verified
+      if (
+        newIdentity.verifiable_addresses &&
+        newIdentity.verifiable_addresses.length > 0
+      ) {
+        const currentAddress = newIdentity.verifiable_addresses[0]
+        if (currentAddress.via === "email") {
+          patchOperations.push({
+            op: "replace",
+            path: "/verifiable_addresses/0/verified",
+            value: true,
+          })
+
+          patchOperations.push({
+            op: "replace",
+            path: "/verifiable_addresses/0/verified_at",
+            value: new Date().toISOString(),
+          })
+
+          patchOperations.push({
+            op: "replace",
+            path: "/verifiable_addresses/0/status",
+            value: "completed",
+          })
+        }
+      }
+
+      if (patchOperations.length > 0) {
+        const { data: finalIdentity } = await kratosAdmin.patchIdentity({
+          id: kratosUserId,
+          jsonPatch: patchOperations,
+        })
+
+        return toDomainIdentityEmailPhone(finalIdentity)
+      }
 
       return toDomainIdentityEmailPhone(newIdentity)
     } catch (err) {

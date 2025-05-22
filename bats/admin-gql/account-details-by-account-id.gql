@@ -4,6 +4,11 @@ query accountDetailsByAccountId($accountId: ID!) {
     level
     owner {
       id
+      phone
+      email {
+        address
+        verified
+      }
     }
   }
 }
