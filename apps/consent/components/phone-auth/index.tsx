@@ -14,7 +14,7 @@ import SubHeading from "@/components/sub-heading"
 
 interface PhoneAuth {
   login_challenge: string
-  authAction: "Register" | "Login"
+  authAction: "Register" | "Log in"
 }
 
 const PhoneAuth = async ({ login_challenge, authAction }: PhoneAuth) => {
@@ -50,7 +50,7 @@ const PhoneAuth = async ({ login_challenge, authAction }: PhoneAuth) => {
     <MainContent>
       <Card>
         <Logo />
-        <Heading>{authAction} In with Blink</Heading>
+        <Heading>{authAction} with Blink</Heading>
         <SubHeading>{subHeadingMessage}</SubHeading>
         <PhoneAuthForm
           authAction={authAction}
