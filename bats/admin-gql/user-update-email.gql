@@ -1,0 +1,13 @@
+mutation UserUpdateEmail($input: UserUpdateEmailInput!) {
+  userUpdateEmail(input: $input) {
+    errors {
+      __typename
+      message
+      code
+      path
+    }
+    accountDetails {
+      id
+    }
+  }
+}

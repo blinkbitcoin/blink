@@ -1,4 +1,5 @@
 export * from "./update-user-phone"
+export * from "./update-user-email"
 export * from "./trigger-marketing-notification"
 export * from "./filtered-user-count"
 import { checkedToAccountId, checkedToUserId, checkedToUsername } from "@/domain/accounts"

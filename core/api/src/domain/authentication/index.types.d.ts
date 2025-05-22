@@ -133,6 +133,10 @@ interface IAuthWithEmailPasswordlessService {
   loginToken(args: {
     email: EmailAddress
   }): Promise<LoginWithPhoneNoPasswordSchemaResponse | KratosError>
+  updateEmail(input: {
+    kratosUserId: UserId
+    email: EmailAddress
+  }): Promise<IdentityPhoneEmail | KratosError>
 }
 
 type CreateIdentityWithSessionResult = WithSessionResponse & {

@@ -53,6 +53,35 @@ setup_file() {
   [[ "$refetched_id" == "$id" ]] || exit 1
 }
 
+@test "admin: can update user email" {
+  admin_token="$(read_value 'admin.token')"
+  id="$(read_value 'tester.id')"
+  new_email="$(read_value 'tester.username')_updated@blink.sv"
+  variables=$(
+    jq -n \
+    --arg email "$new_email" \
+    --arg accountId "$id" \
+    '{input: {email: $email, accountId:$accountId}}'
+  )
+
+  exec_admin_graphql $admin_token 'user-update-email' "$variables"
+  num_errors="$(graphql_output '.data.userUpdateEmail.errors | length')"
+  [[ "$num_errors" == "0" ]] || exit 1
+
+  variables=$(
+    jq -n \
+    --arg accountId "$id" \
+    '{accountId: $accountId}'
+  )
+  exec_admin_graphql "$admin_token" 'account-details-by-account-id' "$variables"
+  refetched_id="$(graphql_output '.data.accountDetailsByAccountId.id')"
+  [[ "$refetched_id" == "$id" ]] || exit 1
+
+  # Verify the email was updated
+  updated_email="$(graphql_output '.data.accountDetailsByAccountId.owner.email.address')"
+  [[ "$updated_email" == "$new_email" ]] || exit 1
+}
+
 @test "admin: can query account details by username" {
   admin_token="$(read_value 'admin.token')"
   id="$(read_value 'tester.id')"

@@ -196,11 +196,14 @@ export const AuthWithPhonePasswordlessService = (): IAuthWithPhonePasswordlessSe
       return new KratosError("state undefined, probably impossible state") // type issue
     }
 
-    identity.traits = { phone }
+    identity.traits = { ...identity.traits, phone }
 
     const adminIdentity: UpdateIdentityBody = {
       ...identity,
-      credentials: { password: { config: { password } } },
+      credentials: {
+        ...(identity.credentials || {}),
+        password: { config: { password } },
+      },
       state: identity.state,
     }
 

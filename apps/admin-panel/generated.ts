@@ -397,6 +397,7 @@ export type Mutation = {
   readonly marketingNotificationTrigger: SuccessPayload;
   readonly merchantMapDelete: MerchantPayload;
   readonly merchantMapValidate: MerchantPayload;
+  readonly userUpdateEmail: AccountDetailPayload;
   readonly userUpdatePhone: AccountDetailPayload;
 };
 
@@ -423,6 +424,11 @@ export type MutationMerchantMapDeleteArgs = {
 
 export type MutationMerchantMapValidateArgs = {
   input: MerchantMapValidateInput;
+};
+
+
+export type MutationUserUpdateEmailArgs = {
+  input: UserUpdateEmailInput;
 };
 
 
@@ -773,6 +779,11 @@ export type UsdWalletTransactionsByPaymentHashArgs = {
 /** A wallet belonging to an account which contains a USD balance and a list of transactions. */
 export type UsdWalletTransactionsByPaymentRequestArgs = {
   paymentRequest: Scalars['LnPaymentRequest']['input'];
+};
+
+export type UserUpdateEmailInput = {
+  readonly accountId: Scalars['AccountId']['input'];
+  readonly email: Scalars['EmailAddress']['input'];
 };
 
 export type UserUpdatePhoneInput = {

@@ -22,6 +22,7 @@ import {
   EmailAlreadyExistsError,
   IncompatibleSchemaUpgradeError,
   InvalidIdentitySessionKratosError,
+  KratosError,
   UnknownKratosError,
 } from "@/domain/kratos"
 import { checkedToEmailAddress } from "@/domain/users"
@@ -425,6 +426,53 @@ export const AuthWithEmailPasswordlessService = (): IAuthWithEmailPasswordlessSe
     return !!identity.traits.email
   }
 
+  const updateEmail = async ({
+    kratosUserId,
+    email,
+  }: {
+    kratosUserId: UserId
+    email: EmailAddress
+  }) => {
+    let identity: KratosIdentity
+
+    try {
+      ;({ data: identity } = await kratosAdmin.getIdentity({ id: kratosUserId }))
+    } catch (err) {
+      return handleKratosErrors(err)
+    }
+
+    if (identity.state === undefined) {
+      return new KratosError("state undefined, probably impossible state") // type issue
+    }
+
+    identity.traits = { ...identity.traits, email }
+
+    const adminIdentity: UpdateIdentityBody = {
+      ...identity,
+      credentials: {
+        ...(identity.credentials || {}),
+        password: { config: { password } },
+      },
+      state: identity.state,
+    }
+
+    try {
+      const { data: newIdentity } = await kratosAdmin.updateIdentity({
+        id: kratosUserId,
+        updateIdentityBody: adminIdentity,
+      })
+
+      return toDomainIdentityEmailPhone(newIdentity)
+    } catch (err) {
+      if (isAxiosError(err)) {
+        if (err.message === "Request failed with status code 409") {
+          return new EmailAlreadyExistsError()
+        }
+      }
+      return handleKratosErrors(err)
+    }
+  }
+
   return wrapAsyncFunctionsToRunInSpan({
     namespace: "services.kratos.auth-email-no-password",
     fns: {
@@ -437,6 +485,7 @@ export const AuthWithEmailPasswordlessService = (): IAuthWithEmailPasswordlessSe
       hasEmail,
       isEmailVerified,
       loginToken,
+      updateEmail,
     },
   })
 }
