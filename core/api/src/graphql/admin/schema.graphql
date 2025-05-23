@@ -349,6 +349,7 @@ type Mutation {
   marketingNotificationTrigger(input: MarketingNotificationTriggerInput!): SuccessPayload!
   merchantMapDelete(input: MerchantMapDeleteInput!): MerchantPayload!
   merchantMapValidate(input: MerchantMapValidateInput!): MerchantPayload!
+  userUpdateEmail(input: UserUpdateEmailInput!): AccountDetailPayload!
   userUpdatePhone(input: UserUpdatePhoneInput!): AccountDetailPayload!
 }
 
@@ -654,6 +655,11 @@ type UsdWallet implements Wallet {
   transactionsByPaymentHash(paymentHash: PaymentHash!): [Transaction!]!
   transactionsByPaymentRequest(paymentRequest: LnPaymentRequest!): [Transaction!]!
   walletCurrency: WalletCurrency!
+}
+
+input UserUpdateEmailInput {
+  accountId: AccountId!
+  email: EmailAddress!
 }
 
 input UserUpdatePhoneInput {

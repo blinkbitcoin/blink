@@ -1,6 +1,6 @@
 import { isAxiosError } from "axios"
 
-import { UpdateIdentityBody } from "@ory/client"
+import { JsonPatch, UpdateIdentityBody } from "@ory/client"
 
 import { kratosAdmin, kratosPublic, toDomainIdentityEmailPhone } from "./private"
 import { SchemaIdType } from "./schema"
@@ -22,6 +22,7 @@ import {
   EmailAlreadyExistsError,
   IncompatibleSchemaUpgradeError,
   InvalidIdentitySessionKratosError,
+  KratosError,
   UnknownKratosError,
 } from "@/domain/kratos"
 import { checkedToEmailAddress } from "@/domain/users"
@@ -425,6 +426,91 @@ export const AuthWithEmailPasswordlessService = (): IAuthWithEmailPasswordlessSe
     return !!identity.traits.email
   }
 
+  const updateEmail = async ({
+    kratosUserId,
+    email,
+  }: {
+    kratosUserId: UserId
+    email: EmailAddress
+  }) => {
+    let identity: KratosIdentity
+
+    try {
+      ;({ data: identity } = await kratosAdmin.getIdentity({ id: kratosUserId }))
+    } catch (err) {
+      return handleKratosErrors(err)
+    }
+
+    if (identity.state === undefined) {
+      return new KratosError("state undefined, probably impossible state")
+    }
+
+    identity.traits = { ...identity.traits, email }
+
+    const adminIdentity: UpdateIdentityBody = {
+      ...identity,
+      credentials: {
+        ...(identity.credentials || {}),
+        password: { config: { password } },
+      },
+      state: identity.state,
+    }
+
+    try {
+      const { data: newIdentity } = await kratosAdmin.updateIdentity({
+        id: kratosUserId,
+        updateIdentityBody: adminIdentity,
+      })
+
+      const patchOperations: JsonPatch[] = []
+
+      // Update verifiable_addresses to mark it as verified
+      if (
+        newIdentity.verifiable_addresses &&
+        newIdentity.verifiable_addresses.length > 0
+      ) {
+        const currentAddress = newIdentity.verifiable_addresses[0]
+        if (currentAddress.via === "email") {
+          patchOperations.push({
+            op: "replace",
+            path: "/verifiable_addresses/0/verified",
+            value: true,
+          })
+
+          patchOperations.push({
+            op: "replace",
+            path: "/verifiable_addresses/0/verified_at",
+            value: new Date().toISOString(),
+          })
+
+          patchOperations.push({
+            op: "replace",
+            path: "/verifiable_addresses/0/status",
+            value: "completed",
+          })
+        }
+      }
+
+      if (patchOperations.length > 0) {
+        const { data: finalIdentity } = await kratosAdmin.patchIdentity({
+          id: kratosUserId,
+          jsonPatch: patchOperations,
+        })
+
+        return toDomainIdentityEmailPhone(finalIdentity)
+      }
+
+      return toDomainIdentityEmailPhone(newIdentity)
+    } catch (err) {
+      if (isAxiosError(err)) {
+        if (err.message === "Request failed with status code 409") {
+          return new EmailAlreadyExistsError()
+        }
+      }
+      return handleKratosErrors(err)
+    }
+  }
+
   return wrapAsyncFunctionsToRunInSpan({
     namespace: "services.kratos.auth-email-no-password",
     fns: {
@@ -437,6 +523,7 @@ export const AuthWithEmailPasswordlessService = (): IAuthWithEmailPasswordlessSe
       hasEmail,
       isEmailVerified,
       loginToken,
+      updateEmail,
     },
   })
 }

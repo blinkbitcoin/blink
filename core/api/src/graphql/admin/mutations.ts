@@ -1,4 +1,5 @@
 import UserUpdatePhoneMutation from "./root/mutation/user-update-phone"
+import UserUpdateEmailMutation from "./root/mutation/user-update-email"
 
 import MerchantMapDeleteMutation from "./root/mutation/merchant-map-delete"
 import MerchantMapValidateMutation from "./root/mutation/merchant-map-validate"
@@ -14,6 +15,7 @@ export const mutationFields = {
   unauthed: {},
   authed: {
     userUpdatePhone: UserUpdatePhoneMutation,
+    userUpdateEmail: UserUpdateEmailMutation,
     accountUpdateLevel: AccountUpdateLevelMutation,
     accountUpdateStatus: AccountUpdateStatusMutation,
     merchantMapValidate: MerchantMapValidateMutation,
