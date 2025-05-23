@@ -124,21 +124,23 @@ const AccountUpdate: React.FC<PropType> = ({ auditedAccount }) => {
         <p className="mb-4 font-semibold text-gray-600">Status</p>
         <div className={`text-gray-600`}>
           {auditedAccount.status}
-          <ConfirmForm
-            action={updateStatus}
-            message="Are you sure you want to update the status?"
-          >
-            <input type="hidden" name="id" value={auditedAccount.id} />
-            <button
-              className={`text-sm mx-4 ${
-                isActiveStatus
-                  ? "bg-red-500 hover:bg-red-700 border-red-700"
-                  : "bg-green-500 hover:bg-green-700 border-green-700"
-              } text-white font-bold p-2 border rounded disabled:opacity-50`}
+          {auditedAccount.status !== "INVITED" && (
+            <ConfirmForm
+              action={updateStatus}
+              message="Are you sure you want to update the status?"
             >
-              {statusButtonLabel}
-            </button>
-          </ConfirmForm>
+              <input type="hidden" name="id" value={auditedAccount.id} />
+              <button
+                className={`text-sm mx-4 ${
+                  isActiveStatus
+                    ? "bg-red-500 hover:bg-red-700 border-red-700"
+                    : "bg-green-500 hover:bg-green-700 border-green-700"
+                } text-white font-bold p-2 border rounded disabled:opacity-50`}
+              >
+                {statusButtonLabel}
+              </button>
+            </ConfirmForm>
+          )}
         </div>
       </div>
     </div>

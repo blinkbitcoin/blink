@@ -76,6 +76,7 @@ export type AccountLevel = typeof AccountLevel[keyof typeof AccountLevel];
 export const AccountStatus = {
   Active: 'ACTIVE',
   Closed: 'CLOSED',
+  Invited: 'INVITED',
   Locked: 'LOCKED',
   New: 'NEW',
   Pending: 'PENDING'
