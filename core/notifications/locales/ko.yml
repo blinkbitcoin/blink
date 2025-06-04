@@ -1,0 +1,68 @@
+_version: 1
+
+circle_time_frame.month: "이번 달"
+circle_time_frame.all_time: ""
+
+circle_type.inner: "inner circle"
+circle_type.outer: "outer circle"
+
+circle_grew.title: "Blink Circles가 점점 커지고 있어요!"
+circle_grew.body: "누군가 방금 당신의 %{circle_type}에 추가되었습니다."
+
+circle_threshold_reached.inner.title: "멋진 Inner Circle이에요! \U0001F919"
+circle_threshold_reached.inner.body: "%{time_frame} 동안 %{threshold}명을 Blink에 초대하셨습니다. 계속 힘내세요!"
+
+circle_threshold_reached.outer.title: "Outer Circle이 확장되고 있어요! \U0001F4AA"
+circle_threshold_reached.outer.body: "당신의 Outer Circle이 %{threshold}명에 도달했습니다.\n비트코인 확산을 이끌고 계시네요!"
+
+identity_verification_approved.title: "본인 인증이 완료되었습니다!"
+identity_verification_approved.body: "본인 인증을 위한 서류가 처리되었습니다."
+
+identity_verification_declined.reason.documents_not_clear: "업로드하신 서류의 화질이 선명하지 않습니다."
+identity_verification_declined.reason.photo_not_clear: "제출하신 사진의 화질이 선명하지 않습니다."
+identity_verification_declined.reason.documents_do_not_match: "제출하신 서류가 본인 사진 또는 입력하신 정보와 일치하지 않습니다."
+identity_verification_declined.reason.documents_expired: "제출하신 서류가 만료되었습니다."
+identity_verification_declined.reason.documents_not_supported: "제출하신 서류는 지원되지 않습니다."
+identity_verification_declined.reason.other: "오류가 발생했습니다. 고객 지원팀에 문의해 주세요."
+identity_verification_declined.title: "신원을 확인할 수 없습니다!"
+identity_verification_declined.body: "제출하신 서류는 %{reason}으로 인해 처리할 수 없습니다."
+
+identity_verification_review_started.title: "본인 인증이 진행 중입니다!"
+identity_verification_review_started.body: "제출하신 서류를 정상적으로 접수하였으며, 현재 처리 중입니다."
+
+transaction.intra_ledger_payment.title: "%{walletCurrency} 거래"
+transaction.intra_ledger_payment.body: "Sent payment of %{formattedCurrencyAmount}"
+transaction.intra_ledger_payment.body_display_currency: "%{displayCurrencyAmount} | %{formattedCurrencyAmount} 결제가 전송되었습니다."
+
+transaction.intra_ledger_receipt.title: "%{walletCurrency} 거래"
+transaction.intra_ledger_receipt.body: "+%{formattedCurrencyAmount}"
+transaction.intra_ledger_receipt.body_display_currency: "+%{displayCurrencyAmount} | %{formattedCurrencyAmount}"
+
+transaction.onchain_payment.title: "%{walletCurrency} 거래"
+transaction.onchain_payment.body_display_currency: "온체인 결제 %{displayCurrencyAmount} | %{formattedCurrencyAmount} 전송이 확인되었습니다."
+transaction.onchain_payment.body: "온체인 결제 %{formattedCurrencyAmount} 전송이 확인되었습니다."
+
+transaction.onchain_receipt.title: "%{walletCurrency} 거래"
+transaction.onchain_receipt.body_display_currency: "+%{displayCurrencyAmount} | %{formattedCurrencyAmount}"
+transaction.onchain_receipt.body: "+%{formattedCurrencyAmount}"
+
+transaction.lightning_receipt.title: "%{walletCurrency} 거래"
+transaction.lightning_receipt.body_display_currency: "+%{displayCurrencyAmount} | %{formattedCurrencyAmount}"
+transaction.lightning_receipt.body: "+%{formattedCurrencyAmount}"
+
+transaction.onchain_receipt_pending.title: "%{walletCurrency} 거래 | 대기 중"
+transaction.onchain_receipt_pending.body_display_currency: "pending +%{displayCurrencyAmount} | %{formattedCurrencyAmount}"
+transaction.onchain_receipt_pending.body: "대기 중 +%{formattedCurrencyAmount}"
+
+transaction.paid_invoice.title: "%{walletCurrency} 거래"
+transaction.paid_invoice.body: "+%{formattedCurrencyAmount}"
+transaction.paid_invoice.body_display_currency: "+%{displayCurrencyAmount} | %{formattedCurrencyAmount}"
+
+price_changed.up.title: "비트코인이 큰 변동을 보이고 있습니다!"
+price_changed.up.body: "비트코인은 지난 하루 동안 %{change_percent}% 상승해 %{price}에 거래되고 있습니다!"
+
+price_changed.down.title: "비트코인이 큰 변동을 보이고 있습니다!"
+price_changed.down.body: "비트코인이 지난 하루 동안 %{change_percent}% 하락하여 %{price}에 거래되고 있습니다!"
+
+security.link_email_reminder.title: "계정 보안을 위해 이메일을 연결하세요."
+security.link_email_reminder.body: "계정 보안을 위해 이메일을 연결하고, 중요한 업데이트를 받아보세요."
