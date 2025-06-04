@@ -22,7 +22,7 @@ identity_verification_declined.reason.documents_not_clear: "업로드된 서류�
 identity_verification_declined.reason.photo_not_clear: "제출된 사진의 화질이 선명하지 않습니다."
 identity_verification_declined.reason.documents_do_not_match: "제출된 서류가 본인 사진 또는 입력하신 정보와 일치하지 않습니다."
 identity_verification_declined.reason.documents_expired: "제출된 서류가 만료되었습니다."
-identity_verification_declined.reason.documents_not_supported: "제출하신 서류는 지원되지 않습니다."
+identity_verification_declined.reason.documents_not_supported: "제출된 서류는 지원되지 않습니다."
 identity_verification_declined.reason.other: "오류가 발생했습니다. 고객 지원팀에 문의해 주세요."
 identity_verification_declined.title: "신원을 확인할 수 없습니다!"
 identity_verification_declined.body: "제출하신 서류는 %{reason}으로 인해 처리할 수 없습니다."
