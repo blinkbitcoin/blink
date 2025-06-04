@@ -18,7 +18,7 @@ circle_threshold_reached.outer.body: "Outer Circle이 %{threshold}명에 도달�
 identity_verification_approved.title: "본인 인증이 완료되었습니다!"
 identity_verification_approved.body: "본인 인증을 위한 서류가 처리되었습니다."
 
-identity_verification_declined.reason.documents_not_clear: "업로드 된 서류의 화질이 선명하지 않습니다."
+identity_verification_declined.reason.documents_not_clear: "업로드된 서류의 화질이 선명하지 않습니다."
 identity_verification_declined.reason.photo_not_clear: "제출된 사진의 화질이 선명하지 않습니다."
 identity_verification_declined.reason.documents_do_not_match: "제출하신 서류가 본인 사진 또는 입력하신 정보와 일치하지 않습니다."
 identity_verification_declined.reason.documents_expired: "제출하신 서류가 만료되었습니다."
