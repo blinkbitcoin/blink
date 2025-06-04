@@ -25,10 +25,10 @@ identity_verification_declined.reason.documents_expired: "제출된 서류가 �
 identity_verification_declined.reason.documents_not_supported: "제출된 서류는 지원되지 않습니다."
 identity_verification_declined.reason.other: "오류가 발생했습니다. 고객 지원팀에 문의해 주세요."
 identity_verification_declined.title: "신원을 확인할 수 없습니다!"
-identity_verification_declined.body: "제출하신 서류는 %{reason}으로 인해 처리할 수 없습니다."
+identity_verification_declined.body: "제출된 서류는 %{reason}으로 인해 처리할 수 없습니다."
 
 identity_verification_review_started.title: "본인 인증이 진행 중입니다!"
-identity_verification_review_started.body: "제출하신 서류를 정상적으로 접수하였으며, 현재 처리 중입니다."
+identity_verification_review_started.body: "제출된 서류를 정상적으로 접수하였으며, 현재 처리 중입니다."
 
 transaction.intra_ledger_payment.title: "%{walletCurrency} 거래"
 transaction.intra_ledger_payment.body: "Sent payment of %{formattedCurrencyAmount}"
