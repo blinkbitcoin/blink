@@ -12,7 +12,7 @@ circle_grew.body: "누군가 방금 당신의 %{circle_type}에 추가되었습�
 circle_threshold_reached.inner.title: "멋진 Inner Circle이에요! \U0001F919"
 circle_threshold_reached.inner.body: "%{time_frame} 동안 %{threshold}명을 Blink에 초대하셨습니다. 계속 힘내세요!"
 
-circle_threshold_reached.outer.title: "Outer Circle이 늘어나고 있어요! \U0001F4AA"
+circle_threshold_reached.outer.title: "Outer Circle이 커지고 있어요! \U0001F4AA"
 circle_threshold_reached.outer.body: "Outer Circle이 %{threshold}명에 도달했습니다. 비트코인 확산을 이끌고 계시네요!"
 
 identity_verification_approved.title: "본인 인증이 완료되었습니다!"
