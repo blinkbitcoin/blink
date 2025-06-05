@@ -1,4 +1,4 @@
-import { JournalNotFoundError } from "medici"
+import { JournalNotFoundError, JournalAlreadyVoidedError } from "medici"
 
 import { MainBook, Transaction } from "../books"
 
@@ -129,7 +129,7 @@ export const recordOnChainSendRevert = async ({
 
     return true
   } catch (err) {
-    if (err instanceof JournalNotFoundError) {
+    if (err instanceof JournalNotFoundError || err instanceof JournalAlreadyVoidedError) {
       return new NoTransactionToUpdateError(JSON.stringify({ journalId, payoutId }))
     }
 
