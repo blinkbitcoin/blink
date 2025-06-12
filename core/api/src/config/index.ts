@@ -60,11 +60,12 @@ export const getJwksArgs = () => {
 export const getGeetestConfig = () => {
   const id = GEETEST_ID
   const key = GEETEST_KEY
+  const version = GEETEST_CAPTCHA_VERSION
 
   if (!id) throw new ConfigError("Missing GEETEST_ID config")
   if (!key) throw new ConfigError("Missing GEETEST_KEY config")
 
-  const config = { id, key }
+  const config = { id, key, version }
   return config
 }
 
@@ -170,6 +171,7 @@ export const NOTIFICATIONS_HOST = env.NOTIFICATIONS_HOST
 export const NOTIFICATIONS_PORT = env.NOTIFICATIONS_PORT
 export const GEETEST_ID = env.GEETEST_ID
 export const GEETEST_KEY = env.GEETEST_KEY
+export const GEETEST_CAPTCHA_VERSION = env.GEETEST_CAPTCHA_VERSION
 export const MONGODB_CON = env.MONGODB_CON
 export const GOOGLE_APPLICATION_CREDENTIALS = env.GOOGLE_APPLICATION_CREDENTIALS
 export const REDIS_MASTER_NAME = env.REDIS_MASTER_NAME

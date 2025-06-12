@@ -252,7 +252,7 @@ authRouter.post("/phone/captcha", async (req: Request, res: Response) => {
     return res.status(500).json({ error: "error creating challenge" })
   }
 
-  const { success, gt, challenge, newCaptcha } = result
+  const { success, gt, challenge, newCaptcha, version } = result
 
   return res.send({
     result: {
@@ -260,6 +260,8 @@ authRouter.post("/phone/captcha", async (req: Request, res: Response) => {
       challengeCode: challenge,
       newCaptcha,
       failbackMode: success === 0,
+      // Include version info for frontend detection
+      ...(version && { version }),
     },
   })
 })

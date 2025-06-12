@@ -64,6 +64,7 @@ export const env = createEnv({
 
     GEETEST_ID: z.string().min(1).optional(),
     GEETEST_KEY: z.string().min(1).optional(),
+    GEETEST_CAPTCHA_VERSION: z.enum(["v3", "v4"]).default("v3"),
 
     MONGODB_CON: z.string().url(),
 
@@ -195,6 +196,7 @@ export const env = createEnv({
 
     GEETEST_ID: process.env.GEETEST_ID,
     GEETEST_KEY: process.env.GEETEST_KEY,
+    GEETEST_CAPTCHA_VERSION: process.env.GEETEST_CAPTCHA_VERSION,
 
     MONGODB_CON: process.env.MONGODB_CON,
 

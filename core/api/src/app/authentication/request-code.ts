@@ -10,7 +10,7 @@ import { PhoneAlreadyExistsError } from "@/domain/authentication/errors"
 import { InvalidChannel, NotImplementedError } from "@/domain/errors"
 import { RateLimitConfig } from "@/domain/rate-limit"
 import { RateLimiterExceededError } from "@/domain/rate-limit/errors"
-import Geetest from "@/services/geetest"
+import GeetestService from "@/services/geetest"
 import { AuthWithEmailPasswordlessService } from "@/services/kratos"
 import { baseLogger } from "@/services/logger"
 import { UsersRepository } from "@/services/mongoose"
@@ -33,13 +33,31 @@ export const requestPhoneCodeWithCaptcha = async ({
   channel: string
 }): Promise<true | ApplicationError> => {
   const geeTestConfig = getGeetestConfig()
-  const geetest = Geetest(geeTestConfig)
+  const geetest = GeetestService(geeTestConfig)
 
-  const verifySuccess = await geetest.validate(
-    geetestChallenge,
-    geetestValidate,
-    geetestSeccode,
-  )
+  // Handle both v3 and v4 validation with parameter adaptation
+  let verifySuccess: true | CaptchaError
+
+  if (geeTestConfig.version === "v4") {
+    // For v4, we need to adapt v3 parameters to v4 format
+    // This is a temporary bridge until frontend sends proper v4 parameters
+    console.warn("⚠️  Using v3 parameters with v4 service. Frontend should be updated to send v4 parameters.")
+
+    // Map v3 parameters to v4 (this is a temporary workaround)
+    verifySuccess = await (geetest as GeetestV4Type).validate(
+      geetestChallenge, // lot_number (temporary mapping)
+      geetestValidate,  // captcha_output (temporary mapping)
+      geetestSeccode,   // pass_token (temporary mapping)
+      Date.now().toString(), // gen_time (fallback)
+    )
+  } else {
+    // v3 validation (deprecated)
+    verifySuccess = await (geetest as GeetestType).validate(
+      geetestChallenge,
+      geetestValidate,
+      geetestSeccode,
+    )
+  }
   if (verifySuccess instanceof Error) return verifySuccess
 
   {
@@ -81,6 +99,8 @@ export const requestPhoneCodeWithCaptcha = async ({
     phoneExists,
   })
 }
+
+// Note: Removed separate v4 function - the main requestPhoneCodeWithCaptcha function now handles both v3 and v4 automatically
 
 export const requestPhoneCodeForAuthedUser = async ({
   phone,

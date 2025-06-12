@@ -9,8 +9,6 @@ const CaptchaCreateChallengeMutation = GT.Field({
   },
   type: GT.NonNull(CaptchaCreateChallengePayload),
   resolve: async () => {
-    // TODO: store the request and determine what to do if things fail here...
-
     const res = await registerCaptchaGeetest()
 
     if (res instanceof Error) {
@@ -19,7 +17,7 @@ const CaptchaCreateChallengeMutation = GT.Field({
       }
     }
 
-    const { success, gt, challenge, newCaptcha } = res
+    const { success, gt, challenge, newCaptcha, version } = res
 
     return {
       errors: [],
@@ -28,6 +26,8 @@ const CaptchaCreateChallengeMutation = GT.Field({
         challengeCode: challenge,
         newCaptcha,
         failbackMode: success === 0,
+        // Include version info for frontend detection
+        ...(version && { version }),
       },
     }
   },

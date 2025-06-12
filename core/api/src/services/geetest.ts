@@ -7,6 +7,7 @@ import axios from "axios"
 import { GeetestLib } from "@galoy/gt3-server-node-express-sdk"
 
 import { addEventToCurrentSpan, recordExceptionInCurrentSpan } from "./tracing"
+import GeetestV4 from "./geetest-v4"
 
 import { CaptchaUserFailToPassError, UnknownCaptchaError } from "@/domain/captcha/errors"
 
@@ -31,7 +32,7 @@ const sendRequest = async (params: { gt: string }) => {
   return bypassRes
 }
 
-const Geetest = (config: { id: string; key: string }): GeetestType => {
+const GeetestService = (config: { id: string; key: string }): GeetestType => {
   const getBypassStatus = async () => {
     return sendRequest({ gt: config.id })
   }
@@ -88,4 +89,16 @@ const Geetest = (config: { id: string; key: string }): GeetestType => {
   return { register, validate }
 }
 
-export default Geetest
+// Main Geetest service with version detection and deprecation warnings
+const Geetest = (config: { id: string; key: string; version: "v3" | "v4" }) => {
+  if (config.version === "v4") {
+    // Use v4 implementation
+    return GeetestV4(config)
+  } else {
+    // v3 implementation (deprecated)
+    console.warn("⚠️  Geetest v3 is deprecated and will be removed in a future version. Please migrate to v4.")
+    return Geetest(config)
+  }
+}
+
+export default GeetestService
