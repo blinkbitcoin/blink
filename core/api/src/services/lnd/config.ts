@@ -1,4 +1,4 @@
-import { lndsConnect } from "./auth"
+import { lndsConnect, lndsConnectForPayments, lndsConnectForInvoices } from "./auth"
 
 import {
   NoValidNodeForPubkeyError,
@@ -12,6 +12,42 @@ export const getLnds = ({
   active,
 }: { type?: LndNodeType; active?: boolean } = {}): LndConnect[] => {
   let result = lndsConnect
+
+  if (type) {
+    result = result.filter((node) => node.type.some((nodeType) => nodeType === type))
+  }
+
+  if (active) {
+    result = result.filter(({ active }) => active)
+  }
+
+  return result
+}
+
+// Get nodes with payment-specific priority
+export const getLndsForPayments = ({
+  type,
+  active,
+}: { type?: LndNodeType; active?: boolean } = {}): LndConnect[] => {
+  let result = lndsConnectForPayments
+
+  if (type) {
+    result = result.filter((node) => node.type.some((nodeType) => nodeType === type))
+  }
+
+  if (active) {
+    result = result.filter(({ active }) => active)
+  }
+
+  return result
+}
+
+// Get nodes with invoice-specific priority
+export const getLndsForInvoices = ({
+  type,
+  active,
+}: { type?: LndNodeType; active?: boolean } = {}): LndConnect[] => {
+  let result = lndsConnectForInvoices
 
   if (type) {
     result = result.filter((node) => node.type.some((nodeType) => nodeType === type))
@@ -43,6 +79,24 @@ export const getActiveOnchainLnd = (): LndConnect | OnChainServiceError => {
   const lnds = getLnds({ active: true, type: "onchain" })
   if (lnds.length === 0) {
     return new OnChainServiceUnavailableError("no active lightning node (for onchain)")
+  }
+  return lnds[0]
+}
+
+// Get active LND node for payments with payment-specific priority
+export const getActiveLndForPayments = (): LndConnect | LightningServiceError => {
+  const lnds = getLndsForPayments({ active: true, type: "offchain" })
+  if (lnds.length === 0) {
+    return new OffChainServiceUnavailableError("no active lightning node (for payments)")
+  }
+  return lnds[0]
+}
+
+// Get active LND node for invoices with invoice-specific priority
+export const getActiveLndForInvoices = (): LndConnect | LightningServiceError => {
+  const lnds = getLndsForInvoices({ active: true, type: "offchain" })
+  if (lnds.length === 0) {
+    return new OffChainServiceUnavailableError("no active lightning node (for invoices)")
   }
   return lnds[0]
 }

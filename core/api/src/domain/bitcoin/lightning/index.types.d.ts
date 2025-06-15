@@ -282,10 +282,12 @@ interface ILightningService {
     decodedInvoice,
     btcPaymentAmount,
     maxFeeAmount,
+    pubkey,
   }: {
     decodedInvoice: LnInvoice
     btcPaymentAmount: BtcPaymentAmount
     maxFeeAmount: BtcPaymentAmount | undefined
+    pubkey?: Pubkey
   }): Promise<PayInvoiceResult | LightningServiceError>
 }
 

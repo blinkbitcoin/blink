@@ -84,6 +84,10 @@ export const env = createEnv({
     // LND PRIMARY
     LND_PRIORITY: z.enum(["lnd1", "lnd2"]).default("lnd1"),
 
+    // LND PRIORITIES FOR SPECIFIC OPERATIONS
+    LND_PAYMENT_PRIORITY: z.enum(["lnd1", "lnd2"]).optional(),
+    LND_INVOICE_PRIORITY: z.enum(["lnd1", "lnd2"]).optional(),
+
     LND1_PUBKEY: z
       .string()
       .regex(/^[a-f0-9]{66}$/i)
@@ -211,6 +215,8 @@ export const env = createEnv({
     REDIS_2_PORT: process.env.REDIS_2_PORT,
 
     LND_PRIORITY: process.env.LND_PRIORITY,
+    LND_PAYMENT_PRIORITY: process.env.LND_PAYMENT_PRIORITY,
+    LND_INVOICE_PRIORITY: process.env.LND_INVOICE_PRIORITY,
 
     LND1_PUBKEY: process.env.LND1_PUBKEY,
     LND1_TLS: process.env.LND1_TLS,

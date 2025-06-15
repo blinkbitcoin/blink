@@ -34,8 +34,12 @@ import sumBy from "lodash.sumby"
 import {
   getActiveLnd,
   getActiveOnchainLnd,
+  getActiveLndForPayments,
+  getActiveLndForInvoices,
   getLndFromPubkey,
   getLnds,
+  getLndsForPayments,
+  getLndsForInvoices,
   parseLndErrorDetails,
 } from "./config"
 
@@ -117,6 +121,17 @@ export const LndService = (): ILightningService | LightningServiceError => {
 
   const listActiveLndsWithPubkeys = (): { lnd: AuthenticatedLnd; pubkey: Pubkey }[] =>
     getLnds({ active: true, type: "offchain" }).map((lndAuth) => ({
+      lnd: lndAuth.lnd,
+      pubkey: lndAuth.pubkey,
+    }))
+
+  // Payment-specific node lists with payment priority
+  const listActiveLndForPayments = (): AuthenticatedLnd[] =>
+    getLndsForPayments({ active: true, type: "offchain" }).map((lndAuth) => lndAuth.lnd)
+
+  // Invoice-specific node lists with invoice priority
+  const listActiveLndsWithPubkeysForInvoices = (): { lnd: AuthenticatedLnd; pubkey: Pubkey }[] =>
+    getLndsForInvoices({ active: true, type: "offchain" }).map((lndAuth) => ({
       lnd: lndAuth.lnd,
       pubkey: lndAuth.pubkey,
     }))
@@ -389,14 +404,19 @@ export const LndService = (): ILightningService | LightningServiceError => {
     if (btcAmount instanceof Error) return btcAmount
     const maxFeeAmount = LnFees().maxProtocolAndBankFee(btcAmount)
 
-    const rawRoute = await probeForRoute({
+    // Use payment-specific priority for route finding
+    const paymentNode = getActiveLndForPayments()
+    if (paymentNode instanceof Error) return paymentNode
+
+    const rawRoute = await probeForRouteWithLnd({
+      lnd: paymentNode.lnd,
       decodedInvoice: invoice,
       maxFee: toSats(maxFeeAmount.amount),
       amount: sats,
     })
     if (rawRoute instanceof Error) return rawRoute
     return {
-      pubkey: defaultPubkey,
+      pubkey: paymentNode.pubkey as Pubkey,
       rawRoute,
     }
   }
@@ -414,11 +434,94 @@ export const LndService = (): ILightningService | LightningServiceError => {
       return new LightningServiceError(
         "Invalid amount passed to method for invoice with no amount. Expected a valid amount to be passed.",
       )
-    return probeForRoute({
+
+    // Use payment-specific priority for route finding
+    const paymentNode = getActiveLndForPayments()
+    if (paymentNode instanceof Error) return paymentNode
+
+    return probeForRouteWithLnd({
+      lnd: paymentNode.lnd,
       decodedInvoice,
       maxFee,
       amount,
     })
+  }
+
+  // Probe for route with specific LND node
+  const probeForRouteWithLnd = async ({
+    lnd,
+    decodedInvoice,
+    maxFee,
+    amount,
+  }: {
+    lnd: AuthenticatedLnd
+    decodedInvoice: LnInvoice
+    maxFee: Satoshis
+    amount: Satoshis
+  }): Promise<RawRoute | LightningServiceError> => {
+    let cancelTimeout = () => {
+      return
+    }
+    try {
+      const routes: ProbeForRouteRoutes = decodedInvoice.routeHints.map((route) =>
+        route.map((hop) => ({
+          base_fee_mtokens: hop.baseFeeMTokens,
+          channel: hop.channel,
+          cltv_delta: hop.cltvDelta,
+          fee_rate: hop.feeRate,
+          public_key: hop.nodePubkey,
+        })),
+      )
+
+      let mTokens = (amount * 1000).toString()
+      if (decodedInvoice.milliSatsAmount > 0) {
+        mTokens = decodedInvoice.milliSatsAmount.toString()
+      }
+
+      const probeForRouteArgs: ProbeForRouteArgs = {
+        lnd,
+        destination: decodedInvoice.destination,
+        mtokens: mTokens,
+        routes,
+        cltv_delta: decodedInvoice.cltvDelta || undefined,
+        features: decodedInvoice.features
+          ? decodedInvoice.features.map((f) => ({
+              bit: f.bit,
+              is_required: f.isRequired,
+              type: f.type,
+            }))
+          : undefined,
+        max_fee: maxFee,
+        payment: decodedInvoice.paymentSecret || undefined,
+        total_mtokens: decodedInvoice.paymentSecret ? mTokens : undefined,
+      }
+      const routePromise = lnService.probeForRoute(probeForRouteArgs)
+      const [timeoutPromise, cancelTimeoutFn] = timeoutWithCancel(
+        TIMEOUT_PAYMENT,
+        "Timeout",
+      )
+      cancelTimeout = cancelTimeoutFn
+      const route = (await Promise.race([routePromise, timeoutPromise])) as RawRoute
+      cancelTimeout()
+      if (!route) return new RouteNotFoundError()
+      return route
+    } catch (err) {
+      if (err instanceof Error && err.message === "Timeout") {
+        return new ProbeForRouteTimedOutFromApplicationError()
+      }
+      cancelTimeout()
+
+      const errDetails = parseLndErrorDetails(err)
+      const match = (knownErrDetail: RegExp): boolean => knownErrDetail.test(errDetails)
+      switch (true) {
+        case match(KnownLndErrorDetails.InsufficientBalance):
+          return new InsufficientBalanceForRoutingError()
+        case match(KnownLndErrorDetails.ProbeForRouteTimedOut):
+          return new ProbeForRouteTimedOutError()
+        default:
+          return handleCommonRouteNotFoundErrors(err)
+      }
+    }
   }
 
   const probeForRoute = async ({
@@ -540,7 +643,8 @@ export const LndService = (): ILightningService | LightningServiceError => {
     descriptionHash,
     expiresAt,
   }: RegisterInvoiceArgs): Promise<RegisteredInvoice | LightningServiceError> => {
-    const lndsAndPubkeys = listActiveLndsWithPubkeys()
+    // Use invoice-specific priority for invoice creation
+    const lndsAndPubkeys = listActiveLndsWithPubkeysForInvoices()
     for (const lndAndPubkey of lndsAndPubkeys) {
       const result = await registerInvoiceOnSingleLnd({
         lndAndPubkey,
@@ -554,7 +658,7 @@ export const LndService = (): ILightningService | LightningServiceError => {
       return result
     }
 
-    return new OffChainServiceUnavailableError("no active lightning node (for offchain)")
+    return new OffChainServiceUnavailableError("no active lightning node (for invoices)")
   }
 
   const lookupInvoice = async ({
@@ -893,12 +997,28 @@ export const LndService = (): ILightningService | LightningServiceError => {
     decodedInvoice,
     btcPaymentAmount,
     maxFeeAmount,
+    pubkey,
   }: {
     decodedInvoice: LnInvoice
     btcPaymentAmount: BtcPaymentAmount
     maxFeeAmount: BtcPaymentAmount | undefined
+    pubkey?: Pubkey
   }): Promise<PayInvoiceResult | LightningServiceError> => {
-    const lnds = listActiveLnd()
+    // If a specific pubkey is provided, use that node (for consistency with route probing)
+    if (pubkey) {
+      const lnd = getLndFromPubkey({ pubkey })
+      if (lnd instanceof Error) return lnd
+
+      return await payInvoiceViaPaymentDetailsWithLnd({
+        lnd,
+        decodedInvoice,
+        btcPaymentAmount,
+        maxFeeAmount,
+      })
+    }
+
+    // Otherwise, use payment-specific priority for payments
+    const lnds = listActiveLndForPayments()
     for (const lnd of lnds) {
       const result = await payInvoiceViaPaymentDetailsWithLnd({
         lnd,
@@ -910,7 +1030,7 @@ export const LndService = (): ILightningService | LightningServiceError => {
       return result
     }
 
-    return new OffChainServiceUnavailableError("no active lightning node (for offchain)")
+    return new OffChainServiceUnavailableError("no active lightning node (for payments)")
   }
 
   return wrapAsyncFunctionsToRunInSpan({

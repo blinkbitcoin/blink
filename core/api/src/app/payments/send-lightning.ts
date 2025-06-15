@@ -960,6 +960,7 @@ const lockedPaymentViaLnSteps = async ({
         : await lndService.payInvoiceViaPaymentDetails({
             ...maxFeeCheckArgs,
             decodedInvoice,
+            pubkey: outgoingNodePubkey, // Use same node that was used for probing (if any)
           })
   }
 
