@@ -1,4 +1,6 @@
-import { getFeesConfig, getOnChainWalletConfig } from "@/config"
+import { getOnChainDepositFeeConfiguration } from "./get-on-chain-deposit-fee-config"
+
+import { getOnChainWalletConfig } from "@/config"
 
 import { getCurrentPriceAsDisplayPriceRatio, usdFromBtcMidPriceFn } from "@/app/prices"
 
@@ -25,7 +27,6 @@ import { DisplayAmountsConverter } from "@/domain/fiat"
 
 const dealer = DealerPriceService()
 const { dustThreshold } = getOnChainWalletConfig()
-const feesConfig = getFeesConfig()
 
 export const addPendingTransaction = async ({
   txId,
@@ -48,11 +49,11 @@ export const addPendingTransaction = async ({
   const account = await AccountsRepository().findById(wallet.accountId)
   if (account instanceof Error) return account
 
+  const fees = await getOnChainDepositFeeConfiguration({ account })
+
   const satsFee = DepositFeeCalculator().onChainDepositFee({
     amount: satoshis,
-    minBankFee: feesConfig.depositDefaultMin,
-    minBankFeeThreshold: feesConfig.depositThreshold,
-    ratio: feesConfig.depositRatioAsBasisPoints,
+    ...fees,
   })
   if (satsFee instanceof Error) return satsFee
 

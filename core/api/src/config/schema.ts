@@ -522,6 +522,17 @@ export const configSchema = {
           additionalProperties: false,
           default: { defaultMin: 3000, threshold: 1000000, ratioAsBasisPoints: 30 },
         },
+        merchantDeposit: {
+          type: "object",
+          properties: {
+            defaultMin: { type: "integer" },
+            threshold: { type: "integer" },
+            ratioAsBasisPoints: { type: "integer" },
+          },
+          required: ["defaultMin", "threshold", "ratioAsBasisPoints"],
+          additionalProperties: false,
+          default: { defaultMin: 3000, threshold: 1000000, ratioAsBasisPoints: 30 },
+        },
         withdraw: {
           type: "object",
           properties: {

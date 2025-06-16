@@ -121,6 +121,11 @@ type YamlSchema = {
       threshold: number
       ratioAsBasisPoints: number
     }
+    merchantDeposit: {
+      defaultMin: number
+      threshold: number
+      ratioAsBasisPoints: number
+    }
     withdraw: {
       method: string
       ratioAsBasisPoints: number
