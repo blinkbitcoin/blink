@@ -155,6 +155,10 @@ fees:
     defaultMin: 3000
     threshold: 1000000
     ratioAsBasisPoints: 30
+  merchantDeposit:
+    defaultMin: 3000
+    threshold: 1000000
+    ratioAsBasisPoints: 30
 onChainWallet:
   dustThreshold: 5000
   minConfirmations: 2

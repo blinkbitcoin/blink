@@ -157,6 +157,12 @@ type LnurlPaymentSendArgs = {
   amount: number
 }
 
+type GetDepositFeeConfigurationResult = {
+  minBankFee: BtcPaymentAmount
+  minBankFeeThreshold: BtcPaymentAmount
+  ratio: DepositFeeRatioAsBasisPoints
+}
+
 type ProcessedReason =
   (typeof import("./process-pending-invoice-result").ProcessedReason)[keyof typeof import("./process-pending-invoice-result").ProcessedReason]
 
