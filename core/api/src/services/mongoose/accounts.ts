@@ -1,4 +1,5 @@
 import { parseRepositoryError } from "./utils"
+import { ContactsRepository } from "./contacts"
 
 import { AccountStatus } from "@/domain/accounts"
 import {
@@ -61,7 +62,6 @@ export const AccountsRepository = (): IAccountsRepository => {
     level,
     statusHistory,
     contactEnabled,
-    contacts,
     username,
     defaultWalletId,
     withdrawFee,
@@ -77,13 +77,6 @@ export const AccountsRepository = (): IAccountsRepository => {
           statusHistory,
           username,
           contactEnabled,
-          contacts: contacts.map(
-            ({ username, alias, transactionsCount }: AccountContact) => ({
-              id: username,
-              name: alias,
-              transactionsCount,
-            }),
-          ),
           defaultWalletId,
           withdrawFee,
           kratosUserId,
@@ -141,31 +134,28 @@ export const AccountsRepository = (): IAccountsRepository => {
   }
 }
 
-const translateToAccount = (result: AccountRecord): Account => ({
-  id: result.id as AccountId,
-  createdAt: new Date(result.created_at),
-  defaultWalletId: result.defaultWalletId as WalletId,
-  username: result.username as Username,
-  level: result.level as AccountLevel,
-  status: result.statusHistory.slice(-1)[0].status,
-  statusHistory: (result.statusHistory || []) as AccountStatusHistory,
-  contactEnabled: !!result.contactEnabled,
-  contacts: result.contacts.reduce(
-    (res: AccountContact[], contact: ContactObjectForUser): AccountContact[] => {
-      if (contact.id) {
-        res.push({
-          id: contact.id as Username,
-          username: contact.id as Username,
-          alias: (contact.name || contact.id) as ContactAlias,
-          transactionsCount: contact.transactionsCount,
-        })
-      }
-      return res
-    },
-    [],
-  ),
-  withdrawFee: result.withdrawFee as Satoshis,
+const translateToAccount = async (result: AccountRecord): Promise<Account> => {
+  const contactsRes = await ContactsRepository().getContactsByAccountId(result.id)
+  const contacts = contactsRes instanceof Error ? [] : contactsRes
 
-  kratosUserId: result.kratosUserId as UserId,
-  displayCurrency: (result.displayCurrency || UsdDisplayCurrency) as DisplayCurrency,
-})
+  return {
+    id: result.id as AccountId,
+    createdAt: new Date(result.created_at),
+    defaultWalletId: result.defaultWalletId as WalletId,
+    username: result.username as Username,
+    level: result.level as AccountLevel,
+    status: result.statusHistory.slice(-1)[0].status,
+    statusHistory: (result.statusHistory || []) as AccountStatusHistory,
+    contactEnabled: !!result.contactEnabled,
+    contacts: contacts.map((contact: ContactRecord) => ({
+      id: contact.identifier as Username,
+      username: contact.identifier as Username,
+      alias: contact.alias as ContactAlias,
+      transactionsCount: contact.transactionsCount,
+    })),
+    withdrawFee: result.withdrawFee as Satoshis,
+
+    kratosUserId: result.kratosUserId as UserId,
+    displayCurrency: (result.displayCurrency || UsdDisplayCurrency) as DisplayCurrency,
+  }
+}
