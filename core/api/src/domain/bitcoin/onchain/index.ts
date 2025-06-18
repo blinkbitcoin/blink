@@ -83,4 +83,6 @@ export const uniqueAddressesForTxn = (rawTx: OnChainTransaction) =>
 
 export const PayoutSpeed = {
   Fast: "fast",
+  Medium: "medium",
+  Slow: "slow",
 } as const

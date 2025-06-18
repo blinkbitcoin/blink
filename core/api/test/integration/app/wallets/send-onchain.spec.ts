@@ -353,6 +353,96 @@ describe("onChainPay", () => {
       const args = recordOnChainSendSpy.mock.calls[0][0]
       expect(args.metadata.type).toBe(LedgerTransactionType.OnchainPayment)
     })
+
+    it("settles onchain successfully using payout speed FAST", async () => {
+      const newWalletDescriptor = await createRandomUserAndBtcWallet()
+      const newAccount = await AccountsRepository().findById(
+        newWalletDescriptor.accountId,
+      )
+      if (newAccount instanceof Error) throw newAccount
+
+      // Fund balance for send
+      const receive = await recordReceiveLnPayment({
+        walletDescriptor: newWalletDescriptor,
+        paymentAmount: receiveAmounts,
+        bankFee: receiveBankFee,
+        displayAmounts: receiveDisplayAmounts,
+        memo,
+      })
+      if (receive instanceof Error) throw receive
+
+      // Execute payment
+      const paymentResult = await Payments.payOnChainByWalletIdForBtcWallet({
+        senderWalletId: newWalletDescriptor.id,
+        senderAccount: newAccount,
+        amount,
+        address: outsideAddress,
+        speed: PayoutSpeed.Fast,
+        memo,
+      })
+      if (paymentResult instanceof Error) throw paymentResult
+      expect(paymentResult.status).toBe(PaymentSendStatus.Success)
+    })
+
+    it("settles onchain successfully using payout speed MEDIUM", async () => {
+      const newWalletDescriptor = await createRandomUserAndBtcWallet()
+      const newAccount = await AccountsRepository().findById(
+        newWalletDescriptor.accountId,
+      )
+      if (newAccount instanceof Error) throw newAccount
+
+      // Fund balance for send
+      const receive = await recordReceiveLnPayment({
+        walletDescriptor: newWalletDescriptor,
+        paymentAmount: receiveAmounts,
+        bankFee: receiveBankFee,
+        displayAmounts: receiveDisplayAmounts,
+        memo,
+      })
+      if (receive instanceof Error) throw receive
+
+      // Execute payment
+      const paymentResult = await Payments.payOnChainByWalletIdForBtcWallet({
+        senderWalletId: newWalletDescriptor.id,
+        senderAccount: newAccount,
+        amount,
+        address: outsideAddress,
+        speed: PayoutSpeed.Medium,
+        memo,
+      })
+      if (paymentResult instanceof Error) throw paymentResult
+      expect(paymentResult.status).toBe(PaymentSendStatus.Success)
+    })
+
+    it("settles onchain successfully using payout speed SLOW", async () => {
+      const newWalletDescriptor = await createRandomUserAndBtcWallet()
+      const newAccount = await AccountsRepository().findById(
+        newWalletDescriptor.accountId,
+      )
+      if (newAccount instanceof Error) throw newAccount
+
+      // Fund balance for send
+      const receive = await recordReceiveLnPayment({
+        walletDescriptor: newWalletDescriptor,
+        paymentAmount: receiveAmounts,
+        bankFee: receiveBankFee,
+        displayAmounts: receiveDisplayAmounts,
+        memo,
+      })
+      if (receive instanceof Error) throw receive
+
+      // Execute payment
+      const paymentResult = await Payments.payOnChainByWalletIdForBtcWallet({
+        senderWalletId: newWalletDescriptor.id,
+        senderAccount: newAccount,
+        amount,
+        address: outsideAddress,
+        speed: PayoutSpeed.Slow,
+        memo,
+      })
+      if (paymentResult instanceof Error) throw paymentResult
+      expect(paymentResult.status).toBe(PaymentSendStatus.Success)
+    })
   })
 
   describe("settles intraledger", () => {

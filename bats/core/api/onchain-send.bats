@@ -512,3 +512,26 @@ wait_for_new_payout_id() {
   bria_cli cancel-payout -i ${payout_id}
   retry 10 1 grep_in_trigger_logs "sequence.*payout_cancelled.*${payout_id}"
 }
+
+@test "onchain-receive: returns list of available payout speeds using payout-speeds query" {
+  exec_graphql 'alice' 'payout-speeds'
+  payout_speeds="$(graphql_output '.data.payoutSpeeds')"
+
+  [[ "$(echo "$payout_speeds" | jq 'length')" -ge 3 ]] || exit 1
+
+  # Validate that each expected speed exists
+  if ! echo "$payout_speeds" | jq -e '.[] | select(.speed == "FAST")' > /dev/null; then
+    echo "Missing payout speed: FAST"
+    exit 1
+  fi
+
+  if ! echo "$payout_speeds" | jq -e '.[] | select(.speed == "MEDIUM")' > /dev/null; then
+    echo "Missing payout speed: MEDIUM"
+    exit 1
+  fi
+
+  if ! echo "$payout_speeds" | jq -e '.[] | select(.speed == "SLOW")' > /dev/null; then
+    echo "Missing payout speed: SLOW"
+    exit 1
+  fi
+}

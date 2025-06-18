@@ -182,16 +182,42 @@ export const configSchema = {
       type: "object",
       properties: {
         hotWalletName: { type: "string" },
-        queueNames: {
-          type: "object",
-          properties: {
-            fast: { type: "string" },
+        payoutQueues: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              speed: {
+                type: "string",
+                enum: ["fast", "medium", "slow"],
+              },
+              queueName: { type: "string" },
+              displayName: { type: "string" },
+              description: { type: "string" },
+            },
+            required: ["speed", "queueName", "displayName", "description"],
+            additionalProperties: false,
           },
-          required: ["fast"],
-          additionalProperties: false,
-          default: {
-            fast: "dev-queue",
-          },
+          default: [
+            {
+              speed: "fast",
+              queueName: "dev-queue",
+              displayName: "Priority",
+              description: "Estimated delivery ~10 minutes",
+            },
+            {
+              speed: "medium",
+              queueName: "dev-medium-queue",
+              displayName: "Standard",
+              description: "Estimated delivery ~1 hour",
+            },
+            {
+              speed: "slow",
+              queueName: "dev-slow-queue",
+              displayName: "Flexible",
+              description: "Estimated delivery ~24 hours",
+            },
+          ],
         },
         coldStorage: {
           type: "object",
@@ -206,7 +232,7 @@ export const configSchema = {
           },
         },
       },
-      required: ["hotWalletName", "queueNames", "coldStorage"],
+      required: ["hotWalletName", "payoutQueues", "coldStorage"],
       additionalProperties: false,
       default: {
         hotWalletName: "dev-wallet",
