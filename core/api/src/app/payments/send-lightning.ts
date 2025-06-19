@@ -67,7 +67,6 @@ import {
   checkWithdrawalLimits,
   createIntraledgerContact,
 } from "@/app/accounts"
-import { IntraledgerContactCreate } from "@/app/contacts"
 import { getCurrentPriceAsDisplayPriceRatio } from "@/app/prices"
 import {
   getTransactionForWalletByJournalId,

@@ -3,24 +3,24 @@ import { ContactsRepository } from "@/services/mongoose"
 
 export const contactCreate = async ({
   accountId,
-  identifier,
-  alias,
+  handle,
+  displayName,
   type,
 }: {
   accountId: AccountId
-  identifier: string
+  handle: string
   type: ContactType
-  alias: string
+  displayName: string
 }): Promise<Contact | ApplicationError> => {
   const contactsRepo = ContactsRepository()
 
-  const existing = await contactsRepo.findContact({ accountId, identifier })
+  const existing = await contactsRepo.findContact({ accountId, handle })
   if (existing instanceof CouldNotFindContactFromAccountIdError) {
     return contactsRepo.persistNew({
       accountId,
-      identifier,
+      handle,
       type,
-      alias,
+      displayName,
       transactionsCount: 1,
     })
   }
@@ -29,7 +29,7 @@ export const contactCreate = async ({
 
   return contactsRepo.update({
     ...existing,
-    alias,
+    displayName,
     transactionsCount: existing.transactionsCount + 1,
   })
 }

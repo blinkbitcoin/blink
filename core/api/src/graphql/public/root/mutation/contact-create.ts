@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import ContactPayload from "@/graphql/public/types/payload/contact"
+=======
+import ContactCreatePayload from "@/graphql/public/types/payload/contact-create"
+>>>>>>> a946da599 (refactor(graphql): rename Contact.identifier to handle and Contact.alias to displayName)
 import ContactHandle from "@/graphql/shared/types/scalar/contact-handle"
 import ContactDisplayName from "@/graphql/public/types/scalar/contact-alias"
 import ContactType from "@/graphql/shared/types/scalar/contact-type"

@@ -496,9 +496,6 @@ type GraphQLApplicationError implements Error {
 """Hex-encoded string of 32 bytes"""
 scalar Hex32Bytes
 
-"""Unique value used to identify a contact (e.g., username or lnAddress)"""
-scalar Identifier
-
 union InitiationVia = InitiationViaIntraLedger | InitiationViaLn | InitiationViaOnChain
 
 type InitiationViaIntraLedger {

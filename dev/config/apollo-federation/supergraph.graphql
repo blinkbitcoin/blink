@@ -721,10 +721,6 @@ enum Icon
   REFRESH @join__enumValue(graph: NOTIFICATIONS)
 }
 
-"""Unique value used to identify a contact (e.g., username or lnAddress)"""
-scalar Identifier
-  @join__type(graph: PUBLIC)
-
 union InitiationVia
   @join__type(graph: PUBLIC)
   @join__unionMember(graph: PUBLIC, member: "InitiationViaIntraLedger")

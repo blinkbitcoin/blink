@@ -1,7 +1,7 @@
 import ContactId from "@/graphql/shared/types/scalar/contact-id"
 import ContactType from "@/graphql/shared/types/scalar/contact-type"
-import Identifier from "@/graphql/shared/types/scalar/contact-identifier"
-import ContactAlias from "@/graphql/public/types/scalar/contact-alias"
+import Handle from "@/graphql/shared/types/scalar/contact-handle"
+import ContactDisplayName from "@/graphql/public/types/scalar/contact-display-name"
 import Timestamp from "@/graphql/shared/types/scalar/timestamp"
 import { GT } from "@/graphql/index"
 
@@ -10,19 +10,19 @@ const Contact = GT.Object<ContactRecord, GraphQLPublicContextAuth>({
   fields: () => ({
     id: {
       type: GT.NonNull(ContactId),
-      description: "ID of the contact user or external identifier.",
+      description: "ID of the contact user or external handle.",
     },
     type: {
       type: GT.NonNull(ContactType),
       description: "Type of the contact (intraledger, lnaddress, etc.).",
     },
-    identifier: {
-      type: GT.NonNull(Identifier),
+    handle: {
+      type: GT.NonNull(Handle),
       description: "Username or lnAddress that identifies the contact.",
     },
-    alias: {
-      type: ContactAlias,
-      description: "Alias name the user assigns to the contact.",
+    displayName: {
+      type: ContactDisplayName,
+      description: "DisplayName name the user assigns to the contact.",
     },
     transactionsCount: {
       type: GT.NonNull(GT.Int),

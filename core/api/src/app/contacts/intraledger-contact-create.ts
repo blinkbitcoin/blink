@@ -16,8 +16,8 @@ export const IntraledgerContactCreate = async ({
   if (recipientAccount.username) {
     const contactToPayerResult = await contactCreate({
       accountId: senderAccount.id,
-      identifier: recipientAccount.username,
-      alias: recipientAccount.username,
+      handle: recipientAccount.username,
+      displayName: recipientAccount.username,
       type: ContactType.IntraLedger,
     })
     if (contactToPayerResult instanceof Error) return contactToPayerResult
@@ -26,8 +26,8 @@ export const IntraledgerContactCreate = async ({
   if (senderAccount.username) {
     const contactToPayeeResult = await contactCreate({
       accountId: recipientAccount.id,
-      identifier: senderAccount.username,
-      alias: senderAccount.username,
+      handle: senderAccount.username,
+      displayName: senderAccount.username,
       type: ContactType.IntraLedger,
     })
     if (contactToPayeeResult instanceof Error) return contactToPayeeResult
