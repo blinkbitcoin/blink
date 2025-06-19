@@ -6,7 +6,7 @@ circle_time_frame.all_time: ""
 circle_type.inner: "내부 서클"
 circle_type.outer: "외부 서클"
 
-circle_grew.title: "Blink Circle이 점점 커지고 있어요!"
+circle_grew.title: "Blink 서클이 점점 커지고 있어요!"
 circle_grew.body: "누군가 방금 %{circle_type}에 추가되었습니다."
 
 circle_threshold_reached.inner.title: "훌륭한 Inner Circle이에요! \U0001F919"
