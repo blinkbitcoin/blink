@@ -4,7 +4,7 @@ circle_time_frame.month: "이번 달"
 circle_time_frame.all_time: ""
 
 circle_type.inner: "내부 서클"
-circle_type.outer: "outer circle"
+circle_type.outer: "외부 서클"
 
 circle_grew.title: "Blink Circle이 점점 커지고 있어요!"
 circle_grew.body: "누군가 방금 %{circle_type}에 추가되었습니다."
