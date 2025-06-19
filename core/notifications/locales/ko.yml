@@ -3,7 +3,7 @@ _version: 1
 circle_time_frame.month: "이번 달"
 circle_time_frame.all_time: ""
 
-circle_type.inner: "inner circle"
+circle_type.inner: "내부 서클"
 circle_type.outer: "outer circle"
 
 circle_grew.title: "Blink Circle이 점점 커지고 있어요!"
