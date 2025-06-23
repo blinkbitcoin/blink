@@ -14,7 +14,7 @@ export const contactCreate = async ({
 }): Promise<Contact | ApplicationError> => {
   const contactsRepo = ContactsRepository()
 
-  const existing = await contactsRepo.findContact({ accountId, handle })
+  const existing = await contactsRepo.findByHandle({ accountId, handle })
   if (existing instanceof CouldNotFindContactFromAccountIdError) {
     return contactsRepo.persistNew({
       accountId,
