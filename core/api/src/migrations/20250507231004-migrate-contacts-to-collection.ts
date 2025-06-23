@@ -54,6 +54,13 @@ module.exports = {
       }
     }
 
+    // Clean up embedded contacts from all accounts
+    const result = await db.collection("accounts").updateMany(
+      {},
+      { $unset: { contacts: "" } }
+    )
+    console.log(`Unset contacts field in ${result.modifiedCount} accounts`)
+
     console.log(`Migration completed. Total contacts migrated: ${migratedCount}`)
     if (failedAccounts.length > 0) {
       console.warn("Some accounts failed to migrate:", failedAccounts)

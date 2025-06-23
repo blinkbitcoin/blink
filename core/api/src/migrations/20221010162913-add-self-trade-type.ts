@@ -78,7 +78,7 @@ module.exports = {
         // Fetch accountId from db if not cached
         const wallet = await walletsCollection.findOne({ id: walletId })
         if (!wallet) continue
-        accountId = wallet._accountId?.toString?.()
+        accountId = wallet._accountId.toString()
         if (!accountId) continue
 
         accountIdsByWalletId[walletId] = accountId
