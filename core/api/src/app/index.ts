@@ -3,7 +3,6 @@ import * as AuthenticationMod from "./authentication"
 import * as AdminMod from "./admin"
 import * as CallbackMod from "./callback"
 import * as CommMod from "./comm"
-import * as ContactsMod from "./contacts"
 import * as QuizMod from "./quiz"
 import * as LightningMod from "./lightning"
 import * as OnChainMod from "./on-chain"
@@ -23,7 +22,6 @@ const allFunctions = {
   Admin: { ...AdminMod },
   Callback: { ...CallbackMod },
   Comm: { ...CommMod },
-  Contacts: { ...ContactsMod },
   Quiz: { ...QuizMod },
   Lightning: { ...LightningMod },
   OnChain: { ...OnChainMod },
@@ -55,7 +53,6 @@ export const {
   Admin,
   Callback,
   Comm,
-  Contacts,
   Quiz,
   Lightning,
   OnChain,

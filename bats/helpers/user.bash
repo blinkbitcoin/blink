@@ -155,5 +155,12 @@ is_contact() {
   local match
   match=$(graphql_output ".data.me.contacts[] | select(.username == \"$contact_handle\")")
 
+<<<<<<< HEAD
   [[ -n "$match" ]]
+=======
+  local result
+  result=$(mongo_cli "$mongo_query")
+
+  [[ "$result" != "null" && -n "$result" ]]
+>>>>>>> 20418ae4e (refactor(contacts): unify contact creation logic and align with app conventions)
 }

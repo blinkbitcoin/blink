@@ -3615,11 +3615,7 @@ export type ResolversTypes = {
   ContactDisplayName: ResolverTypeWrapper<Scalars['ContactDisplayName']['output']>;
   ContactHandle: ResolverTypeWrapper<Scalars['ContactHandle']['output']>;
   ContactId: ResolverTypeWrapper<Scalars['ContactId']['output']>;
-<<<<<<< HEAD
   ContactPayload: ResolverTypeWrapper<Omit<ContactPayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
-=======
-  ContactPayload: ResolverTypeWrapper<ContactPayload>;
->>>>>>> a8af2567c (refactor(graphql): rename contact-create.ts to contact.ts to match object name)
   ContactType: ContactType;
   Coordinates: ResolverTypeWrapper<Coordinates>;
   Float: ResolverTypeWrapper<Scalars['Float']['output']>;
@@ -3858,11 +3854,7 @@ export type ResolversParentTypes = {
   ContactDisplayName: Scalars['ContactDisplayName']['output'];
   ContactHandle: Scalars['ContactHandle']['output'];
   ContactId: Scalars['ContactId']['output'];
-<<<<<<< HEAD
   ContactPayload: Omit<ContactPayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
-=======
-  ContactPayload: ContactPayload;
->>>>>>> a8af2567c (refactor(graphql): rename contact-create.ts to contact.ts to match object name)
   Coordinates: Coordinates;
   Float: Scalars['Float']['output'];
   Country: Country;
