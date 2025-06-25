@@ -6,6 +6,31 @@ describe("username-check", () => {
     expect(username).toEqual("alice_12")
   })
 
+  it("Passes username with letters only", () => {
+    const username = checkedToUsername("alice")
+    expect(username).toEqual("alice")
+  })
+
+  it("Passes username with numbers and at least one letter", () => {
+    const username = checkedToUsername("9a456")
+    expect(username).toEqual("9a456")
+  })
+
+  it("Passes username with letter at the end", () => {
+    const username = checkedToUsername("2468z")
+    expect(username).toEqual("2468z")
+  })
+
+  it("Passes underscore in middle", () => {
+    const username = checkedToUsername("user_123")
+    expect(username).toEqual("user_123")
+  })
+
+  it("Fails if contains only digits", () => {
+    const username = checkedToUsername("639456")
+    expect(username).toBeInstanceOf(Error)
+  })
+
   it("Fails legacy address", () => {
     const username = checkedToUsername("1LKvxGL8ejTsgBjRVUNCGi7adiwaVnM9cn")
     expect(username).toBeInstanceOf(Error)
@@ -16,6 +41,16 @@ describe("username-check", () => {
     expect(username).toBeInstanceOf(Error)
   })
 
+  it("Fails if starting with 3", () => {
+    const username = checkedToUsername("3basd")
+    expect(username).toBeInstanceOf(Error)
+  })
+
+  it("Fails if starting with _", () => {
+    const username = checkedToUsername("_hidden")
+    expect(username).toBeInstanceOf(Error)
+  })
+
   it("Fails if starting with +", () => {
     const username = checkedToUsername("+573001234567")
     expect(username).toBeInstanceOf(Error)
@@ -23,11 +58,6 @@ describe("username-check", () => {
 
   it("Fails wrapped segwit address", () => {
     const username = checkedToUsername("32ksNi7zSt3t2aesvoEWhGMUEwCFg9UCCG")
-    expect(username).toBeInstanceOf(Error)
-  })
-
-  it("Fails if starting with 3", () => {
-    const username = checkedToUsername("3basd")
     expect(username).toBeInstanceOf(Error)
   })
 
@@ -70,6 +100,48 @@ describe("username-check", () => {
 
   it("Fails if non english characters", () => {
     const username = checkedToUsername("ñ_user1")
+    expect(username).toBeInstanceOf(Error)
+  })
+
+  it("Fails if only underscores", () => {
+    const username = checkedToUsername("___")
+    expect(username).toBeInstanceOf(Error)
+  })
+
+  it("Fails if no letters", () => {
+    const username = checkedToUsername("456_789")
+    expect(username).toBeInstanceOf(Error)
+  })
+
+  it("Fails if longer than 50 characters", () => {
+    const username = checkedToUsername("a".repeat(51))
+    expect(username).toBeInstanceOf(Error)
+  })
+
+  it("Passes if exactly 50 characters and valid", () => {
+    const username = checkedToUsername("b1".repeat(25))
+    expect(username).toEqual("b1".repeat(25))
+  })
+
+  it("Returns lowercase", () => {
+    let username = checkedToUsername("Abc123")
+    expect(username).toEqual("abc123")
+    username = checkedToUsername("ABC123")
+    expect(username).toEqual("abc123")
+  })
+
+  it("Fails on undefined input", () => {
+    const username = checkedToUsername(undefined as unknown as string)
+    expect(username).toBeInstanceOf(Error)
+  })
+
+  it("Fails on null input", () => {
+    const username = checkedToUsername(null as unknown as string)
+    expect(username).toBeInstanceOf(Error)
+  })
+
+  it("Fails on empty string", () => {
+    const username = checkedToUsername("")
     expect(username).toBeInstanceOf(Error)
   })
 })
