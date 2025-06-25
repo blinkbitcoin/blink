@@ -104,11 +104,14 @@ type Account = {
   status: AccountStatus
   statusHistory: AccountStatusHistory
   contactEnabled: boolean
-  readonly contacts: AccountContact[]
   kratosUserId: UserId
   displayCurrency: DisplayCurrency
   // temp
   role?: string
+}
+
+type AccountWithContacts = Account & {
+  contacts: AccountContact[]
 }
 
 type AccountValidator = {

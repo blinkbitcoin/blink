@@ -437,11 +437,69 @@ type ConsumerAccount implements Account
   wallets: [Wallet!]!
 }
 
+type Contact
+  @join__type(graph: PUBLIC)
+{
+  """
+  Unix timestamp (number of seconds elapsed since January 1, 1970 00:00:00 UTC)
+  """
+  createdAt: Timestamp!
+
+  """DisplayName name the user assigns to the contact."""
+  displayName: ContactDisplayName
+
+  """Username or lnAddress that identifies the contact."""
+  handle: ContactHandle!
+
+  """ID of the contact user or external handle."""
+  id: ContactId!
+
+  """Total number of transactions with this contact."""
+  transactionsCount: Int!
+
+  """Type of the contact (intraledger, lnaddress, etc.)."""
+  type: ContactType!
+}
+
 """
 An alias name that a user can set for a wallet (with which they have transactions)
 """
 scalar ContactAlias
   @join__type(graph: PUBLIC)
+
+input ContactCreateInput
+  @join__type(graph: PUBLIC)
+{
+  displayName: ContactAlias
+  handle: ContactHandle
+  type: ContactType!
+}
+
+"""A display name that a user can assign to a contact"""
+scalar ContactDisplayName
+  @join__type(graph: PUBLIC)
+
+"""Unique handle used to identify a contact (e.g., username or lnAddress)"""
+scalar ContactHandle
+  @join__type(graph: PUBLIC)
+
+"""Unique identifier of a contact"""
+scalar ContactId
+  @join__type(graph: PUBLIC)
+
+type ContactPayload
+  @join__type(graph: PUBLIC)
+{
+  contact: Contact
+  errors: [Error!]!
+}
+
+enum ContactType
+  @join__type(graph: PUBLIC)
+{
+  INTRALEDGER @join__enumValue(graph: PUBLIC)
+  LNADDRESS @join__enumValue(graph: PUBLIC)
+}
 
 type Coordinates
   @join__type(graph: PUBLIC)
@@ -1226,6 +1284,7 @@ type Mutation
   callbackEndpointDelete(input: CallbackEndpointDeleteInput!): SuccessPayload! @join__field(graph: PUBLIC)
   captchaCreateChallenge: CaptchaCreateChallengePayload! @join__field(graph: PUBLIC)
   captchaRequestAuthCode(input: CaptchaRequestAuthCodeInput!): SuccessPayload! @join__field(graph: PUBLIC)
+  contactCreate(input: ContactCreateInput!): ContactPayload! @join__field(graph: PUBLIC)
   deviceNotificationTokenCreate(input: DeviceNotificationTokenCreateInput!): SuccessPayload! @join__field(graph: PUBLIC)
   feedbackSubmit(input: FeedbackSubmitInput!): SuccessPayload! @join__field(graph: PUBLIC)
 

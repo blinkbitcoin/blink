@@ -1,6 +1,6 @@
 import { checkedToAccountId, checkedToContactAlias } from "@/domain/accounts"
 import { ContactNotExistentError } from "@/domain/errors"
-import { AccountsRepository } from "@/services/mongoose"
+import { ContactsRepository } from "@/services/mongoose"
 
 export const updateContactAlias = async ({
   accountId: accountIdRaw,
@@ -14,27 +14,30 @@ export const updateContactAlias = async ({
   const accountId = checkedToAccountId(accountIdRaw)
   if (accountId instanceof Error) return accountId
 
-  const repo = AccountsRepository()
-
   const aliasChecked = checkedToContactAlias(alias)
   if (aliasChecked instanceof Error) return aliasChecked
 
-  const account = await repo.findById(accountId)
-  if (account instanceof Error) {
-    return account
-  }
+  const contacts = await ContactsRepository().listByAccountId(accountId)
+  if (contacts instanceof Error) return contacts
 
-  const contact = account.contacts.find((contact) => contact.username === username)
+  const contact = contacts.find(
+    (contact) => contact.handle.toLowerCase() === username.toLowerCase(),
+  )
   if (!contact) {
     return new ContactNotExistentError()
   }
 
-  contact.alias = aliasChecked
+  contact.displayName = aliasChecked
 
-  const result = await repo.update(account)
+  const result = await ContactsRepository().update(contact)
   if (result instanceof Error) {
     return result
   }
 
-  return contact
+  return {
+    id: contact.handle as Username,
+    username: contact.handle as Username,
+    alias: aliasChecked,
+    transactionsCount: contact.transactionsCount,
+  }
 }
