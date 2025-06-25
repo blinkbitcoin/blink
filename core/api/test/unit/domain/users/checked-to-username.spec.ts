@@ -123,7 +123,7 @@ describe("username-check", () => {
     expect(username).toEqual("b1".repeat(25))
   })
 
-  it("Passes if has at least one lowercase among uppercase", () => {
+  it("Returns lowercase", () => {
     let username = checkedToUsername("Abc123")
     expect(username).toEqual("abc123")
     username = checkedToUsername("ABC123")
