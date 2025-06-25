@@ -1,7 +1,6 @@
-import { mongo } from "mongoose"
-
 module.exports = {
-  async up(db: mongo.Db) {
+  // @ts-ignore-next-line no-implicit-any error
+  async up(db) {
     console.log("Begin username prefix migration for invalid usernames")
 
     const cursor = db.collection("accounts").find({
