@@ -1,16 +1,32 @@
 import {
   TWILIO_ACCOUNT_SID,
   UNSECURE_DEFAULT_LOGIN_CODE,
+  getAccountsOnboardConfig,
   getGeetestConfig,
   getTestAccounts,
 } from "@/config"
+import { ErrorLevel } from "@/domain/shared"
 import { ChannelType, checkedToChannel } from "@/domain/phone-provider"
 import { TestAccountsChecker } from "@/domain/accounts/test-accounts-checker"
 import { PhoneAlreadyExistsError } from "@/domain/authentication/errors"
-import { InvalidChannel, NotImplementedError } from "@/domain/errors"
+import {
+  InvalidChannel,
+  InvalidIpMetadataError,
+  MissingIPMetadataError,
+  NotImplementedError,
+  UnauthorizedIPForOnboardingError,
+} from "@/domain/errors"
 import { RateLimitConfig } from "@/domain/rate-limit"
+import { IpFetcherServiceError } from "@/domain/ipfetcher"
 import { RateLimiterExceededError } from "@/domain/rate-limit/errors"
+import { IPMetadataAuthorizer } from "@/domain/accounts-ips/ip-metadata-authorizer"
+
+import {
+  addAttributesToCurrentSpan,
+  recordExceptionInCurrentSpan,
+} from "@/services/tracing"
 import Geetest from "@/services/geetest"
+import { IpFetcher } from "@/services/ipfetcher"
 import { AuthWithEmailPasswordlessService } from "@/services/kratos"
 import { baseLogger } from "@/services/logger"
 import { UsersRepository } from "@/services/mongoose"
@@ -220,11 +236,46 @@ export const requestEmailCode = async ({
 
 const checkRequestCodeAttemptPerIpLimits = async (
   ip: IpAddress,
-): Promise<true | RateLimiterExceededError> =>
-  consumeLimiter({
+): Promise<true | DomainError> => {
+  const { ipMetadataValidationSettings } = getAccountsOnboardConfig()
+
+  addAttributesToCurrentSpan({
+    "requestCode.ipMetadataValidation": ipMetadataValidationSettings.enabled,
+  })
+
+  if (ipMetadataValidationSettings.enabled) {
+    const ipFetcherInfo = await IpFetcher().fetchIPInfo(ip)
+
+    if (ipFetcherInfo instanceof IpFetcherServiceError) {
+      recordExceptionInCurrentSpan({
+        error: ipFetcherInfo,
+        level: ErrorLevel.Critical,
+        attributes: { ip },
+      })
+      return ipFetcherInfo
+    }
+
+    addAttributesToCurrentSpan({
+      "requestCode.ipFetcherInfo": JSON.stringify(ipFetcherInfo),
+    })
+
+    const authorizedIPMetadata = IPMetadataAuthorizer(
+      ipMetadataValidationSettings,
+    ).authorize(ipFetcherInfo)
+
+    if (authorizedIPMetadata instanceof Error) {
+      if (authorizedIPMetadata instanceof MissingIPMetadataError)
+        return new InvalidIpMetadataError(authorizedIPMetadata)
+
+      return new UnauthorizedIPForOnboardingError(authorizedIPMetadata)
+    }
+  }
+
+  return consumeLimiter({
     rateLimitConfig: RateLimitConfig.requestCodeAttemptPerIp,
     keyToConsume: ip,
   })
+}
 
 const checkRequestCodeAttemptPerPhoneNumberLimits = async (
   phoneNumber: PhoneNumber,
