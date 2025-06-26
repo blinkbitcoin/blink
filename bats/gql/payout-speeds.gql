@@ -1,0 +1,7 @@
+query payoutSpeeds {
+  payoutSpeeds {
+    speed
+    displayName
+    description
+  }
+}

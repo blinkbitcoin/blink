@@ -182,34 +182,57 @@ export const configSchema = {
       type: "object",
       properties: {
         hotWalletName: { type: "string" },
-        queueNames: {
-          type: "object",
-          properties: {
-            fast: { type: "string" },
+        coldWalletName: { type: "string" },
+        hotToColdRebalanceQueueName: { type: "string" },
+        payoutQueues: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              speed: {
+                type: "string",
+                enum: ["fast", "medium", "slow"],
+              },
+              queueName: { type: "string" },
+              displayName: { type: "string" },
+              description: { type: "string" },
+            },
+            required: ["speed", "queueName", "displayName", "description"],
+            additionalProperties: false,
           },
-          required: ["fast"],
-          additionalProperties: false,
-          default: {
-            fast: "dev-queue",
-          },
-        },
-        coldStorage: {
-          type: "object",
-          properties: {
-            walletName: { type: "string" },
-            hotToColdRebalanceQueueName: { type: "string" },
-          },
-          required: ["walletName", "hotToColdRebalanceQueueName"],
-          default: {
-            walletName: "cold",
-            hotToColdRebalanceQueueName: "dev-queue",
-          },
+          default: [
+            {
+              speed: "fast",
+              queueName: "dev-queue",
+              displayName: "Priority",
+              description: "Estimated broadcast ~10 minutes",
+            },
+            {
+              speed: "medium",
+              queueName: "dev-medium-queue",
+              displayName: "Standard",
+              description: "Estimated broadcast ~1 hour",
+            },
+            {
+              speed: "slow",
+              queueName: "dev-slow-queue",
+              displayName: "Flexible",
+              description: "Estimated broadcast ~24 hours",
+            },
+          ],
         },
       },
-      required: ["hotWalletName", "queueNames", "coldStorage"],
+      required: [
+        "hotWalletName",
+        "coldWalletName",
+        "hotToColdRebalanceQueueName",
+        "payoutQueues",
+      ],
       additionalProperties: false,
       default: {
         hotWalletName: "dev-wallet",
+        coldWalletName: "cold",
+        hotToColdRebalanceQueueName: "dev-queue",
       },
     },
     lndScbBackupBucketName: { type: "string", default: "lnd-static-channel-backups" },

@@ -19,6 +19,7 @@ export class ExpectedPayoutSettledPayloadNotFoundError extends BriaPayloadError 
 export class ExpectedPayoutCancelledPayloadNotFoundError extends BriaPayloadError {}
 export class UnknownPayloadTypeReceivedError extends BriaPayloadError {}
 export class ExpectedAddressInfoMissingInEventError extends BriaPayloadError {}
+export class PayoutQueueNotFoundError extends BriaEventError {}
 
 export class UnknownBriaEventError extends BriaEventError {
   level = ErrorLevel.Critical

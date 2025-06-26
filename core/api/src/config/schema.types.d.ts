@@ -17,6 +17,13 @@ type AccountLimitsConfig = {
   }
 }
 
+type PayoutQueueConfig = {
+  speed: PayoutSpeed
+  queueName: string
+  displayName: string
+  description: string
+}
+
 type YamlSchema = {
   name: string
   lightningAddressDomain: string
@@ -53,13 +60,9 @@ type YamlSchema = {
   }
   bria: {
     hotWalletName: string
-    queueNames: {
-      fast: string
-    }
-    coldStorage: {
-      walletName: string
-      hotToColdRebalanceQueueName: string
-    }
+    payoutQueues: PayoutQueueConfig[]
+    coldWalletName: string
+    hotToColdRebalanceQueueName: string
   }
   lndScbBackupBucketName: string
   admin_accounts: {
