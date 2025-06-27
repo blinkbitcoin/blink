@@ -14,6 +14,10 @@ setup_file() {
 }
 
 @test "merchant: suggest a merchant" {
+  exec_graphql 'anon' 'business-map-markers'
+  local initial_merchants="$(graphql_output)"
+  local initial_merchants_length=$(echo "$initial_merchants" | jq '.data.businessMapMarkers | length')
+
   token_name='merchant'
 
   latitude=40.712776
@@ -33,12 +37,12 @@ setup_file() {
   latitude_result="$(graphql_output '.data.merchantMapSuggest.merchant.coordinates.latitude')"
   [[ "$latitude_result" == "$latitude" ]] || exit 1
 
-  # no merchant visible yet
+  # no additional merchant visible yet
   exec_graphql 'anon' 'business-map-markers'
   map_markers="$(graphql_output)"
   markers_length=$(echo "$map_markers" | jq '.data.businessMapMarkers | length')
 
-  [[ $markers_length -eq 0 ]] || exit 1
+  [[ $markers_length -eq $initial_merchants_length ]] || exit 1
 }
 
 @test "merchant: listing and approving merchant waiting for approval" {
@@ -69,6 +73,10 @@ setup_file() {
 }
 
 @test "merchant: delete merchant with admin api" {
+  exec_graphql 'anon' 'business-map-markers'
+  local initial_merchants="$(graphql_output)"
+  local initial_merchants_length=$(echo "$initial_merchants" | jq '.data.businessMapMarkers | length')
+
   admin_token="$(read_value 'admin.token')"
 
   id="$(read_value merchant.id)"
@@ -83,5 +91,5 @@ setup_file() {
   map_markers="$(graphql_output)"
   markers_length=$(echo "$map_markers" | jq '.data.businessMapMarkers | length')
 
-  [[ $markers_length -eq 0 ]] || exit 1
+  [[ $markers_length -eq $((initial_merchants_length - 1)) ]] || exit 1
 }
