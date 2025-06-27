@@ -81,7 +81,7 @@ create_tx_for_merchant() {
   local variables=$(
     jq -n \
     --arg wallet_id "$(read_value $btc_wallet_name)" \
-    --arg amount "1000" \
+    --arg amount "21" \
     '{input: {walletId: $wallet_id, amount: $amount}}'
   )
   exec_graphql "$token_name" 'ln-invoice-create' "$variables"
