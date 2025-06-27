@@ -1,8 +1,6 @@
-import { OnChain, Lightning, Wallets, Payments } from "@/app"
+import { OnChain, Lightning, Wallets, Payments, Merchants } from "@/app"
 
 import { getCronConfig, TWO_MONTHS_IN_MS } from "@/config"
-
-import { Merchants } from "@/app"
 
 import { ErrorLevel } from "@/domain/shared"
 import { OperationInterruptedError } from "@/domain/errors"
