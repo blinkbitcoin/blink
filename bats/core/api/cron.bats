@@ -5,7 +5,7 @@ load "../../helpers/cli.bash"
 load "../../helpers/ledger.bash"
 load "../../helpers/ln.bash"
 load "../../helpers/user.bash"
-
+load "../../helpers/merchant.bash"
 
 setup_file() {
   clear_cache
@@ -166,4 +166,59 @@ synced_to_graph() {
 
   [[ "$rebalanced_local_balance" -lt "$original_local_balance" ]] || exit 1
   [[ "$rebalanced_remote_balance" -gt "$original_remote_balance" ]] || exit 1
+}
+
+@test "cron: should remove only inactive merchants" {
+  exec_graphql 'anon' 'business-map-markers'
+  local initial_merchants="$(graphql_output)"
+  local initial_merchants_length=$(echo "$initial_merchants" | jq '.data.businessMapMarkers | length')
+
+  local new_merchant_token_name="new_merchant"
+  create_new_merchant $new_merchant_token_name
+  create_old_merchant "old_merchant"
+  run_cron
+
+  exec_graphql 'anon' 'business-map-markers'
+  local merchants="$(graphql_output)"
+  local merchants_length=$(echo "$merchants" | jq '.data.businessMapMarkers | length')
+  [[ $merchants_length -eq $((initial_merchants_length + 1)) ]] || exit 1
+
+  local username="$(read_value $new_merchant_token_name.username)"
+  local merchant_username=$(echo "$merchants" | jq -r ".data.businessMapMarkers[$initial_merchants_length].username")
+  [[ $merchant_username == "$username" ]] || exit 1
+}
+
+@test "cron: should not remove old merchant with recent transactions" {
+  exec_graphql 'anon' 'business-map-markers'
+  local initial_merchants="$(graphql_output)"
+  local initial_merchants_length=$(echo "$initial_merchants" | jq '.data.businessMapMarkers | length')
+
+  local token_name="old_merchant_with_recent_tx"
+  create_old_merchant $token_name
+  create_tx_for_merchant $token_name
+  run_cron
+
+  exec_graphql 'anon' 'business-map-markers'
+  local merchants="$(graphql_output)"
+  local merchants_length=$(echo "$merchants" | jq '.data.businessMapMarkers | length')
+
+  local username="$(read_value $token_name.username)"
+  [[ $merchants_length -eq $((initial_merchants_length + 1)) ]] || exit 1
+  local merchant_username=$(echo "$merchants" | jq -r ".data.businessMapMarkers[$initial_merchants_length].username")
+  [[ $merchant_username == "$username" ]] || exit 1
+}
+
+@test "cron: should remove old merchant with old transactions" {
+  exec_graphql 'anon' 'business-map-markers'
+  local initial_merchants="$(graphql_output)"
+  local initial_merchants_length=$(echo "$initial_merchants" | jq '.data.businessMapMarkers | length')
+
+  create_old_merchant_with_old_tx "old_merchant_with_old_tx"
+
+  run_cron
+
+  exec_graphql 'anon' 'business-map-markers'
+  local merchants="$(graphql_output)"
+  local merchants_length=$(echo "$merchants" | jq '.data.businessMapMarkers | length')
+  [[ $merchants_length -eq $initial_merchants_length ]] || exit 1
 }
