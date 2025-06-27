@@ -10,6 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@master
+        with:
+          root-reserve-mb: 15360
+          temp-reserve-mb: 12288
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
