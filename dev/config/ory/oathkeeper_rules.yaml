@@ -57,7 +57,7 @@
         token_from:
           header: X-API-KEY
         forward_http_headers:
-        - "X-API-KEY"
+          - "X-API-KEY"
         check_session_url: "http://bats-tests:5397/auth/check"
         force_method: GET
         preserve_path: true
@@ -90,7 +90,7 @@
   authenticators:
     - handler: cookie_session
       config:
-        check_session_url: http://host.docker.internal:3004/api/auth/session
+        check_session_url: http://bats-tests:3004/api/auth/session
         preserve_path: true
         preserve_query: true
         subject_from: user.email

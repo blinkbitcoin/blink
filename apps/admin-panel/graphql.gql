@@ -380,6 +380,20 @@ query merchantsPendingApproval {
   }
 }
 
+query inactiveMerchants {
+  inactiveMerchants {
+    id
+    title
+    coordinates {
+      latitude
+      longitude
+    }
+    createdAt
+    validated
+    username
+  }
+}
+
 query filteredUserCount($phoneCountryCodesFilter: [CountryCode!], $userIdsFilter: [ID!]) {
   filteredUserCount(
     phoneCountryCodesFilter: $phoneCountryCodesFilter
