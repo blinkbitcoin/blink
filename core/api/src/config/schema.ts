@@ -611,7 +611,7 @@ export const configSchema = {
       additionalProperties: false,
       default: {
         rebalanceEnabled: true,
-        removeInactiveMerchantsEnabled: false,
+        removeInactiveMerchantsEnabled: true,
       },
     },
     captcha: {
