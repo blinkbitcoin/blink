@@ -541,6 +541,7 @@ export type Query = {
   readonly accountDetailsByUsername: AuditedAccount;
   readonly allLevels: ReadonlyArray<AccountLevel>;
   readonly filteredUserCount: Scalars['Int']['output'];
+  readonly inactiveMerchants: ReadonlyArray<Merchant>;
   readonly lightningInvoice: LightningInvoice;
   readonly lightningPayment: LightningPayment;
   readonly merchantsPendingApproval: ReadonlyArray<Merchant>;
@@ -984,6 +985,11 @@ export type MerchantsPendingApprovalQueryVariables = Exact<{ [key: string]: neve
 
 
 export type MerchantsPendingApprovalQuery = { readonly __typename: 'Query', readonly merchantsPendingApproval: ReadonlyArray<{ readonly __typename: 'Merchant', readonly id: string, readonly title: string, readonly createdAt: number, readonly validated: boolean, readonly username: string, readonly coordinates: { readonly __typename: 'Coordinates', readonly latitude: number, readonly longitude: number } }> };
+
+export type InactiveMerchantsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type InactiveMerchantsQuery = { readonly __typename: 'Query', readonly inactiveMerchants: ReadonlyArray<{ readonly __typename: 'Merchant', readonly id: string, readonly title: string, readonly createdAt: number, readonly validated: boolean, readonly username: string, readonly coordinates: { readonly __typename: 'Coordinates', readonly latitude: number, readonly longitude: number } }> };
 
 export type FilteredUserCountQueryVariables = Exact<{
   phoneCountryCodesFilter?: InputMaybe<ReadonlyArray<Scalars['CountryCode']['input']> | Scalars['CountryCode']['input']>;
@@ -1796,6 +1802,53 @@ export type MerchantsPendingApprovalQueryHookResult = ReturnType<typeof useMerch
 export type MerchantsPendingApprovalLazyQueryHookResult = ReturnType<typeof useMerchantsPendingApprovalLazyQuery>;
 export type MerchantsPendingApprovalSuspenseQueryHookResult = ReturnType<typeof useMerchantsPendingApprovalSuspenseQuery>;
 export type MerchantsPendingApprovalQueryResult = Apollo.QueryResult<MerchantsPendingApprovalQuery, MerchantsPendingApprovalQueryVariables>;
+export const InactiveMerchantsDocument = gql`
+    query inactiveMerchants {
+  inactiveMerchants {
+    id
+    title
+    coordinates {
+      latitude
+      longitude
+    }
+    createdAt
+    validated
+    username
+  }
+}
+    `;
+
+/**
+ * __useInactiveMerchantsQuery__
+ *
+ * To run a query within a React component, call `useInactiveMerchantsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useInactiveMerchantsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useInactiveMerchantsQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useInactiveMerchantsQuery(baseOptions?: Apollo.QueryHookOptions<InactiveMerchantsQuery, InactiveMerchantsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<InactiveMerchantsQuery, InactiveMerchantsQueryVariables>(InactiveMerchantsDocument, options);
+      }
+export function useInactiveMerchantsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<InactiveMerchantsQuery, InactiveMerchantsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<InactiveMerchantsQuery, InactiveMerchantsQueryVariables>(InactiveMerchantsDocument, options);
+        }
+export function useInactiveMerchantsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<InactiveMerchantsQuery, InactiveMerchantsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<InactiveMerchantsQuery, InactiveMerchantsQueryVariables>(InactiveMerchantsDocument, options);
+        }
+export type InactiveMerchantsQueryHookResult = ReturnType<typeof useInactiveMerchantsQuery>;
+export type InactiveMerchantsLazyQueryHookResult = ReturnType<typeof useInactiveMerchantsLazyQuery>;
+export type InactiveMerchantsSuspenseQueryHookResult = ReturnType<typeof useInactiveMerchantsSuspenseQuery>;
+export type InactiveMerchantsQueryResult = Apollo.QueryResult<InactiveMerchantsQuery, InactiveMerchantsQueryVariables>;
 export const FilteredUserCountDocument = gql`
     query filteredUserCount($phoneCountryCodesFilter: [CountryCode!], $userIdsFilter: [ID!]) {
   filteredUserCount(
