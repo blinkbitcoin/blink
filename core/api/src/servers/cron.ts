@@ -1,4 +1,4 @@
-import { OnChain, Lightning, Wallets, Payments } from "@/app"
+import { OnChain, Lightning, Wallets, Payments, Merchants } from "@/app"
 
 import { getCronConfig, TWO_MONTHS_IN_MS } from "@/config"
 
@@ -54,6 +54,11 @@ const deleteLndPaymentsBefore2Months = async () => {
   if (result instanceof Error) throw result
 }
 
+const removeInactiveMerchants = async () => {
+  const result = await Merchants.removeInactiveMerchants()
+  if (result instanceof Error) throw result
+}
+
 const main = async () => {
   console.log("cronjob started")
   const start = new Date()
@@ -76,6 +81,7 @@ const main = async () => {
     deleteExpiredPaymentFlows,
     deleteLndPaymentsBefore2Months,
     deleteFailedPaymentsAttemptAllLnds,
+    ...(cronConfig.removeInactiveMerchantsEnabled ? [removeInactiveMerchants] : []),
   ]
 
   const PROCESS_KILL_EVENTS = ["SIGTERM", "SIGINT"]

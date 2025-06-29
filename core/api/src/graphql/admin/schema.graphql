@@ -466,6 +466,7 @@ type Query {
   accountDetailsByUsername(username: Username!): AuditedAccount!
   allLevels: [AccountLevel!]!
   filteredUserCount(phoneCountryCodesFilter: [CountryCode!], userIdsFilter: [ID!]): Int!
+  inactiveMerchants: [Merchant!]!
   lightningInvoice(hash: PaymentHash!): LightningInvoice!
   lightningPayment(hash: PaymentHash!): LightningPayment!
   merchantsPendingApproval: [Merchant!]!

@@ -168,6 +168,7 @@ onChainWallet:
 userActivenessMonthlyVolumeThreshold: 100
 cronConfig:
   rebalanceEnabled: true
+  removeInactiveMerchantsEnabled: true
 captcha:
   mandatory: false
 skipFeeProbeConfig:
