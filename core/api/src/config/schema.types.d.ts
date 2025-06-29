@@ -144,6 +144,7 @@ type YamlSchema = {
   userActivenessMonthlyVolumeThreshold: number
   cronConfig: {
     rebalanceEnabled: boolean
+    removeInactiveMerchantsEnabled: boolean
   }
   captcha: {
     mandatory: boolean

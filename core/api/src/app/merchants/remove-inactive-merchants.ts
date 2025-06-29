@@ -4,6 +4,8 @@ import { getTransactionsForAccountByWalletIds } from "@/app/accounts"
 
 import { AccountsRepository, MerchantsRepository } from "@/services/mongoose"
 
+const INACTIVE_MONTHS = 6
+
 export const removeInactiveMerchants = async (): Promise<void | ApplicationError> => {
   const merchantsRepo = MerchantsRepository()
   const accountsRepo = AccountsRepository()
@@ -12,7 +14,7 @@ export const removeInactiveMerchants = async (): Promise<void | ApplicationError
   if (merchants instanceof Error) return merchants
 
   const sixMonthsAgo = new Date()
-  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - INACTIVE_MONTHS)
 
   for (const merchant of merchants) {
     if (merchant.createdAt > sixMonthsAgo) continue

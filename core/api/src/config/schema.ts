@@ -605,11 +605,13 @@ export const configSchema = {
       type: "object",
       properties: {
         rebalanceEnabled: { type: "boolean" },
+        removeInactiveMerchantsEnabled: { type: "boolean" },
       },
-      required: ["rebalanceEnabled"],
+      required: ["rebalanceEnabled", "removeInactiveMerchantsEnabled"],
       additionalProperties: false,
       default: {
         rebalanceEnabled: true,
+        removeInactiveMerchantsEnabled: false,
       },
     },
     captcha: {

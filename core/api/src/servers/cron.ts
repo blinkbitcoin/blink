@@ -81,7 +81,7 @@ const main = async () => {
     deleteExpiredPaymentFlows,
     deleteLndPaymentsBefore2Months,
     deleteFailedPaymentsAttemptAllLnds,
-    removeInactiveMerchants,
+    ...(cronConfig.removeInactiveMerchantsEnabled ? [removeInactiveMerchants] : []),
   ]
 
   const PROCESS_KILL_EVENTS = ["SIGTERM", "SIGINT"]
