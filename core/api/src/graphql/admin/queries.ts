@@ -11,6 +11,7 @@ import WalletQuery from "./root/query/wallet"
 import AccountDetailsByAccountId from "./root/query/account-details-by-account-id"
 import AccountDetailsByUserId from "./root/query/account-details-by-user-id"
 import MerchantsPendingApprovalQuery from "./root/query/merchants-pending-approval-listing"
+import InactiveMerchantsQuery from "./root/query/inactive-merchants-listing"
 import FilteredUserCountQuery from "./root/query/filtered-user-count"
 
 import { GT } from "@/graphql/index"
@@ -31,6 +32,7 @@ export const queryFields = {
     lightningPayment: LightningPaymentQuery,
     wallet: WalletQuery,
     merchantsPendingApproval: MerchantsPendingApprovalQuery,
+    inactiveMerchants: InactiveMerchantsQuery,
     filteredUserCount: FilteredUserCountQuery,
   },
 }

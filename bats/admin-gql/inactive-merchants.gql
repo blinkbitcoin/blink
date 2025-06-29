@@ -1,0 +1,13 @@
+query inactiveMerchants {
+  inactiveMerchants {
+    id
+    username
+    title
+    createdAt
+    validated
+    coordinates {
+      latitude
+      longitude
+    }
+  }
+}

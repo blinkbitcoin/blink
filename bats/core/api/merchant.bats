@@ -3,6 +3,7 @@
 load "../../helpers/_common.bash"
 load "../../helpers/user.bash"
 load "../../helpers/admin.bash"
+load "../../helpers/merchant.bash"
 
 setup_file() {
   clear_cache
@@ -92,4 +93,30 @@ setup_file() {
   markers_length=$(echo "$map_markers" | jq '.data.businessMapMarkers | length')
 
   [[ $markers_length -eq $((initial_merchants_length - 1)) ]] || exit 1
+}
+
+@test "merchant: delete inactive merchant with admin api" {
+  admin_token="$(read_value 'admin.token')"
+  exec_admin_graphql $admin_token 'inactive-merchants'
+  local initial_merchants="$(graphql_output)"
+  local initial_merchants_length=$(echo "$initial_merchants" | jq '.data.inactiveMerchants | length')
+
+  create_old_merchant "old_merchant_list_delete"
+
+  exec_admin_graphql $admin_token 'inactive-merchants'
+  merchants="$(graphql_output)"
+  merchants_length=$(echo "$merchants" | jq '.data.inactiveMerchants | length')
+  [[ $merchants_length -eq $((initial_merchants_length + 1)) ]] || exit 1
+
+  id=$(echo "$merchants" | jq -r ".data.inactiveMerchants[$initial_merchants_length].id")
+  variables=$(jq -n \
+    --arg id "$id" \
+    '{input: {id: $id}}'
+  )
+  exec_admin_graphql $admin_token 'merchant-map-delete' "$variables"
+
+  exec_admin_graphql $admin_token 'inactive-merchants'
+  merchants="$(graphql_output)"
+  merchants_length=$(echo "$merchants" | jq '.data.inactiveMerchants | length')
+  [[ $merchants_length -eq $initial_merchants_length ]] || exit 1
 }

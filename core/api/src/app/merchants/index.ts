@@ -6,6 +6,7 @@ export * from "./suggest-merchant-map"
 export * from "./delete-merchant-map"
 export * from "./approve-merchant-map"
 export * from "./remove-inactive-merchants"
+export * from "./list-inactive-merchants"
 
 const merchants = MerchantsRepository()
 

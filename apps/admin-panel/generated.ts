@@ -541,6 +541,7 @@ export type Query = {
   readonly accountDetailsByUsername: AuditedAccount;
   readonly allLevels: ReadonlyArray<AccountLevel>;
   readonly filteredUserCount: Scalars['Int']['output'];
+  readonly inactiveMerchants: ReadonlyArray<Merchant>;
   readonly lightningInvoice: LightningInvoice;
   readonly lightningPayment: LightningPayment;
   readonly merchantsPendingApproval: ReadonlyArray<Merchant>;
