@@ -5,6 +5,7 @@ import {
   getGeetestConfig,
   getTestAccounts,
 } from "@/config"
+
 import { ErrorLevel } from "@/domain/shared"
 import { ChannelType, checkedToChannel } from "@/domain/phone-provider"
 import { TestAccountsChecker } from "@/domain/accounts/test-accounts-checker"
@@ -26,11 +27,12 @@ import {
   recordExceptionInCurrentSpan,
 } from "@/services/tracing"
 import Geetest from "@/services/geetest"
-import { IpFetcher } from "@/services/ipfetcher"
-import { AuthWithEmailPasswordlessService } from "@/services/kratos"
 import { baseLogger } from "@/services/logger"
+import { AppCheck } from "@/services/app-check"
+import { IpFetcher } from "@/services/ipfetcher"
 import { UsersRepository } from "@/services/mongoose"
 import { consumeLimiter } from "@/services/rate-limit"
+import { AuthWithEmailPasswordlessService } from "@/services/kratos"
 import { TWILIO_ACCOUNT_TEST, TwilioClient } from "@/services/twilio-service"
 
 export const requestPhoneCodeWithCaptcha = async ({
@@ -161,22 +163,22 @@ export const requestPhoneCodeWithAppcheckJti = async ({
   channel: string
   appcheckJti: string
 }): Promise<true | PhoneProviderServiceError> => {
-  {
-    const limitOk = await checkRequestCodeAttemptPerIpLimits(ip)
-    if (limitOk instanceof Error) return limitOk
-  }
+  const appCheckLimitsOk = await checkRequestCodeAttemptPerAppcheckJtiLimits(
+    appcheckJti as AppcheckJti,
+  )
+  if (appCheckLimitsOk instanceof Error) return appCheckLimitsOk
 
-  {
-    const limitOk = await checkRequestCodeAttemptPerPhoneNumberLimits(phone)
-    if (limitOk instanceof Error) return limitOk
-  }
+  const appCheckTokenOk = await AppCheck().verifyToken({
+    token: appcheckJti,
+    checkAlreadyConsumed: true,
+  })
+  if (appCheckTokenOk instanceof Error) return appCheckTokenOk
 
-  {
-    const limitOk = await checkRequestCodeAttemptPerAppcheckJtiLimits(
-      appcheckJti as AppcheckJti,
-    )
-    if (limitOk instanceof Error) return limitOk
-  }
+  const ipLimitsOk = await checkRequestCodeAttemptPerIpLimits(ip)
+  if (ipLimitsOk instanceof Error) return ipLimitsOk
+
+  const phoneNumberLimitsOk = await checkRequestCodeAttemptPerPhoneNumberLimits(phone)
+  if (phoneNumberLimitsOk instanceof Error) return phoneNumberLimitsOk
 
   if (UNSECURE_DEFAULT_LOGIN_CODE) {
     return true

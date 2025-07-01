@@ -3,24 +3,27 @@ import {
   checkLoginAttemptPerLoginIdentifierLimits,
   rewardFailedLoginAttemptPerIpLimits,
 } from "./ratelimits"
-
-import { activateInvitedAccount } from "./activate-invited-account"
 import { getPhoneMetadata } from "./get-phone-metadata"
-
-import { upgradeAccountFromDeviceToPhone } from "@/app/accounts"
+import { activateInvitedAccount } from "./activate-invited-account"
 
 import {
   createAccountForDeviceAccount,
   createAccountWithPhoneIdentifier,
 } from "@/app/accounts/create-account"
+import { upgradeAccountFromDeviceToPhone } from "@/app/accounts"
+
+import { getAccountsOnboardConfig, getDefaultAccountsConfig } from "@/config"
+
+import {
+  checkedToDeviceId,
+  checkedToIdentityPassword,
+  checkedToIdentityUsername,
+} from "@/domain/users"
 import {
   checkedToEmailCode,
   telegramPassportLoginKey,
   telegramPassportRequestKey,
 } from "@/domain/authentication"
-
-import { getAccountsOnboardConfig, getDefaultAccountsConfig } from "@/config"
-
 import {
   EmailUnverifiedError,
   IdentifierNotFoundError,
@@ -28,12 +31,13 @@ import {
   InvalidNonceTelegramPassportError,
   WaitingDataTelegramPassportError,
 } from "@/domain/authentication/errors"
+import { ErrorLevel } from "@/domain/shared"
+import { RateLimitConfig } from "@/domain/rate-limit"
+import { IpFetcherServiceError } from "@/domain/ipfetcher"
+import { RateLimiterExceededError } from "@/domain/rate-limit/errors"
 import { ChannelType, checkedToChannel } from "@/domain/phone-provider"
-import {
-  checkedToDeviceId,
-  checkedToIdentityPassword,
-  checkedToIdentityUsername,
-} from "@/domain/users"
+import { PhoneAccountAlreadyExistsNeedToSweepFundsError } from "@/domain/kratos"
+import { IPMetadataAuthorizer } from "@/domain/accounts-ips/ip-metadata-authorizer"
 
 import {
   AuthWithEmailPasswordlessService,
@@ -41,31 +45,22 @@ import {
   AuthWithUsernamePasswordDeviceIdService,
   IdentityRepository,
 } from "@/services/kratos"
-import { LedgerService } from "@/services/ledger"
-import { WalletsRepository } from "@/services/mongoose"
 import {
   addAttributesToCurrentSpan,
   recordExceptionInCurrentSpan,
 } from "@/services/tracing"
-import { isPhoneCodeValid } from "@/services/twilio-service"
-
-import { IPMetadataAuthorizer } from "@/domain/accounts-ips/ip-metadata-authorizer"
-
+import { AppCheck } from "@/services/app-check"
 import {
   InvalidIpMetadataError,
   MissingIPMetadataError,
   UnauthorizedIPForOnboardingError,
 } from "@/domain/errors"
 import { IpFetcher } from "@/services/ipfetcher"
-
-import { IpFetcherServiceError } from "@/domain/ipfetcher"
-import { PhoneAccountAlreadyExistsNeedToSweepFundsError } from "@/domain/kratos"
-import { RateLimitConfig } from "@/domain/rate-limit"
-import { RateLimiterExceededError } from "@/domain/rate-limit/errors"
-import { ErrorLevel } from "@/domain/shared"
-import { consumeLimiter } from "@/services/rate-limit"
-
+import { LedgerService } from "@/services/ledger"
 import { RedisCacheService } from "@/services/cache"
+import { consumeLimiter } from "@/services/rate-limit"
+import { WalletsRepository } from "@/services/mongoose"
+import { isPhoneCodeValid } from "@/services/twilio-service"
 
 const redisCache = RedisCacheService()
 
@@ -392,16 +387,19 @@ export const loginWithDevice = async ({
   appcheckJti: string
   ip: IpAddress
 }): Promise<AuthToken | ApplicationError> => {
-  {
-    const limitOk = await checkFailedLoginAttemptPerIpLimits(ip)
-    if (limitOk instanceof Error) return limitOk
-  }
-
-  const check = await checkDeviceLoginAttemptPerAppcheckJtiLimits(
+  const appCheckLimitsOk = await checkDeviceLoginAttemptPerAppcheckJtiLimits(
     appcheckJti as AppcheckJti,
   )
+  if (appCheckLimitsOk instanceof Error) return appCheckLimitsOk
 
-  if (check instanceof Error) return check
+  const appCheckTokenOk = await AppCheck().verifyToken({
+    token: appcheckJti,
+    checkAlreadyConsumed: false,
+  })
+  if (appCheckTokenOk instanceof Error) return appCheckTokenOk
+
+  const ipLimitsOk = await checkFailedLoginAttemptPerIpLimits(ip)
+  if (ipLimitsOk instanceof Error) return ipLimitsOk
 
   const deviceId = checkedToDeviceId(deviceIdRaw)
   if (deviceId instanceof Error) return deviceId
