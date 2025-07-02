@@ -44,6 +44,6 @@
     "./node_modules/*",
     "./utils/generated/",
     "./utils/generated/*",
-    "./cypress/*"
+
   ]
 }
