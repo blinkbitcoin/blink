@@ -21,7 +21,7 @@ importers:
         version: 3.13.8(@types/react@18.2.62)(graphql@16.11.0)(react-dom@18.3.1)(react@18.3.1)
       '@apollo/experimental-nextjs-app-support':
         specifier: ^0.7.0
-        version: 0.7.1(@apollo/client@3.13.8)(next@14.2.26)(react@18.3.1)
+        version: 0.7.1(@apollo/client@3.13.8)(next@14.2.30)(react@18.3.1)
       '@opentelemetry/api':
         specifier: 1.9.0
         version: 1.9.0
@@ -62,11 +62,11 @@ importers:
         specifier: ^16.8.1
         version: 16.11.0
       next:
-        specifier: 14.2.26
-        version: 14.2.26(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.3.1)(react@18.3.1)
+        specifier: 14.2.30
+        version: 14.2.30(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.3.1)(react@18.3.1)
       next-auth:
         specifier: ^4.24.11
-        version: 4.24.11(next@14.2.26)(react-dom@18.3.1)(react@18.3.1)
+        version: 4.24.11(next@14.2.30)(react-dom@18.3.1)(react@18.3.1)
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -202,7 +202,7 @@ importers:
         version: 16.6.1
       edge-csrf:
         specifier: ^1.0.6
-        version: 1.0.11(next@14.2.26)
+        version: 1.0.11(next@14.2.30)
       graphql:
         specifier: ^16.8.1
         version: 16.11.0
@@ -210,11 +210,11 @@ importers:
         specifier: ^1.10.51
         version: 1.12.9
       next:
-        specifier: 14.2.26
-        version: 14.2.26(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.2.0)(react@18.2.0)
+        specifier: 14.2.30
+        version: 14.2.30(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.2.0)(react@18.2.0)
       next-themes:
         specifier: ^0.2.1
-        version: 0.2.1(next@14.2.26)(react-dom@18.2.0)(react@18.2.0)
+        version: 0.2.1(next@14.2.30)(react-dom@18.2.0)(react@18.2.0)
       react:
         specifier: 18.2.0
         version: 18.2.0
@@ -293,7 +293,7 @@ importers:
         version: 3.13.8(@types/react@18.2.62)(graphql@16.11.0)(react-dom@18.2.0)(react@18.2.0)
       '@apollo/experimental-nextjs-app-support':
         specifier: ^0.5.2
-        version: 0.5.2(@apollo/client@3.13.8)(next@14.2.26)(react@18.2.0)
+        version: 0.5.2(@apollo/client@3.13.8)(next@14.2.30)(react@18.2.0)
       '@emotion/cache':
         specifier: ^11.11.0
         version: 11.14.0
@@ -358,11 +358,11 @@ importers:
         specifier: ^16.8.1
         version: 16.11.0
       next:
-        specifier: 14.2.26
-        version: 14.2.26(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.2.0)(react@18.2.0)
+        specifier: 14.2.30
+        version: 14.2.30(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.2.0)(react@18.2.0)
       next-auth:
         specifier: ^4.24.11
-        version: 4.24.11(next@14.2.26)(react-dom@18.2.0)(react@18.2.0)
+        version: 4.24.11(next@14.2.30)(react-dom@18.2.0)(react@18.2.0)
       react:
         specifier: 18.2.0
         version: 18.2.0
@@ -512,8 +512,8 @@ importers:
         specifier: ^16.8.1
         version: 16.11.0
       next:
-        specifier: 14.2.26
-        version: 14.2.26(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.3.1)(react@18.3.1)
+        specifier: 14.2.30
+        version: 14.2.30(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.3.1)(react@18.3.1)
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -592,7 +592,7 @@ importers:
         version: 3.13.8(@types/react@18.3.23)(graphql-ws@5.16.2)(graphql@16.11.0)(react-dom@18.3.1)(react@18.3.1)
       '@apollo/experimental-nextjs-app-support':
         specifier: ^0.11.4
-        version: 0.11.11(@apollo/client@3.13.8)(graphql@16.11.0)(next@14.2.26)(react-dom@18.3.1)(react@18.3.1)
+        version: 0.11.11(@apollo/client@3.13.8)(graphql@16.11.0)(next@14.2.30)(react-dom@18.3.1)(react@18.3.1)
       '@opentelemetry/api':
         specifier: 1.9.0
         version: 1.9.0
@@ -672,11 +672,11 @@ importers:
         specifier: ^4.0.8
         version: 4.0.8
       next:
-        specifier: 14.2.26
-        version: 14.2.26(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.3.1)(react@18.3.1)
+        specifier: 14.2.30
+        version: 14.2.30(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.3.1)(react@18.3.1)
       next-auth:
         specifier: ^4.24.11
-        version: 4.24.11(next@14.2.26)(react-dom@18.3.1)(react@18.3.1)
+        version: 4.24.11(next@14.2.30)(react-dom@18.3.1)(react@18.3.1)
       pino:
         specifier: 8.20.0
         version: 8.20.0
@@ -845,13 +845,13 @@ importers:
         version: 3.13.8(@types/react@18.3.23)(graphql-ws@5.16.2)(graphql@16.11.0)(react-dom@18.2.0)(react@18.2.0)
       '@apollo/experimental-nextjs-app-support':
         specifier: ^0.8.0
-        version: 0.8.0(@apollo/client@3.13.8)(next@14.2.26)(react@18.2.0)
+        version: 0.8.0(@apollo/client@3.13.8)(next@14.2.30)(react@18.2.0)
       '@apollo/server':
         specifier: ^4.7.1
         version: 4.12.2(graphql@16.11.0)
       '@as-integrations/next':
         specifier: ^3.1.0
-        version: 3.2.0(@apollo/server@4.12.2)(next@14.2.26)
+        version: 3.2.0(@apollo/server@4.12.2)(next@14.2.30)
       '@emotion/react':
         specifier: ^11.11.1
         version: 11.14.0(@types/react@18.3.23)(react@18.2.0)
@@ -943,11 +943,11 @@ importers:
         specifier: ^3.1.0
         version: 3.1.0(pg@8.16.3)
       next:
-        specifier: 14.2.26
-        version: 14.2.26(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.2.0)(react@18.2.0)
+        specifier: 14.2.30
+        version: 14.2.30(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.2.0)(react@18.2.0)
       next-auth:
         specifier: ^4.24.11
-        version: 4.24.11(next@14.2.26)(react-dom@18.2.0)(react@18.2.0)
+        version: 4.24.11(next@14.2.30)(react-dom@18.2.0)(react@18.2.0)
       pg:
         specifier: ^8.11.0
         version: 8.16.3
@@ -1907,7 +1907,7 @@ packages:
       - '@types/react'
     dev: false
 
-  /@apollo/experimental-nextjs-app-support@0.11.11(@apollo/client@3.13.8)(graphql@16.11.0)(next@14.2.26)(react-dom@18.3.1)(react@18.3.1):
+  /@apollo/experimental-nextjs-app-support@0.11.11(@apollo/client@3.13.8)(graphql@16.11.0)(next@14.2.30)(react-dom@18.3.1)(react@18.3.1):
     resolution: {integrity: sha512-q/vtKn2V9NE1YPU7WpPx2PGpLsYSGwRcPy8pa90glrHqlEVVqTWTGraDLe3wG0K/0NnnO1U4IcFoRYKoBfjRag==}
     peerDependencies:
       '@apollo/client': ^3.10.4
@@ -1916,14 +1916,14 @@ packages:
     dependencies:
       '@apollo/client': 3.13.8(@types/react@18.3.23)(graphql-ws@5.16.2)(graphql@16.11.0)(react-dom@18.3.1)(react@18.3.1)
       '@apollo/client-react-streaming': 0.11.11(@apollo/client@3.13.8)(graphql@16.11.0)(react-dom@18.3.1)(react@18.3.1)
-      next: 14.2.26(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.3.1)(react@18.3.1)
+      next: 14.2.30(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.3.1)(react@18.3.1)
       react: 18.3.1
     transitivePeerDependencies:
       - graphql
       - react-dom
     dev: false
 
-  /@apollo/experimental-nextjs-app-support@0.5.2(@apollo/client@3.13.8)(next@14.2.26)(react@18.2.0):
+  /@apollo/experimental-nextjs-app-support@0.5.2(@apollo/client@3.13.8)(next@14.2.30)(react@18.2.0):
     resolution: {integrity: sha512-qUopCHDocCBfL+XDhuPNwiWrJHf7rc75bdDBF2TxZyYwW32wo3vPPac6bGWrYy8lgkJ8K8Z5O56655WQOynFTg==}
     deprecated: Version is deprecated due to a XSS vulnerability. Please see https://github.com/apollographql/apollo-client-nextjs/security/advisories/GHSA-rv8p-rr2h-fgpg for more information.
     peerDependencies:
@@ -1932,14 +1932,14 @@ packages:
       react: ^18
     dependencies:
       '@apollo/client': 3.13.8(@types/react@18.2.62)(graphql@16.11.0)(react-dom@18.2.0)(react@18.2.0)
-      next: 14.2.26(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.2.0)(react@18.2.0)
+      next: 14.2.30(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.2.0)(react@18.2.0)
       react: 18.2.0
       server-only: 0.0.1
       superjson: 1.13.3
       ts-invariant: 0.10.3
     dev: false
 
-  /@apollo/experimental-nextjs-app-support@0.7.1(@apollo/client@3.13.8)(next@14.2.26)(react@18.3.1):
+  /@apollo/experimental-nextjs-app-support@0.7.1(@apollo/client@3.13.8)(next@14.2.30)(react@18.3.1):
     resolution: {integrity: sha512-yrW918/5AuvBIKfcoPvEQdliHp+XfzDqfnwwLfT3G5rFY/QXmM04hWb/01ncrDWWyd7bAfilkxCRwTz8XtBIBg==}
     peerDependencies:
       '@apollo/client': '>=3.8.0-rc || ^3.8.0 || >=3.9.0-alpha || >=3.9.0-beta || >=3.9.0-rc || ^3.9.0'
@@ -1947,14 +1947,14 @@ packages:
       react: ^18
     dependencies:
       '@apollo/client': 3.13.8(@types/react@18.2.62)(graphql@16.11.0)(react-dom@18.3.1)(react@18.3.1)
-      next: 14.2.26(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.3.1)(react@18.3.1)
+      next: 14.2.30(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.3.1)(react@18.3.1)
       react: 18.3.1
       server-only: 0.0.1
       superjson: 2.2.2
       ts-invariant: 0.10.3
     dev: false
 
-  /@apollo/experimental-nextjs-app-support@0.8.0(@apollo/client@3.13.8)(next@14.2.26)(react@18.2.0):
+  /@apollo/experimental-nextjs-app-support@0.8.0(@apollo/client@3.13.8)(next@14.2.30)(react@18.2.0):
     resolution: {integrity: sha512-uyNIkOkew0T6ukC8ycbWBeTu8gtDSD5i+NVGEHU0DIEQaToFHObYcvIxaQ/8hvWzgvnpNU/KMsApfGXA9Xkpyw==}
     peerDependencies:
       '@apollo/client': ^3.9.0
@@ -1962,7 +1962,7 @@ packages:
       react: ^18
     dependencies:
       '@apollo/client': 3.13.8(@types/react@18.3.23)(graphql-ws@5.16.2)(graphql@16.11.0)(react-dom@18.2.0)(react@18.2.0)
-      next: 14.2.26(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.2.0)(react@18.2.0)
+      next: 14.2.30(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.2.0)(react@18.2.0)
       react: 18.2.0
       server-only: 0.0.1
       superjson: 2.2.2
@@ -2198,7 +2198,7 @@ packages:
       - encoding
     dev: true
 
-  /@as-integrations/next@3.2.0(@apollo/server@4.12.2)(next@14.2.26):
+  /@as-integrations/next@3.2.0(@apollo/server@4.12.2)(next@14.2.30):
     resolution: {integrity: sha512-JTVtRwHdOQTixIacmvfdUukSqNytEHfgvg+K9P8cW7JeF4SCPXat+i9abSII3/cbR6/GQwFZ6gq+c4R0nmSzMg==}
     engines: {node: '>=18'}
     peerDependencies:
@@ -2206,7 +2206,7 @@ packages:
       next: ^12.0.0 || ^13.0.0 || ^14.0.0 || ^15.0.0
     dependencies:
       '@apollo/server': 4.12.2(graphql@16.11.0)
-      next: 14.2.26(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.2.0)(react@18.2.0)
+      next: 14.2.30(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.2.0)(react@18.2.0)
     dev: false
 
   /@aw-web-design/x-default-browser@1.4.126:
@@ -4543,7 +4543,7 @@ packages:
     engines: {node: '>=16.0.0'}
     dependencies:
       '@envelop/types': 4.0.1
-      tslib: 2.6.2
+      tslib: 2.8.1
     dev: true
 
   /@envelop/core@5.3.0:
@@ -4568,7 +4568,7 @@ packages:
     resolution: {integrity: sha512-ULo27/doEsP7uUhm2iTnElx13qTO6I5FKvmLoX41cpfuw8x6e0NUFknoqhEsLzAbgz8xVS5mjwcxGCXh4lDYzg==}
     engines: {node: '>=16.0.0'}
     dependencies:
-      tslib: 2.6.2
+      tslib: 2.8.1
     dev: true
 
   /@envelop/types@5.2.1:
@@ -6227,7 +6227,7 @@ packages:
       '@graphql-tools/utils': 8.9.0(graphql@16.11.0)
       dataloader: 2.1.0
       graphql: 16.11.0
-      tslib: 2.4.1
+      tslib: 2.8.1
       value-or-promise: 1.0.11
     dev: false
 
@@ -6254,7 +6254,7 @@ packages:
       '@graphql-tools/utils': 10.0.3(graphql@16.11.0)
       globby: 11.1.0
       graphql: 16.11.0
-      tslib: 2.6.2
+      tslib: 2.8.1
       unixify: 1.0.0
     transitivePeerDependencies:
       - '@babel/core'
@@ -6271,7 +6271,7 @@ packages:
       '@graphql-tools/utils': 10.0.3(graphql@16.11.0)
       globby: 11.1.0
       graphql: 16.11.0
-      tslib: 2.6.2
+      tslib: 2.8.1
       unixify: 1.0.0
     transitivePeerDependencies:
       - '@babel/core'
@@ -6449,7 +6449,7 @@ packages:
       '@whatwg-node/disposablestack': 0.0.6
       '@whatwg-node/promise-helpers': 1.3.2
       graphql: 16.11.0
-      tslib: 2.6.2
+      tslib: 2.8.1
     dev: true
 
   /@graphql-tools/git-loader@8.0.1(@babel/core@7.22.9)(graphql@16.11.0):
@@ -6463,7 +6463,7 @@ packages:
       graphql: 16.11.0
       is-glob: 4.0.3
       micromatch: 4.0.8
-      tslib: 2.6.2
+      tslib: 2.8.1
       unixify: 1.0.0
     transitivePeerDependencies:
       - '@babel/core'
@@ -6499,7 +6499,7 @@ packages:
       '@graphql-tools/utils': 10.8.6(graphql@16.11.0)
       '@whatwg-node/fetch': 0.9.23
       graphql: 16.11.0
-      tslib: 2.6.2
+      tslib: 2.8.1
       value-or-promise: 1.0.12
     transitivePeerDependencies:
       - '@types/node'
@@ -6536,7 +6536,7 @@ packages:
       '@graphql-tools/utils': 10.8.6(graphql@16.11.0)
       globby: 11.1.0
       graphql: 16.11.0
-      tslib: 2.6.2
+      tslib: 2.8.1
       unixify: 1.0.0
     dev: true
 
@@ -6566,7 +6566,7 @@ packages:
       '@babel/types': 7.27.7
       '@graphql-tools/utils': 10.0.3(graphql@16.11.0)
       graphql: 16.11.0
-      tslib: 2.6.2
+      tslib: 2.8.1
     transitivePeerDependencies:
       - '@babel/core'
       - supports-color
@@ -6584,7 +6584,7 @@ packages:
       '@babel/types': 7.27.7
       '@graphql-tools/utils': 10.0.3(graphql@16.11.0)
       graphql: 16.11.0
-      tslib: 2.6.2
+      tslib: 2.8.1
     transitivePeerDependencies:
       - '@babel/core'
       - supports-color
@@ -6617,7 +6617,7 @@ packages:
       '@graphql-tools/utils': 10.8.6(graphql@16.11.0)
       graphql: 16.11.0
       resolve-from: 5.0.0
-      tslib: 2.6.2
+      tslib: 2.8.1
     dev: true
 
   /@graphql-tools/import@7.0.19(graphql@16.11.0):
@@ -6656,7 +6656,7 @@ packages:
       '@graphql-tools/utils': 10.8.6(graphql@16.11.0)
       globby: 11.1.0
       graphql: 16.11.0
-      tslib: 2.6.2
+      tslib: 2.8.1
       unixify: 1.0.0
     dev: true
 
@@ -6694,7 +6694,7 @@ packages:
       '@graphql-tools/utils': 10.0.3(graphql@16.11.0)
       graphql: 16.11.0
       p-limit: 3.1.0
-      tslib: 2.6.2
+      tslib: 2.8.1
     dev: true
 
   /@graphql-tools/load@8.1.0(graphql@16.11.0):
@@ -6816,7 +6816,7 @@ packages:
       '@ardatan/relay-compiler': 12.0.3(graphql@16.11.0)
       '@graphql-tools/utils': 10.8.6(graphql@16.11.0)
       graphql: 16.11.0
-      tslib: 2.6.3
+      tslib: 2.8.1
     transitivePeerDependencies:
       - encoding
     dev: true
@@ -6873,7 +6873,7 @@ packages:
       '@whatwg-node/fetch': 0.9.23
       graphql: 16.11.0
       isomorphic-ws: 5.0.0(ws@8.18.3)
-      tslib: 2.6.2
+      tslib: 2.8.1
       value-or-promise: 1.0.12
       ws: 8.18.3
     transitivePeerDependencies:
@@ -6920,7 +6920,7 @@ packages:
       '@graphql-typed-document-node/core': 3.2.0(graphql@16.11.0)
       dset: 3.1.4
       graphql: 16.11.0
-      tslib: 2.6.2
+      tslib: 2.8.1
     dev: true
 
   /@graphql-tools/utils@10.8.6(graphql@16.11.0):
@@ -6943,7 +6943,7 @@ packages:
       graphql: ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
     dependencies:
       graphql: 16.11.0
-      tslib: 2.4.1
+      tslib: 2.8.1
     dev: true
 
   /@graphql-tools/utils@8.9.0(graphql@16.11.0):
@@ -6952,7 +6952,7 @@ packages:
       graphql: ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
     dependencies:
       graphql: 16.11.0
-      tslib: 2.4.1
+      tslib: 2.8.1
     dev: false
 
   /@graphql-tools/utils@9.2.1(graphql@16.11.0):
@@ -7010,7 +7010,7 @@ packages:
     resolution: {integrity: sha512-JYoxwnPggH2BfO+dWlWZkDeFhyFZqaTRGLvFhy+Pjp2UxitEW6nDrw+pEDw/K9tJwMjIFMmTT9VfTqrnESmBHg==}
     engines: {node: '>=16.0.0'}
     dependencies:
-      tslib: 2.6.2
+      tslib: 2.8.1
     dev: true
 
   /@graphql-yoga/subscription@4.0.0:
@@ -7020,7 +7020,7 @@ packages:
       '@graphql-yoga/typed-event-target': 2.0.0
       '@repeaterjs/repeater': 3.0.6
       '@whatwg-node/events': 0.1.2
-      tslib: 2.6.2
+      tslib: 2.8.1
     dev: true
 
   /@graphql-yoga/typed-event-target@2.0.0:
@@ -7028,7 +7028,7 @@ packages:
     engines: {node: '>=16.0.0'}
     dependencies:
       '@repeaterjs/repeater': 3.0.6
-      tslib: 2.6.2
+      tslib: 2.8.1
     dev: true
 
   /@grpc/grpc-js@1.13.4:
@@ -7916,8 +7916,8 @@ packages:
       - supports-color
     dev: false
 
-  /@next/env@14.2.26:
-    resolution: {integrity: sha512-vO//GJ/YBco+H7xdQhzJxF7ub3SUwft76jwaeOyVVQFHCi5DCnkP16WHB+JBylo4vOKPoZBlR94Z8xBxNBdNJA==}
+  /@next/env@14.2.30:
+    resolution: {integrity: sha512-KBiBKrDY6kxTQWGzKjQB7QirL3PiiOkV7KW98leHFjtVRKtft76Ra5qSA/SL75xT44dp6hOcqiiJ6iievLOYug==}
     dev: false
 
   /@next/eslint-plugin-next@13.4.2:
@@ -7938,8 +7938,8 @@ packages:
       glob: 10.3.10
     dev: true
 
-  /@next/swc-darwin-arm64@14.2.26:
-    resolution: {integrity: sha512-zDJY8gsKEseGAxG+C2hTMT0w9Nk9N1Sk1qV7vXYz9MEiyRoF5ogQX2+vplyUMIfygnjn9/A04I6yrUTRTuRiyQ==}
+  /@next/swc-darwin-arm64@14.2.30:
+    resolution: {integrity: sha512-EAqfOTb3bTGh9+ewpO/jC59uACadRHM6TSA9DdxJB/6gxOpyV+zrbqeXiFTDy9uV6bmipFDkfpAskeaDcO+7/g==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [darwin]
@@ -7947,8 +7947,8 @@ packages:
     dev: false
     optional: true
 
-  /@next/swc-darwin-x64@14.2.26:
-    resolution: {integrity: sha512-U0adH5ryLfmTDkahLwG9sUQG2L0a9rYux8crQeC92rPhi3jGQEY47nByQHrVrt3prZigadwj/2HZ1LUUimuSbg==}
+  /@next/swc-darwin-x64@14.2.30:
+    resolution: {integrity: sha512-TyO7Wz1IKE2kGv8dwQ0bmPL3s44EKVencOqwIY69myoS3rdpO1NPg5xPM5ymKu7nfX4oYJrpMxv8G9iqLsnL4A==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [darwin]
@@ -7956,8 +7956,8 @@ packages:
     dev: false
     optional: true
 
-  /@next/swc-linux-arm64-gnu@14.2.26:
-    resolution: {integrity: sha512-SINMl1I7UhfHGM7SoRiw0AbwnLEMUnJ/3XXVmhyptzriHbWvPPbbm0OEVG24uUKhuS1t0nvN/DBvm5kz6ZIqpg==}
+  /@next/swc-linux-arm64-gnu@14.2.30:
+    resolution: {integrity: sha512-I5lg1fgPJ7I5dk6mr3qCH1hJYKJu1FsfKSiTKoYwcuUf53HWTrEkwmMI0t5ojFKeA6Vu+SfT2zVy5NS0QLXV4Q==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
@@ -7965,8 +7965,8 @@ packages:
     dev: false
     optional: true
 
-  /@next/swc-linux-arm64-musl@14.2.26:
-    resolution: {integrity: sha512-s6JaezoyJK2DxrwHWxLWtJKlqKqTdi/zaYigDXUJ/gmx/72CrzdVZfMvUc6VqnZ7YEvRijvYo+0o4Z9DencduA==}
+  /@next/swc-linux-arm64-musl@14.2.30:
+    resolution: {integrity: sha512-8GkNA+sLclQyxgzCDs2/2GSwBc92QLMrmYAmoP2xehe5MUKBLB2cgo34Yu242L1siSkwQkiV4YLdCnjwc/Micw==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
@@ -7974,8 +7974,8 @@ packages:
     dev: false
     optional: true
 
-  /@next/swc-linux-x64-gnu@14.2.26:
-    resolution: {integrity: sha512-FEXeUQi8/pLr/XI0hKbe0tgbLmHFRhgXOUiPScz2hk0hSmbGiU8aUqVslj/6C6KA38RzXnWoJXo4FMo6aBxjzg==}
+  /@next/swc-linux-x64-gnu@14.2.30:
+    resolution: {integrity: sha512-8Ly7okjssLuBoe8qaRCcjGtcMsv79hwzn/63wNeIkzJVFVX06h5S737XNr7DZwlsbTBDOyI6qbL2BJB5n6TV/w==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
@@ -7983,8 +7983,8 @@ packages:
     dev: false
     optional: true
 
-  /@next/swc-linux-x64-musl@14.2.26:
-    resolution: {integrity: sha512-BUsomaO4d2DuXhXhgQCVt2jjX4B4/Thts8nDoIruEJkhE5ifeQFtvW5c9JkdOtYvE5p2G0hcwQ0UbRaQmQwaVg==}
+  /@next/swc-linux-x64-musl@14.2.30:
+    resolution: {integrity: sha512-dBmV1lLNeX4mR7uI7KNVHsGQU+OgTG5RGFPi3tBJpsKPvOPtg9poyav/BYWrB3GPQL4dW5YGGgalwZ79WukbKQ==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
@@ -7992,8 +7992,8 @@ packages:
     dev: false
     optional: true
 
-  /@next/swc-win32-arm64-msvc@14.2.26:
-    resolution: {integrity: sha512-5auwsMVzT7wbB2CZXQxDctpWbdEnEW/e66DyXO1DcgHxIyhP06awu+rHKshZE+lPLIGiwtjo7bsyeuubewwxMw==}
+  /@next/swc-win32-arm64-msvc@14.2.30:
+    resolution: {integrity: sha512-6MMHi2Qc1Gkq+4YLXAgbYslE1f9zMGBikKMdmQRHXjkGPot1JY3n5/Qrbg40Uvbi8//wYnydPnyvNhI1DMUW1g==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [win32]
@@ -8001,8 +8001,8 @@ packages:
     dev: false
     optional: true
 
-  /@next/swc-win32-ia32-msvc@14.2.26:
-    resolution: {integrity: sha512-GQWg/Vbz9zUGi9X80lOeGsz1rMH/MtFO/XqigDznhhhTfDlDoynCM6982mPCbSlxJ/aveZcKtTlwfAjwhyxDpg==}
+  /@next/swc-win32-ia32-msvc@14.2.30:
+    resolution: {integrity: sha512-pVZMnFok5qEX4RT59mK2hEVtJX+XFfak+/rjHpyFh7juiT52r177bfFKhnlafm0UOSldhXjj32b+LZIOdswGTg==}
     engines: {node: '>= 10'}
     cpu: [ia32]
     os: [win32]
@@ -8010,8 +8010,8 @@ packages:
     dev: false
     optional: true
 
-  /@next/swc-win32-x64-msvc@14.2.26:
-    resolution: {integrity: sha512-2rdB3T1/Gp7bv1eQTTm9d1Y1sv9UuJ2LAwOE0Pe2prHKe32UNscj7YS13fRB37d0GAiGNR+Y7ZcW8YjDI8Ns0w==}
+  /@next/swc-win32-x64-msvc@14.2.30:
+    resolution: {integrity: sha512-4KCo8hMZXMjpTzs3HOqOGYYwAXymXIy7PEPAXNEcEOyKqkjiDlECumrWziy+JEF0Oi4ILHGxzgQ3YiMGG2t/Lg==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [win32]
@@ -18229,13 +18229,13 @@ packages:
       - typescript
     dev: false
 
-  /edge-csrf@1.0.11(next@14.2.26):
+  /edge-csrf@1.0.11(next@14.2.30):
     resolution: {integrity: sha512-kAL5I9mlItBMTTKQMVajkcqsym5b/sdPNcC3B15mg9lPLMLw3BRLXozI5O72wuLKUd2bGhtcGH+FoKT2JMCr4A==}
     deprecated: This package has been split into separate integration packages located at @edge-csrf/<framework>
     peerDependencies:
       next: ^13.0.0 || ^14.0.0
     dependencies:
-      next: 14.2.26(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.2.0)(react@18.2.0)
+      next: 14.2.30(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.2.0)(react@18.2.0)
     dev: false
 
   /editorconfig@1.0.4:
@@ -21321,7 +21321,7 @@ packages:
       dset: 3.1.4
       graphql: 16.11.0
       lru-cache: 10.4.3
-      tslib: 2.6.2
+      tslib: 2.8.1
     dev: true
 
   /graphql@16.11.0:
@@ -24794,7 +24794,7 @@ packages:
     engines: {node: '>= 0.4.0'}
     dev: true
 
-  /next-auth@4.24.11(next@14.2.26)(react-dom@18.2.0)(react@18.2.0):
+  /next-auth@4.24.11(next@14.2.30)(react-dom@18.2.0)(react@18.2.0):
     resolution: {integrity: sha512-pCFXzIDQX7xmHFs4KVH4luCjaCbuPRtZ9oBUjUhOk84mZ9WVPf94n87TxYI4rSRf9HmfHEF8Yep3JrYDVOo3Cw==}
     peerDependencies:
       '@auth/core': 0.34.2
@@ -24812,7 +24812,7 @@ packages:
       '@panva/hkdf': 1.2.1
       cookie: 0.7.2
       jose: 4.15.9
-      next: 14.2.26(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.2.0)(react@18.2.0)
+      next: 14.2.30(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.2.0)(react@18.2.0)
       oauth: 0.9.15
       openid-client: 5.7.1
       preact: 10.26.9
@@ -24822,7 +24822,7 @@ packages:
       uuid: 8.3.2
     dev: false
 
-  /next-auth@4.24.11(next@14.2.26)(react-dom@18.3.1)(react@18.3.1):
+  /next-auth@4.24.11(next@14.2.30)(react-dom@18.3.1)(react@18.3.1):
     resolution: {integrity: sha512-pCFXzIDQX7xmHFs4KVH4luCjaCbuPRtZ9oBUjUhOk84mZ9WVPf94n87TxYI4rSRf9HmfHEF8Yep3JrYDVOo3Cw==}
     peerDependencies:
       '@auth/core': 0.34.2
@@ -24840,7 +24840,7 @@ packages:
       '@panva/hkdf': 1.2.1
       cookie: 0.7.2
       jose: 4.15.9
-      next: 14.2.26(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.3.1)(react@18.3.1)
+      next: 14.2.30(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.3.1)(react@18.3.1)
       oauth: 0.9.15
       openid-client: 5.7.1
       preact: 10.26.9
@@ -24850,20 +24850,20 @@ packages:
       uuid: 8.3.2
     dev: false
 
-  /next-themes@0.2.1(next@14.2.26)(react-dom@18.2.0)(react@18.2.0):
+  /next-themes@0.2.1(next@14.2.30)(react-dom@18.2.0)(react@18.2.0):
     resolution: {integrity: sha512-B+AKNfYNIzh0vqQQKqQItTS8evEouKD7H5Hj3kmuPERwddR2TxvDSFZuTj6T7Jfn1oyeUyJMydPl1Bkxkh0W7A==}
     peerDependencies:
       next: '*'
       react: '*'
       react-dom: '*'
     dependencies:
-      next: 14.2.26(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.2.0)(react@18.2.0)
+      next: 14.2.30(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.2.0)(react@18.2.0)
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
     dev: false
 
-  /next@14.2.26(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-b81XSLihMwCfwiUVRRja3LphLo4uBBMZEzBBWMaISbKTwOmq3wPknIETy/8000tr7Gq4WmbuFYPS7jOYIf+ZJw==}
+  /next@14.2.30(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-+COdu6HQrHHFQ1S/8BBsCag61jZacmvbuL2avHvQFbWa2Ox7bE+d8FyNgxRLjXQ5wtPyQwEmk85js/AuaG2Sbg==}
     engines: {node: '>=18.17.0'}
     hasBin: true
     peerDependencies:
@@ -24880,7 +24880,7 @@ packages:
       sass:
         optional: true
     dependencies:
-      '@next/env': 14.2.26
+      '@next/env': 14.2.30
       '@opentelemetry/api': 1.9.0
       '@swc/helpers': 0.5.5
       busboy: 1.6.0
@@ -24891,22 +24891,22 @@ packages:
       react-dom: 18.2.0(react@18.2.0)
       styled-jsx: 5.1.1(@babel/core@7.27.7)(react@18.2.0)
     optionalDependencies:
-      '@next/swc-darwin-arm64': 14.2.26
-      '@next/swc-darwin-x64': 14.2.26
-      '@next/swc-linux-arm64-gnu': 14.2.26
-      '@next/swc-linux-arm64-musl': 14.2.26
-      '@next/swc-linux-x64-gnu': 14.2.26
-      '@next/swc-linux-x64-musl': 14.2.26
-      '@next/swc-win32-arm64-msvc': 14.2.26
-      '@next/swc-win32-ia32-msvc': 14.2.26
-      '@next/swc-win32-x64-msvc': 14.2.26
+      '@next/swc-darwin-arm64': 14.2.30
+      '@next/swc-darwin-x64': 14.2.30
+      '@next/swc-linux-arm64-gnu': 14.2.30
+      '@next/swc-linux-arm64-musl': 14.2.30
+      '@next/swc-linux-x64-gnu': 14.2.30
+      '@next/swc-linux-x64-musl': 14.2.30
+      '@next/swc-win32-arm64-msvc': 14.2.30
+      '@next/swc-win32-ia32-msvc': 14.2.30
+      '@next/swc-win32-x64-msvc': 14.2.30
     transitivePeerDependencies:
       - '@babel/core'
       - babel-plugin-macros
     dev: false
 
-  /next@14.2.26(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.3.1)(react@18.3.1):
-    resolution: {integrity: sha512-b81XSLihMwCfwiUVRRja3LphLo4uBBMZEzBBWMaISbKTwOmq3wPknIETy/8000tr7Gq4WmbuFYPS7jOYIf+ZJw==}
+  /next@14.2.30(@babel/core@7.27.7)(@opentelemetry/api@1.9.0)(react-dom@18.3.1)(react@18.3.1):
+    resolution: {integrity: sha512-+COdu6HQrHHFQ1S/8BBsCag61jZacmvbuL2avHvQFbWa2Ox7bE+d8FyNgxRLjXQ5wtPyQwEmk85js/AuaG2Sbg==}
     engines: {node: '>=18.17.0'}
     hasBin: true
     peerDependencies:
@@ -24923,7 +24923,7 @@ packages:
       sass:
         optional: true
     dependencies:
-      '@next/env': 14.2.26
+      '@next/env': 14.2.30
       '@opentelemetry/api': 1.9.0
       '@swc/helpers': 0.5.5
       busboy: 1.6.0
@@ -24934,15 +24934,15 @@ packages:
       react-dom: 18.3.1(react@18.3.1)
       styled-jsx: 5.1.1(@babel/core@7.27.7)(react@18.3.1)
     optionalDependencies:
-      '@next/swc-darwin-arm64': 14.2.26
-      '@next/swc-darwin-x64': 14.2.26
-      '@next/swc-linux-arm64-gnu': 14.2.26
-      '@next/swc-linux-arm64-musl': 14.2.26
-      '@next/swc-linux-x64-gnu': 14.2.26
-      '@next/swc-linux-x64-musl': 14.2.26
-      '@next/swc-win32-arm64-msvc': 14.2.26
-      '@next/swc-win32-ia32-msvc': 14.2.26
-      '@next/swc-win32-x64-msvc': 14.2.26
+      '@next/swc-darwin-arm64': 14.2.30
+      '@next/swc-darwin-x64': 14.2.30
+      '@next/swc-linux-arm64-gnu': 14.2.30
+      '@next/swc-linux-arm64-musl': 14.2.30
+      '@next/swc-linux-x64-gnu': 14.2.30
+      '@next/swc-linux-x64-musl': 14.2.30
+      '@next/swc-win32-arm64-msvc': 14.2.30
+      '@next/swc-win32-ia32-msvc': 14.2.30
+      '@next/swc-win32-x64-msvc': 14.2.30
     transitivePeerDependencies:
       - '@babel/core'
       - babel-plugin-macros
