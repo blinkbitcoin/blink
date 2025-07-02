@@ -51,6 +51,12 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
   const errorName = error.name as ApplicationErrorKey
   let message = ""
   switch (errorName) {
+    case "MissingAppCheckTokenError":
+    case "UnauthorizedAppCheckTokenError":
+    case "UnknownAppCheckError":
+    case "AppCheckServiceError":
+      message = "Invalid app check token"
+      return new AuthorizationError({ message, logger: baseLogger })
     case "WithdrawalLimitsExceededError":
       message = error.message
       return new TransactionRestrictedError({ message, logger: baseLogger })
