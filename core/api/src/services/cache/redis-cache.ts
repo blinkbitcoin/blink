@@ -23,7 +23,7 @@ export const RedisCacheService = (): ICacheService => {
 
   const get = async <T>({ key }: LocalCacheGetArgs): Promise<T | CacheServiceError> => {
     try {
-      const value = await redisCache.getCache(key)
+      const value = await redisCache.getCache<T>(key)
       if (value === undefined) return new CacheUndefinedError()
 
       return value

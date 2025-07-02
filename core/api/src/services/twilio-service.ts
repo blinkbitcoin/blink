@@ -66,7 +66,10 @@ export const TwilioClient = (): IPhoneProviderService => {
         if (!lookup.lineTypeIntelligence) {
           return new MissingTypePhoneProviderError()
         }
-        if (lookup.lineTypeIntelligence.type === "nonFixedVoip") {
+        if (
+          lookup.lineTypeIntelligence["type"] &&
+          String(lookup.lineTypeIntelligence["type"]) === "nonFixedVoip"
+        ) {
           return new InvalidTypePhoneProviderError("nonFixedVoip")
         }
       }
@@ -121,7 +124,10 @@ export const TwilioClient = (): IPhoneProviderService => {
       if (!lookup.lineTypeIntelligence) {
         return new MissingTypePhoneProviderError()
       }
-      if (lookup.lineTypeIntelligence.type === "nonFixedVoip") {
+      if (
+        lookup.lineTypeIntelligence["type"] &&
+        String(lookup.lineTypeIntelligence["type"]) === "nonFixedVoip"
+      ) {
         return new InvalidTypePhoneProviderError("nonFixedVoip")
       }
 
@@ -178,10 +184,10 @@ export const TwilioClient = (): IPhoneProviderService => {
       const phoneMetadata: PhoneMetadata = {
         carrier: {
           error_code: `${result.carrier.error_code}`,
-          mobile_country_code: result.carrier.mobile_country_code,
-          mobile_network_code: result.carrier.mobile_network_code,
-          name: result.carrier.name,
-          type: result.carrier.type,
+          mobile_country_code: `${result.carrier.mobile_country_code}`,
+          mobile_network_code: `${result.carrier.mobile_network_code}`,
+          name: `${result.carrier.name}`,
+          type: `${result.carrier.type}` as CarrierType,
         },
         countryCode: result.countryCode,
       }
