@@ -3,6 +3,7 @@ import { GT } from "@/graphql/index"
 import MeQuery from "@/graphql/public/root/query/me"
 import GlobalsQuery from "@/graphql/public/root/query/globals"
 import CurrencyListQuery from "@/graphql/public/root/query/currency-list"
+import PayoutSpeedsQuery from "@/graphql/public/root/query/payout-speeds"
 import AuthorizationQuery from "@/graphql/public/root/query/authorization"
 import BtcPriceListQuery from "@/graphql/public/root/query/btc-price-list"
 import RealtimePriceQuery from "@/graphql/public/root/query/realtime-price"
@@ -27,6 +28,7 @@ export const queryFields = {
     accountDefaultWallet: AccountDefaultWalletQuery,
     businessMapMarkers: BusinessMapMarkersQuery,
     currencyList: CurrencyListQuery,
+    payoutSpeeds: PayoutSpeedsQuery,
     mobileVersions: MobileVersionsQuery,
     realtimePrice: RealtimePriceQuery,
     currencyConversionEstimation: CurrencyConversionEstimationQuery,

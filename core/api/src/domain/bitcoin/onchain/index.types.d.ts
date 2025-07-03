@@ -70,6 +70,13 @@ type QueuePayoutToAddressArgs = {
   journalId: LedgerJournalId
 }
 
+type PayoutQueue = {
+  speed: PayoutSpeed
+  queueName: string
+  displayName: string
+  description: string
+}
+
 type EstimatePayoutFeeArgs = {
   address: OnChainAddress
   amount: BtcPaymentAmount
@@ -121,6 +128,7 @@ interface IOnChainService {
   estimateFeeForPayout(
     args: EstimatePayoutFeeArgs,
   ): Promise<BtcPaymentAmount | OnChainServiceError>
+  listPayoutQueues(): Promise<PayoutQueue[] | OnChainServiceError>
 }
 
 type RebalanceCheckerConfig = {

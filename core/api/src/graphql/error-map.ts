@@ -579,6 +579,9 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
         "Authorization data from Telegram is still pending. Please wait a few seconds and try again."
       return new AuthorizationError({ message, logger: baseLogger })
 
+    case "PayoutQueueNotFoundError":
+      message = "Invalid or inactive speed"
+      return new ValidationInternalError({ message, logger: baseLogger })
     // ----------
     // Unhandled below here
     // ----------

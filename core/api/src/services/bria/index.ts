@@ -1,7 +1,7 @@
 import { Metadata, status } from "@grpc/grpc-js"
 import { ListValue, Struct, Value } from "google-protobuf/google/protobuf/struct_pb"
 
-import { UnknownBriaEventError } from "./errors"
+import { PayoutQueueNotFoundError, UnknownBriaEventError } from "./errors"
 
 import { eventDataHandler } from "./event-handler"
 
@@ -15,6 +15,7 @@ import {
   newAddress,
   submitPayout,
   subscribeAll,
+  listPayoutQueues as listPayoutQueuesGrpc,
 } from "./grpc-client"
 
 import {
@@ -22,6 +23,7 @@ import {
   GetAddressRequest,
   GetPayoutRequest,
   GetWalletBalanceSummaryRequest,
+  ListPayoutQueuesRequest,
   NewAddressRequest,
   BriaEvent as RawBriaEvent,
   SubmitPayoutRequest,
@@ -107,7 +109,14 @@ export const BriaSubscriber = () => {
   }
 }
 
-const queueNameForSpeed = (speed: PayoutSpeed): string => briaConfig.queueNames[speed]
+const queueNameForSpeed = (speed: PayoutSpeed): string | PayoutQueueNotFoundError => {
+  const queue = briaConfig.payoutQueues.find((queue) => queue.speed === speed)
+  if (!queue) {
+    return new PayoutQueueNotFoundError()
+  }
+
+  return queue.queueName
+}
 
 export const OnChainService = (): IOnChainService => {
   const metadata = new Metadata()
@@ -131,7 +140,7 @@ export const OnChainService = (): IOnChainService => {
 
   const getColdBalance = async (): Promise<BtcPaymentAmount | OnChainServiceError> => {
     const request = new GetWalletBalanceSummaryRequest()
-    request.setWalletName(briaConfig.coldStorage.walletName)
+    request.setWalletName(briaConfig.coldWalletName)
 
     try {
       const response = await getWalletBalanceSummary(request, metadata)
@@ -258,6 +267,30 @@ export const OnChainService = (): IOnChainService => {
     }
   }
 
+  const listPayoutQueues = async (): Promise<PayoutQueue[] | OnChainServiceError> => {
+    try {
+      const request = new ListPayoutQueuesRequest()
+      const response = await listPayoutQueuesGrpc(request, metadata)
+
+      const briaQueues = response.getPayoutQueuesList()
+
+      return briaConfig.payoutQueues.reduce<PayoutQueue[]>((queues, configQueue) => {
+        const matched = briaQueues.find((bq) => bq.getName() === configQueue.queueName)
+        if (!matched) return queues
+
+        queues.push({
+          ...configQueue,
+          description: configQueue.description || matched.getDescription() || "",
+        })
+
+        return queues
+      }, [])
+    } catch (err) {
+      const errMsg = parseErrorMessageFromUnknown(err)
+      return new UnknownOnChainServiceError(errMsg)
+    }
+  }
+
   const queuePayoutToAddress = async ({
     walletDescriptor,
     address,
@@ -266,9 +299,12 @@ export const OnChainService = (): IOnChainService => {
     journalId,
   }: QueuePayoutToAddressArgs): Promise<OnChainPayout | OnChainServiceError> => {
     try {
+      const queueName = queueNameForSpeed(speed)
+      if (queueName instanceof Error) return queueName
+
       const request = new SubmitPayoutRequest()
       request.setWalletName(briaConfig.hotWalletName)
-      request.setPayoutQueueName(queueNameForSpeed(speed))
+      request.setPayoutQueueName(queueName)
       request.setOnchainAddress(address)
       request.setSatoshis(Number(amount.amount))
       request.setExternalId(journalId)
@@ -306,8 +342,8 @@ export const OnChainService = (): IOnChainService => {
   ): Promise<PayoutId | OnChainServiceError> => {
     const request = new SubmitPayoutRequest()
     request.setWalletName(briaConfig.hotWalletName)
-    request.setPayoutQueueName(briaConfig.coldStorage.hotToColdRebalanceQueueName)
-    request.setDestinationWalletName(briaConfig.coldStorage.walletName)
+    request.setPayoutQueueName(briaConfig.hotToColdRebalanceQueueName)
+    request.setDestinationWalletName(briaConfig.coldWalletName)
     request.setSatoshis(Number(amount.amount))
     request.setMetadata(constructMetadata({ galoy: { rebalanceToColdWallet: true } }))
 
@@ -336,9 +372,12 @@ export const OnChainService = (): IOnChainService => {
       amount: BtcPaymentAmount
     }): Promise<BtcPaymentAmount | BriaEventError> => {
       try {
+        const queueName = queueNameForSpeed(speed)
+        if (queueName instanceof Error) return queueName
+
         const request = new EstimatePayoutFeeRequest()
         request.setWalletName(briaConfig.hotWalletName)
-        request.setPayoutQueueName(queueNameForSpeed(speed))
+        request.setPayoutQueueName(queueName)
         request.setOnchainAddress(address)
         request.setSatoshis(Number(amount.amount))
 
@@ -370,6 +409,7 @@ export const OnChainService = (): IOnChainService => {
       queuePayoutToAddress,
       rebalanceToColdWallet,
       estimateFeeForPayout,
+      listPayoutQueues,
     },
   })
 }
