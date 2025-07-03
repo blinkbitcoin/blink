@@ -13,7 +13,7 @@ const LoginLink: React.FC<LoginLinkProp> = ({ href }) => {
           <p className="font-medium text-sm">
             Already have an Account?{" "}
             <span className="font-semibold text-[var(--primaryButtonBackground)] dark:text-[var(--primaryButtonBackground)] hover:underline">
-              Login Here.
+              Log in here.
             </span>
           </p>
         </Link>
