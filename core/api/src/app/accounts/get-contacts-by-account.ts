@@ -7,20 +7,18 @@ export const getContactByUsername = async ({
   contactUsername,
 }: {
   account: Account
-  contactUsername: string
+  contactUsername: Username
 }): Promise<AccountContact | ApplicationError> => {
-  const contacts = await ContactsRepository().listByAccountId(account.id)
-  if (contacts instanceof Error) return contacts
-
-  const contact = contacts.find(
-    (contact) => contact.handle.toLowerCase() === contactUsername.toLowerCase(),
-  )
-  if (!contact) return new NoContactForUsernameError()
+  const contact = await ContactsRepository().findByHandle({
+    accountId: account.id,
+    handle: contactUsername,
+  })
+  if (contact instanceof Error) return new NoContactForUsernameError()
 
   return {
-    id: contact.handle as Username,
-    username: contact.handle as Username,
-    alias: contact.displayName as ContactAlias,
+    id: contact.handle,
+    username: contact.handle,
+    alias: contact.displayName,
     transactionsCount: contact.transactionsCount,
   }
 }
@@ -32,9 +30,9 @@ export const getContactsByAccountId = async (
   if (contacts instanceof Error) return contacts
 
   return contacts.map((contact) => ({
-    id: contact.handle as Username,
-    username: contact.handle as Username,
-    alias: contact.displayName as ContactAlias,
+    id: contact.handle,
+    username: contact.handle,
+    alias: contact.displayName,
     transactionsCount: contact.transactionsCount,
   }))
 }
