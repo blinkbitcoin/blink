@@ -1405,12 +1405,22 @@ export const PaymentSendResult = {
 
 export type PaymentSendResult = typeof PaymentSendResult[keyof typeof PaymentSendResult];
 export const PayoutSpeed = {
-  Fast: 'FAST'
+  Fast: 'FAST',
+  Medium: 'MEDIUM',
+  Slow: 'SLOW'
 } as const;
 
 export type PayoutSpeed = typeof PayoutSpeed[keyof typeof PayoutSpeed];
+export type PayoutSpeeds = {
+  readonly __typename: 'PayoutSpeeds';
+  readonly description: Scalars['String']['output'];
+  readonly displayName: Scalars['String']['output'];
+  readonly speed: PayoutSpeed;
+};
+
 export const PhoneCodeChannelType = {
   Sms: 'SMS',
+  Telegram: 'TELEGRAM',
   Whatsapp: 'WHATSAPP'
 } as const;
 
@@ -1518,6 +1528,8 @@ export type Query = {
   readonly onChainTxFee: OnChainTxFee;
   readonly onChainUsdTxFee: OnChainUsdTxFee;
   readonly onChainUsdTxFeeAsBtcDenominated: OnChainUsdTxFee;
+  /** Returns the list of available speeds for on-chain payments */
+  readonly payoutSpeeds: ReadonlyArray<PayoutSpeeds>;
   /** Returns 1 Sat and 1 Usd Cent price for the given currency in minor unit */
   readonly realtimePrice: RealtimePrice;
   /** @deprecated will be migrated to AccountDefaultWalletId */
