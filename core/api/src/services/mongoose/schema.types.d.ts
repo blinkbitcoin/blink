@@ -108,6 +108,9 @@ interface MerchantRecord {
   createdAt: Date
   location: LocationRecord
   validated: boolean
+  deleted: boolean
+  deletedAt?: Date
+  deletedByPrivilegedClientId?: string
 }
 
 interface QuizCompletedRecord {
