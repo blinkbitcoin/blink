@@ -1,17 +1,17 @@
 import { toSats } from "@/domain/bitcoin"
 
 export const RebalanceChecker = ({
-  minOnChainHotWalletBalance,
+  minBalance,
   minRebalanceSize,
-  maxHotWalletBalance,
+  threshold,
 }: RebalanceCheckerConfig): RebalanceChecker => {
-  const getWithdrawFromHotWalletAmount = ({
-    onChainHotWalletBalance,
-    offChainHotWalletBalance,
-  }: WithdrawFromHotWalletAmountArgs): Satoshis => {
-    const totalHotWallet = onChainHotWalletBalance + offChainHotWalletBalance
-    if (totalHotWallet > maxHotWalletBalance) {
-      const rebalanceAmount = onChainHotWalletBalance - minOnChainHotWalletBalance
+  const getWithdrawAmount = ({
+    totalBalance,
+    availableBalance,
+  }: WithdrawAmountArgs): Satoshis => {
+    const availableAmount = availableBalance || totalBalance
+    if (totalBalance > threshold) {
+      const rebalanceAmount = availableAmount - minBalance
       if (rebalanceAmount > minRebalanceSize) {
         return toSats(rebalanceAmount)
       }
@@ -19,7 +19,8 @@ export const RebalanceChecker = ({
 
     return toSats(0)
   }
+
   return {
-    getWithdrawFromHotWalletAmount,
+    getWithdrawAmount,
   }
 }

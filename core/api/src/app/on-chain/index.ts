@@ -1,4 +1,5 @@
 export * from "./rebalance-to-cold-wallet"
+export * from "./rebalance-to-withdrawal-wallet"
 export * from "./record-hot-to-cold-transfer"
 export * from "./list-payout-queues"
 

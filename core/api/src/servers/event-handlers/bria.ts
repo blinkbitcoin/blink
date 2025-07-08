@@ -6,16 +6,20 @@ import {
   LessThanDustThresholdError,
   NoTransactionToUpdateError,
 } from "@/domain/errors"
+import { ErrorLevel } from "@/domain/shared"
 
-import { NoTransactionToSettleError } from "@/services/ledger/domain/errors"
-import * as LedgerFacade from "@/services/ledger/facade"
-import { baseLogger } from "@/services/logger"
-import { BriaPayloadType } from "@/services/bria"
+import {
+  recordExceptionInCurrentSpan,
+  addAttributesToCurrentSpan,
+} from "@/services/tracing"
 import {
   EventAugmentationMissingError,
   UnknownPayloadTypeReceivedError,
 } from "@/services/bria/errors"
-import { addAttributesToCurrentSpan } from "@/services/tracing"
+import { baseLogger } from "@/services/logger"
+import { BriaPayloadType } from "@/services/bria"
+import * as LedgerFacade from "@/services/ledger/facade"
+import { NoTransactionToSettleError } from "@/services/ledger/domain/errors"
 
 // This should never compile if 'payloadType' is not never
 const assertUnreachable = (payloadType: never): Error =>
@@ -49,8 +53,22 @@ export const briaEventHandler = async (event: BriaEvent): Promise<true | DomainE
     case BriaPayloadType.UtxoDropped:
       return utxoDroppedEventHandler({ event: event.payload })
 
-    case BriaPayloadType.UtxoSettled:
-      return utxoSettledEventHandler({ event: event.payload })
+    case BriaPayloadType.UtxoSettled: {
+      const settledResult = await utxoSettledEventHandler({ event: event.payload })
+      if (settledResult instanceof Error) {
+        return settledResult
+      }
+
+      const rebalanceResult = await OnChain.rebalanceToWithdrawalWallet()
+      if (rebalanceResult instanceof Error) {
+        recordExceptionInCurrentSpan({
+          error: rebalanceResult,
+          level: ErrorLevel.Critical,
+        })
+      }
+
+      return settledResult
+    }
 
     case BriaPayloadType.PayoutSubmitted:
       if (event.augmentation.payoutInfo === undefined) {
@@ -184,9 +202,14 @@ export const payoutBroadcastEventHandler = async ({
   event: PayoutBroadcast
   payoutInfo: PayoutAugmentation
 }): Promise<true | ApplicationError> => {
+  if (payoutInfo.metadata?.galoy?.rebalanceToWithdrawalWallet) {
+    return true
+  }
+
   if (payoutInfo.metadata?.galoy?.rebalanceToColdWallet) {
     return OnChain.recordHotToColdTransfer(event)
   }
+
   const res = await Wallets.registerBroadcastedPayout({
     payoutId: event.id,
     proportionalFee: event.proportionalFee,

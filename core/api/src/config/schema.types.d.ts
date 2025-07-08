@@ -24,6 +24,13 @@ type PayoutQueueConfig = {
   description: string
 }
 
+type RebalanceConfig = {
+  threshold: Satoshis
+  minRebalanceSize: Satoshis
+  minBalance: Satoshis
+  payoutQueueName: string
+}
+
 type YamlSchema = {
   name: string
   lightningAddressDomain: string
@@ -53,16 +60,15 @@ type YamlSchema = {
     denyASNs: string[]
     allowASNs: string[]
   }
-  coldStorage: {
-    minOnChainHotWalletBalance: number
-    minRebalanceSize: number
-    maxHotWalletBalance: number
-  }
   bria: {
-    hotWalletName: string
+    receiveWalletName: string
+    withdrawalWalletName: string
     payoutQueues: PayoutQueueConfig[]
     coldWalletName: string
-    hotToColdRebalanceQueueName: string
+    rebalances: {
+      hotToCold: RebalanceConfig
+      receiveToWithdrawal: RebalanceConfig
+    }
   }
   lndScbBackupBucketName: string
   admin_accounts: {

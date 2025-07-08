@@ -1,30 +1,22 @@
 import * as Lightning from "../lightning/get-balances"
 
-import { getColdStorageConfig } from "@/config"
-
-import { getCurrentPriceAsDisplayPriceRatio } from "@/app/prices"
+import { getBriaConfig } from "@/config"
 
 import { toSats } from "@/domain/bitcoin"
-import { UsdDisplayCurrency } from "@/domain/fiat"
 import { RebalanceChecker } from "@/domain/bitcoin/onchain"
-import { paymentAmountFromNumber, WalletCurrency } from "@/domain/shared"
+import { paymentAmountFromNumber, roundToBigInt, WalletCurrency } from "@/domain/shared"
 
 import { LndService } from "@/services/lnd"
 import { OnChainService } from "@/services/bria"
 import { addAttributesToCurrentSpan } from "@/services/tracing"
 
 export const rebalanceToColdWallet = async (): Promise<boolean | ApplicationError> => {
-  const coldStorageConfig = getColdStorageConfig()
+  const { hotToCold: hotToColdConfig } = getBriaConfig().rebalances
 
   const onChainService = OnChainService()
 
   const offChainService = LndService()
   if (offChainService instanceof Error) return offChainService
-
-  const displayPriceRatio = await getCurrentPriceAsDisplayPriceRatio({
-    currency: UsdDisplayCurrency,
-  })
-  if (displayPriceRatio instanceof Error) return displayPriceRatio
 
   const onChainBalance = await onChainService.getHotBalance()
   if (onChainBalance instanceof Error) return onChainBalance
@@ -32,16 +24,18 @@ export const rebalanceToColdWallet = async (): Promise<boolean | ApplicationErro
   const offChainBalance = await Lightning.getTotalBalance()
   if (offChainBalance instanceof Error) return offChainBalance
 
-  const rebalanceAmount = RebalanceChecker(
-    coldStorageConfig,
-  ).getWithdrawFromHotWalletAmount({
-    onChainHotWalletBalance: toSats(onChainBalance.amount),
-    offChainHotWalletBalance: offChainBalance,
+  const withdrawalWalletBalance = await onChainService.getWithdrawalWalletBalance()
+  if (withdrawalWalletBalance instanceof Error) return withdrawalWalletBalance
+
+  const rebalanceAmount = RebalanceChecker(hotToColdConfig).getWithdrawAmount({
+    totalBalance: toSats(onChainBalance.amount + roundToBigInt(offChainBalance)),
+    availableBalance: toSats(withdrawalWalletBalance.amount),
   })
 
   addAttributesToCurrentSpan({
     "rebalance.offChainBalance": offChainBalance,
     "rebalance.onChainBalance": toSats(onChainBalance.amount),
+    "rebalance.withdrawalWalletBalance": toSats(withdrawalWalletBalance.amount),
     "rebalance.amount": rebalanceAmount,
   })
 
@@ -53,7 +47,7 @@ export const rebalanceToColdWallet = async (): Promise<boolean | ApplicationErro
   })
   if (amount instanceof Error) return amount
 
-  const payoutId = await onChainService.rebalanceToColdWallet(amount)
+  const payoutId = await onChainService.rebalanceToColdWallet({ amount })
   if (payoutId instanceof Error) return payoutId
 
   return true
