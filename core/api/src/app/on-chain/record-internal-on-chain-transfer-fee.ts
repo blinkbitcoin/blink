@@ -1,7 +1,7 @@
 import { toSats } from "@/domain/bitcoin"
 import { LedgerService } from "@/services/ledger"
 
-export const recordReceiveToWithdrawalTransferFee = async ({
+export const recordInternalOnChainTransferFee = async ({
   payoutId,
   satoshis,
   proportionalFee,

@@ -593,7 +593,7 @@ wait_for_new_payout_id() {
     -q dev-queue
     -d "${address}"
     -a ${amount}
-    -m '{"galoy": {"rebalanceToWithdrawalWallet": true}}'
+    -m '{"galoy": {"rebalance": true}}'
     | jq -r '.id'
   )
   [[ "${payout_id}" != "null" ]] || exit 1
