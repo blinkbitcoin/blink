@@ -579,6 +579,47 @@ wait_for_new_payout_id() {
   retry 10 1 grep_in_trigger_logs "sequence.*payout_cancelled.*${payout_id}"
 }
 
+@test "onchain-send: record internal onchain transfer fee" {
+  lnd_initial_balance=$(lnd_cli walletbalance | jq -r '.confirmed_balance')
+  bria_initial_dev_wallet_balance=$(bria_cli wallet-balance -w dev-wallet | jq -r '.effectiveSettled')
+
+  address=$(lnd_cli newaddress p2wkh | jq -r '.address')
+  [[ "${address}" != "null" ]] || exit 1
+
+  amount=210000
+
+  payout_id=$(bria_cli submit-payout
+    -w dev-wallet
+    -q dev-queue
+    -d "${address}"
+    -a ${amount}
+    -m '{"galoy": {"rebalanceToWithdrawalWallet": true}}'
+    | jq -r '.id'
+  )
+  [[ "${payout_id}" != "null" ]] || exit 1
+
+  retry 10 1 grep_in_trigger_logs "sequence.*payout_submitted.*${payout_id}"
+
+  bitcoin_cli -generate 3
+
+  tx_hash=(
+    grep_in_trigger_logs "sequence.*payout_settled.*${payout_id}"
+    | tail -n 1
+    | jq -r '.txId'
+  )
+  [[ "${tx_hash}" != "null" ]] || exit 1
+
+  # Get final balances
+  lnd_final_balance=$(lnd_cli walletbalance | jq -r '.confirmed_balance')
+  bria_final_dev_wallet_balance=$(bria_cli wallet-balance -w dev-wallet | jq -r '.effectiveSettled')
+
+  expected_lnd_final_balance=$((lnd_initial_balance + amount))
+  expected_bria_final_dev_wallet_balance=$((bria_initial_dev_wallet_balance - amount))
+
+  [[ "${lnd_final_balance}" -eq "${expected_lnd_final_balance}" ]] || exit 1
+  [[ "${bria_final_dev_wallet_balance}" -eq "${expected_bria_final_dev_wallet_balance}" ]] || exit 1
+}
+
 @test "onchain-send: returns available payout speeds" {
   exec_graphql 'anon' 'payout-speeds'
   payout_speeds="$(graphql_output '.data.payoutSpeeds')"

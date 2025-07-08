@@ -203,7 +203,12 @@ export const payoutBroadcastEventHandler = async ({
   payoutInfo: PayoutAugmentation
 }): Promise<true | ApplicationError> => {
   if (payoutInfo.metadata?.galoy?.rebalanceToWithdrawalWallet) {
-    return true
+    return OnChain.recordReceiveToWithdrawalTransferFee({
+      payoutId: event.id,
+      satoshis: event.satoshis,
+      proportionalFee: event.proportionalFee,
+      txId: event.txId,
+    })
   }
 
   if (payoutInfo.metadata?.galoy?.rebalanceToColdWallet) {

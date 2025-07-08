@@ -1,0 +1,27 @@
+import { toSats } from "@/domain/bitcoin"
+import { LedgerService } from "@/services/ledger"
+
+export const recordReceiveToWithdrawalTransferFee = async ({
+  payoutId,
+  satoshis,
+  proportionalFee,
+  txId,
+}: {
+  payoutId: PayoutId
+  satoshis: BtcPaymentAmount
+  proportionalFee: BtcPaymentAmount
+  txId: OnChainTxHash
+}): Promise<true | ApplicationError> => {
+  const description = `fee for transfer of ${satoshis.amount} sats to withdrawal wallet`
+
+  const ledgerService = LedgerService()
+  const journal = await ledgerService.recordInternalOnChainTransferFee({
+    payoutId,
+    fee: toSats(proportionalFee.amount),
+    txHash: txId,
+    description,
+  })
+  if (journal instanceof Error) return journal
+
+  return true
+}
