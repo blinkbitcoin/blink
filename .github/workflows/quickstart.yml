@@ -13,8 +13,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-      # Free up host disk space for Docker images/layers
-      - uses: wimpysworld/nothing-but-nix@main
       # Prune Docker system before build to maximize disk space
       - name: Prune Docker system
         run: docker system prune -af
