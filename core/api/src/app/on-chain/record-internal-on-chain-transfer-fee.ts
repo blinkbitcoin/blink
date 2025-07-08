@@ -12,7 +12,7 @@ export const recordInternalOnChainTransferFee = async ({
   proportionalFee: BtcPaymentAmount
   txId: OnChainTxHash
 }): Promise<true | ApplicationError> => {
-  const description = `fee for transfer of ${satoshis.amount} sats to withdrawal wallet`
+  const description = `fee for rebalance of ${satoshis.amount} sats`
 
   const ledgerService = LedgerService()
   const journal = await ledgerService.recordInternalOnChainTransferFee({
