@@ -21,7 +21,7 @@ const MerchantMapDeleteMutation = GT.Field<null, GraphQLAdminContext>({
   args: {
     input: { type: GT.NonNull(MerchantMapDeleteInput) },
   },
-  resolve: async (_, args) => {
+  resolve: async (_, args, { privilegedClientId }) => {
     const { id } = args.input
 
     if (id instanceof Error) {
@@ -33,7 +33,10 @@ const MerchantMapDeleteMutation = GT.Field<null, GraphQLAdminContext>({
       return { errors: [mapAndParseErrorForGqlResponse(merchantId)] }
     }
 
-    const account = await Merchants.deleteMerchantById(merchantId)
+    const account = await Merchants.deleteMerchantById({
+      id: merchantId,
+      deletedByPrivilegedClientId: privilegedClientId,
+    })
 
     if (account instanceof Error) {
       return { errors: [mapAndParseErrorForGqlResponse(account)] }

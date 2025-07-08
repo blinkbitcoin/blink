@@ -24,7 +24,10 @@ interface IMerchantRepository {
     username: Username
     validated: boolean
   }): Promise<BusinessMapMarker | RepositoryError>
-  remove(id: MerchantId): Promise<void | RepositoryError>
+  remove(args: {
+    id: MerchantId
+    deletedByPrivilegedClientId?: PrivilegedClientId
+  }): Promise<void | RepositoryError>
 }
 
 export const MerchantsRepository = (): IMerchantRepository => {
@@ -46,7 +49,10 @@ export const MerchantsRepository = (): IMerchantRepository => {
     username: Username,
   ): Promise<BusinessMapMarker[] | RepositoryError> => {
     try {
-      const result = await Merchant.find({ username: caseInsensitiveRegex(username) })
+      const result = await Merchant.find({
+        username: caseInsensitiveRegex(username),
+        deleted: false,
+      })
       if (result.length === 0) {
         return new CouldNotFindMerchantFromUsernameError(username)
       }
@@ -58,7 +64,7 @@ export const MerchantsRepository = (): IMerchantRepository => {
 
   const listForMap = async (): Promise<BusinessMapMarker[] | RepositoryError> => {
     try {
-      const merchants = await Merchant.find({ validated: true })
+      const merchants = await Merchant.find({ validated: true, deleted: false })
       return merchants.map(translateToMerchant)
     } catch (err) {
       return parseRepositoryError(err)
@@ -69,7 +75,7 @@ export const MerchantsRepository = (): IMerchantRepository => {
     BusinessMapMarker[] | RepositoryError
   > => {
     try {
-      const merchants = await Merchant.find({ validated: false })
+      const merchants = await Merchant.find({ validated: false, deleted: false })
       return merchants.map(translateToMerchant)
     } catch (err) {
       return parseRepositoryError(err)
@@ -115,7 +121,7 @@ export const MerchantsRepository = (): IMerchantRepository => {
     validated: boolean
   }) => {
     const result = await Merchant.findOneAndUpdate(
-      { id },
+      { id, deleted: false },
       { coordinates, title, username, validated },
       { new: true },
     )
@@ -126,10 +132,21 @@ export const MerchantsRepository = (): IMerchantRepository => {
     return translateToMerchant(result)
   }
 
-  const remove = async (id: MerchantId): Promise<void | RepositoryError> => {
+  const remove = async ({
+    id,
+    deletedByPrivilegedClientId,
+  }: {
+    id: MerchantId
+    deletedByPrivilegedClientId?: PrivilegedClientId
+  }): Promise<void | RepositoryError> => {
     try {
-      const result = await Merchant.deleteOne({ id })
-      if (!result) {
+      const result = await Merchant.updateOne(
+        { id, deleted: false },
+        {
+          $set: { deleted: true, deletedAt: new Date(), deletedByPrivilegedClientId },
+        },
+      )
+      if (result.matchedCount === 0) {
         return new CouldNotFindMerchantFromIdError(id)
       }
     } catch (err) {
@@ -150,6 +167,11 @@ export const MerchantsRepository = (): IMerchantRepository => {
       title: merchant.title as BusinessMapTitle,
       coordinates,
       validated: merchant.validated,
+      deleted: merchant.deleted,
+      deletedAt: merchant.deletedAt,
+      deletedByPrivilegedClientId: merchant.deleted
+        ? ((merchant.deletedByPrivilegedClientId || "System") as PrivilegedClientId)
+        : undefined,
       createdAt: merchant.createdAt,
     }
   }

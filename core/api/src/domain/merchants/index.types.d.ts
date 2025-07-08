@@ -12,6 +12,9 @@ type BusinessMapMarker = {
   title: BusinessMapTitle
   coordinates: Coordinates
   validated: boolean
+  deleted: boolean
+  deletedAt?: Date
+  deletedByPrivilegedClientId?: PrivilegedClientId
   createdAt: Date
 }
 

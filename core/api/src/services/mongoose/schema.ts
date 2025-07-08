@@ -380,7 +380,22 @@ const MerchantSchema = new Schema<MerchantRecord>({
     default: false,
     index: true,
   },
+  deleted: {
+    type: Boolean,
+    default: false,
+    required: true,
+  },
+  deletedAt: {
+    type: Date,
+    required: false,
+  },
+  deletedByPrivilegedClientId: {
+    type: String,
+    required: false,
+  },
 })
+
+MerchantSchema.index({ validated: 1, deleted: 1 })
 
 export const Merchant = mongoose.model<MerchantRecord>("Merchant", MerchantSchema)
 
