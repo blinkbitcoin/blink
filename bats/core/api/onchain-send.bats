@@ -593,22 +593,20 @@ wait_for_new_payout_id() {
     -q dev-queue \
     -d ${address} \
     -a ${amount} \
-    -m '{"galoy": {"rebalance": true}}' \
+    -m "{\"galoy\":{\"rebalance\":true}}" \
     | jq -r '.id'
   )
 
   [[ "${payout_id}" != "null" ]] || exit 1
 
+  bria_cli watch-events -o
+  bitcoin_cli -generate 1
+
   retry 10 1 grep_in_trigger_logs "sequence.*payout_submitted.*${payout_id}"
 
-  bitcoin_cli -generate 3
+  bitcoin_cli -generate 2
 
-  tx_hash=$(
-    grep_in_trigger_logs "sequence.*payout_settled.*${payout_id}" \
-    | tail -n 1 \
-    | jq -r '.txId'
-  )
-  [[ "${tx_hash}" != "null" ]] || exit 1
+  retry 10 1 grep_in_trigger_logs "sequence.*payout_settled.*${payout_id}"
 
   lnd_final_balance=$(lnd_cli walletbalance | jq -r '.confirmed_balance')
   bria_final_dev_wallet_balance=$(bria_cli wallet-balance -w dev-wallet | jq -r '.effectiveSettled')
