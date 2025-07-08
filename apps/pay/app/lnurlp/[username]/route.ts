@@ -77,9 +77,10 @@ export async function GET(
     ["text/identifier", `${username}@${originalUrlInfo.hostname}`],
   ])
 
-  const callback = `${originalUrlInfo.protocol}://${originalUrlInfo.hostname}${
-    originalUrlInfo.port ? `:${originalUrlInfo.port}` : ""
-  }/lnurlp/${username}/callback`
+  const { protocol, hostname, port } = originalUrlInfo
+  const portString = port && port !== "80" && port !== "443" ? `:${port}` : ""
+
+  const callback = `${protocol}://${hostname}${portString}/lnurlp/${username}/callback`
 
   let minSendable = 1000 // 1 sat in millisat
   let maxSendable = 100000000000 // 1 BTC in millisat
