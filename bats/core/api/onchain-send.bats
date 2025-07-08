@@ -603,14 +603,13 @@ wait_for_new_payout_id() {
 
   bitcoin_cli -generate 3
 
-  tx_hash=(
-    grep_in_trigger_logs "sequence.*payout_settled.*${payout_id}"
-    | tail -n 1
+  tx_hash=$(
+    grep_in_trigger_logs "sequence.*payout_settled.*${payout_id}" \
+    | tail -n 1 \
     | jq -r '.txId'
   )
   [[ "${tx_hash}" != "null" ]] || exit 1
 
-  # Get final balances
   lnd_final_balance=$(lnd_cli walletbalance | jq -r '.confirmed_balance')
   bria_final_dev_wallet_balance=$(bria_cli wallet-balance -w dev-wallet | jq -r '.effectiveSettled')
 
