@@ -588,14 +588,15 @@ wait_for_new_payout_id() {
 
   amount=210000
 
-  payout_id=$(bria_cli submit-payout
-    -w dev-wallet
-    -q dev-queue
-    -d "${address}"
-    -a ${amount}
-    -m '{"galoy": {"rebalance": true}}'
+  payout_id=$(bria_cli submit-payout \
+    -w dev-wallet \
+    -q dev-queue \
+    -d ${address} \
+    -a ${amount} \
+    -m '{"galoy": {"rebalance": true}}' \
     | jq -r '.id'
   )
+
   [[ "${payout_id}" != "null" ]] || exit 1
 
   retry 10 1 grep_in_trigger_logs "sequence.*payout_submitted.*${payout_id}"
