@@ -446,6 +446,14 @@ teardown() {
 
   amount=210000
 
+  estimated_fee=$(bria_cli estimate-payout-fee \
+    -w dev-wallet \
+    -q dev-queue \
+    -d ${address} \
+    -a ${amount} \
+    | jq -r '.satoshis'
+  )
+
   payout_id=$(bria_cli submit-payout \
     -w dev-wallet \
     -q dev-queue \
@@ -457,17 +465,24 @@ teardown() {
 
   [[ "${payout_id}" != "null" ]] || exit 1
 
-  retry 15 2 grep_in_trigger_logs "sequence.*payout_submitted.*${payout_id}"
+  bitcoin_cli -generate 3
+  retry 30 2 grep_in_trigger_logs "sequence.*payout_submitted.*${payout_id}"
 
-  bitcoin_cli -generate 6
+  # hack to force bria settled event
+  for i in {1..20}; do
+    tmp_balance=$(bria_cli wallet-balance -w dev-wallet  | jq -r '.effectiveSettled')
+    [[ "${tmp_balance}" != "${bria_initial_dev_wallet_balance}" ]] && break;
+    bitcoin_cli -generate 1
+    sleep 1
+  done
 
-  retry 15 2 grep_in_trigger_logs "sequence.*payout_settled.*${payout_id}"
+  retry 30 2 grep_in_trigger_logs "sequence.*payout_settled.*${payout_id}"
 
   lnd_final_balance=$(lnd_cli walletbalance | jq -r '.confirmed_balance')
   bria_final_dev_wallet_balance=$(bria_cli wallet-balance -w dev-wallet | jq -r '.effectiveSettled')
 
   expected_lnd_final_balance=$((lnd_initial_balance + amount))
-  expected_bria_final_dev_wallet_balance=$((bria_initial_dev_wallet_balance - amount))
+  expected_bria_final_dev_wallet_balance=$((bria_initial_dev_wallet_balance - amount - estimated_fee))
 
   [[ "${lnd_final_balance}" -eq "${expected_lnd_final_balance}" ]] || exit 1
   [[ "${bria_final_dev_wallet_balance}" -eq "${expected_bria_final_dev_wallet_balance}" ]] || exit 1
