@@ -37,13 +37,13 @@ echo 'export COMPOSE_PROJECT_NAME="$(basename $PWD)"' >> .envrc
 direnv allow
 
 # launch docker
-docker compose -p $(basename "$PWD") -f ./vendor/galoy-quickstart/docker-compose.yml up -d
+docker compose -p $(basename "$PWD") -f ./vendor/blink-quickstart/docker-compose.yml up -d
 ```
 
-If you want to use `docker compose`, you need to keep the "prefix": `-p $(basename "$PWD") -f ./vendor/galoy-quickstart/docker-compose.yml `
+If you want to use `docker compose`, you need to keep the "prefix": `-p $(basename "$PWD") -f ./vendor/blink-quickstart/docker-compose.yml `
 You can create an alias like:
 ```
-alias dp="docker compose -p $(basename "$PWD") -f ./vendor/galoy-quickstart/docker-compose.yml"
+alias dp="docker compose -p $(basename "$PWD") -f ./vendor/blink-quickstart/docker-compose.yml"
 dp up -d
 dp ps
 ```

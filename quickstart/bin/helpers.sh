@@ -7,7 +7,7 @@ COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-quickstart}"
 GALOY_ENDPOINT=${GALOY_ENDPOINT:-localhost:4455}
 
 if [ -n "$HOST_PROJECT_PATH" ]; then
-  GALOY_DIR="./vendor/galoy-quickstart"
+  GALOY_DIR="./vendor/blink-quickstart"
 else
   GALOY_DIR="."
 fi

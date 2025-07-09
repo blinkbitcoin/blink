@@ -204,7 +204,7 @@ services:
     #@overlay/match when=1
     volumes:
     #@overlay/match by=overlay.all, expects="0+"
-    #@overlay/replace via=lambda left, right: str(left).replace("HOST_PROJECT_PATH:-.}", "HOST_PROJECT_PATH:-.}/${GALOY_QUICKSTART_PATH:-vendor/galoy-quickstart}/dev")
+    #@overlay/replace via=lambda left, right: str(left).replace("HOST_PROJECT_PATH:-.}", "HOST_PROJECT_PATH:-.}/${GALOY_QUICKSTART_PATH:-vendor/blink-quickstart}/dev")
     - REPLACED
 
 #@overlay/match by=overlay.all

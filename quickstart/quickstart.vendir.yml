@@ -4,7 +4,7 @@ kind: Config
 directories:
 - path: vendor
   contents:
-  - path: galoy-quickstart
+  - path: blink-quickstart
     git:
       url: https://github.com/blinkbitcoin/blink.git
       ref: main
