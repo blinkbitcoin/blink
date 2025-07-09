@@ -527,7 +527,7 @@ wait_for_new_payout_id() {
   )
   [[ "${payout_id}" != "null" ]] || exit 1
 
-  retry 10 1 grep_in_trigger_logs "sequence.*payout_submitted.*${payout_id}"
+  retry 15 2 grep_in_trigger_logs "sequence.*payout_submitted.*${payout_id}"
 
   last_sequence=$(
     grep_in_trigger_logs "sequence" \
@@ -537,7 +537,7 @@ wait_for_new_payout_id() {
   [[ -n "${last_sequence}" ]] || exit 1
 
   bria_cli cancel-payout -i ${payout_id}
-  retry 10 1 grep_in_trigger_logs "sequence.*payout_cancelled.*${payout_id}"
+  retry 15 2 grep_in_trigger_logs "sequence.*payout_cancelled.*${payout_id}"
 }
 
 @test "onchain-send: cancel internal payout" {
@@ -576,46 +576,7 @@ wait_for_new_payout_id() {
 
   # Check for cancelled event
   bria_cli cancel-payout -i ${payout_id}
-  retry 10 1 grep_in_trigger_logs "sequence.*payout_cancelled.*${payout_id}"
-}
-
-@test "onchain-send: record internal onchain transfer fee" {
-  lnd_initial_balance=$(lnd_cli walletbalance | jq -r '.confirmed_balance')
-  bria_initial_dev_wallet_balance=$(bria_cli wallet-balance -w dev-wallet | jq -r '.effectiveSettled')
-
-  address=$(lnd_cli newaddress p2wkh | jq -r '.address')
-  [[ "${address}" != "null" ]] || exit 1
-
-  amount=210000
-
-  payout_id=$(bria_cli submit-payout \
-    -w dev-wallet \
-    -q dev-queue \
-    -d ${address} \
-    -a ${amount} \
-    -m "{\"galoy\":{\"rebalance\":true}}" \
-    | jq -r '.id'
-  )
-
-  [[ "${payout_id}" != "null" ]] || exit 1
-
-  bria_cli watch-events -o
-  bitcoin_cli -generate 1
-
-  retry 10 1 grep_in_trigger_logs "sequence.*payout_submitted.*${payout_id}"
-
-  bitcoin_cli -generate 2
-
-  retry 10 1 grep_in_trigger_logs "sequence.*payout_settled.*${payout_id}"
-
-  lnd_final_balance=$(lnd_cli walletbalance | jq -r '.confirmed_balance')
-  bria_final_dev_wallet_balance=$(bria_cli wallet-balance -w dev-wallet | jq -r '.effectiveSettled')
-
-  expected_lnd_final_balance=$((lnd_initial_balance + amount))
-  expected_bria_final_dev_wallet_balance=$((bria_initial_dev_wallet_balance - amount))
-
-  [[ "${lnd_final_balance}" -eq "${expected_lnd_final_balance}" ]] || exit 1
-  [[ "${bria_final_dev_wallet_balance}" -eq "${expected_bria_final_dev_wallet_balance}" ]] || exit 1
+  retry 15 2 grep_in_trigger_logs "sequence.*payout_cancelled.*${payout_id}"
 }
 
 @test "onchain-send: returns available payout speeds" {

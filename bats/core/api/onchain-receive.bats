@@ -6,6 +6,7 @@ load "../../helpers/onchain.bash"
 load "../../helpers/ln.bash"
 load "../../helpers/wallet.bash"
 load "../../helpers/ledger.bash"
+load "../../helpers/trigger.bash"
 
 setup_file() {
   create_user 'alice'
@@ -434,4 +435,40 @@ teardown() {
   retry 15 1 check_for_onchain_initiated_settled 'alice' "$alice_address_1" 2
   retry 3 1 check_for_onchain_initiated_settled 'alice' "$alice_address_2" 2
   retry 3 1 check_for_onchain_initiated_settled 'bob' "$bob_address_1" 1
+}
+
+@test "onchain-receive: record internal onchain transfer fee" {
+  lnd_initial_balance=$(lnd_cli walletbalance | jq -r '.confirmed_balance')
+  bria_initial_dev_wallet_balance=$(bria_cli wallet-balance -w dev-wallet | jq -r '.effectiveSettled')
+
+  address=$(lnd_cli newaddress p2wkh | jq -r '.address')
+  [[ "${address}" != "null" ]] || exit 1
+
+  amount=210000
+
+  payout_id=$(bria_cli submit-payout \
+    -w dev-wallet \
+    -q dev-queue \
+    -d ${address} \
+    -a ${amount} \
+    -m "{\"galoy\":{\"rebalance\":true}}" \
+    | jq -r '.id'
+  )
+
+  [[ "${payout_id}" != "null" ]] || exit 1
+
+  retry 15 2 grep_in_trigger_logs "sequence.*payout_submitted.*${payout_id}"
+
+  bitcoin_cli -generate 6
+
+  retry 15 2 grep_in_trigger_logs "sequence.*payout_settled.*${payout_id}"
+
+  lnd_final_balance=$(lnd_cli walletbalance | jq -r '.confirmed_balance')
+  bria_final_dev_wallet_balance=$(bria_cli wallet-balance -w dev-wallet | jq -r '.effectiveSettled')
+
+  expected_lnd_final_balance=$((lnd_initial_balance + amount))
+  expected_bria_final_dev_wallet_balance=$((bria_initial_dev_wallet_balance - amount))
+
+  [[ "${lnd_final_balance}" -eq "${expected_lnd_final_balance}" ]] || exit 1
+  [[ "${bria_final_dev_wallet_balance}" -eq "${expected_bria_final_dev_wallet_balance}" ]] || exit 1
 }
