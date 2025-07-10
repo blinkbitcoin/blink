@@ -2,7 +2,11 @@ import { MainBook, Transaction } from "./books"
 
 import { getBankOwnerWalletId } from "./caching"
 
-import { coldStorageAccountId, lndLedgerAccountId } from "./domain/accounts"
+import {
+  coldStorageAccountId,
+  lndLedgerAccountId,
+  onChainLedgerAccountId,
+} from "./domain/accounts"
 
 import { translateToLedgerJournal } from "./helpers"
 
@@ -92,6 +96,37 @@ export const admin = {
         .credit(coldStorageAccountId, sats + fee, metadata)
         .debit(bankOwnerPath, fee, metadata)
         .debit(lndLedgerAccountId, sats, metadata)
+
+      const savedEntry = await entry.commit()
+      return translateToLedgerJournal(savedEntry)
+    } catch (err) {
+      return new UnknownLedgerError(err)
+    }
+  },
+
+  recordInternalOnChainTransferFee: async ({
+    payoutId,
+    fee,
+    txHash,
+    description,
+  }: RecordInternalOnChainTransferFeeArgs): Promise<
+    LedgerJournal | LedgerServiceError
+  > => {
+    const metadata = {
+      type: LedgerTransactionType.Fee,
+      pending: false,
+      hash: txHash,
+      currency: WalletCurrency.Btc,
+      payout_id: payoutId,
+    }
+
+    try {
+      const bankOwnerWalletId = await getBankOwnerWalletId()
+      const bankOwnerPath = toLiabilitiesWalletId(bankOwnerWalletId)
+
+      const entry = MainBook.entry(description)
+        .debit(bankOwnerPath, fee, metadata)
+        .credit(onChainLedgerAccountId, fee, metadata)
 
       const savedEntry = await entry.commit()
       return translateToLedgerJournal(savedEntry)

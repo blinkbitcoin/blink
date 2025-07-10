@@ -140,6 +140,13 @@ type AddColdStorageTxSendArgs<T extends DisplayCurrency> = {
   feeDisplayCurrency: DisplayAmount<T>
 }
 
+type RecordInternalOnChainTransferFeeArgs = {
+  payoutId: PayoutId
+  fee: Satoshis
+  txHash: OnChainTxHash | PaymentHash
+  description: string
+}
+
 type IntraledgerTxArgs = {
   senderWalletId: WalletId
   senderWalletCurrency: WalletCurrency
@@ -340,6 +347,10 @@ interface ILedgerService {
 
   addColdStorageTxSend<T extends DisplayCurrency>(
     args: AddColdStorageTxSendArgs<T>,
+  ): Promise<LedgerJournal | LedgerServiceError>
+
+  recordInternalOnChainTransferFee(
+    args: RecordInternalOnChainTransferFeeArgs,
   ): Promise<LedgerJournal | LedgerServiceError>
 }
 

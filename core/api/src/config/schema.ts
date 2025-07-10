@@ -163,27 +163,12 @@ export const configSchema = {
         denyASNs: [],
       },
     },
-    coldStorage: {
-      type: "object",
-      properties: {
-        minOnChainHotWalletBalance: { type: "integer" },
-        minRebalanceSize: { type: "integer" },
-        maxHotWalletBalance: { type: "integer" },
-      },
-      required: ["minOnChainHotWalletBalance", "minRebalanceSize", "maxHotWalletBalance"],
-      additionalProperties: false,
-      default: {
-        minOnChainHotWalletBalance: 1000000,
-        minRebalanceSize: 10000000,
-        maxHotWalletBalance: 200000000,
-      },
-    },
     bria: {
       type: "object",
       properties: {
-        hotWalletName: { type: "string" },
+        receiveWalletName: { type: "string" },
+        withdrawalWalletName: { type: "string" },
         coldWalletName: { type: "string" },
-        hotToColdRebalanceQueueName: { type: "string" },
         payoutQueues: {
           type: "array",
           items: {
@@ -221,18 +206,71 @@ export const configSchema = {
             },
           ],
         },
+        rebalances: {
+          type: "object",
+          properties: {
+            hotToCold: {
+              type: "object",
+              properties: {
+                threshold: { type: "integer" },
+                minRebalanceSize: { type: "integer" },
+                minBalance: { type: "integer" },
+                payoutQueueName: { type: "string" },
+              },
+              required: [
+                "threshold",
+                "minRebalanceSize",
+                "minBalance",
+                "payoutQueueName",
+              ],
+              additionalProperties: false,
+            },
+            receiveToWithdrawal: {
+              type: "object",
+              properties: {
+                threshold: { type: "integer" },
+                minRebalanceSize: { type: "integer" },
+                minBalance: { type: "integer" },
+                payoutQueueName: { type: "string" },
+              },
+              required: [
+                "threshold",
+                "minRebalanceSize",
+                "minBalance",
+                "payoutQueueName",
+              ],
+              additionalProperties: false,
+            },
+          },
+          required: ["hotToCold", "receiveToWithdrawal"],
+          default: {
+            hotToCold: {
+              threshold: 200000000,
+              minRebalanceSize: 10000000,
+              minBalance: 1000000,
+              payoutQueueName: "dev-queue",
+            },
+            receiveToWithdrawal: {
+              threshold: 25000000,
+              minRebalanceSize: 25000000,
+              minBalance: 100000,
+              payoutQueueName: "dev-queue",
+            },
+          },
+        },
       },
       required: [
-        "hotWalletName",
+        "receiveWalletName",
+        "withdrawalWalletName",
         "coldWalletName",
-        "hotToColdRebalanceQueueName",
         "payoutQueues",
+        "rebalances",
       ],
       additionalProperties: false,
       default: {
-        hotWalletName: "dev-wallet",
+        receiveWalletName: "dev-wallet",
+        withdrawalWalletName: "dev-wallet",
         coldWalletName: "cold",
-        hotToColdRebalanceQueueName: "dev-queue",
       },
     },
     lndScbBackupBucketName: { type: "string", default: "lnd-static-channel-backups" },
@@ -692,7 +730,6 @@ export const configSchema = {
     "ratioPrecision",
     "buildVersion",
     "quizzes",
-    "coldStorage",
     "bria",
     "lndScbBackupBucketName",
     "admin_accounts",

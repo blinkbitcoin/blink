@@ -1,5 +1,7 @@
 export * from "./rebalance-to-cold-wallet"
+export * from "./rebalance-to-withdrawal-wallet"
 export * from "./record-hot-to-cold-transfer"
+export * from "./record-internal-on-chain-transfer-fee"
 export * from "./list-payout-queues"
 
 import { OnChainService } from "@/services/bria"

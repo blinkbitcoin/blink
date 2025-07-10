@@ -26,14 +26,10 @@ quizzes:
   denyIPCountries: []
   allowASNs: []
   denyASNs: []
-coldStorage:
-  minOnChainHotWalletBalance: 1000000
-  minRebalanceSize: 10000000
-  maxHotWalletBalance: 200000000
 bria:
-  hotWalletName: dev-wallet
+  receiveWalletName: dev-wallet
+  withdrawalWalletName: dev-wallet
   coldWalletName: cold
-  hotToColdRebalanceQueueName: dev-queue
   payoutQueues:
     - speed: fast
       queueName: dev-queue
@@ -47,6 +43,17 @@ bria:
       queueName: dev-slow-queue
       displayName: Flexible
       description: Estimated broadcast ~24 hours
+  rebalances:
+    hotToCold:
+      threshold: 200000000
+      minRebalanceSize: 10000000
+      minBalance: 1000000
+      payoutQueueName: dev-queue
+    receiveToWithdrawal:
+      threshold: 25000000
+      minRebalanceSize: 25000000
+      minBalance: 100000
+      payoutQueueName: dev-queue
 lndScbBackupBucketName: lnd-static-channel-backups
 admin_accounts:
   - role: dealer

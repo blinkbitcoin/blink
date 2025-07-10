@@ -12,6 +12,7 @@ type AddressAugmentation = {
 
 type PayoutMetadata = {
   galoy?: {
+    rebalance?: boolean
     rebalanceToColdWallet?: boolean
   }
 }
