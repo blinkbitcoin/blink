@@ -17,7 +17,6 @@ describe("PaymentInputValidator", () => {
     status: AccountStatus.Active,
     statusHistory: [{ status: AccountStatus.Active }],
     contactEnabled: true,
-    contacts: [],
     kratosUserId: "kratosUserId" as UserId,
     displayCurrency: UsdDisplayCurrency,
   }

@@ -1,0 +1,15 @@
+mutation contactCreate($input: ContactCreateInput!) {
+  contactCreate(input: $input) {
+    errors {
+      message
+    }
+    contact {
+      id
+      handle
+      type
+      displayName
+      transactionsCount
+      createdAt
+    }
+  }
+}

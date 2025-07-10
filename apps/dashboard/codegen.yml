@@ -69,3 +69,8 @@ generates:
         EndpointUrl: "string"
         NotificationCategory: "string"
         DateTime: "string"
+        AccountId: "string"
+        ContactId: "string"
+        ContactHandle: "string"
+        ContactType: "string"
+        ContactDisplayName: "string"

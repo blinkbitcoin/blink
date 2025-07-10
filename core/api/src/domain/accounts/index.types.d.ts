@@ -17,6 +17,8 @@ type DepositFeeRatioAsBasisPoints = bigint & { readonly brand: unique symbol }
 
 type ContactAlias = string & { readonly brand: unique symbol }
 
+type LightningAddress = string & { readonly brand: unique symbol }
+
 type AccountLimitsArgs = {
   level: AccountLevel
   accountLimits?: {
@@ -104,11 +106,14 @@ type Account = {
   status: AccountStatus
   statusHistory: AccountStatusHistory
   contactEnabled: boolean
-  readonly contacts: AccountContact[]
   kratosUserId: UserId
   displayCurrency: DisplayCurrency
   // temp
   role?: string
+}
+
+type AccountWithContacts = Account & {
+  contacts: AccountContact[]
 }
 
 type AccountValidator = {

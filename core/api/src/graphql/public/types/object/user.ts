@@ -80,7 +80,12 @@ const GraphQLUser = GT.Object<User, GraphQLPublicContextAuth>({
       type: GT.NonNullList(AccountContact), // TODO: Make it a Connection Interface
       description: dedent`Get full list of contacts.
         Can include the transactions associated with each contact.`,
-      resolve: async (source, args, { domainAccount }) => domainAccount?.contacts,
+      resolve: async (_source, _args, { domainAccount }) => {
+        const contacts = await Accounts.getContactsByAccountId(domainAccount.id)
+        if (contacts instanceof Error) throw mapError(contacts)
+
+        return contacts
+      },
     },
 
     contactByUsername: {
