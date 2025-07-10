@@ -14,7 +14,6 @@ import {
   MissingIPMetadataError,
   NoBtcWalletExistsForAccountError,
   NotEnoughBalanceForQuizError,
-  QuizClaimedTooEarlyError,
 } from "@/domain/errors"
 import { WalletCurrency } from "@/domain/shared"
 import { RateLimitConfig } from "@/domain/rate-limit"
@@ -130,8 +129,6 @@ export const claimQuiz = async ({
   const quiz = quizzesBefore.find((quiz) => quiz.id === quizId)
   if (quiz === undefined) return new InvalidQuizQuestionIdError()
 
-  if (quiz.notBefore && quiz.notBefore > new Date()) return new QuizClaimedTooEarlyError()
-
   const recipientWallets = await WalletsRepository().listByAccountId(accountId)
   if (recipientWallets instanceof Error) return recipientWallets
 
@@ -159,14 +156,17 @@ export const claimQuiz = async ({
   const shouldGiveSats = await QuizRepository().add({ quizId, accountId })
   if (shouldGiveSats instanceof Error) return shouldGiveSats
 
-  const payment = await intraledgerPaymentSendWalletIdForBtcWallet({
-    senderWalletId: funderWalletId,
-    recipientWalletId,
-    amount,
-    memo: quizId,
-    senderAccount: funderAccount,
-  })
-  if (payment instanceof Error) return payment
+  const isEligibleForPayment = !quiz.notBefore || quiz.notBefore <= new Date()
+  if (isEligibleForPayment) {
+    const payment = await intraledgerPaymentSendWalletIdForBtcWallet({
+      senderWalletId: funderWalletId,
+      recipientWalletId,
+      amount,
+      memo: quizId,
+      senderAccount: funderAccount,
+    })
+    if (payment instanceof Error) return payment
+  }
 
   const quizzesAfter = await listQuizzesByAccountId(accountId)
   if (quizzesAfter instanceof Error) return quizzesAfter

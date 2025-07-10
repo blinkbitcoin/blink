@@ -49,7 +49,7 @@ setup_file() {
   completed=$(graphql_output '.data.me.defaultAccount.quiz' | jq '.[] | select(.id == "whatIsBitcoin") | .completed')
   [[ "${completed}" == "true" ]] || exit 1
 
-  # Check balance after complete
+  # Check balance after complete - Must increase
   exec_graphql $token_name 'wallets-for-account'
   btc_balance_after_quiz=$(graphql_output '
     .data.me.defaultAccount.wallets[]
@@ -63,14 +63,14 @@ setup_file() {
   txn_memo=$(graphql_output '.data.me.defaultAccount.transactions.edges[0].node.memo')
   [[ "${txn_memo}" == "${question_id}" ]] || exit 1
 
-  # Retry quiz
+  # Retry quiz - must not pay again
   exec_graphql "$token_name" 'quiz-claim' "$variables"
   errors=$(graphql_output '.data.quizClaim.errors')
   [[ "${errors}" != "null" ]] || exit 1
   error_msg=$(graphql_output '.data.quizClaim.errors[0].message')
   [[ "${error_msg}" =~ "already claimed" ]] || exit 1
 
-  # Check balance after retry
+  # Check balance after retry - must remain the same
   exec_graphql $token_name 'wallets-for-account'
   btc_balance_after_retry=$(graphql_output '
     .data.me.defaultAccount.wallets[]
@@ -78,11 +78,19 @@ setup_file() {
     .balance
   ')
   [[ "$btc_balance_after_retry" == "$btc_balance_after_quiz" ]] || exit 1
+}
 
-  # Section 1 quiz should not be claimable
-
-  # Do quiz
+@test "quiz: completes a quiz question without receiving payment" {
+  token_name="alice"
   question_id="coincidenceOfWants"
+
+  # Check initial balance
+  exec_graphql $token_name 'wallets-for-account'
+  btc_initial_balance=$(graphql_output '
+    .data.me.defaultAccount.wallets[]
+    | select(.walletCurrency == "BTC")
+    .balance
+  ')
 
   variables=$(
     jq -n \
@@ -91,8 +99,16 @@ setup_file() {
   )
 
   exec_graphql "$token_name" 'quiz-claim' "$variables"
-  errors=$(graphql_output '.data.quizClaim.errors')
-  [[ "${errors}" != "null" ]] || exit 1
-  error_msg=$(graphql_output '.data.quizClaim.errors[0].code')
-  [[ "${error_msg}" =~ "QUIZ_CLAIMED_TOO_EARLY" ]] || exit 1
+  quizzes=$(graphql_output '.data.quizClaim.quizzes')
+  quiz_completed=$(echo "$quizzes" | jq '.[] | select(.id == "coincidenceOfWants") | .completed')
+  [[ "$quiz_completed" == "true" ]] || exit 1
+
+  # Check balance - must not change
+  exec_graphql $token_name 'wallets-for-account'
+  btc_balance_after=$(graphql_output '
+    .data.me.defaultAccount.wallets[]
+    | select(.walletCurrency == "BTC")
+    .balance
+  ')
+  [[ "$btc_balance_after" == "$btc_initial_balance" ]] || exit 1
 }
