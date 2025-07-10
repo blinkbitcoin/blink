@@ -1,4 +1,6 @@
-import { InvalidAccountIdError } from "./errors"
+import { utils } from "lnurl-pay"
+
+import { InvalidAccountIdError, InvalidLightningAddress } from "./errors"
 
 import { AccountLevel, AccountStatus } from "./primitives"
 
@@ -109,4 +111,19 @@ export const checkedToAccountId = (
 export const checkedToAccountLevel = (level: number): AccountLevel | ValidationError => {
   if (Object.values<number>(AccountLevel).includes(level)) return level as AccountLevel
   return new InvalidAccountLevelError()
+}
+
+const toLightningAddress = (address: string): LightningAddress =>
+  address as LightningAddress
+
+export const checkedToLightningAddress = (
+  address: string,
+): LightningAddress | InvalidLightningAddress => {
+  const parsed = utils.parseLightningAddress(address)
+
+  if (!parsed) {
+    return new InvalidLightningAddress(address)
+  }
+
+  return toLightningAddress(address)
 }
