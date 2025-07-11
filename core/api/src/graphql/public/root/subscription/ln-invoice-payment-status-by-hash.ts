@@ -25,6 +25,7 @@ type LnInvoicePaymentStatusByHashResolveSource = {
   status?: string
   paymentHash?: PaymentHash
   paymentRequest?: EncodedPaymentRequest
+  paymentPreimage?: SecretPreImage
 }
 
 const LnInvoicePaymentStatusByHashSubscription = {
@@ -57,6 +58,7 @@ const LnInvoicePaymentStatusByHashSubscription = {
       status: source.status,
       paymentHash: source.paymentHash,
       paymentRequest,
+      paymentPreimage: source.paymentPreimage,
     }
   },
 
@@ -98,9 +100,23 @@ const LnInvoicePaymentStatusByHashSubscription = {
     }
 
     if (paid) {
+      const preimage = await paymentStatusChecker.getPreImage()
+      if (preimage instanceof Error) {
+        pubsub.publishDelayed({
+          trigger,
+          payload: { errors: [mapAndParseErrorForGqlResponse(preimage)] },
+        })
+        return pubsub.createAsyncIterator({ trigger })
+      }
+
       pubsub.publishDelayed({
         trigger,
-        payload: { paymentHash, paymentRequest, status: WalletInvoiceStatus.Paid },
+        payload: {
+          paymentHash,
+          paymentRequest,
+          status: WalletInvoiceStatus.Paid,
+          paymentPreimage: preimage,
+        },
       })
       return pubsub.createAsyncIterator({ trigger })
     }

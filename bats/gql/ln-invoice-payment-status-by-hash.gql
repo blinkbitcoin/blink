@@ -3,5 +3,6 @@ query LnInvoicePaymentStatusByHashQuery($input: LnInvoicePaymentStatusByHashInpu
     status
     paymentHash
     paymentRequest
+    paymentPreimage
   }
 }

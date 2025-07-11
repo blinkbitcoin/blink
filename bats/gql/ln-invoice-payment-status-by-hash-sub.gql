@@ -1,4 +1,6 @@
-subscription lnInvoicePaymentStatusByHashSubscription($input: LnInvoicePaymentStatusByHashInput!) {
+subscription lnInvoicePaymentStatusByHashSubscription(
+  $input: LnInvoicePaymentStatusByHashInput!
+) {
   lnInvoicePaymentStatusByHash(input: $input) {
     errors {
       message
@@ -6,5 +8,6 @@ subscription lnInvoicePaymentStatusByHashSubscription($input: LnInvoicePaymentSt
     status
     paymentHash
     paymentRequest
+    paymentPreimage
   }
 }
