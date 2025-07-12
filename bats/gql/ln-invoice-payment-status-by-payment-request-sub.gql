@@ -6,5 +6,6 @@ subscription lnInvoicePaymentStatusByPaymentRequestSubscription($input: LnInvoic
     status
     paymentHash
     paymentRequest
+    paymentPreimage
   }
 }

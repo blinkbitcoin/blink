@@ -2,7 +2,7 @@ import { Lightning } from "@/app"
 import { WalletInvoiceStatus } from "@/domain/wallet-invoices"
 
 import { GT } from "@/graphql/index"
-import { mapAndParseErrorForGqlResponse } from "@/graphql/error-map"
+import { mapError } from "@/graphql/error-map"
 import LnInvoicePaymentStatus from "@/graphql/public/types/object/ln-invoice-payment-status"
 import LnInvoicePaymentStatusByPaymentRequestInput from "@/graphql/public/types/object/ln-invoice-payment-status-by-payment-request-input"
 
@@ -17,18 +17,27 @@ const LnInvoicePaymentStatusByPaymentRequestQuery = GT.Field({
 
     const paymentStatusChecker = await Lightning.PaymentStatusChecker(paymentRequest)
     if (paymentStatusChecker instanceof Error) {
-      throw mapAndParseErrorForGqlResponse(paymentStatusChecker)
+      throw mapError(paymentStatusChecker)
     }
 
     const paid = await paymentStatusChecker.invoiceIsPaid()
     if (paid instanceof Error) {
-      throw mapAndParseErrorForGqlResponse(paid)
+      throw mapError(paid)
     }
 
     const { paymentHash, isExpired } = paymentStatusChecker
 
     if (paid) {
-      return { paymentHash, paymentRequest, status: WalletInvoiceStatus.Paid }
+      const preimage = await paymentStatusChecker.getPreImage()
+      if (preimage instanceof Error) {
+        throw mapError(preimage)
+      }
+      return {
+        paymentHash,
+        paymentRequest,
+        status: WalletInvoiceStatus.Paid,
+        paymentPreimage: preimage,
+      }
     }
 
     const status = isExpired ? WalletInvoiceStatus.Expired : WalletInvoiceStatus.Pending

@@ -684,6 +684,7 @@ export type LnInvoicePaymentInput = {
 export type LnInvoicePaymentStatus = {
   readonly __typename: 'LnInvoicePaymentStatus';
   readonly paymentHash?: Maybe<Scalars['PaymentHash']['output']>;
+  readonly paymentPreimage?: Maybe<Scalars['LnPaymentPreImage']['output']>;
   readonly paymentRequest?: Maybe<Scalars['LnPaymentRequest']['output']>;
   readonly status?: Maybe<InvoicePaymentStatus>;
 };
@@ -704,6 +705,7 @@ export type LnInvoicePaymentStatusPayload = {
   readonly __typename: 'LnInvoicePaymentStatusPayload';
   readonly errors: ReadonlyArray<Error>;
   readonly paymentHash?: Maybe<Scalars['PaymentHash']['output']>;
+  readonly paymentPreimage?: Maybe<Scalars['LnPaymentPreImage']['output']>;
   readonly paymentRequest?: Maybe<Scalars['LnPaymentRequest']['output']>;
   readonly status?: Maybe<InvoicePaymentStatus>;
 };
@@ -2246,8 +2248,8 @@ export function useCountryCodesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptio
           const options = {...defaultOptions, ...baseOptions}
           return Apollo.useLazyQuery<CountryCodesQuery, CountryCodesQueryVariables>(CountryCodesDocument, options);
         }
-export function useCountryCodesSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<CountryCodesQuery, CountryCodesQueryVariables>) {
-          const options = {...defaultOptions, ...baseOptions}
+export function useCountryCodesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<CountryCodesQuery, CountryCodesQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
           return Apollo.useSuspenseQuery<CountryCodesQuery, CountryCodesQueryVariables>(CountryCodesDocument, options);
         }
 export type CountryCodesQueryHookResult = ReturnType<typeof useCountryCodesQuery>;
@@ -2285,8 +2287,8 @@ export function useGetUserIdLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<
           const options = {...defaultOptions, ...baseOptions}
           return Apollo.useLazyQuery<GetUserIdQuery, GetUserIdQueryVariables>(GetUserIdDocument, options);
         }
-export function useGetUserIdSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetUserIdQuery, GetUserIdQueryVariables>) {
-          const options = {...defaultOptions, ...baseOptions}
+export function useGetUserIdSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetUserIdQuery, GetUserIdQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
           return Apollo.useSuspenseQuery<GetUserIdQuery, GetUserIdQueryVariables>(GetUserIdDocument, options);
         }
 export type GetUserIdQueryHookResult = ReturnType<typeof useGetUserIdQuery>;

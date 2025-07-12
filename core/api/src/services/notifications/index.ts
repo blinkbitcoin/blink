@@ -100,6 +100,10 @@ export const NotificationsService = (): INotificationsService => {
       if (type === NotificationType.LigtningReceipt) {
         const lnTx = transaction as WalletLnTransaction
         const paymentHash = lnTx.initiationVia.paymentHash
+        const paymentPreimage =
+          lnTx.settlementVia.type == "lightning"
+            ? lnTx.settlementVia.revealedPreImage
+            : undefined
         // Notify public subscribers
         const lnPaymentStatusTrigger = customPubSubTrigger({
           event: PubSubDefaultTriggers.LnPaymentStatus,
@@ -111,10 +115,11 @@ export const NotificationsService = (): INotificationsService => {
           event: PubSubDefaultTriggers.AccountUpdate,
           suffix: recipient.accountId,
         })
+
         const result = Promise.all([
           pubsub.publish({
             trigger: lnPaymentStatusTrigger,
-            payload: { paymentHash, status: WalletInvoiceStatus.Paid },
+            payload: { paymentHash, paymentPreimage, status: WalletInvoiceStatus.Paid },
           }),
           pubsub.publish({
             trigger: accountUpdatedTrigger,

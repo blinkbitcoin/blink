@@ -233,13 +233,15 @@ usd_amount=50
   retry 10 1 grep "Data.*lnInvoicePaymentStatusByPaymentRequest.*$payment_request" "$SUBSCRIBER_LOG_FILE"
 
   # Receive payment
-  lnd_outside_cli payinvoice -f \
-    --pay_req "$payment_request" \
+  payment_result="$(lnd_outside_cli payinvoice -f --pay_req "$payment_request" --json)"
+  echo "$payment_result"
+  preimage="$(echo "$payment_result" | jq -r '.payment_preimage')"
 
   # Check for settled with subscriptions
   retry 10 1 grep "Data.*lnInvoicePaymentStatusByPaymentRequest.*PAID" "$SUBSCRIBER_LOG_FILE"
   retry 10 1 grep "Data.*lnInvoicePaymentStatusByPaymentRequest.*$payment_hash" "$SUBSCRIBER_LOG_FILE"
   retry 10 1 grep "Data.*lnInvoicePaymentStatusByPaymentRequest.*$payment_request" "$SUBSCRIBER_LOG_FILE"
+  retry 10 1 grep "Data.*lnInvoicePaymentStatusByPaymentRequest.*$preimage" "$SUBSCRIBER_LOG_FILE"
   stop_subscriber
 }
 
@@ -275,13 +277,15 @@ usd_amount=50
   retry 10 1 grep "Data.*lnInvoicePaymentStatusByHash.*$payment_request" "$SUBSCRIBER_LOG_FILE"
 
   # Receive payment
-  lnd_outside_cli payinvoice -f \
-    --pay_req "$payment_request" \
+  payment_result="$(lnd_outside_cli payinvoice -f --pay_req "$payment_request" --json)"
+  preimage="$(echo "$payment_result" | jq -r '.payment_preimage')"
+  echo "$preimage"
 
   # Check for settled with subscription
   retry 10 1 grep "Data.*lnInvoicePaymentStatusByHash.*PAID" "$SUBSCRIBER_LOG_FILE"
   retry 10 1 grep "Data.*lnInvoicePaymentStatusByHash.*$payment_hash" "$SUBSCRIBER_LOG_FILE"
   retry 10 1 grep "Data.*lnInvoicePaymentStatusByHash.*$payment_request" "$SUBSCRIBER_LOG_FILE"
+  retry 10 1 grep "Data.*lnInvoicePaymentStatusByHash.*$preimage" "$SUBSCRIBER_LOG_FILE"
   stop_subscriber
 }
 
@@ -395,6 +399,50 @@ usd_amount=50
   # Check for settled with query
   retry 15 1 check_ln_payment_settled "$payment_request" "$payment_hash"
   retry 15 1 check_ln_payment_settled_by_hash "$payment_request" "$payment_hash"
+}
+
+@test "public-ln-receive: query pending invoice - paymentPreimage is null" {
+  token_name="$ALICE"
+  btc_wallet_name="$token_name.btc_wallet_id"
+
+  variables=$(
+    jq -n \
+    --arg wallet_id "$(read_value $btc_wallet_name)" \
+    --arg amount "$btc_amount" \
+    '{input: {recipientWalletId: $wallet_id, amount: $amount}}'
+  )
+  exec_graphql 'anon' 'ln-invoice-create-on-behalf-of-recipient' "$variables"
+  invoice="$(graphql_output '.data.lnInvoiceCreateOnBehalfOfRecipient.invoice')"
+
+  payment_request="$(echo $invoice | jq -r '.paymentRequest')"
+  [[ "${payment_request}" != "null" ]] || exit 1
+
+  payment_hash="$(echo $invoice | jq -r '.paymentHash')"
+  [[ "${payment_hash}" != "null" ]] || exit 1
+
+  # Query payment status by payment request
+  variables=$(
+  jq -n \
+  --arg payment_request "$payment_request" \
+  '{input: {paymentRequest: $payment_request}}'
+  )
+  exec_graphql 'anon' 'ln-invoice-payment-status-by-payment-request' "$variables"
+  payment_status="$(graphql_output '.data.lnInvoicePaymentStatusByPaymentRequest.status')"
+  payment_preimage="$(graphql_output '.data.lnInvoicePaymentStatusByPaymentRequest.paymentPreimage')"
+  [[ "${payment_status}" == "PENDING" ]] || exit 1
+  [[ "${payment_preimage}" == "null" ]] || exit 1
+
+  # Query payment status by payment hash
+  variables=$(
+  jq -n \
+  --arg payment_hash "$payment_hash" \
+  '{input: {paymentHash: $payment_hash}}'
+  )
+  exec_graphql 'anon' 'ln-invoice-payment-status-by-hash' "$variables"
+  payment_status="$(graphql_output '.data.lnInvoicePaymentStatusByHash.status')"
+  payment_preimage="$(graphql_output '.data.lnInvoicePaymentStatusByHash.paymentPreimage')"
+  [[ "${payment_status}" == "PENDING" ]] || exit 1
+  [[ "${payment_preimage}" == "null" ]] || exit 1
 }
 
 @test "public-ln-receive: fail to create invoice - invalid wallet-id" {

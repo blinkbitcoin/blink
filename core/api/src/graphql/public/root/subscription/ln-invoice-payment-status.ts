@@ -25,6 +25,7 @@ type LnInvoicePaymentResolveSource = {
   status?: string
   paymentHash?: PaymentHash
   paymentRequest?: EncodedPaymentRequest
+  paymentPreimage?: SecretPreImage
 }
 
 const LnInvoicePaymentStatusSubscription = {
@@ -34,10 +35,10 @@ const LnInvoicePaymentStatusSubscription = {
     input: { type: GT.NonNull(LnInvoicePaymentStatusInput) },
   },
   resolve: async (source: LnInvoicePaymentResolveSource | undefined) => {
-    if (source === undefined) {
+    if (!source) {
       throw new UnknownClientError({
         message:
-          "Got 'undefined' payload. Check url used to ensure right websocket endpoint was used for subscription.",
+          "Got 'undefined' payload. Check URL used to ensure the correct websocket endpoint was used for the subscription.",
         logger: baseLogger,
       })
     }
@@ -46,18 +47,46 @@ const LnInvoicePaymentStatusSubscription = {
       return { errors: source.errors }
     }
 
-    let paymentRequest = source.paymentRequest
-    if (source.paymentHash && !source.paymentRequest) {
-      const invoice = await Lightning.getInvoiceRequestByHash({
-        paymentHash: source.paymentHash,
+    const { status, paymentHash } = source
+    let { paymentRequest, paymentPreimage } = source
+
+    const isValidPreimage =
+      status === WalletInvoiceStatus.Paid ? !!paymentPreimage : !paymentPreimage
+
+    const needsStatusCheck = paymentHash && (!paymentRequest || !isValidPreimage)
+
+    if (needsStatusCheck) {
+      const paymentStatusChecker = await Lightning.PaymentStatusCheckerByHash({
+        paymentHash,
       })
-      paymentRequest = invoice instanceof Error ? paymentRequest : invoice
+
+      if (paymentStatusChecker instanceof Error) {
+        return { errors: [mapAndParseErrorForGqlResponse(paymentStatusChecker)] }
+      }
+
+      const paid = await paymentStatusChecker.invoiceIsPaid()
+      if (paid instanceof Error) {
+        return { errors: [mapAndParseErrorForGqlResponse(paid)] }
+      }
+
+      paymentPreimage = undefined
+      if (paid) {
+        const preimage = await paymentStatusChecker.getPreImage()
+        if (preimage instanceof Error) {
+          return { errors: [mapAndParseErrorForGqlResponse(preimage)] }
+        }
+        paymentPreimage = preimage
+      }
+
+      paymentRequest = paymentStatusChecker.paymentRequest
     }
+
     return {
       errors: [],
-      status: source.status,
-      paymentHash: source.paymentHash,
+      status,
+      paymentHash,
       paymentRequest,
+      paymentPreimage,
     }
   },
 
@@ -95,9 +124,23 @@ const LnInvoicePaymentStatusSubscription = {
     }
 
     if (paid) {
+      const preimage = await paymentStatusChecker.getPreImage()
+      if (preimage instanceof Error) {
+        pubsub.publishDelayed({
+          trigger,
+          payload: { errors: [mapAndParseErrorForGqlResponse(preimage)] },
+        })
+        return pubsub.createAsyncIterator({ trigger })
+      }
+
       pubsub.publishDelayed({
         trigger,
-        payload: { paymentHash, paymentRequest, status: WalletInvoiceStatus.Paid },
+        payload: {
+          paymentHash,
+          paymentRequest,
+          status: WalletInvoiceStatus.Paid,
+          paymentPreimage: preimage,
+        },
       })
       return pubsub.createAsyncIterator({ trigger })
     }

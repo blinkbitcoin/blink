@@ -685,6 +685,7 @@ export type LnInvoicePaymentInput = {
 export type LnInvoicePaymentStatus = {
   readonly __typename: 'LnInvoicePaymentStatus';
   readonly paymentHash?: Maybe<Scalars['PaymentHash']['output']>;
+  readonly paymentPreimage?: Maybe<Scalars['LnPaymentPreImage']['output']>;
   readonly paymentRequest?: Maybe<Scalars['LnPaymentRequest']['output']>;
   readonly status?: Maybe<InvoicePaymentStatus>;
 };
@@ -705,6 +706,7 @@ export type LnInvoicePaymentStatusPayload = {
   readonly __typename: 'LnInvoicePaymentStatusPayload';
   readonly errors: ReadonlyArray<Error>;
   readonly paymentHash?: Maybe<Scalars['PaymentHash']['output']>;
+  readonly paymentPreimage?: Maybe<Scalars['LnPaymentPreImage']['output']>;
   readonly paymentRequest?: Maybe<Scalars['LnPaymentRequest']['output']>;
   readonly status?: Maybe<InvoicePaymentStatus>;
 };
@@ -2247,6 +2249,13 @@ export type AccountDefaultWalletQueryVariables = Exact<{
 
 export type AccountDefaultWalletQuery = { readonly __typename: 'Query', readonly accountDefaultWallet: { readonly __typename: 'PublicWallet', readonly id: string, readonly walletCurrency: WalletCurrency } };
 
+export type LnurlpInvoicePaymentStatusByHashQueryVariables = Exact<{
+  input: LnInvoicePaymentStatusByHashInput;
+}>;
+
+
+export type LnurlpInvoicePaymentStatusByHashQuery = { readonly __typename: 'Query', readonly lnInvoicePaymentStatusByHash: { readonly __typename: 'LnInvoicePaymentStatus', readonly status?: InvoicePaymentStatus | null, readonly paymentHash?: string | null, readonly paymentRequest?: string | null, readonly paymentPreimage?: string | null } };
+
 export type LnInvoicePaymentStatusSubscriptionVariables = Exact<{
   input: LnInvoicePaymentStatusInput;
 }>;
@@ -2610,6 +2619,49 @@ export type AccountDefaultWalletQueryHookResult = ReturnType<typeof useAccountDe
 export type AccountDefaultWalletLazyQueryHookResult = ReturnType<typeof useAccountDefaultWalletLazyQuery>;
 export type AccountDefaultWalletSuspenseQueryHookResult = ReturnType<typeof useAccountDefaultWalletSuspenseQuery>;
 export type AccountDefaultWalletQueryResult = Apollo.QueryResult<AccountDefaultWalletQuery, AccountDefaultWalletQueryVariables>;
+export const LnurlpInvoicePaymentStatusByHashDocument = gql`
+    query LnurlpInvoicePaymentStatusByHash($input: LnInvoicePaymentStatusByHashInput!) {
+  lnInvoicePaymentStatusByHash(input: $input) {
+    status
+    paymentHash
+    paymentRequest
+    paymentPreimage
+  }
+}
+    `;
+
+/**
+ * __useLnurlpInvoicePaymentStatusByHashQuery__
+ *
+ * To run a query within a React component, call `useLnurlpInvoicePaymentStatusByHashQuery` and pass it any options that fit your needs.
+ * When your component renders, `useLnurlpInvoicePaymentStatusByHashQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useLnurlpInvoicePaymentStatusByHashQuery({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useLnurlpInvoicePaymentStatusByHashQuery(baseOptions: Apollo.QueryHookOptions<LnurlpInvoicePaymentStatusByHashQuery, LnurlpInvoicePaymentStatusByHashQueryVariables> & ({ variables: LnurlpInvoicePaymentStatusByHashQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<LnurlpInvoicePaymentStatusByHashQuery, LnurlpInvoicePaymentStatusByHashQueryVariables>(LnurlpInvoicePaymentStatusByHashDocument, options);
+      }
+export function useLnurlpInvoicePaymentStatusByHashLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<LnurlpInvoicePaymentStatusByHashQuery, LnurlpInvoicePaymentStatusByHashQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<LnurlpInvoicePaymentStatusByHashQuery, LnurlpInvoicePaymentStatusByHashQueryVariables>(LnurlpInvoicePaymentStatusByHashDocument, options);
+        }
+export function useLnurlpInvoicePaymentStatusByHashSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<LnurlpInvoicePaymentStatusByHashQuery, LnurlpInvoicePaymentStatusByHashQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<LnurlpInvoicePaymentStatusByHashQuery, LnurlpInvoicePaymentStatusByHashQueryVariables>(LnurlpInvoicePaymentStatusByHashDocument, options);
+        }
+export type LnurlpInvoicePaymentStatusByHashQueryHookResult = ReturnType<typeof useLnurlpInvoicePaymentStatusByHashQuery>;
+export type LnurlpInvoicePaymentStatusByHashLazyQueryHookResult = ReturnType<typeof useLnurlpInvoicePaymentStatusByHashLazyQuery>;
+export type LnurlpInvoicePaymentStatusByHashSuspenseQueryHookResult = ReturnType<typeof useLnurlpInvoicePaymentStatusByHashSuspenseQuery>;
+export type LnurlpInvoicePaymentStatusByHashQueryResult = Apollo.QueryResult<LnurlpInvoicePaymentStatusByHashQuery, LnurlpInvoicePaymentStatusByHashQueryVariables>;
 export const LnInvoicePaymentStatusDocument = gql`
     subscription lnInvoicePaymentStatus($input: LnInvoicePaymentStatusInput!) {
   lnInvoicePaymentStatus(input: $input) {

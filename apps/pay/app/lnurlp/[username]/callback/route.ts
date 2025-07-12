@@ -168,9 +168,15 @@ export async function GET(
       redis.set(`nostrInvoice:${invoice.paymentHash}`, nostr, "EX", 1440)
     }
 
+    const { protocol, hostname, port } = getOriginalRequestInfo(request)
+    const portString = port && port !== "80" && port !== "443" ? `:${port}` : ""
+    const verifyUrl = `${protocol}://${hostname}${portString}/lnurlp/${username}/verify/${invoice.paymentHash}`
+
     return NextResponse.json({
+      status: "OK",
       pr: invoice.paymentRequest,
       routes: [],
+      verify: verifyUrl,
     })
   } catch (err: unknown) {
     console.log("unexpected error getting invoice", err)

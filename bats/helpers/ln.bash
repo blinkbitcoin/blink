@@ -107,8 +107,10 @@ check_ln_payment_settled() {
   payment_status="$(graphql_output '.data.lnInvoicePaymentStatusByPaymentRequest.status')"
   payment_request_resp="$(graphql_output '.data.lnInvoicePaymentStatusByPaymentRequest.paymentRequest')"
   payment_hash_resp="$(graphql_output '.data.lnInvoicePaymentStatusByPaymentRequest.paymentHash')"
+  payment_preimage_resp="$(graphql_output '.data.lnInvoicePaymentStatusByPaymentRequest.paymentPreimage')"
   [[ "${payment_hash}" = "${payment_hash_resp}" ]] || exit 1
   [[ "${payment_request}" = "${payment_request_resp}" ]] || exit 1
+  [[ "${payment_preimage_resp}" != "null" ]] || exit 1
   [[ "${payment_status}" = "PAID" ]]
 }
 
@@ -125,8 +127,10 @@ check_ln_payment_settled_by_hash() {
   payment_status="$(graphql_output '.data.lnInvoicePaymentStatusByHash.status')"
   payment_request_resp="$(graphql_output '.data.lnInvoicePaymentStatusByHash.paymentRequest')"
   payment_hash_resp="$(graphql_output '.data.lnInvoicePaymentStatusByHash.paymentHash')"
+  payment_preimage_resp="$(graphql_output '.data.lnInvoicePaymentStatusByHash.paymentPreimage')"
   [[ "${payment_hash}" = "${payment_hash_resp}" ]] || exit 1
   [[ "${payment_request}" = "${payment_request_resp}" ]] || exit 1
+  [[ "${payment_preimage_resp}" != "null" ]] || exit 1
   [[ "${payment_status}" = "PAID" ]]
 }
 

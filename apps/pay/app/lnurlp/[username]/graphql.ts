@@ -41,3 +41,14 @@ gql`
     }
   }
 `
+
+gql`
+  query LnurlpInvoicePaymentStatusByHash($input: LnInvoicePaymentStatusByHashInput!) {
+    lnInvoicePaymentStatusByHash(input: $input) {
+      status
+      paymentHash
+      paymentRequest
+      paymentPreimage
+    }
+  }
+`

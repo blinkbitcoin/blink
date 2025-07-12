@@ -3,6 +3,7 @@ import { getInvoiceRequestByHash } from "./get-payment-request"
 import { RepositoryError } from "@/domain/errors"
 import { decodeInvoice } from "@/domain/bitcoin/lightning"
 import { LedgerService } from "@/services/ledger"
+import { getInvoicePreImageByHash } from "@/app/transactions/get-invoice-preimage-by-hash"
 
 export const PaymentStatusChecker = async (uncheckedPaymentRequest: string) => {
   const decodedInvoice = decodeInvoice(uncheckedPaymentRequest)
@@ -20,6 +21,9 @@ export const PaymentStatusChecker = async (uncheckedPaymentRequest: string) => {
       const recorded = await ledger.isLnTxRecorded(paymentHash)
       if (recorded instanceof Error) return recorded
       return recorded
+    },
+    getPreImage: async (): Promise<SecretPreImage | ApplicationError> => {
+      return getInvoicePreImageByHash({ paymentHash })
     },
   }
 }
