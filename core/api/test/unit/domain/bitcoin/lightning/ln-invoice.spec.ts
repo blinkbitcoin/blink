@@ -1,4 +1,8 @@
-import { LnInvoiceDecodeError, decodeInvoice } from "@/domain/bitcoin/lightning"
+import {
+  UnknownLnInvoiceDecodeError,
+  UnknownCharacterForLnInvoiceError,
+  decodeInvoice,
+} from "@/domain/bitcoin/lightning"
 import { toSats } from "@/domain/bitcoin"
 
 describe("decodeInvoice", () => {
@@ -27,6 +31,13 @@ describe("decodeInvoice", () => {
 
   it("returns a decode error", () => {
     const result = decodeInvoice("bad input data" as EncodedPaymentRequest)
-    expect(result).toBeInstanceOf(LnInvoiceDecodeError)
+    expect(result).toBeInstanceOf(UnknownLnInvoiceDecodeError)
+  })
+
+  it("returns unknown character decode error", () => {
+    const result = decodeInvoice(
+      "lnbc1698u1psz9q5hpp53fc39799a3455708efbbf18739112178fab53bc7cbdb562f83es53a0c5" as EncodedPaymentRequest,
+    )
+    expect(result).toBeInstanceOf(UnknownCharacterForLnInvoiceError)
   })
 })

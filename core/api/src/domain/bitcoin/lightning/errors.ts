@@ -5,8 +5,9 @@ export class LightningError extends DomainError {}
 export class LnInvoiceDecodeError extends LightningError {}
 export class LnInvoiceMissingPaymentSecretError extends LnInvoiceDecodeError {}
 export class InvalidChecksumForLnInvoiceError extends LnInvoiceDecodeError {}
+export class UnknownCharacterForLnInvoiceError extends LnInvoiceDecodeError {}
 export class UnknownLnInvoiceDecodeError extends LnInvoiceDecodeError {
-  level = ErrorLevel.Critical
+  level = ErrorLevel.Warn
 }
 
 export class LightningServiceError extends LightningError {}

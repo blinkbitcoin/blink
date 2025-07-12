@@ -4,6 +4,7 @@ import {
   InvalidChecksumForLnInvoiceError,
   LnInvoiceDecodeError,
   LnInvoiceMissingPaymentSecretError,
+  UnknownCharacterForLnInvoiceError,
   UnknownLnInvoiceDecodeError,
 } from "./errors"
 
@@ -73,6 +74,9 @@ const safeDecode = (bolt11EncodedInvoice: EncodedPaymentRequest) => {
   } catch (err) {
     if (err instanceof Error && err.message.includes("Invalid checksum")) {
       return new InvalidChecksumForLnInvoiceError()
+    }
+    if (err instanceof Error && err.message.includes("Unknown character")) {
+      return new UnknownCharacterForLnInvoiceError(err.message)
     }
     return new UnknownLnInvoiceDecodeError(err)
   }
