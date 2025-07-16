@@ -31,7 +31,17 @@ const LnInvoicePaymentStatusQuery = GT.Field({
     const { paymentHash, isExpired } = paymentStatusChecker
 
     if (paid) {
-      return { errors: [], paymentHash, paymentRequest, status: WalletInvoiceStatus.Paid }
+      const preimage = await paymentStatusChecker.getPreImage()
+      if (preimage instanceof Error) {
+        return { errors: [mapAndParseErrorForGqlResponse(preimage)] }
+      }
+      return {
+        errors: [],
+        paymentHash,
+        paymentRequest,
+        status: WalletInvoiceStatus.Paid,
+        paymentPreimage: preimage,
+      }
     }
 
     const status = isExpired ? WalletInvoiceStatus.Expired : WalletInvoiceStatus.Pending
