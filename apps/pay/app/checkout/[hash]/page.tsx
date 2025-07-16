@@ -1,4 +1,3 @@
-import { NextPage } from "next"
 import { headers } from "next/headers"
 
 import styles from "./hash.module.css"
@@ -14,7 +13,7 @@ import { InvoiceStatusProvider } from "@/context/invoice-status-context"
 
 import { baseLogger } from "@/lib/logger"
 
-const CheckoutPage: NextPage<{ params: { hash: string } }> = async (context) => {
+const CheckoutPage = async (context: { params: { hash: string } }) => {
   const headersList = headers()
   const returnUrl = headersList.get("x-return-url")
 
