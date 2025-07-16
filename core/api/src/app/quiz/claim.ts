@@ -68,22 +68,25 @@ const checkAddQuizAttemptPerPhoneLimits = async (
 export const claimQuiz = async ({
   quizQuestionId: quizQuestionIdString,
   accountId: accountIdRaw,
+  skipRewards,
   ip,
 }: {
   quizQuestionId: string
   accountId: string
+  skipRewards: boolean
   ip: IpAddress | undefined
 }): Promise<ClaimQuizResult | ApplicationError> => {
-  const checkIp = await checkAddQuizAttemptPerIpLimits(ip)
-  if (checkIp instanceof Error) return checkIp
-
   const accountId = checkedToAccountId(accountIdRaw)
   if (accountId instanceof Error) return accountId
 
-  const quizzesConfig = getQuizzesConfig()
-
   // TODO: quizQuestionId checkedFor
   const quizId = quizQuestionIdString as QuizQuestionId
+  if (skipRewards) return addQuizAndList({ quizId, accountId })
+
+  const checkIp = await checkAddQuizAttemptPerIpLimits(ip)
+  if (checkIp instanceof Error) return checkIp
+
+  const quizzesConfig = getQuizzesConfig()
 
   const amount = QuizzesValue[quizId]
   if (!amount) return new InvalidQuizQuestionIdError()
@@ -156,8 +159,8 @@ export const claimQuiz = async ({
   })
   if (sendCheck instanceof Error) return sendCheck
 
-  const shouldGiveSats = await QuizRepository().add({ quizId, accountId })
-  if (shouldGiveSats instanceof Error) return shouldGiveSats
+  const claimResult = await addQuizAndList({ quizId, accountId })
+  if (claimResult instanceof Error) return claimResult
 
   const payment = await intraledgerPaymentSendWalletIdForBtcWallet({
     senderWalletId: funderWalletId,
@@ -168,10 +171,7 @@ export const claimQuiz = async ({
   })
   if (payment instanceof Error) return payment
 
-  const quizzesAfter = await listQuizzesByAccountId(accountId)
-  if (quizzesAfter instanceof Error) return quizzesAfter
-
-  return quizzesAfter
+  return claimResult
 }
 
 const FunderBalanceChecker = () => {
@@ -190,4 +190,20 @@ const FunderBalanceChecker = () => {
   }
 
   return { check }
+}
+
+const addQuizAndList = async ({
+  quizId,
+  accountId,
+}: {
+  quizId: QuizQuestionId
+  accountId: AccountId
+}): Promise<ClaimQuizResult | ApplicationError> => {
+  const shouldGiveSats = await QuizRepository().add({ quizId, accountId })
+  if (shouldGiveSats instanceof Error) return shouldGiveSats
+
+  const quizzesAfter = await listQuizzesByAccountId(accountId)
+  if (quizzesAfter instanceof Error) return quizzesAfter
+
+  return quizzesAfter
 }
