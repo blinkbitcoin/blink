@@ -1,10 +1,10 @@
 import { AccountsRepository, WalletsRepository } from "@/services/mongoose"
 
+export * from "./create-contact"
 export * from "./account-limit"
-export * from "./add-new-contact"
 export * from "./create-account"
 export * from "./get-account-transactions-for-contact"
-export * from "./get-contact-by-username"
+export * from "./get-contacts"
 export * from "./get-csv-for-account"
 export * from "./get-transactions-for-account"
 export * from "./mark-account-for-deletion"

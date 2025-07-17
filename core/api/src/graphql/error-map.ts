@@ -115,6 +115,18 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       message = "No transactions found for your account."
       return new NotFoundError({ message, logger: baseLogger })
 
+    case "CouldNotFindContactFromAccountIdError":
+      message = `Contact not found for accountId ${error.message}`
+      return new NotFoundError({ message, logger: baseLogger })
+
+    case "CouldNotFindContactFromContactIdError":
+      message = `Contact not found for contactId ${error.message}`
+      return new NotFoundError({ message, logger: baseLogger })
+
+    case "CouldNotUpdateContactError":
+      message = `Failed to update contact`
+      return new UnexpectedClientError({ message, logger: baseLogger })
+
     case "CouldNotFindUserFromPhoneError":
       message = `User does not exist for phone ${error.message}`
       return new NotFoundError({ message, logger: baseLogger })
@@ -702,6 +714,9 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "InvalidAccountLevelError":
     case "InvalidAccountLimitTypeError":
     case "InvalidWithdrawFeeError":
+    case "InvalidHandleError":
+    case "InvalidDisplayNameError":
+    case "InvalidContactIdError":
     case "InvalidUsdCents":
     case "NonIntegerError":
     case "FeeDifferenceError":
@@ -749,6 +764,7 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "InvalidAccountError":
     case "InvalidAccountIdError":
     case "InvalidMinutesError":
+    case "InvalidLightningAddress":
     case "InvalidWalletForAccountError":
     case "AuthenticationError":
     case "LikelyNoUserWithThisPhoneExistError":
