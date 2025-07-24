@@ -17,7 +17,8 @@ type Params = {
 }
 
 export const IpFetcher = (): IIpFetcherService => {
-  axiosRetry(axios, { retries: 3, retryDelay: () => 500 })
+  const client = axios.create()
+  axiosRetry(client, { retries: 3, retryDelay: () => 500 })
 
   const fetchIPInfo = async (ip: string): Promise<IPInfo | IpFetcherServiceError> => {
     const params: Params = {
@@ -36,7 +37,7 @@ export const IpFetcher = (): IIpFetcherService => {
     }
 
     try {
-      const { data } = await axios.request({
+      const { data } = await client.request({
         url: `https://proxycheck.io/v2/${ip}`,
         params,
         timeout: 2000, // ms
