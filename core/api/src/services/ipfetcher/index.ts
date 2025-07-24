@@ -1,3 +1,5 @@
+import https from "https"
+
 import axios from "axios"
 import axiosRetry from "axios-retry"
 
@@ -16,7 +18,10 @@ type Params = {
   key?: string
 }
 
-const client = axios.create()
+const client = axios.create({
+  timeout: 2000,
+  httpsAgent: new https.Agent({ keepAlive: true }),
+})
 axiosRetry(client, { retries: 3, retryDelay: () => 500 })
 
 export const IpFetcher = (): IIpFetcherService => {
@@ -40,7 +45,6 @@ export const IpFetcher = (): IIpFetcherService => {
       const { data } = await client.request({
         url: `https://proxycheck.io/v2/${ip}`,
         params,
-        timeout: 2000, // ms
       })
 
       const proxy = !!(data[ip] && data[ip].proxy && data[ip].proxy === "yes")
