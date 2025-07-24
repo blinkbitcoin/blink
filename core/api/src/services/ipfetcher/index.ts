@@ -22,7 +22,11 @@ const client = axios.create({
   timeout: 2000,
   httpsAgent: new https.Agent({ keepAlive: true }),
 })
-axiosRetry(client, { retries: 3, retryDelay: () => 500 })
+axiosRetry(client, {
+  retries: 3,
+  retryDelay: () => 500,
+  shouldResetTimeout: true,
+})
 
 export const IpFetcher = (): IIpFetcherService => {
   const fetchIPInfo = async (ip: string): Promise<IPInfo | IpFetcherServiceError> => {
