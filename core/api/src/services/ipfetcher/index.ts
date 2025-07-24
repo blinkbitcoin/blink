@@ -1,4 +1,5 @@
 import axios from "axios"
+import axiosRetry from "axios-retry"
 
 import { UnknownIpFetcherServiceError } from "@/domain/ipfetcher"
 import { PROXY_CHECK_APIKEY } from "@/config"
@@ -16,6 +17,8 @@ type Params = {
 }
 
 export const IpFetcher = (): IIpFetcherService => {
+  axiosRetry(axios, { retries: 3, retryDelay: () => 500 })
+
   const fetchIPInfo = async (ip: string): Promise<IPInfo | IpFetcherServiceError> => {
     const params: Params = {
       vpn: "1",
