@@ -3,10 +3,10 @@
 git_uri: git@github.com:blinkbitcoin/blink.git
 git_branch: main
 git_charts_uri: git@github.com:blinkbitcoin/charts.git
-git_stablesats_uri: git@github.com:GaloyMoney/stablesats-rs.git
+git_stablesats_uri: git@github.com:blinkbitcoin/stablesats-rs.git
 git_price_realtime_uri: git@github.com:blinkbitcoin/price.git
 git_price_history_uri: git@github.com:blinkbitcoin/price.git
-git_bria_uri: git@github.com:GaloyMoney/bria.git
+git_bria_uri: git@github.com:blinkbitcoin/bria.git
 git_charts_branch: main
 git_charts_bot_branch: bot-bump-galoy-image
 git_stablesats_proto_bot_branch: bot-bump-stablesats-proto
