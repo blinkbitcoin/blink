@@ -16,10 +16,10 @@ type Params = {
   key?: string
 }
 
-export const IpFetcher = (): IIpFetcherService => {
-  const client = axios.create()
-  axiosRetry(client, { retries: 3, retryDelay: () => 500 })
+const client = axios.create()
+axiosRetry(client, { retries: 3, retryDelay: () => 500 })
 
+export const IpFetcher = (): IIpFetcherService => {
   const fetchIPInfo = async (ip: string): Promise<IPInfo | IpFetcherServiceError> => {
     const params: Params = {
       vpn: "1",
