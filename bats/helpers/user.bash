@@ -29,6 +29,11 @@ login_user() {
   usd_wallet_id="$(graphql_output '.data.me.defaultAccount.wallets[] | select(.walletCurrency == "USD") .id')"
   [[ "${usd_wallet_id}" != "null" ]]
   cache_value "$token_name.usd_wallet_id" "$usd_wallet_id"
+
+  exec_graphql "$token_name" 'default-account'
+  account_id="$(graphql_output '.data.me.defaultAccount.id')"
+  [[ -n "$account_id" && "$account_id" != "null" ]]
+  cache_value "$token_name.account_id" "$account_id"
 }
 
 create_user() {
@@ -128,14 +133,27 @@ ensure_username_is_present() {
 }
 
 is_contact() {
-  local token_name="$1"
-  local contact_username="$(read_value "$2.username")"
+  local owner_token_name="$1"
+  local other_token_or_handle="$2"
 
-  exec_graphql "$token_name" 'contacts'
-  local fetched_username=$(
-    graphql_output \
-    --arg contact_username "$contact_username" \
-    '.data.me.contacts[] | select(.username == $contact_username) .username'
-  )
-  [[ "$fetched_username" == "$contact_username" ]] || return 1
+  local contact_handle
+
+  local cached_username
+  cached_username=$(read_value "$other_token_or_handle.username")
+
+  if [[ -n "$cached_username" ]]; then
+    # It's a user token
+    contact_handle="$cached_username"
+  else
+    # It's a raw handle
+    contact_handle="$other_token_or_handle"
+  fi
+
+  [[ -n "$contact_handle" ]] || return 1
+
+  exec_graphql "$owner_token_name" "contacts"
+  local match
+  match=$(graphql_output ".data.me.contacts[] | select(.username == \"$contact_handle\")")
+
+  [[ -n "$match" ]]
 }

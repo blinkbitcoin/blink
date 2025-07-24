@@ -115,6 +115,18 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       message = "No transactions found for your account."
       return new NotFoundError({ message, logger: baseLogger })
 
+    case "CouldNotFindContactFromAccountIdError":
+      message = `Contact not found for accountId ${error.message}`
+      return new NotFoundError({ message, logger: baseLogger })
+
+    case "CouldNotFindContactFromContactIdError":
+      message = `Contact not found for contactId ${error.message}`
+      return new NotFoundError({ message, logger: baseLogger })
+
+    case "CouldNotUpdateContactError":
+      message = `Failed to update contact`
+      return new UnexpectedClientError({ message, logger: baseLogger })
+
     case "CouldNotFindUserFromPhoneError":
       message = `User does not exist for phone ${error.message}`
       return new NotFoundError({ message, logger: baseLogger })
@@ -150,6 +162,18 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "UnknownCharacterForLnInvoiceError":
       message = "Invoice has an unknown character, couldn't decode."
       return new InvoiceDecodeError({ message, logger: baseLogger })
+
+    case "InvalidContactIdError":
+      message = "Invalid contact id"
+      return new ValidationInternalError({ message, logger: baseLogger })
+
+    case "InvalidHandleError":
+      message = "Invalid handle"
+      return new ValidationInternalError({ message, logger: baseLogger })
+
+    case "InvalidDisplayNameError":
+      message = "Invalid display name"
+      return new ValidationInternalError({ message, logger: baseLogger })
 
     case "LnPaymentRequestInTransitError":
       message = "There is a pending payment for this invoice"
@@ -749,6 +773,7 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "InvalidAccountError":
     case "InvalidAccountIdError":
     case "InvalidMinutesError":
+    case "InvalidLightningAddress":
     case "InvalidWalletForAccountError":
     case "AuthenticationError":
     case "LikelyNoUserWithThisPhoneExistError":

@@ -3,6 +3,7 @@ import dedent from "dedent"
 import ContactAlias from "../scalar/contact-alias"
 
 import Username from "../../../shared/types/scalar/username"
+import Handle from "../../../shared/types/scalar/contact-handle"
 
 import { TransactionConnection } from "../../../shared/types/object/transaction"
 
@@ -15,10 +16,16 @@ import { mapError } from "@/graphql/error-map"
 const AccountContact = GT.Object<AccountRecord, GraphQLPublicContextAuth>({
   name: "UserContact",
   fields: () => ({
-    id: { type: GT.NonNull(Username) },
+    id: { type: GT.NonNull(Handle) },
+    handle: {
+      type: GT.NonNull(Handle),
+      description: "Identifier of the contact (username or Lightning address).",
+    },
     username: {
       type: GT.NonNull(Username),
-      description: "Actual identifier of the contact.",
+      description: "Actual identifier of the contact. Deprecated: use `handle` instead.",
+      deprecationReason: "Use `handle` field; this will be removed in a future release.",
+      resolve: (src) => src.handle ?? src.username,
     },
     alias: {
       type: ContactAlias,
@@ -32,13 +39,13 @@ const AccountContact = GT.Object<AccountRecord, GraphQLPublicContextAuth>({
       type: TransactionConnection,
       args: connectionArgs,
       resolve: async (source, args, { domainAccount }) => {
-        if (!source.username) {
-          throw new Error("Missing username for contact")
+        if (!source.handle) {
+          throw new Error("Missing handle for contact")
         }
-        const contactUsername = checkedToUsername(source.username)
+        const contactHandle = checkedToUsername(source.handle)
 
-        if (contactUsername instanceof Error) {
-          throw mapError(contactUsername)
+        if (contactHandle instanceof Error) {
+          throw mapError(contactHandle)
         }
 
         const account = domainAccount
@@ -49,7 +56,7 @@ const AccountContact = GT.Object<AccountRecord, GraphQLPublicContextAuth>({
 
         const resp = await Accounts.getAccountTransactionsForContact({
           account,
-          contactUsername,
+          contactUsername: contactHandle,
           rawPaginationArgs: args,
         })
 

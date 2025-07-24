@@ -3,6 +3,7 @@ import * as DomainErrors from "@/domain/errors"
 import * as PaymentErrors from "@/domain/payments/errors"
 import * as LedgerErrors from "@/domain/ledger/errors"
 import * as CallbackErrors from "@/domain/callback/errors"
+import * as ContactErrors from "@/domain/contacts/errors"
 import * as CommErrors from "@/domain/comm/errors"
 import * as OnChainErrors from "@/domain/bitcoin/onchain/errors"
 import * as LightningErrors from "@/domain/bitcoin/lightning/errors"
@@ -35,6 +36,7 @@ export const ApplicationErrors = {
   ...PaymentErrors,
   ...LedgerErrors,
   ...CallbackErrors,
+  ...ContactErrors,
   ...CommErrors,
   ...OnChainErrors,
   ...LightningErrors,

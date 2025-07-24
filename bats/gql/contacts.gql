@@ -1,7 +1,10 @@
 query me {
   me {
     contacts {
+      id
       username
+      alias
+      transactionsCount
     }
   }
 }
