@@ -6,7 +6,6 @@ import {
   LessThanDustThresholdError,
   NoTransactionToUpdateError,
 } from "@/domain/errors"
-import { ErrorLevel } from "@/domain/shared"
 
 import {
   recordExceptionInCurrentSpan,
@@ -61,10 +60,7 @@ export const briaEventHandler = async (event: BriaEvent): Promise<true | DomainE
 
       const rebalanceResult = await OnChain.rebalanceToWithdrawalWallet()
       if (rebalanceResult instanceof Error) {
-        recordExceptionInCurrentSpan({
-          error: rebalanceResult,
-          level: ErrorLevel.Critical,
-        })
+        recordExceptionInCurrentSpan({ error: rebalanceResult })
       }
 
       return settledResult
