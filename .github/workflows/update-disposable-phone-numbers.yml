@@ -35,6 +35,20 @@ jobs:
           echo "Latest version available: $LATEST_VERSION"
           echo "Current version in package.json: $CURRENT_VERSION"
 
+      - name: Close existing PR if it exists
+        if: steps.versions.outputs.latest_version != steps.versions.outputs.current_version
+        run: |
+          # Check if PR exists and close it
+          if gh pr list --head "chore/update-disposable-phone-numbers" --json number --jq '.[0].number' | grep -q .; then
+            PR_NUMBER=$(gh pr list --head "chore/update-disposable-phone-numbers" --json number --jq '.[0].number')
+            echo "Closing existing PR #$PR_NUMBER"
+            gh pr close "$PR_NUMBER"
+          else
+            echo "No existing PR found"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Update package if version has changed
         if: steps.versions.outputs.latest_version != steps.versions.outputs.current_version
         run: |
@@ -56,6 +70,12 @@ jobs:
           branch: "chore/update-disposable-phone-numbers"
           delete-branch: true
           base: "main"
+
+      - name: Auto-approve the PR
+        if: steps.create-pr.outputs.pull-request-number
+        run: gh pr review --approve "${{ steps.create-pr.outputs.pull-request-number }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Enable automerge on the PR
         if: steps.create-pr.outputs.pull-request-number
