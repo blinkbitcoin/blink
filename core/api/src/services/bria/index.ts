@@ -391,7 +391,7 @@ export const OnChainService = (): IOnChainService => {
     request.setPayoutQueueName(payoutQueueName)
     request.setDestinationWalletName(briaConfig.withdrawalWalletName)
     request.setSatoshis(satoshis)
-    request.setExternalId(`rebalance-${satoshis}`)
+    request.setExternalId(`rebalance-receive-withdrawal-${satoshis}`)
     request.setMetadata(constructMetadata({ galoy: { rebalance: true } }))
 
     try {
