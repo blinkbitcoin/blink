@@ -1,14 +1,14 @@
 import axios from "axios"
 import MockAdapter from "axios-mock-adapter"
 
-import { IpFetcher } from "@/services/ipfetcher"
+import { IpFetcher, client } from "@/services/ipfetcher"
 
 /* eslint @typescript-eslint/ban-ts-comment: "off" */
 // @ts-ignore-next-line no-implicit-any error
 let mock
 
 beforeAll(() => {
-  mock = new MockAdapter(axios)
+  mock = new MockAdapter(client)
 })
 
 afterEach(() => {

@@ -18,7 +18,7 @@ type Params = {
   key?: string
 }
 
-const client = axios.create({
+export const client = axios.create({
   timeout: 2000,
   httpsAgent: new https.Agent({ keepAlive: true }),
 })
