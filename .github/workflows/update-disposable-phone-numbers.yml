@@ -1,0 +1,64 @@
+name: Update Disposable Phone Numbers
+
+on:
+  schedule:
+    - cron: "0 6 * * *" # Runs daily at 6am UTC
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  update-package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@master
+        with:
+          root-reserve-mb: 12288
+          temp-reserve-mb: 12288
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v14
+
+      - name: Run the Magic Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get latest and current package versions
+        id: versions
+        run: |
+          LATEST_VERSION=$(nix develop -c pnpm view @ip1sms/disposable-phone-numbers version)
+          # Extract version from core/api/package.json, removing any leading non-numeric characters like ^ or ~
+          CURRENT_VERSION=$(jq -r '.dependencies."@ip1sms/disposable-phone-numbers"' core/api/package.json | sed 's/[^0-9.]*//g')
+          echo "latest_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+          echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "Latest version available: $LATEST_VERSION"
+          echo "Current version in package.json: $CURRENT_VERSION"
+
+      - name: Update package if version has changed
+        if: steps.versions.outputs.latest_version != steps.versions.outputs.current_version
+        run: |
+          cd core/api
+          nix develop -c pnpm up @ip1sms/disposable-phone-numbers
+
+      - name: Create Pull Request
+        if: steps.versions.outputs.latest_version != steps.versions.outputs.current_version
+        id: create-pr
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore(deps): update @ip1sms/disposable-phone-numbers to v${{ steps.versions.outputs.latest_version }}"
+          title: "chore(deps): update @ip1sms/disposable-phone-numbers to v${{ steps.versions.outputs.latest_version }}"
+          body: |
+            This PR updates `@ip1sms/disposable-phone-numbers` from `v${{ steps.versions.outputs.current_version }}` to `v${{ steps.versions.outputs.latest_version }}`.
+
+            This is an auto-generated PR that will be automatically merged once all checks pass.
+          branch: "chore/update-disposable-phone-numbers"
+          delete-branch: true
+          base: "main"
+
+      - name: Enable automerge on the PR
+        if: steps.create-pr.outputs.pull-request-number
+        run: gh pr merge --auto --squash "${{ steps.create-pr.outputs.pull-request-number }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
