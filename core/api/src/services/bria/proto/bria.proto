@@ -4,7 +4,7 @@ import "google/protobuf/struct.proto";
 
 package services.bria.v1;
 
-option go_package = "github.com/GaloyMoney/terraform-provider-bria/client/proto/briav1";
+option go_package = "github.com/blinkbitcoin/terraform-provider-bria/client/proto/briav1";
 
 service BriaService {
   rpc CreateProfile (CreateProfileRequest) returns (CreateProfileResponse) {}
@@ -41,6 +41,7 @@ service BriaService {
   rpc CancelPayout(CancelPayoutRequest) returns (CancelPayoutResponse) {}
 
   rpc GetBatch (GetBatchRequest) returns (GetBatchResponse) {}
+  rpc CancelBatch (CancelBatchRequest) returns (CancelBatchResponse) {}
 
   rpc GetAccountBalanceSummary (GetAccountBalanceSummaryRequest) returns (GetAccountBalanceSummaryResponse) {}
 
@@ -352,6 +353,7 @@ message EstimatePayoutFeeRequest {
 
 message EstimatePayoutFeeResponse {
   uint64 satoshis = 1;
+  float fee_rate  = 2;
 }
 
 message SubmitPayoutRequest {
@@ -432,7 +434,14 @@ message GetBatchResponse {
   string unsigned_psbt = 4;
   repeated BatchWalletSummary wallet_summaries = 5;
   repeated SigningSession signing_sessions = 6;
+  bool cancelled = 7;
 }
+
+message CancelBatchRequest {
+  string id = 1;
+}
+
+message CancelBatchResponse {}
 
 message BatchWalletSummary {
   string wallet_id = 1;
