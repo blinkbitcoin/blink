@@ -386,10 +386,12 @@ export const OnChainService = (): IOnChainService => {
   }): Promise<PayoutId | OnChainServiceError> => {
     const request = new SubmitPayoutRequest()
     const { payoutQueueName } = briaConfig.rebalances.receiveToWithdrawal
+    const satoshis = Number(amount.amount)
     request.setWalletName(briaConfig.receiveWalletName)
     request.setPayoutQueueName(payoutQueueName)
     request.setDestinationWalletName(briaConfig.withdrawalWalletName)
-    request.setSatoshis(Number(amount.amount))
+    request.setSatoshis(satoshis)
+    request.setExternalId(`rebalance-receive-withdrawal-${satoshis}`)
     request.setMetadata(constructMetadata({ galoy: { rebalance: true } }))
 
     try {
@@ -397,6 +399,14 @@ export const OnChainService = (): IOnChainService => {
 
       return response.getId() as PayoutId
     } catch (err) {
+      if (
+        err &&
+        typeof err === "object" &&
+        "code" in err &&
+        err?.code === status.ALREADY_EXISTS
+      ) {
+        return new OnChainAddressAlreadyCreatedForRequestIdError()
+      }
       const errMsg = parseErrorMessageFromUnknown(err)
       return new UnknownOnChainServiceError(errMsg)
     }

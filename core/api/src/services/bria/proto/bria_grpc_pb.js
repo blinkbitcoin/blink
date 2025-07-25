@@ -16,6 +16,28 @@ function deserialize_services_bria_v1_BriaEvent(buffer_arg) {
   return bria_pb.BriaEvent.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
+function serialize_services_bria_v1_CancelBatchRequest(arg) {
+  if (!(arg instanceof bria_pb.CancelBatchRequest)) {
+    throw new Error('Expected argument of type services.bria.v1.CancelBatchRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_services_bria_v1_CancelBatchRequest(buffer_arg) {
+  return bria_pb.CancelBatchRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_services_bria_v1_CancelBatchResponse(arg) {
+  if (!(arg instanceof bria_pb.CancelBatchResponse)) {
+    throw new Error('Expected argument of type services.bria.v1.CancelBatchResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_services_bria_v1_CancelBatchResponse(buffer_arg) {
+  return bria_pb.CancelBatchResponse.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
 function serialize_services_bria_v1_CancelPayoutRequest(arg) {
   if (!(arg instanceof bria_pb.CancelPayoutRequest)) {
     throw new Error('Expected argument of type services.bria.v1.CancelPayoutRequest');
@@ -909,6 +931,17 @@ var BriaServiceService = exports.BriaServiceService = {
     responseSerialize: serialize_services_bria_v1_GetBatchResponse,
     responseDeserialize: deserialize_services_bria_v1_GetBatchResponse,
   },
+  cancelBatch: {
+    path: '/services.bria.v1.BriaService/CancelBatch',
+    requestStream: false,
+    responseStream: false,
+    requestType: bria_pb.CancelBatchRequest,
+    responseType: bria_pb.CancelBatchResponse,
+    requestSerialize: serialize_services_bria_v1_CancelBatchRequest,
+    requestDeserialize: deserialize_services_bria_v1_CancelBatchRequest,
+    responseSerialize: serialize_services_bria_v1_CancelBatchResponse,
+    responseDeserialize: deserialize_services_bria_v1_CancelBatchResponse,
+  },
   getAccountBalanceSummary: {
     path: '/services.bria.v1.BriaService/GetAccountBalanceSummary',
     requestStream: false,
@@ -933,4 +966,4 @@ var BriaServiceService = exports.BriaServiceService = {
   },
 };
 
-exports.BriaServiceClient = grpc.makeGenericClientConstructor(BriaServiceService);
+exports.BriaServiceClient = grpc.makeGenericClientConstructor(BriaServiceService, 'BriaService');
