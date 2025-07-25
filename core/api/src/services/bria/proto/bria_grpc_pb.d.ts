@@ -35,6 +35,7 @@ interface IBriaServiceService extends grpc.ServiceDefinition<grpc.UntypedService
     getPayout: IBriaServiceService_IGetPayout;
     cancelPayout: IBriaServiceService_ICancelPayout;
     getBatch: IBriaServiceService_IGetBatch;
+    cancelBatch: IBriaServiceService_ICancelBatch;
     getAccountBalanceSummary: IBriaServiceService_IGetAccountBalanceSummary;
     subscribeAll: IBriaServiceService_ISubscribeAll;
 }
@@ -273,6 +274,15 @@ interface IBriaServiceService_IGetBatch extends grpc.MethodDefinition<bria_pb.Ge
     responseSerialize: grpc.serialize<bria_pb.GetBatchResponse>;
     responseDeserialize: grpc.deserialize<bria_pb.GetBatchResponse>;
 }
+interface IBriaServiceService_ICancelBatch extends grpc.MethodDefinition<bria_pb.CancelBatchRequest, bria_pb.CancelBatchResponse> {
+    path: "/services.bria.v1.BriaService/CancelBatch";
+    requestStream: false;
+    responseStream: false;
+    requestSerialize: grpc.serialize<bria_pb.CancelBatchRequest>;
+    requestDeserialize: grpc.deserialize<bria_pb.CancelBatchRequest>;
+    responseSerialize: grpc.serialize<bria_pb.CancelBatchResponse>;
+    responseDeserialize: grpc.deserialize<bria_pb.CancelBatchResponse>;
+}
 interface IBriaServiceService_IGetAccountBalanceSummary extends grpc.MethodDefinition<bria_pb.GetAccountBalanceSummaryRequest, bria_pb.GetAccountBalanceSummaryResponse> {
     path: "/services.bria.v1.BriaService/GetAccountBalanceSummary";
     requestStream: false;
@@ -321,6 +331,7 @@ export interface IBriaServiceServer extends grpc.UntypedServiceImplementation {
     getPayout: grpc.handleUnaryCall<bria_pb.GetPayoutRequest, bria_pb.GetPayoutResponse>;
     cancelPayout: grpc.handleUnaryCall<bria_pb.CancelPayoutRequest, bria_pb.CancelPayoutResponse>;
     getBatch: grpc.handleUnaryCall<bria_pb.GetBatchRequest, bria_pb.GetBatchResponse>;
+    cancelBatch: grpc.handleUnaryCall<bria_pb.CancelBatchRequest, bria_pb.CancelBatchResponse>;
     getAccountBalanceSummary: grpc.handleUnaryCall<bria_pb.GetAccountBalanceSummaryRequest, bria_pb.GetAccountBalanceSummaryResponse>;
     subscribeAll: grpc.handleServerStreamingCall<bria_pb.SubscribeAllRequest, bria_pb.BriaEvent>;
 }
@@ -404,6 +415,9 @@ export interface IBriaServiceClient {
     getBatch(request: bria_pb.GetBatchRequest, callback: (error: grpc.ServiceError | null, response: bria_pb.GetBatchResponse) => void): grpc.ClientUnaryCall;
     getBatch(request: bria_pb.GetBatchRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: bria_pb.GetBatchResponse) => void): grpc.ClientUnaryCall;
     getBatch(request: bria_pb.GetBatchRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: bria_pb.GetBatchResponse) => void): grpc.ClientUnaryCall;
+    cancelBatch(request: bria_pb.CancelBatchRequest, callback: (error: grpc.ServiceError | null, response: bria_pb.CancelBatchResponse) => void): grpc.ClientUnaryCall;
+    cancelBatch(request: bria_pb.CancelBatchRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: bria_pb.CancelBatchResponse) => void): grpc.ClientUnaryCall;
+    cancelBatch(request: bria_pb.CancelBatchRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: bria_pb.CancelBatchResponse) => void): grpc.ClientUnaryCall;
     getAccountBalanceSummary(request: bria_pb.GetAccountBalanceSummaryRequest, callback: (error: grpc.ServiceError | null, response: bria_pb.GetAccountBalanceSummaryResponse) => void): grpc.ClientUnaryCall;
     getAccountBalanceSummary(request: bria_pb.GetAccountBalanceSummaryRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: bria_pb.GetAccountBalanceSummaryResponse) => void): grpc.ClientUnaryCall;
     getAccountBalanceSummary(request: bria_pb.GetAccountBalanceSummaryRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: bria_pb.GetAccountBalanceSummaryResponse) => void): grpc.ClientUnaryCall;
@@ -491,6 +505,9 @@ export class BriaServiceClient extends grpc.Client implements IBriaServiceClient
     public getBatch(request: bria_pb.GetBatchRequest, callback: (error: grpc.ServiceError | null, response: bria_pb.GetBatchResponse) => void): grpc.ClientUnaryCall;
     public getBatch(request: bria_pb.GetBatchRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: bria_pb.GetBatchResponse) => void): grpc.ClientUnaryCall;
     public getBatch(request: bria_pb.GetBatchRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: bria_pb.GetBatchResponse) => void): grpc.ClientUnaryCall;
+    public cancelBatch(request: bria_pb.CancelBatchRequest, callback: (error: grpc.ServiceError | null, response: bria_pb.CancelBatchResponse) => void): grpc.ClientUnaryCall;
+    public cancelBatch(request: bria_pb.CancelBatchRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: bria_pb.CancelBatchResponse) => void): grpc.ClientUnaryCall;
+    public cancelBatch(request: bria_pb.CancelBatchRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: bria_pb.CancelBatchResponse) => void): grpc.ClientUnaryCall;
     public getAccountBalanceSummary(request: bria_pb.GetAccountBalanceSummaryRequest, callback: (error: grpc.ServiceError | null, response: bria_pb.GetAccountBalanceSummaryResponse) => void): grpc.ClientUnaryCall;
     public getAccountBalanceSummary(request: bria_pb.GetAccountBalanceSummaryRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: bria_pb.GetAccountBalanceSummaryResponse) => void): grpc.ClientUnaryCall;
     public getAccountBalanceSummary(request: bria_pb.GetAccountBalanceSummaryRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: bria_pb.GetAccountBalanceSummaryResponse) => void): grpc.ClientUnaryCall;

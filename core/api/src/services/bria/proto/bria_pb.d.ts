@@ -1517,6 +1517,8 @@ export namespace EstimatePayoutFeeRequest {
 export class EstimatePayoutFeeResponse extends jspb.Message { 
     getSatoshis(): number;
     setSatoshis(value: number): EstimatePayoutFeeResponse;
+    getFeeRate(): number;
+    setFeeRate(value: number): EstimatePayoutFeeResponse;
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): EstimatePayoutFeeResponse.AsObject;
@@ -1531,6 +1533,7 @@ export class EstimatePayoutFeeResponse extends jspb.Message {
 export namespace EstimatePayoutFeeResponse {
     export type AsObject = {
         satoshis: number,
+        feeRate: number,
     }
 }
 
@@ -1917,6 +1920,8 @@ export class GetBatchResponse extends jspb.Message {
     getSigningSessionsList(): Array<SigningSession>;
     setSigningSessionsList(value: Array<SigningSession>): GetBatchResponse;
     addSigningSessions(value?: SigningSession, index?: number): SigningSession;
+    getCancelled(): boolean;
+    setCancelled(value: boolean): GetBatchResponse;
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): GetBatchResponse.AsObject;
@@ -1936,6 +1941,44 @@ export namespace GetBatchResponse {
         unsignedPsbt: string,
         walletSummariesList: Array<BatchWalletSummary.AsObject>,
         signingSessionsList: Array<SigningSession.AsObject>,
+        cancelled: boolean,
+    }
+}
+
+export class CancelBatchRequest extends jspb.Message { 
+    getId(): string;
+    setId(value: string): CancelBatchRequest;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): CancelBatchRequest.AsObject;
+    static toObject(includeInstance: boolean, msg: CancelBatchRequest): CancelBatchRequest.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: CancelBatchRequest, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): CancelBatchRequest;
+    static deserializeBinaryFromReader(message: CancelBatchRequest, reader: jspb.BinaryReader): CancelBatchRequest;
+}
+
+export namespace CancelBatchRequest {
+    export type AsObject = {
+        id: string,
+    }
+}
+
+export class CancelBatchResponse extends jspb.Message { 
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): CancelBatchResponse.AsObject;
+    static toObject(includeInstance: boolean, msg: CancelBatchResponse): CancelBatchResponse.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: CancelBatchResponse, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): CancelBatchResponse;
+    static deserializeBinaryFromReader(message: CancelBatchResponse, reader: jspb.BinaryReader): CancelBatchResponse;
+}
+
+export namespace CancelBatchResponse {
+    export type AsObject = {
     }
 }
 
