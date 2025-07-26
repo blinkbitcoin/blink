@@ -16,7 +16,9 @@ export const IPMetadataAuthorizer = ({
     if (!ipMetadata || !ipMetadata.isoCode || !ipMetadata.asn)
       return new MissingIPMetadataError()
 
-    if (checkProxy && ipMetadata.proxy) return new UnauthorizedIPMetadataProxyError()
+    if (checkProxy && isHighRiskProxy(ipMetadata)) {
+      return new UnauthorizedIPMetadataProxyError()
+    }
 
     const isoCode = ipMetadata.isoCode.toUpperCase()
     const allowedCountry = allowCountries.length <= 0 || allowCountries.includes(isoCode)
@@ -32,4 +34,26 @@ export const IPMetadataAuthorizer = ({
   }
 
   return { authorize }
+}
+
+const isHighRiskProxy = (ipMetadata: IPType): boolean => {
+  const { risk, proxy, type } = ipMetadata
+
+  if (!risk) {
+    return false
+  }
+
+  if (risk >= 74) {
+    return true
+  }
+
+  if (type === undefined || proxy === undefined) {
+    return false
+  }
+
+  if (risk >= 67) {
+    return !(proxy && type === "VPN")
+  }
+
+  return proxy && type !== "VPN"
 }
