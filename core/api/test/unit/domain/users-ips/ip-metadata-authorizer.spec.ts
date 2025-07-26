@@ -157,14 +157,22 @@ describe("IPMetadataAuthorizer", () => {
     })
 
     it("returns true for low risk with VPN proxy", () => {
-      const ipInfo = { ...defaultIpInfo, proxy: true, risk: 50, type: "VPN" }
-      const authorized = IPMetadataAuthorizer(defaultConfig).authorize(ipInfo)
+      let ipInfo = { ...defaultIpInfo, proxy: true, risk: 50, type: "VPN" }
+      let authorized = IPMetadataAuthorizer(defaultConfig).authorize(ipInfo)
+      expect(authorized).toBe(true)
+
+      ipInfo = { ...defaultIpInfo, proxy: true, risk: 0, type: "VPN" }
+      authorized = IPMetadataAuthorizer(defaultConfig).authorize(ipInfo)
       expect(authorized).toBe(true)
     })
 
     it("returns error for low risk with non-VPN proxy", () => {
-      const ipInfo = { ...defaultIpInfo, proxy: true, risk: 50, type: "other" }
-      const authorized = IPMetadataAuthorizer(defaultConfig).authorize(ipInfo)
+      let ipInfo = { ...defaultIpInfo, proxy: true, risk: 50, type: "other" }
+      let authorized = IPMetadataAuthorizer(defaultConfig).authorize(ipInfo)
+      expect(authorized).toBeInstanceOf(UnauthorizedIPMetadataProxyError)
+
+      ipInfo = { ...defaultIpInfo, proxy: true, risk: 0, type: "other" }
+      authorized = IPMetadataAuthorizer(defaultConfig).authorize(ipInfo)
       expect(authorized).toBeInstanceOf(UnauthorizedIPMetadataProxyError)
     })
 

@@ -39,7 +39,7 @@ export const IPMetadataAuthorizer = ({
 const isHighRiskProxy = (ipMetadata: IPType): boolean => {
   const { risk, proxy, type } = ipMetadata
 
-  if (!risk) {
+  if (risk === undefined) {
     return false
   }
 
