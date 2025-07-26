@@ -53,9 +53,11 @@ export const IpFetcher = (): IIpFetcherService => {
 
       const proxy = !!(data[ip] && data[ip].proxy && data[ip].proxy === "yes")
       const isoCode = data[ip] && data[ip].isocode
+      const type = data[ip] ? `${data[ip].type}` : ""
+      const risk = Number(data[ip]?.risk) || 0
 
-      addAttributesToCurrentSpan({ proxy, isoCode, keyIsPresent })
-      return { ...data[ip], isoCode, proxy, status: data.status }
+      addAttributesToCurrentSpan({ proxy, risk, type, isoCode, keyIsPresent })
+      return { ...data[ip], isoCode, proxy, risk, type, status: data.status }
     } catch (error) {
       recordExceptionInCurrentSpan({ error, attributes: { ip, keyIsPresent } })
       return new UnknownIpFetcherServiceError(error)

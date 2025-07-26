@@ -6,9 +6,10 @@ type IPType = {
   isoCode?: string
   region?: string
   city?: string
-  Type?: string
+  type?: string
   asn?: string
   proxy?: boolean
+  risk?: number
 }
 
 type OnChainObjectForUser = {
