@@ -1,12 +1,12 @@
 import { GT } from "@/graphql/index"
 import IError from "@/graphql/shared/types/abstract/error"
 
-const RedisKeyRemovePayload = GT.Object({
-  name: "RedisKeyRemovePayload",
+const RateLimitResetPayload = GT.Object({
+  name: "RateLimitResetPayload",
   fields: () => ({
     errors: { type: GT.NonNullList(IError) },
     success: { type: GT.Boolean },
   }),
 })
 
-export default RedisKeyRemovePayload
+export default RateLimitResetPayload
