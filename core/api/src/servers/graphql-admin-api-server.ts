@@ -24,6 +24,27 @@ import { Transactions } from "@/app"
 
 import { AuthorizationError } from "@/graphql/error"
 
+import { RoleChecker, AdminFeature } from "@/services/auth/role-checker"
+
+const roleChecker = new RoleChecker()
+
+const loaders = {
+  txnMetadata: new DataLoader(async (keys) => {
+    const txnMetadata = await Transactions.getTransactionsMetadataByIds(
+      keys as LedgerTransactionId[],
+    )
+    if (txnMetadata instanceof Error) {
+      recordExceptionInCurrentSpan({
+        error: txnMetadata,
+      })
+
+      return keys.map(() => undefined)
+    }
+
+    return txnMetadata
+  }),
+}
+
 const setGqlAdminContext = async (
   req: Request,
   res: Response,
@@ -32,27 +53,16 @@ const setGqlAdminContext = async (
   const logger = baseLogger
   const tokenPayload = req.token
 
-  // TODO: loaders probably not needed for the admin panel
-  const loaders = {
-    txnMetadata: new DataLoader(async (keys) => {
-      const txnMetadata = await Transactions.getTransactionsMetadataByIds(
-        keys as LedgerTransactionId[],
-      )
-      if (txnMetadata instanceof Error) {
-        recordExceptionInCurrentSpan({
-          error: txnMetadata,
-        })
-
-        return keys.map(() => undefined)
-      }
-
-      return txnMetadata
-    }),
-  }
-
+  // Extract user email from token payload
+  const userEmail = tokenPayload.sub as string // This should be the email from OAuth
   const privilegedClientId = tokenPayload.sub as PrivilegedClientId
 
-  req.gqlContext = { loaders, privilegedClientId, logger }
+  req.gqlContext = {
+    loaders,
+    privilegedClientId,
+    userEmail, // Add email to context
+    logger,
+  }
 
   addAttributesToCurrentSpanAndPropagate(
     {
@@ -64,32 +74,62 @@ const setGqlAdminContext = async (
   )
 }
 
-const isAuthenticated = rule({ cache: "contextual" })(async (
+// Feature-specific authorization rules
+const requiresViewAccess = rule({ cache: "contextual" })(async (
   parent,
   args,
   ctx: GraphQLAdminContext,
 ) => {
-  return (
-    ctx.privilegedClientId !== null &&
-    ctx.privilegedClientId !== undefined &&
-    ctx.privilegedClientId !== ""
-  )
+  if (!ctx.userEmail) return false
+  return roleChecker.hasFeature(ctx.userEmail, AdminFeature.VIEW_ACCOUNTS)
+})
+
+const requiresModifyAccess = rule({ cache: "contextual" })(async (
+  parent,
+  args,
+  ctx: GraphQLAdminContext,
+) => {
+  if (!ctx.userEmail) return false
+  return roleChecker.hasFeature(ctx.userEmail, AdminFeature.MODIFY_ACCOUNTS)
 })
 
 export async function startApolloServerForAdminSchema() {
-  const authedQueryFields: { [key: string]: Rule } = {}
-  for (const key of Object.keys(adminQueryFields.authed)) {
-    authedQueryFields[key] = isAuthenticated
+  // View-only queries
+  const viewerQueryFields: { [key: string]: Rule } = {}
+  const viewerQueries = [
+    "accountDetailsByUserId",
+    "accountDetailsByPhone",
+    "accountDetailsByEmail",
+  ]
+
+  for (const key of viewerQueries) {
+    if (adminQueryFields.authed[key]) {
+      viewerQueryFields[key] = requiresViewAccess
+    }
   }
 
+  // Modification queries
+  const modifyQueryFields: { [key: string]: Rule } = {}
+  const modifyQueries = ["updateUserPhone", "updateUserEmail"]
+
+  for (const key of modifyQueries) {
+    if (adminQueryFields.authed[key]) {
+      modifyQueryFields[key] = requiresModifyAccess
+    }
+  }
+
+  // Apply all mutations with modify access
   const authedMutationFields: { [key: string]: Rule } = {}
   for (const key of Object.keys(adminMutationFields.authed)) {
-    authedMutationFields[key] = isAuthenticated
+    authedMutationFields[key] = requiresModifyAccess
   }
 
   const permissions = shield(
     {
-      Query: authedQueryFields,
+      Query: {
+        ...viewerQueryFields,
+        ...modifyQueryFields,
+      },
       Mutation: authedMutationFields,
     },
     {
