@@ -15,16 +15,23 @@ import { GT } from "@/graphql/index"
 export const mutationFields = {
   unauthed: {},
   authed: {
-    userUpdatePhone: UserUpdatePhoneMutation,
-    userUpdateEmail: UserUpdateEmailMutation,
     accountUpdateLevel: AccountUpdateLevelMutation,
     accountUpdateStatus: AccountUpdateStatusMutation,
     accountForceDelete: AccountForceDeleteMutation,
     merchantMapValidate: MerchantMapValidateMutation,
     merchantMapDelete: MerchantMapDeleteMutation,
     marketingNotificationTrigger: TriggerMarketingNotificationMutation,
+    merchantMapDelete: MerchantMapDeleteMutation,
+    merchantMapValidate: MerchantMapValidateMutation,
+    userUpdateEmail: UserUpdateEmailMutation,
+    userUpdatePhone: UserUpdatePhoneMutation,
   },
 }
+
+// All mutations require modify permission by default
+export const mutationPermissions = {
+  modify: Object.keys(mutationFields.authed) as (keyof typeof mutationFields.authed)[],
+} as const
 
 export const MutationType = GT.Object<null, GraphQLAdminContext>({
   name: "Mutation",

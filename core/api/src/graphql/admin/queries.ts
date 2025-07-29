@@ -19,23 +19,28 @@ import { GT } from "@/graphql/index"
 export const queryFields = {
   unauthed: {},
   authed: {
-    allLevels: AllLevelsQuery,
-    accountDetailsByUserPhone: AccountDetailsByUserPhoneQuery,
-    accountDetailsByUsername: AccountDetailsByUsernameQuery,
-    accountDetailsByEmail: AccountDetailsByUserEmailQuery,
     accountDetailsByAccountId: AccountDetailsByAccountId,
+    accountDetailsByEmail: AccountDetailsByUserEmailQuery,
+    accountDetailsByUserPhone: AccountDetailsByUserPhoneQuery,
     accountDetailsByUserId: AccountDetailsByUserId,
+    accountDetailsByUsername: AccountDetailsByUsernameQuery,
+    allLevels: AllLevelsQuery,
+    filteredUserCount: FilteredUserCountQuery,
+    inactiveMerchants: InactiveMerchantsQuery,
+    lightningInvoice: LightningInvoiceQuery,
+    lightningPayment: LightningPaymentQuery,
+    merchantsPendingApproval: MerchantsPendingApprovalQuery,
     transactionById: TransactionByIdQuery,
     transactionsByHash: TransactionsByHashQuery,
     transactionsByPaymentRequest: TransactionsByPaymentRequestQuery,
-    lightningInvoice: LightningInvoiceQuery,
-    lightningPayment: LightningPaymentQuery,
     wallet: WalletQuery,
-    merchantsPendingApproval: MerchantsPendingApprovalQuery,
-    inactiveMerchants: InactiveMerchantsQuery,
-    filteredUserCount: FilteredUserCountQuery,
   },
 }
+
+// All authed queries require view permission by default
+export const queryPermissions = {
+  view: Object.keys(queryFields.authed) as (keyof typeof queryFields.authed)[],
+} as const
 
 export const QueryType = GT.Object({
   name: "Query",

@@ -16,6 +16,16 @@ export const env = createEnv({
       .string()
       .transform((x) => x.split(",").map((email) => email.trim()))
       .default("test@galoy.io"),
+    ROLE_MAPPING: z
+      .string()
+      .transform((str) => {
+        try {
+          return JSON.parse(str)
+        } catch {
+          return {}
+        }
+      })
+      .default("{}"),
   },
   /*
    * Environment variables available on the client (and server).
@@ -40,5 +50,6 @@ export const env = createEnv({
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
     NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
     AUTHORIZED_EMAILS: process.env.AUTHORIZED_EMAILS,
+    ROLE_MAPPING: process.env.ROLE_MAPPING || "{}",
   },
 })
