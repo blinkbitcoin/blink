@@ -318,6 +318,31 @@ getEmailCode() {
   [[ "$num_errors" == "0" && "$success" == "true" ]] || exit 1
 }
 
+@test "admin: Some random functionality requires authentication" {
+  variables=$(
+    jq -n \
+    '{
+      input: {
+        localizedNotificationContents: [
+          {
+            language: "en",
+            title: "Test title",
+            body: "test body"
+          }
+        ],
+        shouldSendPush: false,
+        shouldAddToHistory: true,
+        shouldAddToBulletin: true,
+      }
+    }'
+  )
+  
+  # Try without any token (unauthenticated)
+  exec_admin_graphql "" 'marketing-notification-trigger' "$variables"
+  error_code="$(graphql_output '.error.code')"
+  [[ "$error_code" == "401" ]] || exit 1
+}
+
 # TODO: add check by email
 
 # TODO: business update map info
