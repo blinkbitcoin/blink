@@ -1,4 +1,3 @@
-import { redis } from "@/services/redis"
 import { resetLimiter } from "@/services/rate-limit"
 import { RateLimitConfig, RateLimitPrefix } from "@/domain/rate-limit"
 import { addAttributesToCurrentSpan } from "@/services/tracing"
@@ -21,7 +20,9 @@ export const resetRateLimit = async (
   // Find matching rate limit config
   const rateLimitConfig = getRateLimitConfigByPrefix(rateLimitPrefix)
   if (!rateLimitConfig) {
-    return new UnknownRepositoryError(`No rate limit config found for prefix: '${rateLimitPrefix}'`)
+    return new UnknownRepositoryError(
+      `No rate limit config found for prefix: '${rateLimitPrefix}'`,
+    )
   }
 
   const result = await resetLimiter({
@@ -41,5 +42,3 @@ const getRateLimitConfigByPrefix = (prefix: RateLimitPrefix): RateLimitConfig | 
   }
   return null
 }
-
-

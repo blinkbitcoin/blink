@@ -1,7 +1,7 @@
 import { gql } from "apollo-server-core"
+
 import { createApolloServer } from "@/graphql/server"
 import { RateLimitConfig } from "@/domain/rate-limit"
-import { RedisRateLimitService } from "@/services/rate-limit"
 
 const RATE_LIMIT_RESET_MUTATION = gql`
   mutation RateLimitReset($input: RateLimitResetInput!) {
@@ -15,6 +15,7 @@ const RATE_LIMIT_RESET_MUTATION = gql`
 `
 
 describe("RateLimitReset GraphQL", () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let server: any
 
   beforeAll(async () => {

@@ -2,11 +2,7 @@ import { GT } from "@/graphql/index"
 import { Admin } from "@/app"
 import { mapAndParseErrorForGqlResponse } from "@/graphql/error-map"
 
-const RedisKeysSearchQuery = GT.Field<
-  null,
-  GraphQLAdminContext,
-  { pattern: string }
->({
+const RedisKeysSearchQuery = GT.Field<null, GraphQLAdminContext, { pattern: string }>({
   extensions: {
     complexity: 100,
   },
@@ -16,11 +12,11 @@ const RedisKeysSearchQuery = GT.Field<
   },
   resolve: async (_, args) => {
     const result = await Admin.searchRedisKeys(args.pattern)
-    
+
     if (result instanceof Error) {
       throw mapAndParseErrorForGqlResponse(result)
     }
-    
+
     return result
   },
 })
