@@ -4,15 +4,15 @@ import { RateLimitConfig, RateLimitPrefix } from "@/domain/rate-limit"
 import { addAttributesToCurrentSpan } from "@/services/tracing"
 import { UnknownRepositoryError } from "@/domain/errors"
 
-export const removeRedisKey = async (
+export const resetRateLimit = async (
   key: string,
 ): Promise<boolean | ApplicationError> => {
-  addAttributesToCurrentSpan({ "redis.key": key })
+  addAttributesToCurrentSpan({ "rateLimit.key": key })
 
   // Parse the key to extract rate limit config and identifier
   const keyParts = key.split(":")
   if (keyParts.length < 2) {
-    return new UnknownRepositoryError(`Invalid Redis key format: '${key}'`)
+    return new UnknownRepositoryError(`Invalid rate limit key format: '${key}'`)
   }
 
   const rateLimitPrefix = keyParts[0] as RateLimitPrefix
