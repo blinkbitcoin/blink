@@ -9,6 +9,8 @@ import AccountUpdateStatusMutation from "./root/mutation/account-update-status"
 
 import TriggerMarketingNotificationMutation from "./root/mutation/marketing-notification-trigger"
 
+import RedisKeyRemoveMutation from "./root/mutation/redis-key-remove"
+
 import { GT } from "@/graphql/index"
 
 export const mutationFields = {
@@ -21,6 +23,7 @@ export const mutationFields = {
     merchantMapValidate: MerchantMapValidateMutation,
     merchantMapDelete: MerchantMapDeleteMutation,
     marketingNotificationTrigger: TriggerMarketingNotificationMutation,
+    redisKeyRemove: RedisKeyRemoveMutation,
   },
 }
 

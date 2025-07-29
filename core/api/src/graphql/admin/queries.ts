@@ -13,6 +13,7 @@ import AccountDetailsByUserId from "./root/query/account-details-by-user-id"
 import MerchantsPendingApprovalQuery from "./root/query/merchants-pending-approval-listing"
 import InactiveMerchantsQuery from "./root/query/inactive-merchants-listing"
 import FilteredUserCountQuery from "./root/query/filtered-user-count"
+import RedisKeysSearchQuery from "./root/query/redis-keys-search"
 
 import { GT } from "@/graphql/index"
 
@@ -34,6 +35,7 @@ export const queryFields = {
     merchantsPendingApproval: MerchantsPendingApprovalQuery,
     inactiveMerchants: InactiveMerchantsQuery,
     filteredUserCount: FilteredUserCountQuery,
+    redisKeysSearch: RedisKeysSearchQuery,
   },
 }
 
