@@ -24,6 +24,8 @@ type GraphQLAdminContext = {
   logger: Logger
   loaders: Loaders
   privilegedClientId: PrivilegedClientId
+  userEmail: string
+  role: string
 }
 
 type GraphQLContext =
