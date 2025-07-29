@@ -1,10 +1,10 @@
 import { GT } from "@/graphql/index"
 import { Admin } from "@/app"
 import { mapAndParseErrorForGqlResponse } from "@/graphql/error-map"
-import RedisKeyRemoveInput from "@/graphql/admin/types/object/redis-key-remove-input"
-import RedisKeyRemovePayload from "@/graphql/admin/types/payload/redis-key-remove"
+import RateLimitResetInput from "@/graphql/admin/types/object/rate-limit-reset-input"
+import RateLimitResetPayload from "@/graphql/admin/types/payload/rate-limit-reset"
 
-const RedisKeyRemoveMutation = GT.Field<
+const RateLimitResetMutation = GT.Field<
   null,
   GraphQLAdminContext,
   { input: { key: string } }
@@ -12,18 +12,18 @@ const RedisKeyRemoveMutation = GT.Field<
   extensions: {
     complexity: 120,
   },
-  type: GT.NonNull(RedisKeyRemovePayload),
+  type: GT.NonNull(RateLimitResetPayload),
   args: {
-    input: { type: GT.NonNull(RedisKeyRemoveInput) },
+    input: { type: GT.NonNull(RateLimitResetInput) },
   },
   resolve: async (_, args) => {
     const { key } = args.input
 
-    const result = await Admin.removeRedisKey(key)
+    const result = await Admin.resetRateLimit(key)
 
     if (result instanceof Error) {
       return { 
-        errors: [{ message: `Redis key '${key}' not found` }], 
+        errors: [{ message: `Rate limit key '${key}' could not be reset: ${result.message}` }], 
         success: false 
       }
     }
@@ -35,4 +35,4 @@ const RedisKeyRemoveMutation = GT.Field<
   },
 })
 
-export default RedisKeyRemoveMutation
+export default RateLimitResetMutation
