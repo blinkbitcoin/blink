@@ -9,6 +9,7 @@ import AccountUpdateStatusMutation from "./root/mutation/account-update-status"
 import AccountForceDeleteMutation from "./root/mutation/account-force-delete"
 
 import TriggerMarketingNotificationMutation from "./root/mutation/marketing-notification-trigger"
+import RedisKeyRemoveMutation from "./root/mutation/redis-key-remove"
 
 import { accessRules, extractFields, buildPermissionMappings } from "./access-rules"
 
@@ -49,6 +50,10 @@ export const mutationFields = {
     marketingNotificationTrigger: {
       field: TriggerMarketingNotificationMutation,
       rule: accessRules.sendNotifications,
+    },
+    redisKeyRemove: {
+      field: RedisKeyRemoveMutation,
+      rule: accessRules.systemConfig,
     },
   },
 }
