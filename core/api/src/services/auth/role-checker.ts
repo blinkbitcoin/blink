@@ -1,5 +1,7 @@
 import { GoogleAuth } from "google-auth-library"
 
+import { env } from "../../config/env"
+
 // Based on https://cloud.google.com/resource-manager/reference/rest/v1/Policy
 interface Policy {
   bindings?: Binding[]
@@ -49,6 +51,15 @@ export class RoleChecker {
   })
 
   async getUserRoles(userEmail: string): Promise<AdminRole[]> {
+    // Only bypass in development/test environments
+    if (
+      (env.NODE_ENV === "development" || env.NODE_ENV === "test") &&
+      env.BYPASS_ROLE_CHECK === "true"
+    ) {
+      return Object.values(AdminRole)
+    }
+
+    // Production uses real role checking
     try {
       const client = await this.auth.getClient()
       const projectId = process.env.GCP_PROJECT_ID

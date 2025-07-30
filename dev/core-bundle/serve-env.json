@@ -1,6 +1,7 @@
 {
   "HELMREVISION": "dev",
   "NETWORK": "regtest",
+  "BYPASS_ROLE_CHECK": "true",
   "OATHKEEPER_DECISION_ENDPOINT": "http://localhost:4456",
   "TWILIO_ACCOUNT_SID": "AC_twilio_id",
   "TWILIO_AUTH_TOKEN": "AC_twilio_auth_token",
