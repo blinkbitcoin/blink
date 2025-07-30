@@ -126,7 +126,7 @@ export const env = createEnv({
       .default(50052),
 
     GCP_PROJECT_ID: z.string().min(1).optional(),
-    
+
     GCP_IAM_SERVICE_ACCOUNT_PATH: z.string().min(1).optional(),
     GCS_APPLICATION_CREDENTIALS_PATH: z.string().min(1).optional(),
     NEXTCLOUD_URL: z.string().min(1).optional(),
