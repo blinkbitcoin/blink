@@ -54,7 +54,7 @@ export class RoleChecker {
     // Only bypass in development/test environments
     if (
       (env.NODE_ENV === "development" || env.NODE_ENV === "test") &&
-      env.BYPASS_ROLE_CHECK === "true"
+      env.BYPASS_ROLE_CHECK
     ) {
       return Object.values(AdminRole)
     }

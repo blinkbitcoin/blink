@@ -149,6 +149,11 @@ export const env = createEnv({
       .or(z.string())
       .pipe(z.coerce.number().min(0))
       .default(60),
+
+    NODE_ENV: z.string(),
+  },
+
+  shared: {
   },
 
   runtimeEnvStrict: {
@@ -258,5 +263,7 @@ export const env = createEnv({
 
     EXPORTER_ASSETS_LIABILITIES_DELAY_SECS:
       process.env.EXPORTER_ASSETS_LIABILITIES_DELAY_SECS,
+
+    NODE_ENV: process.env.NODE_ENV,
   },
 })
