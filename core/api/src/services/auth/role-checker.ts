@@ -48,6 +48,7 @@ const ROLE_FEATURES = {
 export class RoleChecker {
   private auth = new GoogleAuth({
     scopes: ["https://www.googleapis.com/auth/cloud-platform"],
+    keyFilename: env.GCP_IAM_SERVICE_ACCOUNT_PATH,
   })
 
   async getUserRoles(userEmail: string): Promise<AdminRole[]> {
