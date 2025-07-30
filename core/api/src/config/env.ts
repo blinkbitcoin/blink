@@ -126,7 +126,9 @@ export const env = createEnv({
       .default(50052),
 
     GCP_PROJECT_ID: z.string().min(1).optional(),
+    
     GCP_IAM_SERVICE_ACCOUNT_PATH: z.string().min(1).optional(),
+    GCS_APPLICATION_CREDENTIALS_PATH: z.string().min(1).optional(),
     NEXTCLOUD_URL: z.string().min(1).optional(),
     NEXTCLOUD_USER: z.string().min(1).optional(),
     NEXTCLOUD_PASSWORD: z.string().min(1).optional(),
@@ -243,6 +245,7 @@ export const env = createEnv({
 
     GCP_PROJECT_ID: process.env.GCP_PROJECT_ID,
     GCP_IAM_SERVICE_ACCOUNT_PATH: process.env.GCP_IAM_SERVICE_ACCOUNT_PATH,
+    GCS_APPLICATION_CREDENTIALS_PATH: process.env.GCS_APPLICATION_CREDENTIALS_PATH,
     NEXTCLOUD_URL: process.env.NEXTCLOUD_URL,
     NEXTCLOUD_USER: process.env.NEXTCLOUD_USER,
     NEXTCLOUD_PASSWORD: process.env.NEXTCLOUD_PASSWORD,
