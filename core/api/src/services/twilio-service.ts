@@ -269,7 +269,7 @@ export const KnownTwilioErrorMessages = {
     /The destination phone number has been temporarily blocked by Twilio due to fraudulent activities/,
   ServiceUnavailable: /Service is unavailable. Please try again/,
   InvalidOrApprovedVerification:
-    /The requested resource \/Services\/(.*?)\/VerificationCheck was not found/,
+    /The requested resource \/(?:v2\/)?Services\/(.*?)\/VerificationCheck was not found/,
 } as const
 
 export const isPhoneCodeValid = async ({
