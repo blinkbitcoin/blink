@@ -153,9 +153,6 @@ export const env = createEnv({
     NODE_ENV: z.string(),
   },
 
-  shared: {
-  },
-
   runtimeEnvStrict: {
     COMMITHASH: process.env.COMMITHASH,
     HELMREVISION: process.env.HELMREVISION,
