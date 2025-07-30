@@ -69,7 +69,10 @@ export class RoleChecker {
 
       bindings.forEach((binding) => {
         if (binding.members?.includes(`user:${userEmail}`)) {
-          if (binding.role && Object.values(AdminRole).includes(binding.role as AdminRole)) {
+          if (
+            binding.role &&
+            Object.values(AdminRole).includes(binding.role as AdminRole)
+          ) {
             userRoles.push(binding.role as AdminRole)
           }
         }
