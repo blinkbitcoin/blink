@@ -1,11 +1,19 @@
 import { GoogleAuth } from "google-auth-library"
-import type { Binding } from "@google-cloud/resource-manager"
 
-interface IamPolicyResponse {
-  data: {
-    bindings?: Binding[]
-    etag?: string
-    version?: number
+// Based on https://cloud.google.com/resource-manager/reference/rest/v1/Policy
+interface Policy {
+  bindings?: Binding[]
+  etag?: string
+  version?: number
+}
+
+interface Binding {
+  role?: string
+  members?: string[]
+  condition?: {
+    title?: string
+    description?: string
+    expression?: string
   }
 }
 
@@ -50,17 +58,18 @@ export class RoleChecker {
         )
       }
 
-      const response = await client.request<IamPolicyResponse>({
+      const response = await client.request({
         url: `https://cloudresourcemanager.googleapis.com/v1/projects/${projectId}:getIamPolicy`,
         method: "POST",
       })
 
-      const bindings = response.data.bindings || []
+      const policy = response.data as Policy
+      const bindings = policy.bindings || []
       const userRoles: AdminRole[] = []
 
-      bindings.forEach((binding: Binding) => {
+      bindings.forEach((binding) => {
         if (binding.members?.includes(`user:${userEmail}`)) {
-          if (Object.values(AdminRole).includes(binding.role)) {
+          if (binding.role && Object.values(AdminRole).includes(binding.role as AdminRole)) {
             userRoles.push(binding.role as AdminRole)
           }
         }

@@ -103,7 +103,7 @@ export async function startApolloServerForAdminSchema() {
   ]
 
   for (const key of viewerQueries) {
-    if (adminQueryFields.authed[key]) {
+    if (key in adminQueryFields.authed) {
       viewerQueryFields[key] = requiresViewAccess
     }
   }
@@ -113,7 +113,7 @@ export async function startApolloServerForAdminSchema() {
   const modifyQueries = ["updateUserPhone", "updateUserEmail"]
 
   for (const key of modifyQueries) {
-    if (adminQueryFields.authed[key]) {
+    if (key in adminQueryFields.authed) {
       modifyQueryFields[key] = requiresModifyAccess
     }
   }
