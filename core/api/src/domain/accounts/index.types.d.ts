@@ -167,4 +167,5 @@ type FeesConfig = {
   withdrawThreshold: Satoshis
   withdrawDaysLookback: Days
   withdrawDefaultMin: Satoshis
+  onchain: OnchainFeesConfig
 }

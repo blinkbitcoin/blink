@@ -161,6 +161,7 @@ export const getFeesConfig = (feesConfig = yamlConfig.fees): FeesConfig => {
     withdrawThreshold: toSats(feesConfig.withdraw.threshold),
     withdrawDaysLookback: toDays(feesConfig.withdraw.daysLookback),
     withdrawDefaultMin: toSats(feesConfig.withdraw.defaultMin),
+    onchain: feesConfig.onchain,
   }
 }
 

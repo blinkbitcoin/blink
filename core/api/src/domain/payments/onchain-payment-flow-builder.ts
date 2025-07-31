@@ -13,23 +13,17 @@ import { getFeesConfig } from "@/config"
 import {
   AmountCalculator,
   ONE_CENT,
-  paymentAmountFromNumber,
   ValidationError,
   WalletCurrency,
   ZERO_BANK_FEE,
 } from "@/domain/shared"
 import { LessThanDustThresholdError, SelfPaymentError } from "@/domain/errors"
 import { OnChainFees, PaymentInitiationMethod, SettlementMethod } from "@/domain/wallets"
-import { ImbalanceCalculator } from "@/domain/ledger/imbalance-calculator"
 
 const calc = AmountCalculator()
 const feeConfig = getFeesConfig()
 const onChainFees = OnChainFees({
-  feeRatioAsBasisPoints: feeConfig.withdrawRatioAsBasisPoints,
-  thresholdImbalance: {
-    amount: BigInt(feeConfig.withdrawThreshold),
-    currency: WalletCurrency.Btc,
-  },
+  onchain: feeConfig.onchain,
 })
 
 export const OnChainPaymentFlowBuilder = <S extends WalletCurrency>(
@@ -429,9 +423,13 @@ const OPFBWithConversion = <S extends WalletCurrency, R extends WalletCurrency>(
     })
   }
 
-  const withMinerFee = async (
-    minerFee: BtcPaymentAmount,
-  ): Promise<OnChainPaymentFlow<S, R> | ValidationError | DealerPriceServiceError> => {
+  const withMinerFee = async ({
+    minerFee,
+    feeRate,
+    speed,
+  }: WithMinerFeeArgs): Promise<
+    OnChainPaymentFlow<S, R> | ValidationError | DealerPriceServiceError
+  > => {
     const state = await stateFromPromise(statePromise)
     if (state instanceof Error) return state
 
@@ -441,35 +439,11 @@ const OPFBWithConversion = <S extends WalletCurrency, R extends WalletCurrency>(
     })
     if (priceRatio instanceof Error) return priceRatio
 
-    const minBankFee = paymentAmountFromNumber({
-      amount: state.senderWithdrawFee || feeConfig.withdrawDefaultMin,
-      currency: WalletCurrency.Btc,
-    })
-    if (minBankFee instanceof Error) return minBankFee
-
-    const imbalanceCalculator = ImbalanceCalculator({
-      method: feeConfig.withdrawMethod,
-      netInVolumeAmountLightningFn: state.netInVolumeAmountLightningFn,
-      netInVolumeAmountOnChainFn: state.netInVolumeAmountOnChainFn,
-      sinceDaysAgo: feeConfig.withdrawDaysLookback,
-    })
-    const imbalanceForWallet = await imbalanceCalculator.getSwapOutImbalanceAmount<S>({
-      id: state.senderWalletId,
-      currency: state.senderWalletCurrency,
-      accountId: state.senderAccountId,
-    })
-    if (imbalanceForWallet instanceof Error) return imbalanceForWallet
-
-    const imbalance =
-      imbalanceForWallet.currency === WalletCurrency.Btc
-        ? (imbalanceForWallet as BtcPaymentAmount)
-        : priceRatio.convertFromUsd(imbalanceForWallet as UsdPaymentAmount)
-
     const feeAmounts = onChainFees.withdrawalFee({
       minerFee,
       amount: state.btcProposedAmount,
-      minBankFee,
-      imbalance,
+      speed,
+      feeRate,
     })
 
     // Calculate amounts & fees

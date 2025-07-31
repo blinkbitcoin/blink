@@ -1,167 +1,150 @@
+import { PayoutSpeed } from "@/domain/bitcoin/onchain"
+import { WalletCurrency } from "@/domain/shared"
 import { OnChainFees } from "@/domain/wallets"
-import { AmountCalculator, WalletCurrency, ZERO_SATS } from "@/domain/shared"
 
-const thresholdImbalance = {
-  amount: BigInt(1_000_000),
-  currency: WalletCurrency.Btc,
-}
+import { generateTxSizeCases } from "test/helpers/withdrawal-fee-calculator"
+import {
+  costToBankCasesMock,
+  feeCapCasesMock,
+  multiplierCasesMock,
+  onchainFeeSettingsMock,
+  TRANSACTION_SIZE_MATRIX,
+} from "test/mocks/withdrawal-fee-calculator"
 
-const calc = AmountCalculator()
+const minerZeroFee = { amount: 0n, currency: WalletCurrency.Btc }
+
+const txSizeCases = generateTxSizeCases(TRANSACTION_SIZE_MATRIX)
+const feeCalculator = OnChainFees({
+  onchain: onchainFeeSettingsMock,
+})
 
 describe("OnChainFees", () => {
-  describe("onChainWithdrawalFlatFee", () => {
-    const feeRatioAsBasisPoints = 0n
-    const calculator = OnChainFees({
-      thresholdImbalance,
-      feeRatioAsBasisPoints,
-    })
-
-    it("returns the sum of onchain fee and wallet fee", async () => {
-      const minerFee = { amount: BigInt(7200), currency: WalletCurrency.Btc }
-      const minBankFee = { amount: BigInt(2000), currency: WalletCurrency.Btc }
-      const imbalance = { amount: BigInt(0), currency: WalletCurrency.Btc }
-      const amount = { amount: BigInt(100_000_000), currency: WalletCurrency.Btc }
-      const fee = calculator.withdrawalFee({
-        minerFee,
-        amount,
-        minBankFee,
-        imbalance,
-      })
-      expect(fee.totalFee).toEqual({ amount: 9200n, currency: "BTC" })
-    })
+  describe("calculateTransactionSize", () => {
+    test.each(txSizeCases)(
+      "inputs=%i, outputs=%i => %i bytes",
+      (inputs: number, outputs: number, expectedSize: number) => {
+        const size = feeCalculator.calculateTransactionSize(inputs, outputs)
+        expect(size).toBe(expectedSize)
+      },
+    )
   })
-  describe("onChainWithdrawalProportionalOnImbalanceFee", () => {
-    const feeRatioAsBasisPoints = 50n
-    const calculator = OnChainFees({
-      thresholdImbalance,
-      feeRatioAsBasisPoints,
-    })
 
-    it("returns flat fee for no tx", async () => {
-      const minerFee = { amount: BigInt(7200), currency: WalletCurrency.Btc }
-      const minBankFee = { amount: BigInt(2000), currency: WalletCurrency.Btc }
-      const imbalance = ZERO_SATS
-      const amount = { amount: BigInt(1_000), currency: WalletCurrency.Btc }
-      const fee = calculator.withdrawalFee({
-        amount,
-        minerFee,
-        minBankFee,
-        imbalance,
-      })
-      expect(fee.bankFee).toEqual(minBankFee)
-    })
-    it("returns flat fee for loop in imbalance and small amount", async () => {
-      const minerFee = { amount: BigInt(7200), currency: WalletCurrency.Btc }
-      const minBankFee = { amount: BigInt(2000), currency: WalletCurrency.Btc }
-      const imbalance = { amount: BigInt(-2_000_000), currency: WalletCurrency.Btc }
-      const amount = { amount: BigInt(1_000_000), currency: WalletCurrency.Btc }
-      const fee = calculator.withdrawalFee({
-        amount,
-        minerFee,
-        minBankFee,
-        imbalance,
-      })
-      expect(fee.bankFee).toEqual(minBankFee)
-    })
-    it("returns flat fee for loop out imbalance below threshold, low amount", async () => {
-      const minerFee = { amount: BigInt(7200), currency: WalletCurrency.Btc }
-      const minBankFee = { amount: BigInt(2000), currency: WalletCurrency.Btc }
-      const imbalance = { amount: BigInt(500_000), currency: WalletCurrency.Btc }
-      const amount = { amount: BigInt(250_000), currency: WalletCurrency.Btc }
-      const fee = calculator.withdrawalFee({
-        amount,
-        minerFee,
-        minBankFee,
-        imbalance,
-      })
-      expect(fee.bankFee).toEqual(minBankFee)
-    })
-    it("returns proportional fee for loop in imbalance and large amount", async () => {
-      const minerFee = { amount: BigInt(7200), currency: WalletCurrency.Btc }
-      const minBankFee = { amount: BigInt(2000), currency: WalletCurrency.Btc }
-      const imbalance = { amount: BigInt(-2_000_000), currency: WalletCurrency.Btc }
-      const amount = { amount: BigInt(100_000_000), currency: WalletCurrency.Btc }
-      const fee = calculator.withdrawalFee({
-        amount,
-        minerFee,
-        minBankFee,
-        imbalance,
-      })
-
-      const expectedAmount = calc.mulBasisPoints(
-        calc.sub(calc.add(amount, imbalance), thresholdImbalance),
-        feeRatioAsBasisPoints,
-      )
-      expect(fee.bankFee).toEqual(expectedAmount)
-    })
-    it("returns proportional fee for small loop out imbalance and large amount", async () => {
-      const minerFee = { amount: BigInt(7200), currency: WalletCurrency.Btc }
-      const minBankFee = { amount: BigInt(2000), currency: WalletCurrency.Btc }
-      const imbalance = { amount: BigInt(500_000), currency: WalletCurrency.Btc }
-      const amount = { amount: BigInt(10_000_000), currency: WalletCurrency.Btc }
-      const fee = calculator.withdrawalFee({
-        amount,
-        minerFee,
-        minBankFee,
-        imbalance,
-      })
-      expect(fee.bankFee).toEqual(
-        calc.mulBasisPoints(
-          { amount: 9_500_000n, currency: WalletCurrency.Btc },
-          feeRatioAsBasisPoints,
-        ),
+  describe("withdrawalFee", () => {
+    describe("Tier #1 (Fast)", () => {
+      test.each(feeCapCasesMock.tier1)(
+        "Tier1: amount=$satsAmount sats, feeRate=$feeRate => bankFee $expectedSats sats",
+        ({ satsAmount, feeRate, expectedSats }) => {
+          const { totalFee } = feeCalculator.withdrawalFee({
+            minerFee: minerZeroFee,
+            amount: { amount: BigInt(satsAmount), currency: WalletCurrency.Btc },
+            speed: PayoutSpeed.Fast,
+            feeRate,
+          })
+          expect(totalFee.amount).toEqual(BigInt(expectedSats))
+        },
       )
     })
-    it("returns flat fee for loop out imbalance below threshold", async () => {
-      const minerFee = { amount: BigInt(7200), currency: WalletCurrency.Btc }
-      const minBankFee = { amount: BigInt(2000), currency: WalletCurrency.Btc }
-      const imbalance = { amount: BigInt(500_000), currency: WalletCurrency.Btc }
-      const amount = { amount: BigInt(250_000), currency: WalletCurrency.Btc }
-      const fee = calculator.withdrawalFee({
-        amount,
-        minerFee,
-        minBankFee,
-        imbalance,
-      })
-      expect(fee.bankFee).toEqual(minBankFee)
+
+    describe("Tier #2 (Medium)", () => {
+      test.each(feeCapCasesMock.tier2)(
+        "Tier2: amount=$satsAmount sats, feeRate=$feeRate => bankFee $expectedSats sats",
+        ({ satsAmount, feeRate, expectedSats }) => {
+          const { totalFee } = feeCalculator.withdrawalFee({
+            minerFee: minerZeroFee,
+            amount: { amount: BigInt(satsAmount), currency: WalletCurrency.Btc },
+            speed: PayoutSpeed.Medium,
+            feeRate,
+          })
+          expect(totalFee.amount).toEqual(BigInt(expectedSats))
+        },
+      )
     })
 
-    it("returns proportional fee for loop out imbalance above threshold, amount < imbalance", async () => {
-      const minerFee = { amount: BigInt(7200), currency: WalletCurrency.Btc }
-      const minBankFee = { amount: BigInt(2000), currency: WalletCurrency.Btc }
-      const imbalance = { amount: BigInt(2_000_000), currency: WalletCurrency.Btc }
-      const amount = { amount: BigInt(500_000), currency: WalletCurrency.Btc }
-      const fee = calculator.withdrawalFee({
-        amount,
-        minerFee,
-        minBankFee,
-        imbalance,
-      })
-      expect(fee.bankFee).toEqual(calc.mulBasisPoints(amount, feeRatioAsBasisPoints))
-    })
-    it("returns proportional fee for loop out imbalance above threshold, amount > imbalance", async () => {
-      const minerFee = { amount: BigInt(7200), currency: WalletCurrency.Btc }
-      const minBankFee = { amount: BigInt(2000), currency: WalletCurrency.Btc }
-      const imbalance = { amount: BigInt(2_000_000), currency: WalletCurrency.Btc }
-      const amount = { amount: BigInt(10_000_000), currency: WalletCurrency.Btc }
-      const fee = calculator.withdrawalFee({
-        amount,
-        minerFee,
-        minBankFee,
-        imbalance,
-      })
-      expect(fee.bankFee).toEqual(calc.mulBasisPoints(amount, feeRatioAsBasisPoints))
+    describe("Tier #3 (Slow)", () => {
+      test.each(feeCapCasesMock.tier3)(
+        "Tier3: amount=$satsAmount sats, feeRate=$feeRate => bankFee $expectedSats sats",
+        ({ satsAmount, feeRate, expectedSats }) => {
+          const { totalFee } = feeCalculator.withdrawalFee({
+            minerFee: minerZeroFee,
+            amount: { amount: BigInt(satsAmount), currency: WalletCurrency.Btc },
+            speed: PayoutSpeed.Slow,
+            feeRate,
+          })
+          expect(totalFee.amount).toEqual(BigInt(expectedSats))
+        },
+      )
     })
   })
+
+  describe("calculateCostToBank", () => {
+    describe("Tier #1 & #2 (Fast & Medium)", () => {
+      const cases = costToBankCasesMock.tier1_2
+
+      test.each(cases)(
+        "amount=$satsAmount sats, feeRate=$feeRate => costToBank $expectedCost sats",
+        ({ satsAmount, feeRate, expectedCost }) => {
+          expect(
+            feeCalculator.calculateCostToBank(satsAmount, PayoutSpeed.Fast, feeRate),
+          ).toBe(expectedCost)
+          expect(
+            feeCalculator.calculateCostToBank(satsAmount, PayoutSpeed.Medium, feeRate),
+          ).toBe(expectedCost)
+        },
+      )
+    })
+
+    describe("Tier #3 (Slow)", () => {
+      const cases = costToBankCasesMock.tier3
+
+      test.each(cases)(
+        "amount=$satsAmount sats, feeRate=$feeRate => costToBank $expectedCost sats",
+        ({ satsAmount, feeRate, expectedCost }) => {
+          expect(
+            feeCalculator.calculateCostToBank(satsAmount, PayoutSpeed.Slow, feeRate),
+          ).toBe(expectedCost)
+        },
+      )
+    })
+  })
+
+  describe("calculateBaseMultiplier", () => {
+    describe("Tier #1 (Fast)", () => {
+      test.each(multiplierCasesMock.tier1)(
+        "Fast, feeRate=$feeRate => multiplier $expectedMultiplier",
+        ({ feeRate, expectedMultiplier }) => {
+          expect(
+            feeCalculator.calculateBaseMultiplier(PayoutSpeed.Fast, feeRate),
+          ).toBeCloseTo(expectedMultiplier, 6)
+        },
+      )
+    })
+
+    describe("Tier #2 (Medium)", () => {
+      test.each(multiplierCasesMock.tier2)(
+        "Medium, feeRate=$feeRate => multiplier $expectedMultiplier",
+        ({ feeRate, expectedMultiplier }) => {
+          expect(
+            feeCalculator.calculateBaseMultiplier(PayoutSpeed.Medium, feeRate),
+          ).toBeCloseTo(expectedMultiplier, 6)
+        },
+      )
+    })
+
+    describe("Tier #3 (Slow)", () => {
+      test.each(multiplierCasesMock.tier3)(
+        "Slow, feeRate=$feeRate => multiplier $expectedMultiplier",
+        ({ feeRate, expectedMultiplier }) => {
+          expect(
+            feeCalculator.calculateBaseMultiplier(PayoutSpeed.Slow, feeRate),
+          ).toBeCloseTo(expectedMultiplier, 6)
+        },
+      )
+    })
+  })
+
   describe("onChainIntraLedgerFee", () => {
-    const feeRatioAsBasisPoints = 50n
-    const calculator = OnChainFees({
-      thresholdImbalance,
-      feeRatioAsBasisPoints,
-    })
-
     it("always returns zero", async () => {
-      const fee = calculator.intraLedgerFees()
+      const fee = feeCalculator.intraLedgerFees()
       expect(fee.btc.amount).toEqual(0n)
       expect(fee.usd.amount).toEqual(0n)
     })
