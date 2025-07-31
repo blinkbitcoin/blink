@@ -8,7 +8,7 @@ import { WalletIdRegex, WalletType } from "@/domain/wallets"
 import { WalletCurrency } from "@/domain/shared"
 
 import { Languages } from "@/domain/users"
-
+import { ContactType } from "@/domain/contacts"
 import { CarrierType } from "@/domain/phone-provider"
 import { checkedToLedgerExternalId } from "@/domain/ledger"
 
@@ -219,25 +219,6 @@ const AccountSchema = new Schema<AccountRecord>(
     contactEnabled: {
       type: Boolean,
       default: true,
-    },
-    contacts: {
-      type: [
-        {
-          id: {
-            type: String,
-            collation: { locale: "en", strength: 2 },
-          },
-          name: {
-            type: String,
-            // TODO: add constraint here
-          },
-          transactionsCount: {
-            type: Number,
-            default: 1,
-          },
-        },
-      ],
-      default: [],
     },
 
     statusHistory: {
@@ -573,3 +554,53 @@ export const WalletOnChainPendingReceive =
     "WalletOnChainPendingReceive",
     WalletOnChainPendingReceiveSchema,
   )
+
+const ContactSchema = new Schema<ContactRecord>(
+  {
+    id: {
+      type: String,
+      index: true,
+      unique: true,
+      required: true,
+      default: () => crypto.randomUUID(),
+    },
+    accountId: {
+      type: String,
+      ref: "Account",
+      index: true,
+      required: true,
+    },
+    type: {
+      type: String,
+      enum: Object.values(ContactType),
+      required: true,
+      default: ContactType.IntraLedger,
+    },
+    handle: {
+      type: String,
+      required: true,
+    },
+    displayName: {
+      type: String,
+      required: false,
+    },
+    transactionsCount: {
+      type: Number,
+      default: 1,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now,
+      required: true,
+    },
+  },
+  { id: false },
+)
+
+ContactSchema.index({ accountId: 1, handle: 1, type: 1 }, { unique: true })
+
+export const Contact = mongoose.model<ContactRecord>("Contact", ContactSchema)

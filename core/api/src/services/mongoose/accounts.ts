@@ -61,7 +61,6 @@ export const AccountsRepository = (): IAccountsRepository => {
     level,
     statusHistory,
     contactEnabled,
-    contacts,
     username,
     defaultWalletId,
     withdrawFee,
@@ -77,13 +76,6 @@ export const AccountsRepository = (): IAccountsRepository => {
           statusHistory,
           username,
           contactEnabled,
-          contacts: contacts.map(
-            ({ username, alias, transactionsCount }: AccountContact) => ({
-              id: username,
-              name: alias,
-              transactionsCount,
-            }),
-          ),
           defaultWalletId,
           withdrawFee,
           kratosUserId,
@@ -150,22 +142,7 @@ const translateToAccount = (result: AccountRecord): Account => ({
   status: result.statusHistory.slice(-1)[0].status,
   statusHistory: (result.statusHistory || []) as AccountStatusHistory,
   contactEnabled: !!result.contactEnabled,
-  contacts: result.contacts.reduce(
-    (res: AccountContact[], contact: ContactObjectForUser): AccountContact[] => {
-      if (contact.id) {
-        res.push({
-          id: contact.id as Username,
-          username: contact.id as Username,
-          alias: (contact.name || contact.id) as ContactAlias,
-          transactionsCount: contact.transactionsCount,
-        })
-      }
-      return res
-    },
-    [],
-  ),
   withdrawFee: result.withdrawFee as Satoshis,
-
   kratosUserId: result.kratosUserId as UserId,
   displayCurrency: (result.displayCurrency || UsdDisplayCurrency) as DisplayCurrency,
 })

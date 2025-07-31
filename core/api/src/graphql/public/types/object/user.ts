@@ -80,7 +80,14 @@ const GraphQLUser = GT.Object<User, GraphQLPublicContextAuth>({
       type: GT.NonNullList(AccountContact), // TODO: Make it a Connection Interface
       description: dedent`Get full list of contacts.
         Can include the transactions associated with each contact.`,
-      resolve: async (source, args, { domainAccount }) => domainAccount?.contacts,
+      resolve: async (_source, _args, { domainAccount }) => {
+        const contacts = await Accounts.getContactsByAccountId({
+          accountId: domainAccount.id,
+        })
+        if (contacts instanceof Error) throw mapError(contacts)
+
+        return contacts
+      },
     },
 
     contactByUsername: {
@@ -102,9 +109,9 @@ const GraphQLUser = GT.Object<User, GraphQLPublicContextAuth>({
         if (username instanceof Error) {
           throw username
         }
-        const contact = await Accounts.getContactByUsername({
-          account: domainAccount,
-          contactUsername: username,
+        const contact = await Accounts.getContactByHandle({
+          accountId: domainAccount.id,
+          handle: username,
         })
         if (contact instanceof Error) {
           throw mapError(contact)

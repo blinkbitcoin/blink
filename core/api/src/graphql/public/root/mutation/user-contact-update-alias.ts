@@ -47,7 +47,7 @@ const UserContactUpdateAliasMutation = GT.Field<
 
     const contact = await Accounts.updateContactAlias({
       accountId,
-      username,
+      handle: username,
       alias,
     })
 

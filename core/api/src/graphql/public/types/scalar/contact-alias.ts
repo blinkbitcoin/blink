@@ -1,3 +1,5 @@
+import { checkedToDisplayName } from "@/domain/contacts"
+
 import { InputValidationError } from "@/graphql/error"
 import { GT } from "@/graphql/index"
 
@@ -20,10 +22,11 @@ const ContactAlias = GT.Scalar({
 })
 
 function validContactAliasValue(value: string) {
-  if (value.match(/^[\p{Alpha}][\p{Alpha} -]{3,}/u)) {
-    return value
+  const result = checkedToDisplayName(value)
+  if (result instanceof Error) {
+    return new InputValidationError({ message: "Invalid value for ContactAlias" })
   }
-  return new InputValidationError({ message: "Invalid value for ContactAlias" })
+  return result
 }
 
 export default ContactAlias

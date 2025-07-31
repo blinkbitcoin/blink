@@ -17,6 +17,8 @@ type DepositFeeRatioAsBasisPoints = bigint & { readonly brand: unique symbol }
 
 type ContactAlias = string & { readonly brand: unique symbol }
 
+type LightningAddress = string & { readonly brand: unique symbol }
+
 type AccountLimitsArgs = {
   level: AccountLevel
   accountLimits?: {
@@ -81,8 +83,9 @@ interface IAccountTxVolumeRemaining {
 }
 
 type AccountContact = {
-  readonly id: Username
-  readonly username: Username
+  readonly id: Handle
+  readonly username: Handle
+  readonly handle: Handle
   alias: ContactAlias
   transactionsCount: number
 }
@@ -104,11 +107,14 @@ type Account = {
   status: AccountStatus
   statusHistory: AccountStatusHistory
   contactEnabled: boolean
-  readonly contacts: AccountContact[]
   kratosUserId: UserId
   displayCurrency: DisplayCurrency
   // temp
   role?: string
+}
+
+type AccountWithContacts = Account & {
+  contacts: AccountContact[]
 }
 
 type AccountValidator = {

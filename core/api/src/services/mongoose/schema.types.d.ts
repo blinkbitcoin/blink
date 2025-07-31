@@ -79,6 +79,7 @@ interface AccountRecord {
   id: string
   kratosUserId: string
 
+  handle?: string
   username: string | null
   role: string
 
@@ -211,4 +212,15 @@ type WalletOnChainPendingReceiveRecord = {
   displayPriceOffset: string
   displayPriceCurrency: string
   createdAt: Date
+}
+
+interface ContactRecord {
+  id: string
+  accountId: string
+  type: string
+  handle: string
+  displayName?: string
+  transactionsCount: number
+  createdAt: Date
+  updatedAt?: Date
 }
