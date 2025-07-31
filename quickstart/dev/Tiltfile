@@ -483,6 +483,15 @@ core_serve_env_from_json = read_json(env_json)
 local_env_file = ".env.local"
 core_serve_env = merge_env_file(local_env_file, core_serve_env_from_json)
 
+# Add to core_serve_env
+google_creds_path = core_serve_env.get("GOOGLE_APPLICATION_CREDENTIALS")
+if google_creds_path:
+    print("GOOGLE_APPLICATION_CREDENTIALS set to: {}".format(google_creds_path))
+    if not os.path.exists(google_creds_path):
+        fail("Google service account file not found at: {}".format(google_creds_path))
+else:
+    fail("GOOGLE_APPLICATION_CREDENTIALS not set. Please set it in .env.local")
+
 callback_target = "//bats/helpers/callback:run"
 local_resource(
     "callback",

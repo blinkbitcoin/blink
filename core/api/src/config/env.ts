@@ -24,6 +24,8 @@ export const env = createEnv({
       .pipe(z.coerce.boolean())
       .default(false),
 
+    BYPASS_ROLE_CHECK: z.boolean().or(z.string()).pipe(z.coerce.boolean()).default(false),
+
     TELEGRAM_BOT_API_TOKEN: z.string().optional(),
     TELEGRAM_PASSPORT_PRIVATE_KEY: z.string().optional(),
 
@@ -123,6 +125,9 @@ export const env = createEnv({
       .pipe(z.coerce.number())
       .default(50052),
 
+    GCP_PROJECT_ID: z.string().min(1).optional(),
+
+    GCP_IAM_SERVICE_ACCOUNT_PATH: z.string().min(1).optional(),
     GCS_APPLICATION_CREDENTIALS_PATH: z.string().min(1).optional(),
     NEXTCLOUD_URL: z.string().min(1).optional(),
     NEXTCLOUD_USER: z.string().min(1).optional(),
@@ -147,6 +152,8 @@ export const env = createEnv({
       .or(z.string())
       .pipe(z.coerce.number().min(0))
       .default(60),
+
+    NODE_ENV: z.string().default("production"),
   },
 
   runtimeEnvStrict: {
@@ -157,6 +164,8 @@ export const env = createEnv({
 
     UNSECURE_DEFAULT_LOGIN_CODE: process.env.UNSECURE_DEFAULT_LOGIN_CODE,
     UNSECURE_IP_FROM_REQUEST_OBJECT: process.env.UNSECURE_IP_FROM_REQUEST_OBJECT,
+
+    BYPASS_ROLE_CHECK: process.env.BYPASS_ROLE_CHECK,
 
     TELEGRAM_BOT_API_TOKEN: process.env.TELEGRAM_BOT_API_TOKEN,
     TELEGRAM_PASSPORT_PRIVATE_KEY: process.env.TELEGRAM_PASSPORT_PRIVATE_KEY,
@@ -234,6 +243,8 @@ export const env = createEnv({
     PRICE_HISTORY_HOST: process.env.PRICE_HISTORY_HOST,
     PRICE_HISTORY_PORT: process.env.PRICE_HISTORY_PORT,
 
+    GCP_PROJECT_ID: process.env.GCP_PROJECT_ID,
+    GCP_IAM_SERVICE_ACCOUNT_PATH: process.env.GCP_IAM_SERVICE_ACCOUNT_PATH,
     GCS_APPLICATION_CREDENTIALS_PATH: process.env.GCS_APPLICATION_CREDENTIALS_PATH,
     NEXTCLOUD_URL: process.env.NEXTCLOUD_URL,
     NEXTCLOUD_USER: process.env.NEXTCLOUD_USER,
@@ -254,5 +265,7 @@ export const env = createEnv({
 
     EXPORTER_ASSETS_LIABILITIES_DELAY_SECS:
       process.env.EXPORTER_ASSETS_LIABILITIES_DELAY_SECS,
+
+    NODE_ENV: process.env.NODE_ENV,
   },
 })
