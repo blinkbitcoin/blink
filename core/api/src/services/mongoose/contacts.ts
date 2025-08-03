@@ -58,7 +58,12 @@ export const ContactsRepository = (): IContactsRepository => {
     try {
       const result = await Contact.findOneAndUpdate(
         { accountId: contact.accountId, id: contact.id },
-        contact,
+        {
+          $set: {
+            ...contact,
+            updatedAt: Date.now(),
+          },
+        },
         { new: true },
       )
       if (!result) return new CouldNotUpdateContactError()
