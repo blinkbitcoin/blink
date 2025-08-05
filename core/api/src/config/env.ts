@@ -153,7 +153,7 @@ export const env = createEnv({
       .pipe(z.coerce.number().min(0))
       .default(60),
 
-    NODE_ENV: z.string().default("production"),
+    NODE_ENV: z.string(),
   },
 
   runtimeEnvStrict: {

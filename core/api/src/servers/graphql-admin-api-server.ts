@@ -24,10 +24,9 @@ import { Transactions } from "@/app"
 
 import { AuthorizationError } from "@/graphql/error"
 
-import { RoleChecker, AdminFeature } from "@/services/auth/role-checker"
+import { AdminFeature, hasFeature } from "@/services/auth/role-checker"
 
-const roleChecker = new RoleChecker()
-
+// TODO: loaders probably not needed for the admin panel
 const loaders = {
   txnMetadata: new DataLoader(async (keys) => {
     const txnMetadata = await Transactions.getTransactionsMetadataByIds(
@@ -53,7 +52,6 @@ const setGqlAdminContext = async (
   const logger = baseLogger
   const tokenPayload = req.token
 
-  // Extract user email from token payload
   const userEmail = tokenPayload.sub as string // This should be the email from OAuth
   const privilegedClientId = tokenPayload.sub as PrivilegedClientId
 
@@ -74,14 +72,13 @@ const setGqlAdminContext = async (
   )
 }
 
-// Feature-specific authorization rules
 const requiresViewAccess = rule({ cache: "contextual" })(async (
   parent,
   args,
   ctx: GraphQLAdminContext,
 ) => {
   if (!ctx.userEmail) return false
-  return roleChecker.hasFeature(ctx.userEmail, AdminFeature.VIEW_ACCOUNTS)
+  return hasFeature(ctx.userEmail, AdminFeature.VIEW_ACCOUNTS)
 })
 
 const requiresModifyAccess = rule({ cache: "contextual" })(async (
@@ -90,11 +87,10 @@ const requiresModifyAccess = rule({ cache: "contextual" })(async (
   ctx: GraphQLAdminContext,
 ) => {
   if (!ctx.userEmail) return false
-  return roleChecker.hasFeature(ctx.userEmail, AdminFeature.MODIFY_ACCOUNTS)
+  return hasFeature(ctx.userEmail, AdminFeature.MODIFY_ACCOUNTS)
 })
 
 export async function startApolloServerForAdminSchema() {
-  // View-only queries
   const viewerQueryFields: { [key: string]: Rule } = {}
   const viewerQueries = [
     "accountDetailsByUserId",
@@ -108,7 +104,6 @@ export async function startApolloServerForAdminSchema() {
     }
   }
 
-  // Modification queries
   const modifyQueryFields: { [key: string]: Rule } = {}
   const modifyQueries = ["updateUserPhone", "updateUserEmail"]
 
@@ -118,7 +113,6 @@ export async function startApolloServerForAdminSchema() {
     }
   }
 
-  // Apply all mutations with modify access
   const authedMutationFields: { [key: string]: Rule } = {}
   for (const key of Object.keys(adminMutationFields.authed)) {
     authedMutationFields[key] = requiresModifyAccess

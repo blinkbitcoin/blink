@@ -139,7 +139,7 @@ def sdl_impl(ctx: AnalysisContext) -> list[DefaultInfo]:
     for deps_src in ctx.attrs.deps_srcs:
         cmd.hidden(deps_src)
 
-    ctx.actions.run(cmd, category = "sdl", env = ctx.attrs.env)
+    ctx.actions.run(cmd, category = "sdl")
     return [DefaultInfo(default_output = out)]
 
 sdl = rule(
@@ -157,12 +157,6 @@ sdl = rule(
             attrs.source(),
             default = [],
             doc = """Source files that the generator will depends on""",
-        ),
-        "env": attrs.dict(
-            key = attrs.string(),
-            value = attrs.string(),
-            default = {},
-            doc = """Environment variables to set when running the generator""",
         ),
         "_python_toolchain": attrs.toolchain_dep(
             default = "toolchains//:python",
