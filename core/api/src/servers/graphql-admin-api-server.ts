@@ -3,6 +3,9 @@ import { rule, shield } from "graphql-shield"
 import { Rule } from "graphql-shield/typings/rules"
 
 import { NextFunction, Request, Response } from "express"
+import { expressjwt } from "express-jwt"
+import { getJwksArgs, jwtAlgorithms } from "./graphql-server"
+import jwksRsa from "jwks-rsa"
 
 import DataLoader from "dataloader"
 
@@ -10,7 +13,11 @@ import { startApolloServer } from "./graphql-server"
 
 import { baseLogger } from "@/services/logger"
 
-import { adminMutationFields, adminQueryFields, gqlAdminSchema } from "@/graphql/admin"
+import { gqlAdminSchema } from "@/graphql/admin"
+
+import { queryPermissions } from "@/graphql/admin/queries"
+
+import { mutationPermissions } from "@/graphql/admin/mutations"
 
 import { GALOY_ADMIN_PORT } from "@/config"
 
@@ -24,6 +31,26 @@ import { Transactions } from "@/app"
 
 import { AuthorizationError } from "@/graphql/error"
 
+import { AdminFeature, hasFeature } from "@/services/auth/role-checker"
+
+// TODO: loaders probably not needed for the admin panel
+const loaders = {
+  txnMetadata: new DataLoader(async (keys) => {
+    const txnMetadata = await Transactions.getTransactionsMetadataByIds(
+      keys as LedgerTransactionId[],
+    )
+    if (txnMetadata instanceof Error) {
+      recordExceptionInCurrentSpan({
+        error: txnMetadata,
+      })
+
+      return keys.map(() => undefined)
+    }
+
+    return txnMetadata
+  }),
+}
+
 const setGqlAdminContext = async (
   req: Request,
   res: Response,
@@ -32,27 +59,17 @@ const setGqlAdminContext = async (
   const logger = baseLogger
   const tokenPayload = req.token
 
-  // TODO: loaders probably not needed for the admin panel
-  const loaders = {
-    txnMetadata: new DataLoader(async (keys) => {
-      const txnMetadata = await Transactions.getTransactionsMetadataByIds(
-        keys as LedgerTransactionId[],
-      )
-      if (txnMetadata instanceof Error) {
-        recordExceptionInCurrentSpan({
-          error: txnMetadata,
-        })
+  console.log("JWT Token payload:", tokenPayload)
 
-        return keys.map(() => undefined)
-      }
-
-      return txnMetadata
-    }),
-  }
-
+  const userEmail = tokenPayload.sub as string // This should be the email from OAuth
   const privilegedClientId = tokenPayload.sub as PrivilegedClientId
 
-  req.gqlContext = { loaders, privilegedClientId, logger }
+  req.gqlContext = {
+    loaders,
+    privilegedClientId,
+    userEmail, // Add email to context
+    logger,
+  }
 
   addAttributesToCurrentSpanAndPropagate(
     {
@@ -64,32 +81,38 @@ const setGqlAdminContext = async (
   )
 }
 
-const isAuthenticated = rule({ cache: "contextual" })(async (
+const requiresViewAccess = rule({ cache: "contextual" })(async (
   parent,
   args,
   ctx: GraphQLAdminContext,
 ) => {
-  return (
-    ctx.privilegedClientId !== null &&
-    ctx.privilegedClientId !== undefined &&
-    ctx.privilegedClientId !== ""
-  )
+  if (!ctx.userEmail) return false
+  return hasFeature(ctx.userEmail, AdminFeature.VIEW_ACCOUNTS)
+})
+
+const requiresModifyAccess = rule({ cache: "contextual" })(async (
+  parent,
+  args,
+  ctx: GraphQLAdminContext,
+) => {
+  if (!ctx.userEmail) return false
+  return hasFeature(ctx.userEmail, AdminFeature.MODIFY_ACCOUNTS)
 })
 
 export async function startApolloServerForAdminSchema() {
-  const authedQueryFields: { [key: string]: Rule } = {}
-  for (const key of Object.keys(adminQueryFields.authed)) {
-    authedQueryFields[key] = isAuthenticated
+  const viewerQueryFields: { [key: string]: Rule } = {}
+  for (const key of queryPermissions.view) {
+    viewerQueryFields[key] = requiresViewAccess
   }
 
   const authedMutationFields: { [key: string]: Rule } = {}
-  for (const key of Object.keys(adminMutationFields.authed)) {
-    authedMutationFields[key] = isAuthenticated
+  for (const key of mutationPermissions.modify) {
+    authedMutationFields[key] = requiresModifyAccess
   }
 
   const permissions = shield(
     {
-      Query: authedQueryFields,
+      Query: viewerQueryFields,
       Mutation: authedMutationFields,
     },
     {

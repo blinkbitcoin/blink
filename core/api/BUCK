@@ -140,6 +140,7 @@ sdl(
   generator = ":write-sdl",
   args = ["admin"],
   deps_srcs = [":src"],
+  env = {"NODE_ENV": "development"},
   visibility = ["PUBLIC"],
 )
 

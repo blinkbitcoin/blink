@@ -98,6 +98,9 @@ jobs:
         run: nix develop -c buck2 build ${{ matrix.build_args }}
       - name: Start deps and run tests via tilt
         run: nix develop -c xvfb-run ./dev/bin/tilt-ci.sh ${{ matrix.component }}
+        env:
+          NODE_ENV: test
+          BYPASS_ROLE_CHECK: true
       - name: Prepare Tilt log
         id: prepare_tilt_log
         if: always()

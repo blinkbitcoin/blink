@@ -106,4 +106,5 @@
   mutators:
     - handler: id_token
       config: #! TODO: add aud: {"aud": ["https://api/admin/graphql"] }
-        claims: '{"sub": "{{ print .Subject }}", "scope": "{{ print .Extra.scope }}" }'
+        # This is currently failing with invalid character '\"' after array element"
+        claims: "{\"sub\": \"{{ print .Subject }}\", \"scopes\": {{ printf \"%+q\" .Extra.scopes }}, \"email\": \"{{ print .Extra.user.email }}\" }"
