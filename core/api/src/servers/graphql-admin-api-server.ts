@@ -3,6 +3,9 @@ import { rule, shield } from "graphql-shield"
 import { Rule } from "graphql-shield/typings/rules"
 
 import { NextFunction, Request, Response } from "express"
+import { expressjwt } from "express-jwt"
+import { getJwksArgs, jwtAlgorithms } from "./graphql-server"
+import jwksRsa from "jwks-rsa"
 
 import DataLoader from "dataloader"
 
@@ -55,6 +58,8 @@ const setGqlAdminContext = async (
 ): Promise<void> => {
   const logger = baseLogger
   const tokenPayload = req.token
+
+  console.log("JWT Token payload:", tokenPayload)
 
   const userEmail = tokenPayload.sub as string // This should be the email from OAuth
   const privilegedClientId = tokenPayload.sub as PrivilegedClientId

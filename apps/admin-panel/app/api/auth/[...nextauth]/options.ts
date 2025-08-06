@@ -40,6 +40,8 @@ if (env.NODE_ENV === "development") {
 
 const callbacks: Partial<CallbacksOptions> = {
   async signIn({ account, profile, user }) {
+    console.log("signIn", account, profile, user)
+    console.log("-------------------------")
     if (account?.provider === "credentials" && env.NODE_ENV === "development") {
       return !!user
     }
@@ -57,7 +59,38 @@ const callbacks: Partial<CallbacksOptions> = {
     const verified = new Boolean("email_verified" in profile && profile.email_verified)
     return verified && env.AUTHORIZED_EMAILS.includes(email)
   },
+  async jwt({ token, account, profile, user }) {
+    // dummy values ToDo grab from config
+    // ToDo is it really necessary or is the session callback enough?!
+    token.scopes = ["muh","meh"]
+    console.log("jwt", token)
+    console.log("-------------------------")
+    return token
+  },
+  async session({ session, token }) {
+    // Create custom JWT for admin-api
+    const adminJwtPayload = {
+      sub: token.email,
+      email: token.email,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + (60 * 60), // 1 hour
+      iss: "admin-panel",
+      aud: "admin-api",
+      scopes: ["muh","meh"]
+    }
+
+    const jwt = require('jsonwebtoken')
+    const adminToken = jwt.sign(adminJwtPayload, env.NEXTAUTH_SECRET)
+    
+    session.adminToken = adminToken
+    session.user.email = token.email
+    // need scopes in session as well in order to retrieve it in oathkeeper's mutator
+    session.scopes = ["muh","meh"]
+    return session
+  },
 }
+
+
 
 export const authOptions = {
   providers,
