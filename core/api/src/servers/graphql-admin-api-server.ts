@@ -10,7 +10,11 @@ import { startApolloServer } from "./graphql-server"
 
 import { baseLogger } from "@/services/logger"
 
-import { adminMutationFields, adminQueryFields, gqlAdminSchema } from "@/graphql/admin"
+import { gqlAdminSchema } from "@/graphql/admin"
+
+import { queryPermissions } from "@/graphql/admin/queries"
+
+import { mutationPermissions } from "@/graphql/admin/mutations"
 
 import { GALOY_ADMIN_PORT } from "@/config"
 
@@ -92,38 +96,18 @@ const requiresModifyAccess = rule({ cache: "contextual" })(async (
 
 export async function startApolloServerForAdminSchema() {
   const viewerQueryFields: { [key: string]: Rule } = {}
-  const viewerQueries = [
-    "accountDetailsByUserId",
-    "accountDetailsByPhone",
-    "accountDetailsByEmail",
-  ]
-
-  for (const key of viewerQueries) {
-    if (key in adminQueryFields.authed) {
-      viewerQueryFields[key] = requiresViewAccess
-    }
-  }
-
-  const modifyQueryFields: { [key: string]: Rule } = {}
-  const modifyQueries = ["updateUserPhone", "updateUserEmail"]
-
-  for (const key of modifyQueries) {
-    if (key in adminQueryFields.authed) {
-      modifyQueryFields[key] = requiresModifyAccess
-    }
+  for (const key of queryPermissions.view) {
+    viewerQueryFields[key] = requiresViewAccess
   }
 
   const authedMutationFields: { [key: string]: Rule } = {}
-  for (const key of Object.keys(adminMutationFields.authed)) {
+  for (const key of mutationPermissions.modify) {
     authedMutationFields[key] = requiresModifyAccess
   }
 
   const permissions = shield(
     {
-      Query: {
-        ...viewerQueryFields,
-        ...modifyQueryFields,
-      },
+      Query: viewerQueryFields,
       Mutation: authedMutationFields,
     },
     {
