@@ -1104,8 +1104,8 @@ importers:
         specifier: ^0.7.15
         version: 0.7.15
       '@ip1sms/disposable-phone-numbers':
-        specifier: ^2.1.1248
-        version: 2.1.1248
+        specifier: ^2.1.1250
+        version: 2.1.1250
       '@merqva/telegram-passport':
         specifier: ^1.0.2
         version: 1.0.2
@@ -7231,8 +7231,8 @@ packages:
     resolution: {integrity: sha512-Sx1pU8EM64o2BrqNpEO1CNLtKQwyhuXuqyfH7oGKCk+1a33d2r5saW8zNwm3j6BTExtjrv2BxTgzzkMwts6vGg==}
     dev: false
 
-  /@ip1sms/disposable-phone-numbers@2.1.1248:
-    resolution: {integrity: sha512-sK6HlWRB2Am+/40h/xPUwr0gSPnym6zzSXmg9hAIfyI/oEuvQY9gHwuzf6A2hEcla7K+rpNSL0kguYg/KIRtLQ==}
+  /@ip1sms/disposable-phone-numbers@2.1.1250:
+    resolution: {integrity: sha512-K6m0VywRBE5lA2JLdns+nZtjthDl0MbQBCHGiOSktXuckh8yGP+LIi+kye8dIp+HWROhI7VFYyHPIMkGT56WgQ==}
     dev: false
 
   /@isaacs/cliui@8.0.2:
@@ -18491,6 +18491,14 @@ packages:
 
   /enhanced-resolve@5.18.2:
     resolution: {integrity: sha512-6Jw4sE1maoRJo3q8MsSIn2onJFbLTOjY9hlx4DZXmOKvLRd1Ok2kXmAGXaafL2+ijsJZ1ClYbl/pmqr9+k4iUQ==}
+    engines: {node: '>=10.13.0'}
+    dependencies:
+      graceful-fs: 4.2.11
+      tapable: 2.2.2
+    dev: true
+
+  /enhanced-resolve@5.18.3:
+    resolution: {integrity: sha512-d4lC8xfavMeBjzGr2vECC3fsGXziXZQyJxD868h2M/mBI3PwAuODxAkLkq5HYuvrPYcUtiLzsTo8U3PgX3Ocww==}
     engines: {node: '>=10.13.0'}
     dependencies:
       graceful-fs: 4.2.11
@@ -30898,7 +30906,7 @@ packages:
       acorn-import-phases: 1.0.4(acorn@8.15.0)
       browserslist: 4.25.1
       chrome-trace-event: 1.0.4
-      enhanced-resolve: 5.18.2
+      enhanced-resolve: 5.18.3
       es-module-lexer: 1.7.0
       eslint-scope: 5.1.1
       events: 3.3.0
