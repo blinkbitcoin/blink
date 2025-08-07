@@ -12,10 +12,9 @@ export const createContact = async ({
   handle,
   displayName,
   type,
-  incrementTxs = true,
 }: {
   accountId: AccountId
-  handle: Username
+  handle: string
   type: ContactType
   displayName: ContactAlias
 }): Promise<Contact | ApplicationError> => {
@@ -33,7 +32,7 @@ export const createContact = async ({
       handle: validatedHandle,
       type,
       displayName,
-      transactionsCount: incrementTxs ? 1 : 0,
+      transactionsCount: 1,
     })
   }
 
@@ -42,9 +41,7 @@ export const createContact = async ({
   return contactsRepo.update({
     ...existing,
     displayName,
-    transactionsCount: incrementTxs
-      ? existing.transactionsCount + 1
-      : existing.transactionsCount,
+    transactionsCount: existing.transactionsCount + 1,
   })
 }
 
