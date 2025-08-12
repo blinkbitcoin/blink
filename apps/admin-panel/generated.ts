@@ -65,6 +65,17 @@ export type AccountDetailPayload = {
   readonly errors: ReadonlyArray<Error>;
 };
 
+export type AccountForceDeleteInput = {
+  readonly accountId: Scalars['AccountId']['input'];
+  readonly cancelIfPositiveBalance?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+export type AccountForceDeletePayload = {
+  readonly __typename: 'AccountForceDeletePayload';
+  readonly errors: ReadonlyArray<Error>;
+  readonly success?: Maybe<Scalars['Boolean']['output']>;
+};
+
 export const AccountLevel = {
   One: 'ONE',
   Three: 'THREE',
@@ -393,6 +404,7 @@ export type MerchantPayload = {
 
 export type Mutation = {
   readonly __typename: 'Mutation';
+  readonly accountForceDelete: AccountForceDeletePayload;
   readonly accountUpdateLevel: AccountDetailPayload;
   readonly accountUpdateStatus: AccountDetailPayload;
   readonly marketingNotificationTrigger: SuccessPayload;
@@ -400,6 +412,11 @@ export type Mutation = {
   readonly merchantMapValidate: MerchantPayload;
   readonly userUpdateEmail: AccountDetailPayload;
   readonly userUpdatePhone: AccountDetailPayload;
+};
+
+
+export type MutationAccountForceDeleteArgs = {
+  input: AccountForceDeleteInput;
 };
 
 
