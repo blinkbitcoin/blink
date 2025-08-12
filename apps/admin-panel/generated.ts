@@ -73,7 +73,7 @@ export type AccountForceDeleteInput = {
 export type AccountForceDeletePayload = {
   readonly __typename: 'AccountForceDeletePayload';
   readonly errors: ReadonlyArray<Error>;
-  readonly success?: Maybe<Scalars['Boolean']['output']>;
+  readonly success: Scalars['Boolean']['output'];
 };
 
 export const AccountLevel = {

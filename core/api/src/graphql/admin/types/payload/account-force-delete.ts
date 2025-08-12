@@ -8,7 +8,7 @@ const AccountForceDeletePayload = GT.Object({
       type: GT.NonNullList(IError),
     },
     success: {
-      type: GT.Boolean,
+      type: GT.NonNull(GT.Boolean),
     },
   }),
 })

@@ -10,7 +10,7 @@ input AccountForceDeleteInput {
 
 type AccountForceDeletePayload {
   errors: [Error!]!
-  success: Boolean
+  success: Boolean!
 }
 
 """Unique identifier of an account"""
