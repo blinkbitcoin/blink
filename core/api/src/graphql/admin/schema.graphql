@@ -3,6 +3,16 @@ type AccountDetailPayload {
   errors: [Error!]!
 }
 
+input AccountForceDeleteInput {
+  accountId: AccountId!
+  cancelIfPositiveBalance: Boolean = true
+}
+
+type AccountForceDeletePayload {
+  errors: [Error!]!
+  success: Boolean!
+}
+
 """Unique identifier of an account"""
 scalar AccountId
 
@@ -345,6 +355,7 @@ type MerchantPayload {
 }
 
 type Mutation {
+  accountForceDelete(input: AccountForceDeleteInput!): AccountForceDeletePayload!
   accountUpdateLevel(input: AccountUpdateLevelInput!): AccountDetailPayload!
   accountUpdateStatus(input: AccountUpdateStatusInput!): AccountDetailPayload!
   marketingNotificationTrigger(input: MarketingNotificationTriggerInput!): SuccessPayload!

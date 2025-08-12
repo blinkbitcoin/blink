@@ -19,10 +19,12 @@ export const markAccountForDeletion = async ({
   accountId,
   cancelIfPositiveBalance = false,
   updatedByPrivilegedClientId,
+  bypassMaxDeletions = false,
 }: {
   accountId: AccountId
   cancelIfPositiveBalance?: boolean
   updatedByPrivilegedClientId?: PrivilegedClientId
+  bypassMaxDeletions?: boolean
 }): Promise<true | ApplicationError> => {
   const accountsRepo = AccountsRepository()
   const account = await accountsRepo.findById(accountId)
@@ -59,7 +61,7 @@ export const markAccountForDeletion = async ({
   if (user.deletedPhones) {
     deletedPhones.push(...user.deletedPhones)
   }
-  if (deletedPhones.length > 0) {
+  if (deletedPhones.length > 0 && !bypassMaxDeletions) {
     const usersByPhones = await usersRepo.findByDeletedPhones(deletedPhones)
     if (usersByPhones instanceof Error) return usersByPhones
     if (usersByPhones.length >= maxDeletions) return new InvalidAccountForDeletionError()

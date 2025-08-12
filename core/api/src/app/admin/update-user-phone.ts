@@ -38,6 +38,7 @@ export const updateUserPhone = async ({
     const result = await markAccountForDeletion({
       accountId: newAccount.id,
       cancelIfPositiveBalance: true,
+      bypassMaxDeletions: true,
       updatedByPrivilegedClientId,
     })
     if (result instanceof Error) return result
