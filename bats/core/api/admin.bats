@@ -300,6 +300,24 @@ getEmailCode() {
   [[ "$num_errors" == "0" && "$success" == "true" ]] || exit 1
 }
 
+@test "admin: can force delete account" {
+  admin_token="$(read_value 'admin.token')"
+
+  create_user 'tester_delete'
+  id="$(read_value 'tester_delete.account_id')"
+
+  variables=$(
+    jq -n \
+    --arg accountId "$id" \
+    '{input: {accountId: $accountId}}'
+  )
+  exec_admin_graphql "$admin_token" 'account-force-delete' "$variables"
+  num_errors="$(graphql_output '.data.accountForceDelete.errors | length')"
+  success="$(graphql_output '.data.accountForceDelete.success')"
+
+  [[ "$num_errors" == "0" && "$success" == "true" ]] || exit 1
+}
+
 # TODO: add check by email
 
 # TODO: business update map info

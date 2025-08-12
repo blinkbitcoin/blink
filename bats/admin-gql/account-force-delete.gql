@@ -1,0 +1,8 @@
+mutation accountForceDelete($input: AccountForceDeleteInput!) {
+  accountForceDelete(input: $input) {
+    errors {
+      message
+    }
+    success
+  }
+}
