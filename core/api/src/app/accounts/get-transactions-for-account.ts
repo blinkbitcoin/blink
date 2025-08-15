@@ -17,7 +17,7 @@ export const getTransactionsForAccountByWalletIds = async ({
 
   const wallets: Wallet[] = []
 
-  if (walletIds) {
+  if (walletIds && walletIds.length > 0) {
     for (const walletId of walletIds) {
       const wallet = await walletsRepo.findById(walletId)
       if (wallet instanceof RepositoryError) return wallet

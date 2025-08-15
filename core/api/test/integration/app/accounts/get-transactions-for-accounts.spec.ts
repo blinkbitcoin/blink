@@ -15,6 +15,15 @@ import {
   recordReceiveLnPayment,
 } from "test/helpers"
 
+jest.mock("@/app/wallets", () => ({
+  getTransactionsForWallets: jest.fn(),
+}))
+
+import { getTransactionsForWallets } from "@/app/wallets"
+const mockGetTransactionsForWallets = getTransactionsForWallets as jest.MockedFunction<
+  typeof getTransactionsForWallets
+>
+
 const calc = AmountCalculator()
 
 beforeAll(async () => {
@@ -81,5 +90,32 @@ describe("getTransactionsForAccountByWalletIds", () => {
 
     // Restore system state
     await Transaction.deleteMany({ memo })
+  })
+
+  it("calls getTransactionsForWallets with all account wallets when walletIds is empty array", async () => {
+    const senderWalletDescriptor = await createRandomUserAndBtcWallet()
+    const senderAccount = await AccountsRepository().findById(
+      senderWalletDescriptor.accountId,
+    )
+    if (senderAccount instanceof Error) throw senderAccount
+
+    mockGetTransactionsForWallets.mockResolvedValueOnce({
+      edges: [],
+      pageInfo: { hasNextPage: false, hasPreviousPage: false },
+    })
+
+    await Accounts.getTransactionsForAccountByWalletIds({
+      account: senderAccount,
+      walletIds: [],
+      rawPaginationArgs: {},
+    })
+
+    // Verify that getTransactionsForWallets was called with all account wallets
+    expect(mockGetTransactionsForWallets).toHaveBeenCalledWith({
+      wallets: expect.arrayContaining([
+        expect.objectContaining({ id: senderWalletDescriptor.id }),
+      ]),
+      rawPaginationArgs: {},
+    })
   })
 })
