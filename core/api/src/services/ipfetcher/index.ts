@@ -1,7 +1,7 @@
 import https from "https"
 
 import axios from "axios"
-import axiosRetry from "axios-retry"
+import axiosRetry, { linearDelay } from "axios-retry"
 
 import { UnknownIpFetcherServiceError } from "@/domain/ipfetcher"
 import { PROXY_CHECK_APIKEY } from "@/config"
@@ -23,8 +23,8 @@ export const client = axios.create({
   httpsAgent: new https.Agent({ keepAlive: true }),
 })
 axiosRetry(client, {
-  retries: 3,
-  retryDelay: () => 500,
+  retries: 4,
+  retryDelay: linearDelay(200),
   shouldResetTimeout: true,
 })
 
