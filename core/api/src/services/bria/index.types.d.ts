@@ -50,6 +50,12 @@ type UtxoSettled = {
   address: OnChainAddress
   blockNumber: number
 }
+
+type EstimateFeeForPayoutRes = {
+  fee: BtcPaymentAmount
+  feeRate: number
+}
+
 type PayoutSubmitted = {
   type: "payout_submitted"
   id: PayoutId
