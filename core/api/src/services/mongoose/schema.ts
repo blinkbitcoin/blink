@@ -518,6 +518,16 @@ const paymentFlowStateSchema = new Schema<PaymentFlowStateRecord>(
 
 paymentFlowStateSchema.index({
   paymentHash: 1,
+  senderWalletId: 1,
+  inputAmount: 1,
+  _id: -1,
+})
+
+paymentFlowStateSchema.index({
+  intraLedgerHash: 1,
+  senderWalletId: 1,
+  inputAmount: 1,
+  _id: -1,
 })
 
 export const PaymentFlowState = mongoose.model(
