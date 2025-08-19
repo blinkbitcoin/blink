@@ -135,7 +135,7 @@ interface IOnChainService {
   }): Promise<PayoutId | OnChainServiceError>
   estimateFeeForPayout(
     args: EstimatePayoutFeeArgs,
-  ): Promise<BtcPaymentAmount | OnChainServiceError>
+  ): Promise<EstimateFeeForPayoutRes | OnChainServiceError>
   listPayoutQueues(): Promise<PayoutQueue[] | OnChainServiceError>
 }
 

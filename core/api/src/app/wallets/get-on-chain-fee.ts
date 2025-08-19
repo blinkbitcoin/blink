@@ -164,14 +164,18 @@ export const getMinerFeeAndPaymentFlow = async <
   const address = await builder.addressForFlow()
   if (address instanceof Error) return address
 
-  const minerFee = await onChainService.estimateFeeForPayout({
+  const estimateRes = await onChainService.estimateFeeForPayout({
     amount: proposedBtcAmount,
     address,
     speed,
   })
-  if (minerFee instanceof Error) return minerFee
+  if (estimateRes instanceof Error) return estimateRes
 
-  return builder.withMinerFee(minerFee)
+  return builder.withMinerFee({
+    minerFee: estimateRes.fee,
+    feeRate: estimateRes.feeRate,
+    speed,
+  })
 }
 
 export const getOnChainFeeForBtcWallet = async <S extends WalletCurrency>(
