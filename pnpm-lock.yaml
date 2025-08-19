@@ -819,7 +819,7 @@ importers:
         version: 6.5.0(eslint@8.57.0)(typescript@5.6.3)
       eslint-webpack-plugin:
         specifier: ^4.1.0
-        version: 4.2.0(eslint@8.57.0)(webpack@5.101.2)
+        version: 4.2.0(eslint@8.57.0)(webpack@5.101.3)
       postcss:
         specifier: ^8.4.47
         version: 8.5.6
@@ -828,7 +828,7 @@ importers:
         version: 3.6.2
       react-dev-utils:
         specifier: ^12.0.1
-        version: 12.0.1(eslint@8.57.0)(typescript@5.6.3)(webpack@5.101.2)
+        version: 12.0.1(eslint@8.57.0)(typescript@5.6.3)(webpack@5.101.3)
       tailwindcss:
         specifier: ^3.4.14
         version: 3.4.17
@@ -1104,8 +1104,8 @@ importers:
         specifier: ^0.7.15
         version: 0.7.15
       '@ip1sms/disposable-phone-numbers':
-        specifier: ^2.1.1259
-        version: 2.1.1259
+        specifier: ^2.1.1263
+        version: 2.1.1263
       '@merqva/telegram-passport':
         specifier: ^1.0.2
         version: 1.0.2
@@ -1623,7 +1623,7 @@ importers:
         version: 2.0.0(webpack@5.99.9)
       '@storybook/addon-styling':
         specifier: ^1.3.7
-        version: 1.3.7(@types/react-dom@18.3.7)(@types/react@18.3.23)(less@4.4.0)(postcss@8.4.38)(react-dom@18.3.1)(react@18.3.1)(typescript@5.8.3)(webpack@5.99.9)
+        version: 1.3.7(@types/react-dom@18.3.7)(@types/react@18.3.23)(less@4.4.1)(postcss@8.4.38)(react-dom@18.3.1)(react@18.3.1)(typescript@5.8.3)(webpack@5.99.9)
       '@storybook/addon-styling-webpack':
         specifier: ^0.0.5
         version: 0.0.5(webpack@5.99.9)
@@ -7231,8 +7231,8 @@ packages:
     resolution: {integrity: sha512-Sx1pU8EM64o2BrqNpEO1CNLtKQwyhuXuqyfH7oGKCk+1a33d2r5saW8zNwm3j6BTExtjrv2BxTgzzkMwts6vGg==}
     dev: false
 
-  /@ip1sms/disposable-phone-numbers@2.1.1259:
-    resolution: {integrity: sha512-Q1V2eUdBUQuCA+V5rUP93aKery+2nRTYXqpKoCNQvFuq0bO5m+vSEDrppwdLiMNdWHa270kVGnm49R68gzuhfQ==}
+  /@ip1sms/disposable-phone-numbers@2.1.1263:
+    resolution: {integrity: sha512-m5WbmdeUyV9n4RJ+FbTlQ4sqZmc8BUUkYfyv//yoBpEPWdiH2tmwrU+Lw05PsGmbRBZD2IJXNJTrIbXWDzLz+Q==}
     dev: false
 
   /@isaacs/cliui@8.0.2:
@@ -11351,7 +11351,7 @@ packages:
       webpack: 5.99.9(esbuild@0.18.20)(webpack-cli@5.1.4)
     dev: true
 
-  /@storybook/addon-styling@1.3.7(@types/react-dom@18.3.7)(@types/react@18.3.23)(less@4.4.0)(postcss@8.4.38)(react-dom@18.3.1)(react@18.3.1)(typescript@5.8.3)(webpack@5.99.9):
+  /@storybook/addon-styling@1.3.7(@types/react-dom@18.3.7)(@types/react@18.3.23)(less@4.4.1)(postcss@8.4.38)(react-dom@18.3.1)(react@18.3.1)(typescript@5.8.3)(webpack@5.99.9):
     resolution: {integrity: sha512-JSBZMOrSw/3rlq5YoEI7Qyq703KSNP0Jd+gxTWu3/tP6245mpjn2dXnR8FvqVxCi+FG4lt2kQyPzgsuwEw1SSA==}
     deprecated: 'This package has been split into @storybook/addon-styling-webpack and @storybook/addon-themes. More info: https://github.com/storybookjs/addon-styling'
     hasBin: true
@@ -11385,8 +11385,8 @@ packages:
       '@storybook/theming': 7.6.20(react-dom@18.3.1)(react@18.3.1)
       '@storybook/types': 7.6.20
       css-loader: 6.11.0(webpack@5.99.9)
-      less: 4.4.0
-      less-loader: 11.1.4(less@4.4.0)(webpack@5.99.9)
+      less: 4.4.1
+      less-loader: 11.1.4(less@4.4.1)(webpack@5.99.9)
       postcss: 8.4.38
       postcss-loader: 7.3.4(postcss@8.4.38)(typescript@5.8.3)(webpack@5.99.9)
       prettier: 2.8.8
@@ -16412,15 +16412,15 @@ packages:
       node-releases: 2.0.19
       update-browserslist-db: 1.1.3(browserslist@4.25.1)
 
-  /browserslist@4.25.2:
-    resolution: {integrity: sha512-0si2SJK3ooGzIawRu61ZdPCO1IncZwS8IzuX73sPZsXW6EQ/w/DAfPyKI8l1ETTCr2MnvqWitmlCUxgdul45jA==}
+  /browserslist@4.25.3:
+    resolution: {integrity: sha512-cDGv1kkDI4/0e5yON9yM5G/0A5u8sf5TnmdX5C9qHzI9PPu++sQ9zjm1k9NiOrf3riY4OkK0zSGqfvJyJsgCBQ==}
     engines: {node: ^6 || ^7 || ^8 || ^9 || ^10 || ^11 || ^12 || >=13.7}
     hasBin: true
     dependencies:
       caniuse-lite: 1.0.30001735
-      electron-to-chromium: 1.5.202
+      electron-to-chromium: 1.5.206
       node-releases: 2.0.19
-      update-browserslist-db: 1.1.3(browserslist@4.25.2)
+      update-browserslist-db: 1.1.3(browserslist@4.25.3)
     dev: true
 
   /bs-logger@0.2.6:
@@ -18463,8 +18463,8 @@ packages:
   /electron-to-chromium@1.5.178:
     resolution: {integrity: sha512-wObbz/ar3Bc6e4X5vf0iO8xTN8YAjN/tgiAOJLr7yjYFtP9wAjq8Mb5h0yn6kResir+VYx2DXBj9NNobs0ETSA==}
 
-  /electron-to-chromium@1.5.202:
-    resolution: {integrity: sha512-NxbYjRmiHcHXV1Ws3fWUW+SLb62isauajk45LUJ/HgIOkUA7jLZu/X2Iif+X9FBNK8QkF9Zb4Q2mcwXCcY30mg==}
+  /electron-to-chromium@1.5.206:
+    resolution: {integrity: sha512-/eucXSTaI8L78l42xPurxdBzPTjAkMVCQO7unZCWk9LnZiwKcSvQUhF4c99NWQLwMQXxjlfoQy0+8m9U2yEDQQ==}
     dev: true
 
   /elliptic@6.6.1:
@@ -19746,7 +19746,7 @@ packages:
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
     dev: true
 
-  /eslint-webpack-plugin@4.2.0(eslint@8.57.0)(webpack@5.101.2):
+  /eslint-webpack-plugin@4.2.0(eslint@8.57.0)(webpack@5.101.3):
     resolution: {integrity: sha512-rsfpFQ01AWQbqtjgPRr2usVRxhWDuG0YDYcG8DJOteD3EFnpeuYuOwk0PQiN7PRBTqS6ElNdtPZPggj8If9WnA==}
     engines: {node: '>= 14.15.0'}
     peerDependencies:
@@ -19759,7 +19759,7 @@ packages:
       micromatch: 4.0.8
       normalize-path: 3.0.0
       schema-utils: 4.3.2
-      webpack: 5.101.2
+      webpack: 5.101.3
     dev: true
 
   /eslint@8.40.0:
@@ -20610,7 +20610,7 @@ packages:
     resolution: {integrity: sha512-j0KLYPhm6zeac4lz3oJ3o65qvgQCcPubiyotZrXqEaG4hNagNYO8qdlUrX5vwqv9ohqeT/Z3j6+yW067yWWdUw==}
     dev: true
 
-  /fork-ts-checker-webpack-plugin@6.5.3(eslint@8.57.0)(typescript@5.6.3)(webpack@5.101.2):
+  /fork-ts-checker-webpack-plugin@6.5.3(eslint@8.57.0)(typescript@5.6.3)(webpack@5.101.3):
     resolution: {integrity: sha512-SbH/l9ikmMWycd5puHJKTkZJKddF4iRLyW3DeZ08HTI7NGyLS38MXd/KGgeWumQO7YNQbW2u/NtPT2YowbPaGQ==}
     engines: {node: '>=10', yarn: '>=1.0.0'}
     peerDependencies:
@@ -20639,7 +20639,7 @@ packages:
       semver: 7.7.2
       tapable: 1.1.3
       typescript: 5.6.3
-      webpack: 5.101.2
+      webpack: 5.101.3
     dev: true
 
   /fork-ts-checker-webpack-plugin@8.0.0(typescript@5.8.3)(webpack@5.99.9):
@@ -23915,19 +23915,19 @@ packages:
       dotenv-expand: 10.0.0
     dev: true
 
-  /less-loader@11.1.4(less@4.4.0)(webpack@5.99.9):
+  /less-loader@11.1.4(less@4.4.1)(webpack@5.99.9):
     resolution: {integrity: sha512-6/GrYaB6QcW6Vj+/9ZPgKKs6G10YZai/l/eJ4SLwbzqNTBsAqt5hSLVF47TgsiBxV1P6eAU0GYRH3YRuQU9V3A==}
     engines: {node: '>= 14.15.0'}
     peerDependencies:
       less: ^3.5.0 || ^4.0.0
       webpack: ^5.0.0
     dependencies:
-      less: 4.4.0
+      less: 4.4.1
       webpack: 5.99.9(esbuild@0.18.20)(webpack-cli@5.1.4)
     dev: true
 
-  /less@4.4.0:
-    resolution: {integrity: sha512-kdTwsyRuncDfjEs0DlRILWNvxhDG/Zij4YLO4TMJgDLW+8OzpfkdPnRgrsRuY1o+oaxJGWsps5f/RVBgGmmN0w==}
+  /less@4.4.1:
+    resolution: {integrity: sha512-X9HKyiXPi0f/ed0XhgUlBeFfxrlDP3xR4M7768Zl+WXLUViuL9AOPPJP4nCV0tgRWvTYvpNmN0SFhZOQzy16PA==}
     engines: {node: '>=14'}
     hasBin: true
     dependencies:
@@ -27009,7 +27009,7 @@ packages:
       react: 18.3.1
     dev: false
 
-  /react-dev-utils@12.0.1(eslint@8.57.0)(typescript@5.6.3)(webpack@5.101.2):
+  /react-dev-utils@12.0.1(eslint@8.57.0)(typescript@5.6.3)(webpack@5.101.3):
     resolution: {integrity: sha512-84Ivxmr17KjUupyqzFode6xKhjwuEJDROWKJy/BthkL7Wn6NJ8h4WE6k/exAv6ImS+0oZLRRW5j/aINMHyeGeQ==}
     engines: {node: '>=14'}
     peerDependencies:
@@ -27028,7 +27028,7 @@ packages:
       escape-string-regexp: 4.0.0
       filesize: 8.0.7
       find-up: 5.0.0
-      fork-ts-checker-webpack-plugin: 6.5.3(eslint@8.57.0)(typescript@5.6.3)(webpack@5.101.2)
+      fork-ts-checker-webpack-plugin: 6.5.3(eslint@8.57.0)(typescript@5.6.3)(webpack@5.101.3)
       global-modules: 2.0.0
       globby: 11.1.0
       gzip-size: 6.0.0
@@ -27044,7 +27044,7 @@ packages:
       strip-ansi: 6.0.1
       text-table: 0.2.0
       typescript: 5.6.3
-      webpack: 5.101.2
+      webpack: 5.101.3
     transitivePeerDependencies:
       - eslint
       - supports-color
@@ -29435,7 +29435,7 @@ packages:
       webpack: 5.99.9(esbuild@0.18.20)(webpack-cli@5.1.4)
     dev: true
 
-  /terser-webpack-plugin@5.3.14(webpack@5.101.2):
+  /terser-webpack-plugin@5.3.14(webpack@5.101.3):
     resolution: {integrity: sha512-vkZjpUjb6OMS7dhV+tILUW6BhpDR7P2L/aQSAv+Uwk+m8KATX9EccViHTJR2qDtACKPIYndLGCyl3FMo+r2LMw==}
     engines: {node: '>= 10.13.0'}
     peerDependencies:
@@ -29456,7 +29456,7 @@ packages:
       schema-utils: 4.3.2
       serialize-javascript: 6.0.2
       terser: 5.43.1
-      webpack: 5.101.2
+      webpack: 5.101.3
     dev: true
 
   /terser@5.43.1:
@@ -30469,13 +30469,13 @@ packages:
       escalade: 3.2.0
       picocolors: 1.1.1
 
-  /update-browserslist-db@1.1.3(browserslist@4.25.2):
+  /update-browserslist-db@1.1.3(browserslist@4.25.3):
     resolution: {integrity: sha512-UxhIZQ+QInVdunkDAaiazvvT/+fXL5Osr0JZlJulepYu6Jd7qJtDZjlur0emRlT71EN3ScPoE7gvsuIKKNavKw==}
     hasBin: true
     peerDependencies:
       browserslist: '>= 4.21.0'
     dependencies:
-      browserslist: 4.25.2
+      browserslist: 4.25.3
       escalade: 3.2.0
       picocolors: 1.1.1
     dev: true
@@ -30931,8 +30931,8 @@ packages:
     resolution: {integrity: sha512-66/V2i5hQanC51vBQKPH4aI8NMAcBW59FVBs+rC7eGHupMyfn34q7rZIE+ETlJ+XTevqfUhVVBgSUNSW2flEUQ==}
     dev: true
 
-  /webpack@5.101.2:
-    resolution: {integrity: sha512-4JLXU0tD6OZNVqlwzm3HGEhAHufSiyv+skb7q0d2367VDMzrU1Q/ZeepvkcHH0rZie6uqEtTQQe0OEOOluH3Mg==}
+  /webpack@5.101.3:
+    resolution: {integrity: sha512-7b0dTKR3Ed//AD/6kkx/o7duS8H3f1a4w3BYpIriX4BzIhjkn4teo05cptsxvLesHFKK5KObnadmCHBwGc+51A==}
     engines: {node: '>=10.13.0'}
     hasBin: true
     peerDependencies:
@@ -30949,7 +30949,7 @@ packages:
       '@webassemblyjs/wasm-parser': 1.14.1
       acorn: 8.15.0
       acorn-import-phases: 1.0.4(acorn@8.15.0)
-      browserslist: 4.25.2
+      browserslist: 4.25.3
       chrome-trace-event: 1.0.4
       enhanced-resolve: 5.18.3
       es-module-lexer: 1.7.0
@@ -30963,7 +30963,7 @@ packages:
       neo-async: 2.6.2
       schema-utils: 4.3.2
       tapable: 2.2.2
-      terser-webpack-plugin: 5.3.14(webpack@5.101.2)
+      terser-webpack-plugin: 5.3.14(webpack@5.101.3)
       watchpack: 2.4.4
       webpack-sources: 3.3.3
     transitivePeerDependencies:
