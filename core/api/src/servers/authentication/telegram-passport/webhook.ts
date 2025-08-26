@@ -33,7 +33,8 @@ export const handleTelegramPassportWebhook = async (req: Request, res: Response)
   }
 
   if (!req.body || !req.body.message || !req.body.message.passport_data) {
-    return res.status(400).send({ error: "Missing passport_data in request" })
+    // need to return 200 to avoid retries
+    return res.status(200).send({ error: "Missing passport_data in request" })
   }
 
   try {
