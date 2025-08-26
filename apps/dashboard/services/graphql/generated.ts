@@ -26,6 +26,12 @@ export type Scalars = {
   CentAmount: { input: number; output: number; }
   /** An alias name that a user can set for a wallet (with which they have transactions) */
   ContactAlias: { input: string; output: string; }
+  /** A display name that a user can assign to a contact */
+  ContactDisplayName: { input: string; output: string; }
+  /** Unique handle used to identify a contact (e.g., username or lnAddress) */
+  ContactHandle: { input: string; output: string; }
+  /** Unique identifier of a contact */
+  ContactId: { input: string; output: string; }
   /** A CCA2 country code (ex US, FR, etc) */
   CountryCode: { input: string; output: string; }
   /** Display currency of an account */
@@ -458,6 +464,40 @@ export type ConsumerAccountWalletByIdArgs = {
   walletId: Scalars['WalletId']['input'];
 };
 
+export type Contact = {
+  readonly __typename: 'Contact';
+  /** Unix timestamp (number of seconds elapsed since January 1, 1970 00:00:00 UTC) */
+  readonly createdAt: Scalars['Timestamp']['output'];
+  /** DisplayName name the user assigns to the contact. */
+  readonly displayName?: Maybe<Scalars['ContactDisplayName']['output']>;
+  /** Username or lnAddress that identifies the contact. */
+  readonly handle: Scalars['ContactHandle']['output'];
+  /** ID of the contact user or external handle. */
+  readonly id: Scalars['ContactId']['output'];
+  /** Total number of transactions with this contact. */
+  readonly transactionsCount: Scalars['Int']['output'];
+  /** Type of the contact (intraledger, lnaddress, etc.). */
+  readonly type: ContactType;
+};
+
+export type ContactCreateInput = {
+  readonly displayName?: InputMaybe<Scalars['ContactAlias']['input']>;
+  readonly handle?: InputMaybe<Scalars['ContactHandle']['input']>;
+  readonly type: ContactType;
+};
+
+export type ContactPayload = {
+  readonly __typename: 'ContactPayload';
+  readonly contact?: Maybe<Contact>;
+  readonly errors: ReadonlyArray<Error>;
+};
+
+export const ContactType = {
+  Intraledger: 'INTRALEDGER',
+  Lnaddress: 'LNADDRESS'
+} as const;
+
+export type ContactType = typeof ContactType[keyof typeof ContactType];
 export type Coordinates = {
   readonly __typename: 'Coordinates';
   readonly latitude: Scalars['Float']['output'];
@@ -779,6 +819,7 @@ export type LnInvoicePaymentInput = {
 export type LnInvoicePaymentStatus = {
   readonly __typename: 'LnInvoicePaymentStatus';
   readonly paymentHash?: Maybe<Scalars['PaymentHash']['output']>;
+  readonly paymentPreimage?: Maybe<Scalars['LnPaymentPreImage']['output']>;
   readonly paymentRequest?: Maybe<Scalars['LnPaymentRequest']['output']>;
   readonly status?: Maybe<InvoicePaymentStatus>;
 };
@@ -799,6 +840,7 @@ export type LnInvoicePaymentStatusPayload = {
   readonly __typename: 'LnInvoicePaymentStatusPayload';
   readonly errors: ReadonlyArray<Error>;
   readonly paymentHash?: Maybe<Scalars['PaymentHash']['output']>;
+  readonly paymentPreimage?: Maybe<Scalars['LnPaymentPreImage']['output']>;
   readonly paymentRequest?: Maybe<Scalars['LnPaymentRequest']['output']>;
   readonly status?: Maybe<InvoicePaymentStatus>;
 };
@@ -995,6 +1037,7 @@ export type Mutation = {
   readonly callbackEndpointDelete: SuccessPayload;
   readonly captchaCreateChallenge: CaptchaCreateChallengePayload;
   readonly captchaRequestAuthCode: SuccessPayload;
+  readonly contactCreate: ContactPayload;
   readonly deviceNotificationTokenCreate: SuccessPayload;
   readonly feedbackSubmit: SuccessPayload;
   /**
@@ -1165,6 +1208,11 @@ export type MutationCallbackEndpointDeleteArgs = {
 
 export type MutationCaptchaRequestAuthCodeArgs = {
   input: CaptchaRequestAuthCodeInput;
+};
+
+
+export type MutationContactCreateArgs = {
+  input: ContactCreateInput;
 };
 
 
@@ -1530,12 +1578,22 @@ export const PaymentSendResult = {
 
 export type PaymentSendResult = typeof PaymentSendResult[keyof typeof PaymentSendResult];
 export const PayoutSpeed = {
-  Fast: 'FAST'
+  Fast: 'FAST',
+  Medium: 'MEDIUM',
+  Slow: 'SLOW'
 } as const;
 
 export type PayoutSpeed = typeof PayoutSpeed[keyof typeof PayoutSpeed];
+export type PayoutSpeeds = {
+  readonly __typename: 'PayoutSpeeds';
+  readonly description: Scalars['String']['output'];
+  readonly displayName: Scalars['String']['output'];
+  readonly speed: PayoutSpeed;
+};
+
 export const PhoneCodeChannelType = {
   Sms: 'SMS',
+  Telegram: 'TELEGRAM',
   Whatsapp: 'WHATSAPP'
 } as const;
 
@@ -1643,6 +1701,8 @@ export type Query = {
   readonly onChainTxFee: OnChainTxFee;
   readonly onChainUsdTxFee: OnChainUsdTxFee;
   readonly onChainUsdTxFeeAsBtcDenominated: OnChainUsdTxFee;
+  /** Returns the list of available speeds for on-chain payments */
+  readonly payoutSpeeds: ReadonlyArray<PayoutSpeeds>;
   /** Returns 1 Sat and 1 Usd Cent price for the given currency in minor unit */
   readonly realtimePrice: RealtimePrice;
   /** @deprecated will be migrated to AccountDefaultWalletId */
@@ -1732,6 +1792,7 @@ export type Quiz = {
 
 export type QuizClaimInput = {
   readonly id: Scalars['ID']['input'];
+  readonly skipRewards?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 export type QuizClaimPayload = {
@@ -2136,11 +2197,16 @@ export type UserContact = {
    * Only the user can see the alias attached to their contact.
    */
   readonly alias?: Maybe<Scalars['ContactAlias']['output']>;
-  readonly id: Scalars['Username']['output'];
+  /** Identifier of the contact (username or Lightning address). */
+  readonly handle: Scalars['ContactHandle']['output'];
+  readonly id: Scalars['ContactHandle']['output'];
   /** Paginated list of transactions sent to/from this contact. */
   readonly transactions?: Maybe<TransactionConnection>;
   readonly transactionsCount: Scalars['Int']['output'];
-  /** Actual identifier of the contact. */
+  /**
+   * Actual identifier of the contact. Deprecated: use `handle` instead.
+   * @deprecated Use `handle` field; this will be removed in a future release.
+   */
   readonly username: Scalars['Username']['output'];
 };
 
@@ -3013,8 +3079,8 @@ export function useApiKeysLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<Ap
           const options = {...defaultOptions, ...baseOptions}
           return Apollo.useLazyQuery<ApiKeysQuery, ApiKeysQueryVariables>(ApiKeysDocument, options);
         }
-export function useApiKeysSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<ApiKeysQuery, ApiKeysQueryVariables>) {
-          const options = {...defaultOptions, ...baseOptions}
+export function useApiKeysSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<ApiKeysQuery, ApiKeysQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
           return Apollo.useSuspenseQuery<ApiKeysQuery, ApiKeysQueryVariables>(ApiKeysDocument, options);
         }
 export type ApiKeysQueryHookResult = ReturnType<typeof useApiKeysQuery>;
@@ -3057,8 +3123,8 @@ export function useCallbackEndpointsLazyQuery(baseOptions?: Apollo.LazyQueryHook
           const options = {...defaultOptions, ...baseOptions}
           return Apollo.useLazyQuery<CallbackEndpointsQuery, CallbackEndpointsQueryVariables>(CallbackEndpointsDocument, options);
         }
-export function useCallbackEndpointsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<CallbackEndpointsQuery, CallbackEndpointsQueryVariables>) {
-          const options = {...defaultOptions, ...baseOptions}
+export function useCallbackEndpointsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<CallbackEndpointsQuery, CallbackEndpointsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
           return Apollo.useSuspenseQuery<CallbackEndpointsQuery, CallbackEndpointsQueryVariables>(CallbackEndpointsDocument, options);
         }
 export type CallbackEndpointsQueryHookResult = ReturnType<typeof useCallbackEndpointsQuery>;
@@ -3158,8 +3224,8 @@ export function useGetPaginatedTransactionsLazyQuery(baseOptions?: Apollo.LazyQu
           const options = {...defaultOptions, ...baseOptions}
           return Apollo.useLazyQuery<GetPaginatedTransactionsQuery, GetPaginatedTransactionsQueryVariables>(GetPaginatedTransactionsDocument, options);
         }
-export function useGetPaginatedTransactionsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetPaginatedTransactionsQuery, GetPaginatedTransactionsQueryVariables>) {
-          const options = {...defaultOptions, ...baseOptions}
+export function useGetPaginatedTransactionsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetPaginatedTransactionsQuery, GetPaginatedTransactionsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
           return Apollo.useSuspenseQuery<GetPaginatedTransactionsQuery, GetPaginatedTransactionsQueryVariables>(GetPaginatedTransactionsDocument, options);
         }
 export type GetPaginatedTransactionsQueryHookResult = ReturnType<typeof useGetPaginatedTransactionsQuery>;
@@ -3257,8 +3323,8 @@ export function useGetFirstTransactionsLazyQuery(baseOptions?: Apollo.LazyQueryH
           const options = {...defaultOptions, ...baseOptions}
           return Apollo.useLazyQuery<GetFirstTransactionsQuery, GetFirstTransactionsQueryVariables>(GetFirstTransactionsDocument, options);
         }
-export function useGetFirstTransactionsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetFirstTransactionsQuery, GetFirstTransactionsQueryVariables>) {
-          const options = {...defaultOptions, ...baseOptions}
+export function useGetFirstTransactionsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetFirstTransactionsQuery, GetFirstTransactionsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
           return Apollo.useSuspenseQuery<GetFirstTransactionsQuery, GetFirstTransactionsQueryVariables>(GetFirstTransactionsDocument, options);
         }
 export type GetFirstTransactionsQueryHookResult = ReturnType<typeof useGetFirstTransactionsQuery>;
@@ -3298,8 +3364,8 @@ export function useGetDefaultWalletByUsernameLazyQuery(baseOptions?: Apollo.Lazy
           const options = {...defaultOptions, ...baseOptions}
           return Apollo.useLazyQuery<GetDefaultWalletByUsernameQuery, GetDefaultWalletByUsernameQueryVariables>(GetDefaultWalletByUsernameDocument, options);
         }
-export function useGetDefaultWalletByUsernameSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetDefaultWalletByUsernameQuery, GetDefaultWalletByUsernameQueryVariables>) {
-          const options = {...defaultOptions, ...baseOptions}
+export function useGetDefaultWalletByUsernameSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetDefaultWalletByUsernameQuery, GetDefaultWalletByUsernameQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
           return Apollo.useSuspenseQuery<GetDefaultWalletByUsernameQuery, GetDefaultWalletByUsernameQueryVariables>(GetDefaultWalletByUsernameDocument, options);
         }
 export type GetDefaultWalletByUsernameQueryHookResult = ReturnType<typeof useGetDefaultWalletByUsernameQuery>;
@@ -3360,8 +3426,8 @@ export function useMeLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<MeQuery
           const options = {...defaultOptions, ...baseOptions}
           return Apollo.useLazyQuery<MeQuery, MeQueryVariables>(MeDocument, options);
         }
-export function useMeSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<MeQuery, MeQueryVariables>) {
-          const options = {...defaultOptions, ...baseOptions}
+export function useMeSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<MeQuery, MeQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
           return Apollo.useSuspenseQuery<MeQuery, MeQueryVariables>(MeDocument, options);
         }
 export type MeQueryHookResult = ReturnType<typeof useMeQuery>;
@@ -3410,8 +3476,8 @@ export function useRealtimePriceLazyQuery(baseOptions?: Apollo.LazyQueryHookOpti
           const options = {...defaultOptions, ...baseOptions}
           return Apollo.useLazyQuery<RealtimePriceQuery, RealtimePriceQueryVariables>(RealtimePriceDocument, options);
         }
-export function useRealtimePriceSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<RealtimePriceQuery, RealtimePriceQueryVariables>) {
-          const options = {...defaultOptions, ...baseOptions}
+export function useRealtimePriceSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<RealtimePriceQuery, RealtimePriceQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
           return Apollo.useSuspenseQuery<RealtimePriceQuery, RealtimePriceQueryVariables>(RealtimePriceDocument, options);
         }
 export type RealtimePriceQueryHookResult = ReturnType<typeof useRealtimePriceQuery>;
@@ -3486,21 +3552,21 @@ export type DirectiveResolverFn<TResult = {}, TParent = {}, TContext = {}, TArgs
 ) => TResult | Promise<TResult>;
 
 /** Mapping of union types */
-export type ResolversUnionTypes<RefType extends Record<string, unknown>> = {
+export type ResolversUnionTypes<_RefType extends Record<string, unknown>> = {
   InitiationVia: ( InitiationViaIntraLedger ) | ( InitiationViaLn ) | ( InitiationViaOnChain );
   NotificationAction: ( OpenDeepLinkAction ) | ( OpenExternalLinkAction );
   SettlementVia: ( SettlementViaIntraLedger ) | ( SettlementViaLn ) | ( SettlementViaOnChain );
-  UserUpdate: ( IntraLedgerUpdate ) | ( LnUpdate ) | ( OnChainUpdate ) | ( Price ) | ( RealtimePrice );
+  UserUpdate: ( Omit<IntraLedgerUpdate, 'transaction'> & { transaction: _RefType['Transaction'] } ) | ( Omit<LnUpdate, 'transaction'> & { transaction: _RefType['Transaction'] } ) | ( Omit<OnChainUpdate, 'transaction'> & { transaction: _RefType['Transaction'] } ) | ( Price ) | ( RealtimePrice );
 };
 
 /** Mapping of interface types */
-export type ResolversInterfaceTypes<RefType extends Record<string, unknown>> = {
-  Account: ( ConsumerAccount );
+export type ResolversInterfaceTypes<_RefType extends Record<string, unknown>> = {
+  Account: ( Omit<ConsumerAccount, 'callbackEndpoints' | 'invoices' | 'limits' | 'pendingIncomingTransactions' | 'transactions' | 'walletById' | 'wallets'> & { callbackEndpoints: ReadonlyArray<_RefType['CallbackEndpoint']>, invoices?: Maybe<_RefType['InvoiceConnection']>, limits: _RefType['AccountLimits'], pendingIncomingTransactions: ReadonlyArray<_RefType['Transaction']>, transactions?: Maybe<_RefType['TransactionConnection']>, walletById: _RefType['Wallet'], wallets: ReadonlyArray<_RefType['Wallet']> } );
   AccountLimit: ( OneDayAccountLimit );
   Error: ( GraphQlApplicationError );
   Invoice: ( LnInvoice ) | ( LnNoAmountInvoice );
   PriceInterface: ( PriceOfOneSatInMinorUnit ) | ( PriceOfOneSettlementMinorUnitInDisplayMinorUnit ) | ( PriceOfOneUsdCentInMinorUnit );
-  Wallet: ( BtcWallet ) | ( UsdWallet );
+  Wallet: ( Omit<BtcWallet, 'invoiceByPaymentHash' | 'invoices' | 'pendingIncomingTransactions' | 'pendingIncomingTransactionsByAddress' | 'transactionById' | 'transactions' | 'transactionsByAddress' | 'transactionsByPaymentHash' | 'transactionsByPaymentRequest'> & { invoiceByPaymentHash: _RefType['Invoice'], invoices?: Maybe<_RefType['InvoiceConnection']>, pendingIncomingTransactions: ReadonlyArray<_RefType['Transaction']>, pendingIncomingTransactionsByAddress: ReadonlyArray<_RefType['Transaction']>, transactionById: _RefType['Transaction'], transactions?: Maybe<_RefType['TransactionConnection']>, transactionsByAddress?: Maybe<_RefType['TransactionConnection']>, transactionsByPaymentHash: ReadonlyArray<_RefType['Transaction']>, transactionsByPaymentRequest: ReadonlyArray<_RefType['Transaction']> } ) | ( Omit<UsdWallet, 'invoiceByPaymentHash' | 'invoices' | 'pendingIncomingTransactions' | 'pendingIncomingTransactionsByAddress' | 'transactionById' | 'transactions' | 'transactionsByAddress' | 'transactionsByPaymentHash' | 'transactionsByPaymentRequest'> & { invoiceByPaymentHash: _RefType['Invoice'], invoices?: Maybe<_RefType['InvoiceConnection']>, pendingIncomingTransactions: ReadonlyArray<_RefType['Transaction']>, pendingIncomingTransactionsByAddress: ReadonlyArray<_RefType['Transaction']>, transactionById: _RefType['Transaction'], transactions?: Maybe<_RefType['TransactionConnection']>, transactionsByAddress?: Maybe<_RefType['TransactionConnection']>, transactionsByPaymentHash: ReadonlyArray<_RefType['Transaction']>, transactionsByPaymentRequest: ReadonlyArray<_RefType['Transaction']> } );
 };
 
 /** Mapping between all available schema types and the resolvers types */
@@ -3509,7 +3575,7 @@ export type ResolversTypes = {
   String: ResolverTypeWrapper<Scalars['String']['output']>;
   ID: ResolverTypeWrapper<Scalars['ID']['output']>;
   Int: ResolverTypeWrapper<Scalars['Int']['output']>;
-  AccountDeletePayload: ResolverTypeWrapper<AccountDeletePayload>;
+  AccountDeletePayload: ResolverTypeWrapper<Omit<AccountDeletePayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
   Boolean: ResolverTypeWrapper<Scalars['Boolean']['output']>;
   AccountDisableNotificationCategoryInput: AccountDisableNotificationCategoryInput;
   AccountDisableNotificationChannelInput: AccountDisableNotificationChannelInput;
@@ -3517,33 +3583,40 @@ export type ResolversTypes = {
   AccountEnableNotificationChannelInput: AccountEnableNotificationChannelInput;
   AccountLevel: AccountLevel;
   AccountLimit: ResolverTypeWrapper<ResolversInterfaceTypes<ResolversTypes>['AccountLimit']>;
-  AccountLimits: ResolverTypeWrapper<AccountLimits>;
+  AccountLimits: ResolverTypeWrapper<Omit<AccountLimits, 'convert' | 'internalSend' | 'withdrawal'> & { convert: ReadonlyArray<ResolversTypes['AccountLimit']>, internalSend: ReadonlyArray<ResolversTypes['AccountLimit']>, withdrawal: ReadonlyArray<ResolversTypes['AccountLimit']> }>;
   AccountUpdateDefaultWalletIdInput: AccountUpdateDefaultWalletIdInput;
-  AccountUpdateDefaultWalletIdPayload: ResolverTypeWrapper<AccountUpdateDefaultWalletIdPayload>;
+  AccountUpdateDefaultWalletIdPayload: ResolverTypeWrapper<Omit<AccountUpdateDefaultWalletIdPayload, 'account' | 'errors'> & { account?: Maybe<ResolversTypes['ConsumerAccount']>, errors: ReadonlyArray<ResolversTypes['Error']> }>;
   AccountUpdateDisplayCurrencyInput: AccountUpdateDisplayCurrencyInput;
-  AccountUpdateDisplayCurrencyPayload: ResolverTypeWrapper<AccountUpdateDisplayCurrencyPayload>;
-  AccountUpdateNotificationSettingsPayload: ResolverTypeWrapper<AccountUpdateNotificationSettingsPayload>;
+  AccountUpdateDisplayCurrencyPayload: ResolverTypeWrapper<Omit<AccountUpdateDisplayCurrencyPayload, 'account' | 'errors'> & { account?: Maybe<ResolversTypes['ConsumerAccount']>, errors: ReadonlyArray<ResolversTypes['Error']> }>;
+  AccountUpdateNotificationSettingsPayload: ResolverTypeWrapper<Omit<AccountUpdateNotificationSettingsPayload, 'account' | 'errors'> & { account?: Maybe<ResolversTypes['ConsumerAccount']>, errors: ReadonlyArray<ResolversTypes['Error']> }>;
   ApiKey: ResolverTypeWrapper<ApiKey>;
   ApiKeyCreateInput: ApiKeyCreateInput;
   ApiKeyCreatePayload: ResolverTypeWrapper<ApiKeyCreatePayload>;
   ApiKeyRevokeInput: ApiKeyRevokeInput;
   ApiKeyRevokePayload: ResolverTypeWrapper<ApiKeyRevokePayload>;
   AuthToken: ResolverTypeWrapper<Scalars['AuthToken']['output']>;
-  AuthTokenPayload: ResolverTypeWrapper<AuthTokenPayload>;
+  AuthTokenPayload: ResolverTypeWrapper<Omit<AuthTokenPayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
   Authorization: ResolverTypeWrapper<Authorization>;
-  BTCWallet: ResolverTypeWrapper<BtcWallet>;
+  BTCWallet: ResolverTypeWrapper<Omit<BtcWallet, 'invoiceByPaymentHash' | 'invoices' | 'pendingIncomingTransactions' | 'pendingIncomingTransactionsByAddress' | 'transactionById' | 'transactions' | 'transactionsByAddress' | 'transactionsByPaymentHash' | 'transactionsByPaymentRequest'> & { invoiceByPaymentHash: ResolversTypes['Invoice'], invoices?: Maybe<ResolversTypes['InvoiceConnection']>, pendingIncomingTransactions: ReadonlyArray<ResolversTypes['Transaction']>, pendingIncomingTransactionsByAddress: ReadonlyArray<ResolversTypes['Transaction']>, transactionById: ResolversTypes['Transaction'], transactions?: Maybe<ResolversTypes['TransactionConnection']>, transactionsByAddress?: Maybe<ResolversTypes['TransactionConnection']>, transactionsByPaymentHash: ReadonlyArray<ResolversTypes['Transaction']>, transactionsByPaymentRequest: ReadonlyArray<ResolversTypes['Transaction']> }>;
   BuildInformation: ResolverTypeWrapper<BuildInformation>;
   CallbackEndpoint: ResolverTypeWrapper<CallbackEndpoint>;
   CallbackEndpointAddInput: CallbackEndpointAddInput;
-  CallbackEndpointAddPayload: ResolverTypeWrapper<CallbackEndpointAddPayload>;
+  CallbackEndpointAddPayload: ResolverTypeWrapper<Omit<CallbackEndpointAddPayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
   CallbackEndpointDeleteInput: CallbackEndpointDeleteInput;
-  CaptchaCreateChallengePayload: ResolverTypeWrapper<CaptchaCreateChallengePayload>;
+  CaptchaCreateChallengePayload: ResolverTypeWrapper<Omit<CaptchaCreateChallengePayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
   CaptchaCreateChallengeResult: ResolverTypeWrapper<CaptchaCreateChallengeResult>;
   CaptchaRequestAuthCodeInput: CaptchaRequestAuthCodeInput;
   CentAmount: ResolverTypeWrapper<Scalars['CentAmount']['output']>;
-  CentAmountPayload: ResolverTypeWrapper<CentAmountPayload>;
-  ConsumerAccount: ResolverTypeWrapper<ConsumerAccount>;
+  CentAmountPayload: ResolverTypeWrapper<Omit<CentAmountPayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
+  ConsumerAccount: ResolverTypeWrapper<Omit<ConsumerAccount, 'callbackEndpoints' | 'invoices' | 'limits' | 'pendingIncomingTransactions' | 'transactions' | 'walletById' | 'wallets'> & { callbackEndpoints: ReadonlyArray<ResolversTypes['CallbackEndpoint']>, invoices?: Maybe<ResolversTypes['InvoiceConnection']>, limits: ResolversTypes['AccountLimits'], pendingIncomingTransactions: ReadonlyArray<ResolversTypes['Transaction']>, transactions?: Maybe<ResolversTypes['TransactionConnection']>, walletById: ResolversTypes['Wallet'], wallets: ReadonlyArray<ResolversTypes['Wallet']> }>;
+  Contact: ResolverTypeWrapper<Contact>;
   ContactAlias: ResolverTypeWrapper<Scalars['ContactAlias']['output']>;
+  ContactCreateInput: ContactCreateInput;
+  ContactDisplayName: ResolverTypeWrapper<Scalars['ContactDisplayName']['output']>;
+  ContactHandle: ResolverTypeWrapper<Scalars['ContactHandle']['output']>;
+  ContactId: ResolverTypeWrapper<Scalars['ContactId']['output']>;
+  ContactPayload: ResolverTypeWrapper<Omit<ContactPayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
+  ContactType: ContactType;
   Coordinates: ResolverTypeWrapper<Coordinates>;
   Float: ResolverTypeWrapper<Scalars['Float']['output']>;
   Country: ResolverTypeWrapper<Country>;
@@ -3572,11 +3645,11 @@ export type ResolversTypes = {
   InitiationViaLn: ResolverTypeWrapper<InitiationViaLn>;
   InitiationViaOnChain: ResolverTypeWrapper<InitiationViaOnChain>;
   IntraLedgerPaymentSendInput: IntraLedgerPaymentSendInput;
-  IntraLedgerUpdate: ResolverTypeWrapper<IntraLedgerUpdate>;
+  IntraLedgerUpdate: ResolverTypeWrapper<Omit<IntraLedgerUpdate, 'transaction'> & { transaction: ResolversTypes['Transaction'] }>;
   IntraLedgerUsdPaymentSendInput: IntraLedgerUsdPaymentSendInput;
   Invoice: ResolverTypeWrapper<ResolversInterfaceTypes<ResolversTypes>['Invoice']>;
-  InvoiceConnection: ResolverTypeWrapper<InvoiceConnection>;
-  InvoiceEdge: ResolverTypeWrapper<InvoiceEdge>;
+  InvoiceConnection: ResolverTypeWrapper<Omit<InvoiceConnection, 'edges'> & { edges?: Maybe<ReadonlyArray<ResolversTypes['InvoiceEdge']>> }>;
+  InvoiceEdge: ResolverTypeWrapper<Omit<InvoiceEdge, 'node'> & { node: ResolversTypes['Invoice'] }>;
   InvoicePaymentStatus: InvoicePaymentStatus;
   Language: ResolverTypeWrapper<Scalars['Language']['output']>;
   LnAddressPaymentSendInput: LnAddressPaymentSendInput;
@@ -3585,25 +3658,25 @@ export type ResolversTypes = {
   LnInvoiceCreateInput: LnInvoiceCreateInput;
   LnInvoiceCreateOnBehalfOfRecipientInput: LnInvoiceCreateOnBehalfOfRecipientInput;
   LnInvoiceFeeProbeInput: LnInvoiceFeeProbeInput;
-  LnInvoicePayload: ResolverTypeWrapper<LnInvoicePayload>;
+  LnInvoicePayload: ResolverTypeWrapper<Omit<LnInvoicePayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
   LnInvoicePaymentInput: LnInvoicePaymentInput;
   LnInvoicePaymentStatus: ResolverTypeWrapper<LnInvoicePaymentStatus>;
   LnInvoicePaymentStatusByHashInput: LnInvoicePaymentStatusByHashInput;
   LnInvoicePaymentStatusByPaymentRequestInput: LnInvoicePaymentStatusByPaymentRequestInput;
   LnInvoicePaymentStatusInput: LnInvoicePaymentStatusInput;
-  LnInvoicePaymentStatusPayload: ResolverTypeWrapper<LnInvoicePaymentStatusPayload>;
+  LnInvoicePaymentStatusPayload: ResolverTypeWrapper<Omit<LnInvoicePaymentStatusPayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
   LnNoAmountInvoice: ResolverTypeWrapper<LnNoAmountInvoice>;
   LnNoAmountInvoiceCreateInput: LnNoAmountInvoiceCreateInput;
   LnNoAmountInvoiceCreateOnBehalfOfRecipientInput: LnNoAmountInvoiceCreateOnBehalfOfRecipientInput;
   LnNoAmountInvoiceFeeProbeInput: LnNoAmountInvoiceFeeProbeInput;
-  LnNoAmountInvoicePayload: ResolverTypeWrapper<LnNoAmountInvoicePayload>;
+  LnNoAmountInvoicePayload: ResolverTypeWrapper<Omit<LnNoAmountInvoicePayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
   LnNoAmountInvoicePaymentInput: LnNoAmountInvoicePaymentInput;
   LnNoAmountUsdInvoiceFeeProbeInput: LnNoAmountUsdInvoiceFeeProbeInput;
   LnNoAmountUsdInvoicePaymentInput: LnNoAmountUsdInvoicePaymentInput;
   LnPaymentPreImage: ResolverTypeWrapper<Scalars['LnPaymentPreImage']['output']>;
   LnPaymentRequest: ResolverTypeWrapper<Scalars['LnPaymentRequest']['output']>;
   LnPaymentSecret: ResolverTypeWrapper<Scalars['LnPaymentSecret']['output']>;
-  LnUpdate: ResolverTypeWrapper<LnUpdate>;
+  LnUpdate: ResolverTypeWrapper<Omit<LnUpdate, 'transaction'> & { transaction: ResolversTypes['Transaction'] }>;
   LnUsdInvoiceBtcDenominatedCreateOnBehalfOfRecipientInput: LnUsdInvoiceBtcDenominatedCreateOnBehalfOfRecipientInput;
   LnUsdInvoiceCreateInput: LnUsdInvoiceCreateInput;
   LnUsdInvoiceCreateOnBehalfOfRecipientInput: LnUsdInvoiceCreateOnBehalfOfRecipientInput;
@@ -3614,11 +3687,11 @@ export type ResolversTypes = {
   Memo: ResolverTypeWrapper<Scalars['Memo']['output']>;
   Merchant: ResolverTypeWrapper<Merchant>;
   MerchantMapSuggestInput: MerchantMapSuggestInput;
-  MerchantPayload: ResolverTypeWrapper<MerchantPayload>;
+  MerchantPayload: ResolverTypeWrapper<Omit<MerchantPayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
   Minutes: ResolverTypeWrapper<Scalars['Minutes']['output']>;
   MobileVersions: ResolverTypeWrapper<MobileVersions>;
   Mutation: ResolverTypeWrapper<{}>;
-  MyUpdatesPayload: ResolverTypeWrapper<Omit<MyUpdatesPayload, 'update'> & { update?: Maybe<ResolversTypes['UserUpdate']> }>;
+  MyUpdatesPayload: ResolverTypeWrapper<Omit<MyUpdatesPayload, 'errors' | 'me' | 'update'> & { errors: ReadonlyArray<ResolversTypes['Error']>, me?: Maybe<ResolversTypes['User']>, update?: Maybe<ResolversTypes['UserUpdate']> }>;
   Network: Network;
   NotificationAction: ResolverTypeWrapper<ResolversUnionTypes<ResolversTypes>['NotificationAction']>;
   NotificationCategory: ResolverTypeWrapper<Scalars['NotificationCategory']['output']>;
@@ -3628,12 +3701,12 @@ export type ResolversTypes = {
   OnChainAddress: ResolverTypeWrapper<Scalars['OnChainAddress']['output']>;
   OnChainAddressCreateInput: OnChainAddressCreateInput;
   OnChainAddressCurrentInput: OnChainAddressCurrentInput;
-  OnChainAddressPayload: ResolverTypeWrapper<OnChainAddressPayload>;
+  OnChainAddressPayload: ResolverTypeWrapper<Omit<OnChainAddressPayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
   OnChainPaymentSendAllInput: OnChainPaymentSendAllInput;
   OnChainPaymentSendInput: OnChainPaymentSendInput;
   OnChainTxFee: ResolverTypeWrapper<OnChainTxFee>;
   OnChainTxHash: ResolverTypeWrapper<Scalars['OnChainTxHash']['output']>;
-  OnChainUpdate: ResolverTypeWrapper<OnChainUpdate>;
+  OnChainUpdate: ResolverTypeWrapper<Omit<OnChainUpdate, 'transaction'> & { transaction: ResolversTypes['Transaction'] }>;
   OnChainUsdPaymentSendAsBtcDenominatedInput: OnChainUsdPaymentSendAsBtcDenominatedInput;
   OnChainUsdPaymentSendInput: OnChainUsdPaymentSendInput;
   OnChainUsdTxFee: ResolverTypeWrapper<OnChainUsdTxFee>;
@@ -3643,9 +3716,10 @@ export type ResolversTypes = {
   OpenExternalLinkAction: ResolverTypeWrapper<OpenExternalLinkAction>;
   PageInfo: ResolverTypeWrapper<PageInfo>;
   PaymentHash: ResolverTypeWrapper<Scalars['PaymentHash']['output']>;
-  PaymentSendPayload: ResolverTypeWrapper<PaymentSendPayload>;
+  PaymentSendPayload: ResolverTypeWrapper<Omit<PaymentSendPayload, 'errors' | 'transaction'> & { errors: ReadonlyArray<ResolversTypes['Error']>, transaction?: Maybe<ResolversTypes['Transaction']> }>;
   PaymentSendResult: PaymentSendResult;
   PayoutSpeed: PayoutSpeed;
+  PayoutSpeeds: ResolverTypeWrapper<PayoutSpeeds>;
   Phone: ResolverTypeWrapper<Scalars['Phone']['output']>;
   PhoneCodeChannelType: PhoneCodeChannelType;
   Price: ResolverTypeWrapper<Price>;
@@ -3655,19 +3729,19 @@ export type ResolversTypes = {
   PriceOfOneSatInMinorUnit: ResolverTypeWrapper<PriceOfOneSatInMinorUnit>;
   PriceOfOneSettlementMinorUnitInDisplayMinorUnit: ResolverTypeWrapper<PriceOfOneSettlementMinorUnitInDisplayMinorUnit>;
   PriceOfOneUsdCentInMinorUnit: ResolverTypeWrapper<PriceOfOneUsdCentInMinorUnit>;
-  PricePayload: ResolverTypeWrapper<PricePayload>;
+  PricePayload: ResolverTypeWrapper<Omit<PricePayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
   PricePoint: ResolverTypeWrapper<PricePoint>;
   PublicWallet: ResolverTypeWrapper<PublicWallet>;
   Query: ResolverTypeWrapper<{}>;
   Quiz: ResolverTypeWrapper<Quiz>;
   QuizClaimInput: QuizClaimInput;
-  QuizClaimPayload: ResolverTypeWrapper<QuizClaimPayload>;
+  QuizClaimPayload: ResolverTypeWrapper<Omit<QuizClaimPayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
   RealtimePrice: ResolverTypeWrapper<RealtimePrice>;
   RealtimePriceInput: RealtimePriceInput;
-  RealtimePricePayload: ResolverTypeWrapper<RealtimePricePayload>;
+  RealtimePricePayload: ResolverTypeWrapper<Omit<RealtimePricePayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
   SafeInt: ResolverTypeWrapper<Scalars['SafeInt']['output']>;
   SatAmount: ResolverTypeWrapper<Scalars['SatAmount']['output']>;
-  SatAmountPayload: ResolverTypeWrapper<SatAmountPayload>;
+  SatAmountPayload: ResolverTypeWrapper<Omit<SatAmountPayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
   Scope: Scope;
   Seconds: ResolverTypeWrapper<Scalars['Seconds']['output']>;
   SettlementVia: ResolverTypeWrapper<ResolversUnionTypes<ResolversTypes>['SettlementVia']>;
@@ -3678,13 +3752,13 @@ export type ResolversTypes = {
   SignedDisplayMajorAmount: ResolverTypeWrapper<Scalars['SignedDisplayMajorAmount']['output']>;
   StatefulNotification: ResolverTypeWrapper<Omit<StatefulNotification, 'action'> & { action?: Maybe<ResolversTypes['NotificationAction']> }>;
   StatefulNotificationAcknowledgeInput: StatefulNotificationAcknowledgeInput;
-  StatefulNotificationAcknowledgePayload: ResolverTypeWrapper<StatefulNotificationAcknowledgePayload>;
-  StatefulNotificationConnection: ResolverTypeWrapper<StatefulNotificationConnection>;
-  StatefulNotificationEdge: ResolverTypeWrapper<StatefulNotificationEdge>;
+  StatefulNotificationAcknowledgePayload: ResolverTypeWrapper<Omit<StatefulNotificationAcknowledgePayload, 'notification'> & { notification: ResolversTypes['StatefulNotification'] }>;
+  StatefulNotificationConnection: ResolverTypeWrapper<Omit<StatefulNotificationConnection, 'edges' | 'nodes'> & { edges: ReadonlyArray<ResolversTypes['StatefulNotificationEdge']>, nodes: ReadonlyArray<ResolversTypes['StatefulNotification']> }>;
+  StatefulNotificationEdge: ResolverTypeWrapper<Omit<StatefulNotificationEdge, 'node'> & { node: ResolversTypes['StatefulNotification'] }>;
   Subscription: ResolverTypeWrapper<{}>;
-  SuccessPayload: ResolverTypeWrapper<SuccessPayload>;
+  SuccessPayload: ResolverTypeWrapper<Omit<SuccessPayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
   SupportChatMessageAddInput: SupportChatMessageAddInput;
-  SupportChatMessageAddPayload: ResolverTypeWrapper<SupportChatMessageAddPayload>;
+  SupportChatMessageAddPayload: ResolverTypeWrapper<Omit<SupportChatMessageAddPayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
   SupportMessage: ResolverTypeWrapper<SupportMessage>;
   SupportRole: SupportRole;
   Timestamp: ResolverTypeWrapper<Scalars['Timestamp']['output']>;
@@ -3692,39 +3766,39 @@ export type ResolversTypes = {
   TotpRegistrationId: ResolverTypeWrapper<Scalars['TotpRegistrationId']['output']>;
   TotpSecret: ResolverTypeWrapper<Scalars['TotpSecret']['output']>;
   Transaction: ResolverTypeWrapper<Omit<Transaction, 'initiationVia' | 'settlementVia'> & { initiationVia: ResolversTypes['InitiationVia'], settlementVia: ResolversTypes['SettlementVia'] }>;
-  TransactionConnection: ResolverTypeWrapper<TransactionConnection>;
-  TransactionEdge: ResolverTypeWrapper<TransactionEdge>;
+  TransactionConnection: ResolverTypeWrapper<Omit<TransactionConnection, 'edges'> & { edges?: Maybe<ReadonlyArray<ResolversTypes['TransactionEdge']>> }>;
+  TransactionEdge: ResolverTypeWrapper<Omit<TransactionEdge, 'node'> & { node: ResolversTypes['Transaction'] }>;
   TxDirection: TxDirection;
   TxExternalId: ResolverTypeWrapper<Scalars['TxExternalId']['output']>;
   TxNotificationType: TxNotificationType;
   TxStatus: TxStatus;
-  UpgradePayload: ResolverTypeWrapper<UpgradePayload>;
-  UsdWallet: ResolverTypeWrapper<UsdWallet>;
-  User: ResolverTypeWrapper<User>;
-  UserContact: ResolverTypeWrapper<UserContact>;
+  UpgradePayload: ResolverTypeWrapper<Omit<UpgradePayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
+  UsdWallet: ResolverTypeWrapper<Omit<UsdWallet, 'invoiceByPaymentHash' | 'invoices' | 'pendingIncomingTransactions' | 'pendingIncomingTransactionsByAddress' | 'transactionById' | 'transactions' | 'transactionsByAddress' | 'transactionsByPaymentHash' | 'transactionsByPaymentRequest'> & { invoiceByPaymentHash: ResolversTypes['Invoice'], invoices?: Maybe<ResolversTypes['InvoiceConnection']>, pendingIncomingTransactions: ReadonlyArray<ResolversTypes['Transaction']>, pendingIncomingTransactionsByAddress: ReadonlyArray<ResolversTypes['Transaction']>, transactionById: ResolversTypes['Transaction'], transactions?: Maybe<ResolversTypes['TransactionConnection']>, transactionsByAddress?: Maybe<ResolversTypes['TransactionConnection']>, transactionsByPaymentHash: ReadonlyArray<ResolversTypes['Transaction']>, transactionsByPaymentRequest: ReadonlyArray<ResolversTypes['Transaction']> }>;
+  User: ResolverTypeWrapper<Omit<User, 'contactByUsername' | 'contacts' | 'defaultAccount' | 'statefulNotifications' | 'statefulNotificationsWithoutBulletinEnabled' | 'unacknowledgedStatefulNotificationsWithBulletinEnabled'> & { contactByUsername: ResolversTypes['UserContact'], contacts: ReadonlyArray<ResolversTypes['UserContact']>, defaultAccount: ResolversTypes['Account'], statefulNotifications: ResolversTypes['StatefulNotificationConnection'], statefulNotificationsWithoutBulletinEnabled: ResolversTypes['StatefulNotificationConnection'], unacknowledgedStatefulNotificationsWithBulletinEnabled: ResolversTypes['StatefulNotificationConnection'] }>;
+  UserContact: ResolverTypeWrapper<Omit<UserContact, 'transactions'> & { transactions?: Maybe<ResolversTypes['TransactionConnection']> }>;
   UserContactUpdateAliasInput: UserContactUpdateAliasInput;
-  UserContactUpdateAliasPayload: ResolverTypeWrapper<UserContactUpdateAliasPayload>;
-  UserEmailDeletePayload: ResolverTypeWrapper<UserEmailDeletePayload>;
+  UserContactUpdateAliasPayload: ResolverTypeWrapper<Omit<UserContactUpdateAliasPayload, 'contact' | 'errors'> & { contact?: Maybe<ResolversTypes['UserContact']>, errors: ReadonlyArray<ResolversTypes['Error']> }>;
+  UserEmailDeletePayload: ResolverTypeWrapper<Omit<UserEmailDeletePayload, 'errors' | 'me'> & { errors: ReadonlyArray<ResolversTypes['Error']>, me?: Maybe<ResolversTypes['User']> }>;
   UserEmailRegistrationInitiateInput: UserEmailRegistrationInitiateInput;
-  UserEmailRegistrationInitiatePayload: ResolverTypeWrapper<UserEmailRegistrationInitiatePayload>;
+  UserEmailRegistrationInitiatePayload: ResolverTypeWrapper<Omit<UserEmailRegistrationInitiatePayload, 'errors' | 'me'> & { errors: ReadonlyArray<ResolversTypes['Error']>, me?: Maybe<ResolversTypes['User']> }>;
   UserEmailRegistrationValidateInput: UserEmailRegistrationValidateInput;
-  UserEmailRegistrationValidatePayload: ResolverTypeWrapper<UserEmailRegistrationValidatePayload>;
+  UserEmailRegistrationValidatePayload: ResolverTypeWrapper<Omit<UserEmailRegistrationValidatePayload, 'errors' | 'me'> & { errors: ReadonlyArray<ResolversTypes['Error']>, me?: Maybe<ResolversTypes['User']> }>;
   UserLoginInput: UserLoginInput;
   UserLoginUpgradeInput: UserLoginUpgradeInput;
   UserLogoutInput: UserLogoutInput;
-  UserPhoneDeletePayload: ResolverTypeWrapper<UserPhoneDeletePayload>;
+  UserPhoneDeletePayload: ResolverTypeWrapper<Omit<UserPhoneDeletePayload, 'errors' | 'me'> & { errors: ReadonlyArray<ResolversTypes['Error']>, me?: Maybe<ResolversTypes['User']> }>;
   UserPhoneRegistrationInitiateInput: UserPhoneRegistrationInitiateInput;
   UserPhoneRegistrationValidateInput: UserPhoneRegistrationValidateInput;
-  UserPhoneRegistrationValidatePayload: ResolverTypeWrapper<UserPhoneRegistrationValidatePayload>;
-  UserTotpDeletePayload: ResolverTypeWrapper<UserTotpDeletePayload>;
-  UserTotpRegistrationInitiatePayload: ResolverTypeWrapper<UserTotpRegistrationInitiatePayload>;
+  UserPhoneRegistrationValidatePayload: ResolverTypeWrapper<Omit<UserPhoneRegistrationValidatePayload, 'errors' | 'me'> & { errors: ReadonlyArray<ResolversTypes['Error']>, me?: Maybe<ResolversTypes['User']> }>;
+  UserTotpDeletePayload: ResolverTypeWrapper<Omit<UserTotpDeletePayload, 'errors' | 'me'> & { errors: ReadonlyArray<ResolversTypes['Error']>, me?: Maybe<ResolversTypes['User']> }>;
+  UserTotpRegistrationInitiatePayload: ResolverTypeWrapper<Omit<UserTotpRegistrationInitiatePayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
   UserTotpRegistrationValidateInput: UserTotpRegistrationValidateInput;
-  UserTotpRegistrationValidatePayload: ResolverTypeWrapper<UserTotpRegistrationValidatePayload>;
+  UserTotpRegistrationValidatePayload: ResolverTypeWrapper<Omit<UserTotpRegistrationValidatePayload, 'errors' | 'me'> & { errors: ReadonlyArray<ResolversTypes['Error']>, me?: Maybe<ResolversTypes['User']> }>;
   UserUpdate: ResolverTypeWrapper<ResolversUnionTypes<ResolversTypes>['UserUpdate']>;
   UserUpdateLanguageInput: UserUpdateLanguageInput;
-  UserUpdateLanguagePayload: ResolverTypeWrapper<UserUpdateLanguagePayload>;
+  UserUpdateLanguagePayload: ResolverTypeWrapper<Omit<UserUpdateLanguagePayload, 'errors' | 'user'> & { errors: ReadonlyArray<ResolversTypes['Error']>, user?: Maybe<ResolversTypes['User']> }>;
   UserUpdateUsernameInput: UserUpdateUsernameInput;
-  UserUpdateUsernamePayload: ResolverTypeWrapper<UserUpdateUsernamePayload>;
+  UserUpdateUsernamePayload: ResolverTypeWrapper<Omit<UserUpdateUsernamePayload, 'errors' | 'user'> & { errors: ReadonlyArray<ResolversTypes['Error']>, user?: Maybe<ResolversTypes['User']> }>;
   Username: ResolverTypeWrapper<Scalars['Username']['output']>;
   Wallet: ResolverTypeWrapper<ResolversInterfaceTypes<ResolversTypes>['Wallet']>;
   WalletCurrency: WalletCurrency;
@@ -3741,40 +3815,46 @@ export type ResolversParentTypes = {
   String: Scalars['String']['output'];
   ID: Scalars['ID']['output'];
   Int: Scalars['Int']['output'];
-  AccountDeletePayload: AccountDeletePayload;
+  AccountDeletePayload: Omit<AccountDeletePayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
   Boolean: Scalars['Boolean']['output'];
   AccountDisableNotificationCategoryInput: AccountDisableNotificationCategoryInput;
   AccountDisableNotificationChannelInput: AccountDisableNotificationChannelInput;
   AccountEnableNotificationCategoryInput: AccountEnableNotificationCategoryInput;
   AccountEnableNotificationChannelInput: AccountEnableNotificationChannelInput;
   AccountLimit: ResolversInterfaceTypes<ResolversParentTypes>['AccountLimit'];
-  AccountLimits: AccountLimits;
+  AccountLimits: Omit<AccountLimits, 'convert' | 'internalSend' | 'withdrawal'> & { convert: ReadonlyArray<ResolversParentTypes['AccountLimit']>, internalSend: ReadonlyArray<ResolversParentTypes['AccountLimit']>, withdrawal: ReadonlyArray<ResolversParentTypes['AccountLimit']> };
   AccountUpdateDefaultWalletIdInput: AccountUpdateDefaultWalletIdInput;
-  AccountUpdateDefaultWalletIdPayload: AccountUpdateDefaultWalletIdPayload;
+  AccountUpdateDefaultWalletIdPayload: Omit<AccountUpdateDefaultWalletIdPayload, 'account' | 'errors'> & { account?: Maybe<ResolversParentTypes['ConsumerAccount']>, errors: ReadonlyArray<ResolversParentTypes['Error']> };
   AccountUpdateDisplayCurrencyInput: AccountUpdateDisplayCurrencyInput;
-  AccountUpdateDisplayCurrencyPayload: AccountUpdateDisplayCurrencyPayload;
-  AccountUpdateNotificationSettingsPayload: AccountUpdateNotificationSettingsPayload;
+  AccountUpdateDisplayCurrencyPayload: Omit<AccountUpdateDisplayCurrencyPayload, 'account' | 'errors'> & { account?: Maybe<ResolversParentTypes['ConsumerAccount']>, errors: ReadonlyArray<ResolversParentTypes['Error']> };
+  AccountUpdateNotificationSettingsPayload: Omit<AccountUpdateNotificationSettingsPayload, 'account' | 'errors'> & { account?: Maybe<ResolversParentTypes['ConsumerAccount']>, errors: ReadonlyArray<ResolversParentTypes['Error']> };
   ApiKey: ApiKey;
   ApiKeyCreateInput: ApiKeyCreateInput;
   ApiKeyCreatePayload: ApiKeyCreatePayload;
   ApiKeyRevokeInput: ApiKeyRevokeInput;
   ApiKeyRevokePayload: ApiKeyRevokePayload;
   AuthToken: Scalars['AuthToken']['output'];
-  AuthTokenPayload: AuthTokenPayload;
+  AuthTokenPayload: Omit<AuthTokenPayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
   Authorization: Authorization;
-  BTCWallet: BtcWallet;
+  BTCWallet: Omit<BtcWallet, 'invoiceByPaymentHash' | 'invoices' | 'pendingIncomingTransactions' | 'pendingIncomingTransactionsByAddress' | 'transactionById' | 'transactions' | 'transactionsByAddress' | 'transactionsByPaymentHash' | 'transactionsByPaymentRequest'> & { invoiceByPaymentHash: ResolversParentTypes['Invoice'], invoices?: Maybe<ResolversParentTypes['InvoiceConnection']>, pendingIncomingTransactions: ReadonlyArray<ResolversParentTypes['Transaction']>, pendingIncomingTransactionsByAddress: ReadonlyArray<ResolversParentTypes['Transaction']>, transactionById: ResolversParentTypes['Transaction'], transactions?: Maybe<ResolversParentTypes['TransactionConnection']>, transactionsByAddress?: Maybe<ResolversParentTypes['TransactionConnection']>, transactionsByPaymentHash: ReadonlyArray<ResolversParentTypes['Transaction']>, transactionsByPaymentRequest: ReadonlyArray<ResolversParentTypes['Transaction']> };
   BuildInformation: BuildInformation;
   CallbackEndpoint: CallbackEndpoint;
   CallbackEndpointAddInput: CallbackEndpointAddInput;
-  CallbackEndpointAddPayload: CallbackEndpointAddPayload;
+  CallbackEndpointAddPayload: Omit<CallbackEndpointAddPayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
   CallbackEndpointDeleteInput: CallbackEndpointDeleteInput;
-  CaptchaCreateChallengePayload: CaptchaCreateChallengePayload;
+  CaptchaCreateChallengePayload: Omit<CaptchaCreateChallengePayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
   CaptchaCreateChallengeResult: CaptchaCreateChallengeResult;
   CaptchaRequestAuthCodeInput: CaptchaRequestAuthCodeInput;
   CentAmount: Scalars['CentAmount']['output'];
-  CentAmountPayload: CentAmountPayload;
-  ConsumerAccount: ConsumerAccount;
+  CentAmountPayload: Omit<CentAmountPayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
+  ConsumerAccount: Omit<ConsumerAccount, 'callbackEndpoints' | 'invoices' | 'limits' | 'pendingIncomingTransactions' | 'transactions' | 'walletById' | 'wallets'> & { callbackEndpoints: ReadonlyArray<ResolversParentTypes['CallbackEndpoint']>, invoices?: Maybe<ResolversParentTypes['InvoiceConnection']>, limits: ResolversParentTypes['AccountLimits'], pendingIncomingTransactions: ReadonlyArray<ResolversParentTypes['Transaction']>, transactions?: Maybe<ResolversParentTypes['TransactionConnection']>, walletById: ResolversParentTypes['Wallet'], wallets: ReadonlyArray<ResolversParentTypes['Wallet']> };
+  Contact: Contact;
   ContactAlias: Scalars['ContactAlias']['output'];
+  ContactCreateInput: ContactCreateInput;
+  ContactDisplayName: Scalars['ContactDisplayName']['output'];
+  ContactHandle: Scalars['ContactHandle']['output'];
+  ContactId: Scalars['ContactId']['output'];
+  ContactPayload: Omit<ContactPayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
   Coordinates: Coordinates;
   Float: Scalars['Float']['output'];
   Country: Country;
@@ -3801,11 +3881,11 @@ export type ResolversParentTypes = {
   InitiationViaLn: InitiationViaLn;
   InitiationViaOnChain: InitiationViaOnChain;
   IntraLedgerPaymentSendInput: IntraLedgerPaymentSendInput;
-  IntraLedgerUpdate: IntraLedgerUpdate;
+  IntraLedgerUpdate: Omit<IntraLedgerUpdate, 'transaction'> & { transaction: ResolversParentTypes['Transaction'] };
   IntraLedgerUsdPaymentSendInput: IntraLedgerUsdPaymentSendInput;
   Invoice: ResolversInterfaceTypes<ResolversParentTypes>['Invoice'];
-  InvoiceConnection: InvoiceConnection;
-  InvoiceEdge: InvoiceEdge;
+  InvoiceConnection: Omit<InvoiceConnection, 'edges'> & { edges?: Maybe<ReadonlyArray<ResolversParentTypes['InvoiceEdge']>> };
+  InvoiceEdge: Omit<InvoiceEdge, 'node'> & { node: ResolversParentTypes['Invoice'] };
   Language: Scalars['Language']['output'];
   LnAddressPaymentSendInput: LnAddressPaymentSendInput;
   LnInvoice: LnInvoice;
@@ -3813,25 +3893,25 @@ export type ResolversParentTypes = {
   LnInvoiceCreateInput: LnInvoiceCreateInput;
   LnInvoiceCreateOnBehalfOfRecipientInput: LnInvoiceCreateOnBehalfOfRecipientInput;
   LnInvoiceFeeProbeInput: LnInvoiceFeeProbeInput;
-  LnInvoicePayload: LnInvoicePayload;
+  LnInvoicePayload: Omit<LnInvoicePayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
   LnInvoicePaymentInput: LnInvoicePaymentInput;
   LnInvoicePaymentStatus: LnInvoicePaymentStatus;
   LnInvoicePaymentStatusByHashInput: LnInvoicePaymentStatusByHashInput;
   LnInvoicePaymentStatusByPaymentRequestInput: LnInvoicePaymentStatusByPaymentRequestInput;
   LnInvoicePaymentStatusInput: LnInvoicePaymentStatusInput;
-  LnInvoicePaymentStatusPayload: LnInvoicePaymentStatusPayload;
+  LnInvoicePaymentStatusPayload: Omit<LnInvoicePaymentStatusPayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
   LnNoAmountInvoice: LnNoAmountInvoice;
   LnNoAmountInvoiceCreateInput: LnNoAmountInvoiceCreateInput;
   LnNoAmountInvoiceCreateOnBehalfOfRecipientInput: LnNoAmountInvoiceCreateOnBehalfOfRecipientInput;
   LnNoAmountInvoiceFeeProbeInput: LnNoAmountInvoiceFeeProbeInput;
-  LnNoAmountInvoicePayload: LnNoAmountInvoicePayload;
+  LnNoAmountInvoicePayload: Omit<LnNoAmountInvoicePayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
   LnNoAmountInvoicePaymentInput: LnNoAmountInvoicePaymentInput;
   LnNoAmountUsdInvoiceFeeProbeInput: LnNoAmountUsdInvoiceFeeProbeInput;
   LnNoAmountUsdInvoicePaymentInput: LnNoAmountUsdInvoicePaymentInput;
   LnPaymentPreImage: Scalars['LnPaymentPreImage']['output'];
   LnPaymentRequest: Scalars['LnPaymentRequest']['output'];
   LnPaymentSecret: Scalars['LnPaymentSecret']['output'];
-  LnUpdate: LnUpdate;
+  LnUpdate: Omit<LnUpdate, 'transaction'> & { transaction: ResolversParentTypes['Transaction'] };
   LnUsdInvoiceBtcDenominatedCreateOnBehalfOfRecipientInput: LnUsdInvoiceBtcDenominatedCreateOnBehalfOfRecipientInput;
   LnUsdInvoiceCreateInput: LnUsdInvoiceCreateInput;
   LnUsdInvoiceCreateOnBehalfOfRecipientInput: LnUsdInvoiceCreateOnBehalfOfRecipientInput;
@@ -3842,11 +3922,11 @@ export type ResolversParentTypes = {
   Memo: Scalars['Memo']['output'];
   Merchant: Merchant;
   MerchantMapSuggestInput: MerchantMapSuggestInput;
-  MerchantPayload: MerchantPayload;
+  MerchantPayload: Omit<MerchantPayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
   Minutes: Scalars['Minutes']['output'];
   MobileVersions: MobileVersions;
   Mutation: {};
-  MyUpdatesPayload: Omit<MyUpdatesPayload, 'update'> & { update?: Maybe<ResolversParentTypes['UserUpdate']> };
+  MyUpdatesPayload: Omit<MyUpdatesPayload, 'errors' | 'me' | 'update'> & { errors: ReadonlyArray<ResolversParentTypes['Error']>, me?: Maybe<ResolversParentTypes['User']>, update?: Maybe<ResolversParentTypes['UserUpdate']> };
   NotificationAction: ResolversUnionTypes<ResolversParentTypes>['NotificationAction'];
   NotificationCategory: Scalars['NotificationCategory']['output'];
   NotificationChannelSettings: NotificationChannelSettings;
@@ -3854,12 +3934,12 @@ export type ResolversParentTypes = {
   OnChainAddress: Scalars['OnChainAddress']['output'];
   OnChainAddressCreateInput: OnChainAddressCreateInput;
   OnChainAddressCurrentInput: OnChainAddressCurrentInput;
-  OnChainAddressPayload: OnChainAddressPayload;
+  OnChainAddressPayload: Omit<OnChainAddressPayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
   OnChainPaymentSendAllInput: OnChainPaymentSendAllInput;
   OnChainPaymentSendInput: OnChainPaymentSendInput;
   OnChainTxFee: OnChainTxFee;
   OnChainTxHash: Scalars['OnChainTxHash']['output'];
-  OnChainUpdate: OnChainUpdate;
+  OnChainUpdate: Omit<OnChainUpdate, 'transaction'> & { transaction: ResolversParentTypes['Transaction'] };
   OnChainUsdPaymentSendAsBtcDenominatedInput: OnChainUsdPaymentSendAsBtcDenominatedInput;
   OnChainUsdPaymentSendInput: OnChainUsdPaymentSendInput;
   OnChainUsdTxFee: OnChainUsdTxFee;
@@ -3869,7 +3949,8 @@ export type ResolversParentTypes = {
   OpenExternalLinkAction: OpenExternalLinkAction;
   PageInfo: PageInfo;
   PaymentHash: Scalars['PaymentHash']['output'];
-  PaymentSendPayload: PaymentSendPayload;
+  PaymentSendPayload: Omit<PaymentSendPayload, 'errors' | 'transaction'> & { errors: ReadonlyArray<ResolversParentTypes['Error']>, transaction?: Maybe<ResolversParentTypes['Transaction']> };
+  PayoutSpeeds: PayoutSpeeds;
   Phone: Scalars['Phone']['output'];
   Price: Price;
   PriceInput: PriceInput;
@@ -3877,19 +3958,19 @@ export type ResolversParentTypes = {
   PriceOfOneSatInMinorUnit: PriceOfOneSatInMinorUnit;
   PriceOfOneSettlementMinorUnitInDisplayMinorUnit: PriceOfOneSettlementMinorUnitInDisplayMinorUnit;
   PriceOfOneUsdCentInMinorUnit: PriceOfOneUsdCentInMinorUnit;
-  PricePayload: PricePayload;
+  PricePayload: Omit<PricePayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
   PricePoint: PricePoint;
   PublicWallet: PublicWallet;
   Query: {};
   Quiz: Quiz;
   QuizClaimInput: QuizClaimInput;
-  QuizClaimPayload: QuizClaimPayload;
+  QuizClaimPayload: Omit<QuizClaimPayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
   RealtimePrice: RealtimePrice;
   RealtimePriceInput: RealtimePriceInput;
-  RealtimePricePayload: RealtimePricePayload;
+  RealtimePricePayload: Omit<RealtimePricePayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
   SafeInt: Scalars['SafeInt']['output'];
   SatAmount: Scalars['SatAmount']['output'];
-  SatAmountPayload: SatAmountPayload;
+  SatAmountPayload: Omit<SatAmountPayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
   Seconds: Scalars['Seconds']['output'];
   SettlementVia: ResolversUnionTypes<ResolversParentTypes>['SettlementVia'];
   SettlementViaIntraLedger: SettlementViaIntraLedger;
@@ -3899,49 +3980,49 @@ export type ResolversParentTypes = {
   SignedDisplayMajorAmount: Scalars['SignedDisplayMajorAmount']['output'];
   StatefulNotification: Omit<StatefulNotification, 'action'> & { action?: Maybe<ResolversParentTypes['NotificationAction']> };
   StatefulNotificationAcknowledgeInput: StatefulNotificationAcknowledgeInput;
-  StatefulNotificationAcknowledgePayload: StatefulNotificationAcknowledgePayload;
-  StatefulNotificationConnection: StatefulNotificationConnection;
-  StatefulNotificationEdge: StatefulNotificationEdge;
+  StatefulNotificationAcknowledgePayload: Omit<StatefulNotificationAcknowledgePayload, 'notification'> & { notification: ResolversParentTypes['StatefulNotification'] };
+  StatefulNotificationConnection: Omit<StatefulNotificationConnection, 'edges' | 'nodes'> & { edges: ReadonlyArray<ResolversParentTypes['StatefulNotificationEdge']>, nodes: ReadonlyArray<ResolversParentTypes['StatefulNotification']> };
+  StatefulNotificationEdge: Omit<StatefulNotificationEdge, 'node'> & { node: ResolversParentTypes['StatefulNotification'] };
   Subscription: {};
-  SuccessPayload: SuccessPayload;
+  SuccessPayload: Omit<SuccessPayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
   SupportChatMessageAddInput: SupportChatMessageAddInput;
-  SupportChatMessageAddPayload: SupportChatMessageAddPayload;
+  SupportChatMessageAddPayload: Omit<SupportChatMessageAddPayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
   SupportMessage: SupportMessage;
   Timestamp: Scalars['Timestamp']['output'];
   TotpCode: Scalars['TotpCode']['output'];
   TotpRegistrationId: Scalars['TotpRegistrationId']['output'];
   TotpSecret: Scalars['TotpSecret']['output'];
   Transaction: Omit<Transaction, 'initiationVia' | 'settlementVia'> & { initiationVia: ResolversParentTypes['InitiationVia'], settlementVia: ResolversParentTypes['SettlementVia'] };
-  TransactionConnection: TransactionConnection;
-  TransactionEdge: TransactionEdge;
+  TransactionConnection: Omit<TransactionConnection, 'edges'> & { edges?: Maybe<ReadonlyArray<ResolversParentTypes['TransactionEdge']>> };
+  TransactionEdge: Omit<TransactionEdge, 'node'> & { node: ResolversParentTypes['Transaction'] };
   TxExternalId: Scalars['TxExternalId']['output'];
-  UpgradePayload: UpgradePayload;
-  UsdWallet: UsdWallet;
-  User: User;
-  UserContact: UserContact;
+  UpgradePayload: Omit<UpgradePayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
+  UsdWallet: Omit<UsdWallet, 'invoiceByPaymentHash' | 'invoices' | 'pendingIncomingTransactions' | 'pendingIncomingTransactionsByAddress' | 'transactionById' | 'transactions' | 'transactionsByAddress' | 'transactionsByPaymentHash' | 'transactionsByPaymentRequest'> & { invoiceByPaymentHash: ResolversParentTypes['Invoice'], invoices?: Maybe<ResolversParentTypes['InvoiceConnection']>, pendingIncomingTransactions: ReadonlyArray<ResolversParentTypes['Transaction']>, pendingIncomingTransactionsByAddress: ReadonlyArray<ResolversParentTypes['Transaction']>, transactionById: ResolversParentTypes['Transaction'], transactions?: Maybe<ResolversParentTypes['TransactionConnection']>, transactionsByAddress?: Maybe<ResolversParentTypes['TransactionConnection']>, transactionsByPaymentHash: ReadonlyArray<ResolversParentTypes['Transaction']>, transactionsByPaymentRequest: ReadonlyArray<ResolversParentTypes['Transaction']> };
+  User: Omit<User, 'contactByUsername' | 'contacts' | 'defaultAccount' | 'statefulNotifications' | 'statefulNotificationsWithoutBulletinEnabled' | 'unacknowledgedStatefulNotificationsWithBulletinEnabled'> & { contactByUsername: ResolversParentTypes['UserContact'], contacts: ReadonlyArray<ResolversParentTypes['UserContact']>, defaultAccount: ResolversParentTypes['Account'], statefulNotifications: ResolversParentTypes['StatefulNotificationConnection'], statefulNotificationsWithoutBulletinEnabled: ResolversParentTypes['StatefulNotificationConnection'], unacknowledgedStatefulNotificationsWithBulletinEnabled: ResolversParentTypes['StatefulNotificationConnection'] };
+  UserContact: Omit<UserContact, 'transactions'> & { transactions?: Maybe<ResolversParentTypes['TransactionConnection']> };
   UserContactUpdateAliasInput: UserContactUpdateAliasInput;
-  UserContactUpdateAliasPayload: UserContactUpdateAliasPayload;
-  UserEmailDeletePayload: UserEmailDeletePayload;
+  UserContactUpdateAliasPayload: Omit<UserContactUpdateAliasPayload, 'contact' | 'errors'> & { contact?: Maybe<ResolversParentTypes['UserContact']>, errors: ReadonlyArray<ResolversParentTypes['Error']> };
+  UserEmailDeletePayload: Omit<UserEmailDeletePayload, 'errors' | 'me'> & { errors: ReadonlyArray<ResolversParentTypes['Error']>, me?: Maybe<ResolversParentTypes['User']> };
   UserEmailRegistrationInitiateInput: UserEmailRegistrationInitiateInput;
-  UserEmailRegistrationInitiatePayload: UserEmailRegistrationInitiatePayload;
+  UserEmailRegistrationInitiatePayload: Omit<UserEmailRegistrationInitiatePayload, 'errors' | 'me'> & { errors: ReadonlyArray<ResolversParentTypes['Error']>, me?: Maybe<ResolversParentTypes['User']> };
   UserEmailRegistrationValidateInput: UserEmailRegistrationValidateInput;
-  UserEmailRegistrationValidatePayload: UserEmailRegistrationValidatePayload;
+  UserEmailRegistrationValidatePayload: Omit<UserEmailRegistrationValidatePayload, 'errors' | 'me'> & { errors: ReadonlyArray<ResolversParentTypes['Error']>, me?: Maybe<ResolversParentTypes['User']> };
   UserLoginInput: UserLoginInput;
   UserLoginUpgradeInput: UserLoginUpgradeInput;
   UserLogoutInput: UserLogoutInput;
-  UserPhoneDeletePayload: UserPhoneDeletePayload;
+  UserPhoneDeletePayload: Omit<UserPhoneDeletePayload, 'errors' | 'me'> & { errors: ReadonlyArray<ResolversParentTypes['Error']>, me?: Maybe<ResolversParentTypes['User']> };
   UserPhoneRegistrationInitiateInput: UserPhoneRegistrationInitiateInput;
   UserPhoneRegistrationValidateInput: UserPhoneRegistrationValidateInput;
-  UserPhoneRegistrationValidatePayload: UserPhoneRegistrationValidatePayload;
-  UserTotpDeletePayload: UserTotpDeletePayload;
-  UserTotpRegistrationInitiatePayload: UserTotpRegistrationInitiatePayload;
+  UserPhoneRegistrationValidatePayload: Omit<UserPhoneRegistrationValidatePayload, 'errors' | 'me'> & { errors: ReadonlyArray<ResolversParentTypes['Error']>, me?: Maybe<ResolversParentTypes['User']> };
+  UserTotpDeletePayload: Omit<UserTotpDeletePayload, 'errors' | 'me'> & { errors: ReadonlyArray<ResolversParentTypes['Error']>, me?: Maybe<ResolversParentTypes['User']> };
+  UserTotpRegistrationInitiatePayload: Omit<UserTotpRegistrationInitiatePayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
   UserTotpRegistrationValidateInput: UserTotpRegistrationValidateInput;
-  UserTotpRegistrationValidatePayload: UserTotpRegistrationValidatePayload;
+  UserTotpRegistrationValidatePayload: Omit<UserTotpRegistrationValidatePayload, 'errors' | 'me'> & { errors: ReadonlyArray<ResolversParentTypes['Error']>, me?: Maybe<ResolversParentTypes['User']> };
   UserUpdate: ResolversUnionTypes<ResolversParentTypes>['UserUpdate'];
   UserUpdateLanguageInput: UserUpdateLanguageInput;
-  UserUpdateLanguagePayload: UserUpdateLanguagePayload;
+  UserUpdateLanguagePayload: Omit<UserUpdateLanguagePayload, 'errors' | 'user'> & { errors: ReadonlyArray<ResolversParentTypes['Error']>, user?: Maybe<ResolversParentTypes['User']> };
   UserUpdateUsernameInput: UserUpdateUsernameInput;
-  UserUpdateUsernamePayload: UserUpdateUsernamePayload;
+  UserUpdateUsernamePayload: Omit<UserUpdateUsernamePayload, 'errors' | 'user'> & { errors: ReadonlyArray<ResolversParentTypes['Error']>, user?: Maybe<ResolversParentTypes['User']> };
   Username: Scalars['Username']['output'];
   Wallet: ResolversInterfaceTypes<ResolversParentTypes>['Wallet'];
   WalletId: Scalars['WalletId']['output'];
@@ -4186,9 +4267,37 @@ export type ConsumerAccountResolvers<ContextType = any, ParentType extends Resol
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
+export type ContactResolvers<ContextType = any, ParentType extends ResolversParentTypes['Contact'] = ResolversParentTypes['Contact']> = {
+  createdAt?: Resolver<ResolversTypes['Timestamp'], ParentType, ContextType>;
+  displayName?: Resolver<Maybe<ResolversTypes['ContactDisplayName']>, ParentType, ContextType>;
+  handle?: Resolver<ResolversTypes['ContactHandle'], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['ContactId'], ParentType, ContextType>;
+  transactionsCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  type?: Resolver<ResolversTypes['ContactType'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
 export interface ContactAliasScalarConfig extends GraphQLScalarTypeConfig<ResolversTypes['ContactAlias'], any> {
   name: 'ContactAlias';
 }
+
+export interface ContactDisplayNameScalarConfig extends GraphQLScalarTypeConfig<ResolversTypes['ContactDisplayName'], any> {
+  name: 'ContactDisplayName';
+}
+
+export interface ContactHandleScalarConfig extends GraphQLScalarTypeConfig<ResolversTypes['ContactHandle'], any> {
+  name: 'ContactHandle';
+}
+
+export interface ContactIdScalarConfig extends GraphQLScalarTypeConfig<ResolversTypes['ContactId'], any> {
+  name: 'ContactId';
+}
+
+export type ContactPayloadResolvers<ContextType = any, ParentType extends ResolversParentTypes['ContactPayload'] = ResolversParentTypes['ContactPayload']> = {
+  contact?: Resolver<Maybe<ResolversTypes['Contact']>, ParentType, ContextType>;
+  errors?: Resolver<ReadonlyArray<ResolversTypes['Error']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
 
 export type CoordinatesResolvers<ContextType = any, ParentType extends ResolversParentTypes['Coordinates'] = ResolversParentTypes['Coordinates']> = {
   latitude?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
@@ -4370,6 +4479,7 @@ export type LnInvoicePayloadResolvers<ContextType = any, ParentType extends Reso
 
 export type LnInvoicePaymentStatusResolvers<ContextType = any, ParentType extends ResolversParentTypes['LnInvoicePaymentStatus'] = ResolversParentTypes['LnInvoicePaymentStatus']> = {
   paymentHash?: Resolver<Maybe<ResolversTypes['PaymentHash']>, ParentType, ContextType>;
+  paymentPreimage?: Resolver<Maybe<ResolversTypes['LnPaymentPreImage']>, ParentType, ContextType>;
   paymentRequest?: Resolver<Maybe<ResolversTypes['LnPaymentRequest']>, ParentType, ContextType>;
   status?: Resolver<Maybe<ResolversTypes['InvoicePaymentStatus']>, ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
@@ -4378,6 +4488,7 @@ export type LnInvoicePaymentStatusResolvers<ContextType = any, ParentType extend
 export type LnInvoicePaymentStatusPayloadResolvers<ContextType = any, ParentType extends ResolversParentTypes['LnInvoicePaymentStatusPayload'] = ResolversParentTypes['LnInvoicePaymentStatusPayload']> = {
   errors?: Resolver<ReadonlyArray<ResolversTypes['Error']>, ParentType, ContextType>;
   paymentHash?: Resolver<Maybe<ResolversTypes['PaymentHash']>, ParentType, ContextType>;
+  paymentPreimage?: Resolver<Maybe<ResolversTypes['LnPaymentPreImage']>, ParentType, ContextType>;
   paymentRequest?: Resolver<Maybe<ResolversTypes['LnPaymentRequest']>, ParentType, ContextType>;
   status?: Resolver<Maybe<ResolversTypes['InvoicePaymentStatus']>, ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
@@ -4476,6 +4587,7 @@ export type MutationResolvers<ContextType = any, ParentType extends ResolversPar
   callbackEndpointDelete?: Resolver<ResolversTypes['SuccessPayload'], ParentType, ContextType, RequireFields<MutationCallbackEndpointDeleteArgs, 'input'>>;
   captchaCreateChallenge?: Resolver<ResolversTypes['CaptchaCreateChallengePayload'], ParentType, ContextType>;
   captchaRequestAuthCode?: Resolver<ResolversTypes['SuccessPayload'], ParentType, ContextType, RequireFields<MutationCaptchaRequestAuthCodeArgs, 'input'>>;
+  contactCreate?: Resolver<ResolversTypes['ContactPayload'], ParentType, ContextType, RequireFields<MutationContactCreateArgs, 'input'>>;
   deviceNotificationTokenCreate?: Resolver<ResolversTypes['SuccessPayload'], ParentType, ContextType, RequireFields<MutationDeviceNotificationTokenCreateArgs, 'input'>>;
   feedbackSubmit?: Resolver<ResolversTypes['SuccessPayload'], ParentType, ContextType, RequireFields<MutationFeedbackSubmitArgs, 'input'>>;
   intraLedgerPaymentSend?: Resolver<ResolversTypes['PaymentSendPayload'], ParentType, ContextType, RequireFields<MutationIntraLedgerPaymentSendArgs, 'input'>>;
@@ -4626,6 +4738,13 @@ export type PaymentSendPayloadResolvers<ContextType = any, ParentType extends Re
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
+export type PayoutSpeedsResolvers<ContextType = any, ParentType extends ResolversParentTypes['PayoutSpeeds'] = ResolversParentTypes['PayoutSpeeds']> = {
+  description?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  displayName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  speed?: Resolver<ResolversTypes['PayoutSpeed'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
 export interface PhoneScalarConfig extends GraphQLScalarTypeConfig<ResolversTypes['Phone'], any> {
   name: 'Phone';
 }
@@ -4702,6 +4821,7 @@ export type QueryResolvers<ContextType = any, ParentType extends ResolversParent
   onChainTxFee?: Resolver<ResolversTypes['OnChainTxFee'], ParentType, ContextType, RequireFields<QueryOnChainTxFeeArgs, 'address' | 'amount' | 'speed' | 'walletId'>>;
   onChainUsdTxFee?: Resolver<ResolversTypes['OnChainUsdTxFee'], ParentType, ContextType, RequireFields<QueryOnChainUsdTxFeeArgs, 'address' | 'amount' | 'speed' | 'walletId'>>;
   onChainUsdTxFeeAsBtcDenominated?: Resolver<ResolversTypes['OnChainUsdTxFee'], ParentType, ContextType, RequireFields<QueryOnChainUsdTxFeeAsBtcDenominatedArgs, 'address' | 'amount' | 'speed' | 'walletId'>>;
+  payoutSpeeds?: Resolver<ReadonlyArray<ResolversTypes['PayoutSpeeds']>, ParentType, ContextType>;
   realtimePrice?: Resolver<ResolversTypes['RealtimePrice'], ParentType, ContextType, RequireFields<QueryRealtimePriceArgs, 'currency'>>;
   userDefaultWalletId?: Resolver<ResolversTypes['WalletId'], ParentType, ContextType, RequireFields<QueryUserDefaultWalletIdArgs, 'username'>>;
   usernameAvailable?: Resolver<Maybe<ResolversTypes['Boolean']>, ParentType, ContextType, RequireFields<QueryUsernameAvailableArgs, 'username'>>;
@@ -4945,7 +5065,8 @@ export type UserResolvers<ContextType = any, ParentType extends ResolversParentT
 
 export type UserContactResolvers<ContextType = any, ParentType extends ResolversParentTypes['UserContact'] = ResolversParentTypes['UserContact']> = {
   alias?: Resolver<Maybe<ResolversTypes['ContactAlias']>, ParentType, ContextType>;
-  id?: Resolver<ResolversTypes['Username'], ParentType, ContextType>;
+  handle?: Resolver<ResolversTypes['ContactHandle'], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['ContactHandle'], ParentType, ContextType>;
   transactions?: Resolver<Maybe<ResolversTypes['TransactionConnection']>, ParentType, ContextType, Partial<UserContactTransactionsArgs>>;
   transactionsCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   username?: Resolver<ResolversTypes['Username'], ParentType, ContextType>;
@@ -5081,7 +5202,12 @@ export type Resolvers<ContextType = any> = {
   CentAmount?: GraphQLScalarType;
   CentAmountPayload?: CentAmountPayloadResolvers<ContextType>;
   ConsumerAccount?: ConsumerAccountResolvers<ContextType>;
+  Contact?: ContactResolvers<ContextType>;
   ContactAlias?: GraphQLScalarType;
+  ContactDisplayName?: GraphQLScalarType;
+  ContactHandle?: GraphQLScalarType;
+  ContactId?: GraphQLScalarType;
+  ContactPayload?: ContactPayloadResolvers<ContextType>;
   Coordinates?: CoordinatesResolvers<ContextType>;
   Country?: CountryResolvers<ContextType>;
   CountryCode?: GraphQLScalarType;
@@ -5145,6 +5271,7 @@ export type Resolvers<ContextType = any> = {
   PageInfo?: PageInfoResolvers<ContextType>;
   PaymentHash?: GraphQLScalarType;
   PaymentSendPayload?: PaymentSendPayloadResolvers<ContextType>;
+  PayoutSpeeds?: PayoutSpeedsResolvers<ContextType>;
   Phone?: GraphQLScalarType;
   Price?: PriceResolvers<ContextType>;
   PriceInterface?: PriceInterfaceResolvers<ContextType>;
