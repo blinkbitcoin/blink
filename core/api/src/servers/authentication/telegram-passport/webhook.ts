@@ -13,7 +13,10 @@ import {
 import { Authentication } from "@/app"
 import { mapError } from "@/graphql/error-map"
 
+import { ErrorLevel } from "@/domain/shared"
+
 import { baseLogger } from "@/services/logger"
+import { recordExceptionInCurrentSpan } from "@/services/tracing"
 
 const logger = baseLogger.child({ module: "trigger" })
 
@@ -23,17 +26,30 @@ const setupHash = isTelegramPassportEnabled()
 
 export const handleTelegramPassportWebhook = async (req: Request, res: Response) => {
   if (!isTelegramPassportEnabled()) {
+    recordExceptionInCurrentSpan({
+      error: new Error("Telegram passport authentication is not enabled"),
+      level: ErrorLevel.Info,
+    })
     return res
       .status(400)
       .send({ error: "Telegram passport authentication is not enabled" })
   }
 
   if (req.query.hash !== setupHash) {
+    recordExceptionInCurrentSpan({
+      error: new Error("Unauthorized"),
+      level: ErrorLevel.Warn,
+    })
     return res.status(403).send("Unauthorized")
   }
 
   if (!req.body || !req.body.message || !req.body.message.passport_data) {
-    return res.status(400).send({ error: "Missing passport_data in request" })
+    recordExceptionInCurrentSpan({
+      error: new Error("Missing passport_data in request"),
+      level: ErrorLevel.Warn,
+    })
+    // it needs to return 200 to avoid retries
+    return res.status(200).send({ error: "Missing passport_data in request" })
   }
 
   try {
@@ -58,6 +74,7 @@ export const handleTelegramPassportWebhook = async (req: Request, res: Response)
     return res.status(200).send({ success: true })
   } catch (error) {
     logger.error({ data: req.body }, "Error processing Telegram Passport data")
+    recordExceptionInCurrentSpan({ error, level: ErrorLevel.Critical })
     return res.status(500).send({
       error: "Failed to process Telegram Passport data",
       message: error instanceof Error ? error.message : "Unknown error",
