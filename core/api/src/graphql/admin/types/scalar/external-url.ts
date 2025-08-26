@@ -21,6 +21,10 @@ const ExternalUrl = GT.Scalar({
 })
 
 function validUrlValue(value: string) {
+  if (value !== value.trim()) {
+    return new InputValidationError({ message: "Invalid value for ExternalUrl" })
+  }
+
   try {
     const url = new URL(value)
     if (url.protocol !== "https:" && url.protocol !== "http:") {
