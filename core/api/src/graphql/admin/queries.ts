@@ -37,9 +37,30 @@ export const queryFields = {
   },
 }
 
-// All authed queries require view permission by default
+// Detailed query permissions mapping by access right
 export const queryPermissions = {
-  view: Object.keys(queryFields.authed) as (keyof typeof queryFields.authed)[],
+  // Account viewing operations - require VIEW_ACCOUNTS
+  viewAccounts: [
+    "accountDetailsByAccountId",
+    "accountDetailsByEmail",
+    "accountDetailsByUserPhone",
+    "accountDetailsByUserId",
+    "accountDetailsByUsername",
+    "allLevels",
+    "filteredUserCount",
+    "wallet",
+    "inactiveMerchants",
+    "merchantsPendingApproval",
+  ] as (keyof typeof queryFields.authed)[],
+
+  // Transaction viewing operations - require VIEW_TRANSACTIONS
+  viewTransactions: [
+    "lightningInvoice",
+    "lightningPayment",
+    "transactionById",
+    "transactionsByHash",
+    "transactionsByPaymentRequest",
+  ] as (keyof typeof queryFields.authed)[],
 } as const
 
 export const QueryType = GT.Object({

@@ -28,9 +28,27 @@ export const mutationFields = {
   },
 }
 
-// All mutations require modify permission by default
+// Detailed mutation permissions mapping by access right
 export const mutationPermissions = {
-  modify: Object.keys(mutationFields.authed) as (keyof typeof mutationFields.authed)[],
+  // Account modification operations - require MODIFY_ACCOUNTS
+  modifyAccounts: [
+    "accountUpdateLevel",
+    "accountUpdateStatus",
+    "userUpdateEmail",
+    "userUpdatePhone",
+    "merchantMapValidate",
+    "merchantMapDelete",
+  ] as (keyof typeof mutationFields.authed)[],
+
+  // Account deletion operations - require DELETE_ACCOUNTS
+  deleteAccounts: [
+    "accountForceDelete",
+  ] as (keyof typeof mutationFields.authed)[],
+
+  // Notification operations - require SEND_NOTIFICATIONS
+  sendNotifications: [
+    "marketingNotificationTrigger",
+  ] as (keyof typeof mutationFields.authed)[],
 } as const
 
 export const MutationType = GT.Object<null, GraphQLAdminContext>({
