@@ -13,10 +13,7 @@ export type AdminRole = "VIEWER" | "SUPPORT" | "ADMIN"
 
 // Role to access rights mapping
 const ROLE_ACCESS_RIGHTS: Record<AdminRole, AdminAccessRight[]> = {
-  VIEWER: [
-    AdminAccessRight.VIEW_ACCOUNTS,
-    AdminAccessRight.VIEW_TRANSACTIONS,
-  ],
+  VIEWER: [AdminAccessRight.VIEW_ACCOUNTS, AdminAccessRight.VIEW_TRANSACTIONS],
   SUPPORT: [
     AdminAccessRight.VIEW_ACCOUNTS,
     AdminAccessRight.MODIFY_ACCOUNTS,
