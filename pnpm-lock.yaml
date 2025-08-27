@@ -1104,8 +1104,8 @@ importers:
         specifier: ^0.7.15
         version: 0.7.15
       '@ip1sms/disposable-phone-numbers':
-        specifier: ^2.1.1270
-        version: 2.1.1270
+        specifier: ^2.1.1271
+        version: 2.1.1271
       '@merqva/telegram-passport':
         specifier: ^1.0.2
         version: 1.0.2
@@ -1511,7 +1511,7 @@ importers:
         version: 6.1.0(typescript@5.8.3)
       migrate-mongo:
         specifier: ^11.0.0
-        version: 11.0.0(mongodb@6.18.0)
+        version: 11.0.0(mongodb@6.19.0)
       node-jose:
         specifier: ^2.2.0
         version: 2.2.0
@@ -7231,8 +7231,8 @@ packages:
     resolution: {integrity: sha512-Sx1pU8EM64o2BrqNpEO1CNLtKQwyhuXuqyfH7oGKCk+1a33d2r5saW8zNwm3j6BTExtjrv2BxTgzzkMwts6vGg==}
     dev: false
 
-  /@ip1sms/disposable-phone-numbers@2.1.1270:
-    resolution: {integrity: sha512-RMEoc90ZTn314TG29ZHHEZj7eldNAnyya3WM+YAM1uvgrRFtPoa+8VRBj46uz0pzBRfhe84UoIVje994gy3ikw==}
+  /@ip1sms/disposable-phone-numbers@2.1.1271:
+    resolution: {integrity: sha512-/DU+idoelXGFEHs2JO5iXSPPDnl6iDsKfqSOtunP86dpT0y6Y1NaFx4w7Ys8hgzDueKD9S6dJD8IcIjKQlPsUQ==}
     dev: false
 
   /@isaacs/cliui@8.0.2:
@@ -24580,7 +24580,7 @@ packages:
       braces: 3.0.3
       picomatch: 2.3.1
 
-  /migrate-mongo@11.0.0(mongodb@6.18.0):
+  /migrate-mongo@11.0.0(mongodb@6.19.0):
     resolution: {integrity: sha512-GB/gHzUwp/fL1w6ksNGihTyb+cSrm6NbVLlz1OSkQKaLlzAXMwH7iKK2ZS7W5v+I8vXiY2rL58WTUZSAL6QR+A==}
     engines: {node: '>=8'}
     hasBin: true
@@ -24593,7 +24593,7 @@ packages:
       fn-args: 5.0.0
       fs-extra: 10.1.0
       lodash: 4.17.21
-      mongodb: 6.18.0(snappy@7.2.2)
+      mongodb: 6.19.0(snappy@7.2.2)
       p-each-series: 2.2.0
     dev: true
 
@@ -24861,8 +24861,8 @@ packages:
       snappy: 7.2.2
     dev: true
 
-  /mongodb@6.18.0(snappy@7.2.2):
-    resolution: {integrity: sha512-fO5ttN9VC8P0F5fqtQmclAkgXZxbIkYRTUi1j8JO6IYwvamkhtYDilJr35jOPELR49zqCJgXZWwCtW7B+TM8vQ==}
+  /mongodb@6.19.0(snappy@7.2.2):
+    resolution: {integrity: sha512-H3GtYujOJdeKIMLKBT9PwlDhGrQfplABNF1G904w6r5ZXKWyv77aB0X9B+rhmaAwjtllHzaEkvi9mkGVZxs2Bw==}
     engines: {node: '>=16.20.1'}
     peerDependencies:
       '@aws-sdk/credential-providers': ^3.188.0
@@ -24870,7 +24870,7 @@ packages:
       gcp-metadata: ^5.2.0
       kerberos: ^2.0.1
       mongodb-client-encryption: '>=6.0.0 <7'
-      snappy: ^7.2.2
+      snappy: ^7.3.2
       socks: ^2.7.1
     peerDependenciesMeta:
       '@aws-sdk/credential-providers':
