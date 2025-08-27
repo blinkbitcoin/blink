@@ -5,13 +5,14 @@ import type { Provider } from "next-auth/providers"
 import { CallbacksOptions } from "next-auth"
 
 import { env } from "../../../env"
+import { getAccessRightsForRole, isValidAdminRole, type AdminRole } from "../../../access-rights"
 
 declare module "next-auth" {
   interface Session {
     sub: string | null
     accessToken: string
     role: string
-    scope: string[]
+    scope: string
   }
 }
 
@@ -75,18 +76,38 @@ const callbacks: Partial<CallbacksOptions> = {
     return verified && env.AUTHORIZED_EMAILS.includes(email)
   },
   async jwt({ token, account, profile, user }) {
-    const role_mapping = env.ROLE_MAPPING
+    var role_mapping: { [key: string]: string }
+    if (env.NODE_ENV === "development") {
+
+      role_mapping = {
+        "admintest@blinkbitcoin.test": "ADMIN",
+        "alicetest@blinkbitcoin.test": "VIEWER",
+        "bobtest@blinkbitcoin.test": "SUPPORT",
+      }
+    } else {
+      role_mapping = env.ROLE_MAPPING
+    }
     if (user) {
-      // get this from config depending if you prefere scope or role
-      token.scope = ["READ", "WRITE"]
-      token.role = role_mapping[user.email as keyof typeof role_mapping] || "VIEWER"
+      const userRole = role_mapping[user.email as keyof typeof role_mapping] || "VIEWER"
+
+      // Validate and get access rights for the role
+      if (isValidAdminRole(userRole)) {
+        const accessRights = getAccessRightsForRole(userRole as AdminRole)
+        token.scope = JSON.stringify(accessRights)
+        token.role = userRole
+      } else {
+        // Fallback to VIEWER if invalid role
+        const accessRights = getAccessRightsForRole("VIEWER")
+        token.scope = JSON.stringify(accessRights)
+        token.role = "VIEWER"
+      }
     } else {
       console.log("no user")
     }
     return token
   },
   async session({ session, token }) {
-    session.scope = token.scope as string[]
+    session.scope = token.scope as string
     session.role = token.role as string
     return session
   },
