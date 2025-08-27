@@ -40,6 +40,19 @@ export const hasAccessRight = async (
   return STRING_ROLE_ACCESS_RIGHTS[role]?.includes(accessRight) || false
 }
 
+/**
+ * Check if a scope array contains a specific access right
+ * @param scope - Array of access rights from JWT token scope
+ * @param accessRight - The access right to check for
+ * @returns True if the scope contains the access right
+ */
+export const hasAccessRightInScope = async (
+  scope: string[],
+  accessRight: AdminAccessRight,
+): Promise<boolean> => {
+  return scope.includes(accessRight)
+}
+
 // Backward compatibility - deprecated, use AdminAccessRight instead
 export const AdminFeature = AdminAccessRight
 

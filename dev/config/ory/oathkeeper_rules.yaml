@@ -106,4 +106,4 @@
   mutators:
     - handler: id_token
       config: #! TODO: add aud: {"aud": ["https://api/admin/graphql"] }
-        claims: '{"sub": "{{ print .Subject }}", "scope": "{{ print .Extra.scope }}", "role": "{{ print .Extra.role }}" }'
+        claims: '{"sub": "{{ print .Subject }}", "scope": {{ printf "%+q" .Extra.scope }}, "role": "{{ print .Extra.role }}"}'

@@ -28,12 +28,7 @@ import { Transactions } from "@/app"
 
 import { AuthorizationError } from "@/graphql/error"
 
-import { AdminAccessRight, AdminRoleString, hasAccessRight } from "@/services/auth/role-checker"
-
-// Helper function to validate role
-const isValidAdminRole = (role: string): role is AdminRoleString => {
-  return role === "VIEWER" || role === "SUPPORT" || role === "ADMIN"
-}
+import { AdminAccessRight, hasAccessRightInScope } from "@/services/auth/role-checker"
 
 // TODO: loaders probably not needed for the admin panel
 const loaders = {
@@ -65,6 +60,8 @@ const setGqlAdminContext = async (
 
   const userEmail = tokenPayload.sub as string // This should be the email from OAuth
   const role = tokenPayload.role as string
+  const scopeString = tokenPayload.scope as string || "[]"
+  const scope = JSON.parse(scopeString) as string[]
   const privilegedClientId = tokenPayload.sub as PrivilegedClientId
 
   req.gqlContext = {
@@ -72,6 +69,7 @@ const setGqlAdminContext = async (
     privilegedClientId,
     userEmail, // Add email to context
     role,
+    scope,
     logger,
   }
 
@@ -90,9 +88,8 @@ const requiresViewAccess = rule({ cache: "contextual" })(async (
   args,
   ctx: GraphQLAdminContext,
 ) => {
-  if (!ctx.userEmail || !ctx.role || !isValidAdminRole(ctx.role)) return false
-  console.log("ctx",ctx)
-  return hasAccessRight(ctx.role, AdminAccessRight.VIEW_ACCOUNTS)
+  if (!ctx.userEmail || !ctx.scope) return false
+  return hasAccessRightInScope(ctx.scope, AdminAccessRight.VIEW_ACCOUNTS)
 })
 
 const requiresModifyAccess = rule({ cache: "contextual" })(async (
@@ -100,8 +97,8 @@ const requiresModifyAccess = rule({ cache: "contextual" })(async (
   args,
   ctx: GraphQLAdminContext,
 ) => {
-  if (!ctx.userEmail || !ctx.role || !isValidAdminRole(ctx.role)) return false
-  return hasAccessRight(ctx.role, AdminAccessRight.MODIFY_ACCOUNTS)
+  if (!ctx.userEmail || !ctx.scope) return false
+  return hasAccessRightInScope(ctx.scope, AdminAccessRight.MODIFY_ACCOUNTS)
 })
 
 export async function startApolloServerForAdminSchema() {
