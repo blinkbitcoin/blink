@@ -5,7 +5,11 @@ import type { Provider } from "next-auth/providers"
 import { CallbacksOptions } from "next-auth"
 
 import { env } from "../../../env"
-import { getAccessRightsForRole, isValidAdminRole, type AdminRole } from "../../../access-rights"
+import {
+  getAccessRightsForRole,
+  isValidAdminRole,
+  type AdminRole,
+} from "../../../access-rights"
 
 declare module "next-auth" {
   interface Session {
@@ -75,17 +79,16 @@ const callbacks: Partial<CallbacksOptions> = {
     const verified = new Boolean("email_verified" in profile && profile.email_verified)
     return verified && env.AUTHORIZED_EMAILS.includes(email)
   },
-  async jwt({ token, account, profile, user }) {
-    var role_mapping: { [key: string]: string }
+  async jwt({ token, user }) {
+    let role_mapping: { [key: string]: string }
     if (env.NODE_ENV === "development") {
-
       role_mapping = {
         "admintest@blinkbitcoin.test": "ADMIN",
         "alicetest@blinkbitcoin.test": "VIEWER",
         "bobtest@blinkbitcoin.test": "SUPPORT",
       }
     } else {
-      role_mapping = env.ROLE_MAPPING
+      role_mapping = env.USER_ROLE_MAP
     }
     if (user) {
       const userRole = role_mapping[user.email as keyof typeof role_mapping] || "VIEWER"
@@ -112,8 +115,6 @@ const callbacks: Partial<CallbacksOptions> = {
     return session
   },
 }
-
-
 
 export const authOptions = {
   providers,

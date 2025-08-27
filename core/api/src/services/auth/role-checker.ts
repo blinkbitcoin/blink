@@ -1,7 +1,3 @@
-
-
-
-
 export enum AdminRole {
   VIEWER = "roles/adminPanelViewer",
   SUPPORT = "roles/adminPanelSupport",
@@ -31,7 +27,6 @@ const STRING_ROLE_ACCESS_RIGHTS = {
   ],
   ADMIN: Object.values(AdminAccessRight),
 }
-
 
 export const hasAccessRight = async (
   role: AdminRoleString,
