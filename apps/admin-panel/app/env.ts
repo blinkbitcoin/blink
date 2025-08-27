@@ -16,7 +16,7 @@ export const env = createEnv({
       .string()
       .transform((x) => x.split(",").map((email) => email.trim()))
       .default("test@galoy.io"),
-    ROLE_MAPPING: z
+    USER_ROLE_MAP: z
       .string()
       .transform((str) => {
         try {
@@ -50,6 +50,6 @@ export const env = createEnv({
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
     NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
     AUTHORIZED_EMAILS: process.env.AUTHORIZED_EMAILS,
-    ROLE_MAPPING: process.env.ROLE_MAPPING || "{}",
+    USER_ROLE_MAP: process.env.ROLE_MAPPING || "{}",
   },
 })
