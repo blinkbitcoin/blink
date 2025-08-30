@@ -39,6 +39,8 @@ export const env = createEnv({
 
     PRICE_SERVER_PORT: z.number().or(z.string()).pipe(z.coerce.number()).default(3325),
     PRICE_SERVER_HOST: z.string().default("localhost"),
+    QUOTE_SERVER_PORT: z.number().or(z.string()).pipe(z.coerce.number()).default(3326),
+    QUOTE_SERVER_HOST: z.string().default("localhost"),
 
     TWILIO_ACCOUNT_SID: z.string().min(1),
     TWILIO_AUTH_TOKEN: z.string().min(1),
@@ -175,6 +177,9 @@ export const env = createEnv({
 
     PRICE_SERVER_PORT: process.env.PRICE_SERVER_PORT,
     PRICE_SERVER_HOST: process.env.PRICE_SERVER_HOST,
+
+    QUOTE_SERVER_PORT: process.env.QUOTE_SERVER_PORT,
+    QUOTE_SERVER_HOST: process.env.QUOTE_SERVER_HOST,
 
     TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID,
     TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN,
