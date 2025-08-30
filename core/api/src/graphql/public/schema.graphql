@@ -1341,6 +1341,12 @@ type Query {
   Returns 1 Sat and 1 Usd Cent price for the given currency in minor unit
   """
   realtimePrice(currency: DisplayCurrency = "USD"): RealtimePrice!
+
+  """
+  Get a StableSats quote for buying or selling USD.
+  Returns a quote with pricing and expiration information.
+  """
+  stableSatsGetQuote(input: StableSatsGetQuoteInput!): StableSatsQuotePayload!
   userDefaultWalletId(username: Username!): WalletId! @deprecated(reason: "will be migrated to AccountDefaultWalletId")
   usernameAvailable(username: Username!): Boolean
 }
@@ -1361,6 +1367,13 @@ input QuizClaimInput {
 type QuizClaimPayload {
   errors: [Error!]!
   quizzes: [Quiz!]!
+}
+
+enum QuoteType {
+  BUY_USD_WITH_CENTS
+  BUY_USD_WITH_SATS
+  SELL_USD_FOR_CENTS
+  SELL_USD_FOR_SATS
 }
 
 type RealtimePrice {
@@ -1436,6 +1449,48 @@ scalar SignedAmount
 A string amount (of a currency) that can be negative (e.g. in a transaction)
 """
 scalar SignedDisplayMajorAmount
+
+input StableSatsGetQuoteInput {
+  """Amount in cents (for cent-based quotes)"""
+  centAmount: CentAmount
+
+  """Whether to execute the quote immediately"""
+  immediateExecution: Boolean = false
+
+  """Type of quote to request"""
+  quoteType: QuoteType!
+
+  """Amount in satoshis (for sat-based quotes)"""
+  satAmount: SatAmount
+}
+
+type StableSatsQuote {
+  """Amount to buy in cents (for buy USD quotes)"""
+  amountToBuyInCents: Int
+
+  """Amount to buy in satoshis (for sell USD quotes)"""
+  amountToBuyInSats: Int
+
+  """Amount to sell in cents (for sell USD quotes)"""
+  amountToSellInCents: Int
+
+  """Amount to sell in satoshis (for buy USD quotes)"""
+  amountToSellInSats: Int
+
+  """Whether the quote has been executed"""
+  executed: Boolean!
+
+  """Quote expiration timestamp"""
+  expiresAt: Int!
+
+  """Unique identifier for the quote"""
+  quoteId: String!
+}
+
+type StableSatsQuotePayload {
+  errors: [Error!]!
+  quote: StableSatsQuote
+}
 
 type Subscription {
   lnInvoicePaymentStatus(input: LnInvoicePaymentStatusInput!): LnInvoicePaymentStatusPayload! @deprecated(reason: "Deprecated in favor of lnInvoicePaymentStatusByPaymentRequest")
