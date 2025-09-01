@@ -357,14 +357,33 @@ services:
     environment:
       POSTGRES_PASSWORD: postgres
 
+
+  stablesats-pg:
+    image: postgres:15.1
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=pg
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 5s
+      timeout: 30s
+      retries: 5
+
   stablesats:
     image: us.gcr.io/galoy-org/stablesats-rs:latest
     ports:
       - "3325:3325"
+      - "3326:3326"
     command: ["stablesats", "run"]
     working_dir: /repo/config
+    environment:
+      - PG_CON=postgres://user:password@stablesats-pg:5432/pg
     depends_on:
-      - otel-agent
+      stablesats-pg:
+        condition: service_healthy
+      otel-agent:
+        condition: service_started
     restart: on-failure:10
     volumes:
       - ${HOST_PROJECT_PATH:-.}/:/repo
