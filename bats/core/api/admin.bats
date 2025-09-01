@@ -15,6 +15,8 @@ setup_file() {
   create_user 'tester2'
 
   login_admin
+  login_modify_user
+  login_view_user
 }
 
 getEmailCode() {
@@ -35,21 +37,21 @@ getEmailCode() {
   echo "$code"
 }
 
-@test "admin: can query account details by phone" {
-  admin_token="$(read_value 'admin.token')"
+@test "view_user: can query account details by phone" {
+  token="$(read_value 'view_user.token')"
   variables=$(
     jq -n \
     --arg phone "$(read_value 'tester.phone')" \
     '{phone: $phone}'
   )
-  exec_admin_graphql $admin_token 'account-details-by-user-phone' "$variables"
+  exec_admin_graphql $token 'account-details-by-user-phone' "$variables"
   id="$(graphql_output '.data.accountDetailsByUserPhone.id')"
   [[ "$id" != "null" && "$id" != "" ]] || exit 1
   cache_value 'tester.id' "$id"
 }
 
-@test "admin: can update user phone number" {
-  admin_token="$(read_value 'admin.token')"
+@test "modify_user: can update user phone number" {
+  token="$(read_value 'modify_user.token')"
   id="$(read_value 'tester.id')"
   new_phone="$(random_phone)"
   variables=$(
@@ -59,7 +61,7 @@ getEmailCode() {
     '{input: {phone: $phone, accountId:$accountId}}'
   )
 
-  exec_admin_graphql $admin_token 'user-update-phone' "$variables"
+  exec_admin_graphql $token 'user-update-phone' "$variables"
   num_errors="$(graphql_output '.data.userUpdatePhone.errors | length')"
   [[ "$num_errors" == "0" ]] || exit 1
 
@@ -68,12 +70,30 @@ getEmailCode() {
     --arg phone "$new_phone" \
     '{phone: $phone}'
   )
-  exec_admin_graphql "$admin_token" 'account-details-by-user-phone' "$variables"
+  exec_admin_graphql "$token" 'account-details-by-user-phone' "$variables"
   refetched_id="$(graphql_output '.data.accountDetailsByUserPhone.id')"
   [[ "$refetched_id" == "$id" ]] || exit 1
 }
 
-@test "admin: can update user email" {
+@test "view_user: cannot update user phone number" {
+  token="$(read_value 'view_user.token')"
+  id="$(read_value 'tester.id')"
+  new_phone="$(random_phone)"
+  variables=$(
+    jq -n \
+    --arg phone "$new_phone" \
+    --arg accountId "$id" \
+    '{input: {phone: $phone, accountId:$accountId}}'
+  )
+
+  # Attempt to update phone number - should fail with authorization error
+  exec_admin_graphql $token 'user-update-phone' "$variables"
+  error_message="$(graphql_output '.errors[0].message')"
+  echo "error_message: $error_message" >&2
+  [[ "$error_message" == "Not authorized" ]] || exit 1
+}
+
+@test "modify_user: can update user email" {
   email="$(read_value tester.username)@blink.sv"
   cache_value "tester.email" "$email"
 
@@ -89,7 +109,7 @@ getEmailCode() {
   [[ "$(graphql_output '.data.userEmailRegistrationValidate.me.email.address')" == "$email" ]] || exit 1
   [[ "$(graphql_output '.data.userEmailRegistrationValidate.me.email.verified')" == "true" ]] || exit 1
 
-  admin_token="$(read_value 'admin.token')"
+  token="$(read_value 'admin.token')"
   id="$(read_value 'tester.id')"
   new_email="$(read_value 'tester.username')_updated@blink.sv"
   variables=$(
@@ -99,7 +119,7 @@ getEmailCode() {
     '{input: {email: $email, accountId:$accountId}}'
   )
 
-  exec_admin_graphql $admin_token 'user-update-email' "$variables"
+  exec_admin_graphql $token 'user-update-email' "$variables"
   num_errors="$(graphql_output '.data.userUpdateEmail.errors | length')"
   [[ "$num_errors" == "0" ]] || exit 1
 
@@ -108,7 +128,7 @@ getEmailCode() {
     --arg accountId "$id" \
     '{accountId: $accountId}'
   )
-  exec_admin_graphql "$admin_token" 'account-details-by-account-id' "$variables"
+  exec_admin_graphql "$token" 'account-details-by-account-id' "$variables"
   refetched_id="$(graphql_output '.data.accountDetailsByAccountId.id')"
   [[ "$refetched_id" == "$id" ]] || exit 1
 
@@ -298,6 +318,32 @@ getEmailCode() {
   num_errors="$(graphql_output '.data.marketingNotificationTrigger.errors | length')"
   success="$(graphql_output '.data.marketingNotificationTrigger.success')"
   [[ "$num_errors" == "0" && "$success" == "true" ]] || exit 1
+}
+
+@test "modify_user: cannot trigger marketing notification" {
+  token="$(read_value 'modify_user.token')"
+
+  variables=$(
+    jq -n \
+    '{
+      input: {
+        localizedNotificationContents: [
+          {
+            language: "en",
+            title: "Test title",
+            body: "test body"
+          }
+        ],
+        shouldSendPush: false,
+        shouldAddToHistory: true,
+        shouldAddToBulletin: true,
+      }
+    }'
+  )
+  exec_admin_graphql "$token" 'marketing-notification-trigger' "$variables"
+  error_message="$(graphql_output '.errors[0].message')"
+  echo "error_message: $error_message" >&2
+  [[ "$error_message" == "Not authorized" ]] || exit 1
 }
 
 @test "admin: can force delete account" {
