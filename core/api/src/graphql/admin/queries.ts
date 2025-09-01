@@ -62,9 +62,7 @@ export const queryPermissions = {
   ] as (keyof typeof queryFields.authed)[],
 
   // System configuration operations - require SYSTEM_CONFIG
-  systemConfig: [
-    "allLevels",
-  ] as (keyof typeof queryFields.authed)[],
+  systemConfig: ["allLevels"] as (keyof typeof queryFields.authed)[],
 } as const
 
 export const QueryType = GT.Object({
