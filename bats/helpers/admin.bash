@@ -32,6 +32,8 @@ _create_admin_client_and_token() {
   cache_value "$token_cache_key" "$token"
 }
 
+# Below user specification is mimicing the users as they are defined in apps/admin-panel/app/api/auth/[...nextauth]/options.ts
+
 # Full admin access with all permissions
 login_admin() {
   local scopes='["VIEW_ACCOUNTS","VIEW_TRANSACTIONS","MODIFY_ACCOUNTS","DELETE_ACCOUNTS","SEND_NOTIFICATIONS","SYSTEM_CONFIG"]'
@@ -39,9 +41,9 @@ login_admin() {
 }
 
 # Modify user access (can view and modify accounts/transactions, but no notifications or system config)
-login_modify_user() {
-  local scopes='["VIEW_ACCOUNTS","VIEW_TRANSACTIONS","MODIFY_ACCOUNTS","DELETE_ACCOUNTS"]'
-  _create_admin_client_and_token "$scopes" "modify_user.token"
+login_support_user() {
+  local scopes='["VIEW_ACCOUNTS","VIEW_TRANSACTIONS","MODIFY_ACCOUNTS","DELETE_ACCOUNTS","SEND_NOTIFICATIONS"]'
+  _create_admin_client_and_token "$scopes" "support_user.token"
 }
 
 # View-only access (can only view accounts and transactions)

@@ -15,7 +15,7 @@ setup_file() {
   create_user 'tester2'
 
   login_admin
-  login_modify_user
+  login_support_user
   login_view_user
 }
 
@@ -50,8 +50,8 @@ getEmailCode() {
   cache_value 'tester.id' "$id"
 }
 
-@test "modify_user: can update user phone number" {
-  token="$(read_value 'modify_user.token')"
+@test "support_user: can update user phone number" {
+  token="$(read_value 'support_user.token')"
   id="$(read_value 'tester.id')"
   new_phone="$(random_phone)"
   variables=$(
@@ -93,7 +93,7 @@ getEmailCode() {
   [[ "$error_message" == "Not authorized" ]] || exit 1
 }
 
-@test "modify_user: can update user email" {
+@test "support_user: can update user email" {
   email="$(read_value tester.username)@blink.sv"
   cache_value "tester.email" "$email"
 
@@ -294,34 +294,8 @@ getEmailCode() {
   [[ "$count" -eq 1 ]] || exit 1
 }
 
-@test "admin: can trigger marketing notification" {
-  admin_token="$(read_value 'admin.token')"
-
-  variables=$(
-    jq -n \
-    '{
-      input: {
-        localizedNotificationContents: [
-          {
-            language: "en",
-            title: "Test title",
-            body: "test body"
-          }
-        ],
-        shouldSendPush: false,
-        shouldAddToHistory: true,
-        shouldAddToBulletin: true,
-      }
-    }'
-  )
-  exec_admin_graphql "$admin_token" 'marketing-notification-trigger' "$variables"
-  num_errors="$(graphql_output '.data.marketingNotificationTrigger.errors | length')"
-  success="$(graphql_output '.data.marketingNotificationTrigger.success')"
-  [[ "$num_errors" == "0" && "$success" == "true" ]] || exit 1
-}
-
-@test "modify_user: cannot trigger marketing notification" {
-  token="$(read_value 'modify_user.token')"
+@test "support_user: can trigger marketing notification" {
+  token="$(read_value 'support_user.token')"
 
   variables=$(
     jq -n \
@@ -341,9 +315,9 @@ getEmailCode() {
     }'
   )
   exec_admin_graphql "$token" 'marketing-notification-trigger' "$variables"
-  error_message="$(graphql_output '.errors[0].message')"
-  echo "error_message: $error_message" >&2
-  [[ "$error_message" == "Not authorized" ]] || exit 1
+  num_errors="$(graphql_output '.data.marketingNotificationTrigger.errors | length')"
+  success="$(graphql_output '.data.marketingNotificationTrigger.success')"
+  [[ "$num_errors" == "0" && "$success" == "true" ]] || exit 1
 }
 
 @test "admin: can force delete account" {
@@ -364,29 +338,37 @@ getEmailCode() {
   [[ "$num_errors" == "0" && "$success" == "true" ]] || exit 1
 }
 
-@test "admin: Some random functionality requires authentication" {
+@test "admin: can access system configuration (SYSTEM_CONFIG scope)" {
+  admin_token="$(read_value 'admin.token')"
+
+  # Use allLevels query as a proxy for system configuration access
+  # This represents a system configuration endpoint that should require SYSTEM_CONFIG scope
   variables=$(
     jq -n \
-    '{
-      input: {
-        localizedNotificationContents: [
-          {
-            language: "en",
-            title: "Test title",
-            body: "test body"
-          }
-        ],
-        shouldSendPush: false,
-        shouldAddToHistory: true,
-        shouldAddToBulletin: true,
-      }
-    }'
+    '{}'
   )
-  
-  # Try without any token (unauthenticated)
-  exec_admin_graphql "" 'marketing-notification-trigger' "$variables"
-  error_code="$(graphql_output '.error.code')"
-  [[ "$error_code" == "401" ]] || exit 1
+  exec_admin_graphql "$admin_token" 'all-levels' "$variables"
+  levels="$(graphql_output '.data.allLevels')"
+  [[ "$levels" != "null" && "$levels" != "" ]] || exit 1
+
+  # Verify we get expected account levels
+  level_count="$(graphql_output '.data.allLevels | length')"
+  [[ "$level_count" -gt 0 ]] || exit 1
+}
+
+@test "support_user: cannot access system configuration (SYSTEM_CONFIG scope)" {
+  support_token="$(read_value 'support_user.token')"
+
+  # Use allLevels query as a proxy for system configuration access
+  # Support user should not have SYSTEM_CONFIG scope, so this should fail
+  variables=$(
+    jq -n \
+    '{}'
+  )
+  exec_admin_graphql "$support_token" 'all-levels' "$variables"
+  error_message="$(graphql_output '.errors[0].message')"
+  echo "error_message: $error_message" >&2
+  [[ "$error_message" == "Not authorized" ]] || exit 1
 }
 
 # TODO: add check by email

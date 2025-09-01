@@ -46,7 +46,6 @@ export const queryPermissions = {
     "accountDetailsByUserPhone",
     "accountDetailsByUserId",
     "accountDetailsByUsername",
-    "allLevels",
     "filteredUserCount",
     "wallet",
     "inactiveMerchants",
@@ -60,6 +59,11 @@ export const queryPermissions = {
     "transactionById",
     "transactionsByHash",
     "transactionsByPaymentRequest",
+  ] as (keyof typeof queryFields.authed)[],
+
+  // System configuration operations - require SYSTEM_CONFIG
+  systemConfig: [
+    "allLevels",
   ] as (keyof typeof queryFields.authed)[],
 } as const
 

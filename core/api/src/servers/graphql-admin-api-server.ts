@@ -114,6 +114,11 @@ export async function startApolloServerForAdminSchema() {
     queryFields[queryName] = accessRules.viewTransactions
   }
 
+  // Apply SYSTEM_CONFIG permission to specified queries
+  for (const queryName of queryPermissions.systemConfig) {
+    queryFields[queryName] = accessRules.systemConfig
+  }
+
   // Build mutation permissions from mutations.ts definitions
   const mutationFields: { [key: string]: Rule } = {}
 
