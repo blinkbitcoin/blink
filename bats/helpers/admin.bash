@@ -32,7 +32,7 @@ _create_admin_client_and_token() {
   cache_value "$token_cache_key" "$token"
 }
 
-# Below user specification is mimicing the users as they are defined in apps/admin-panel/app/api/auth/[...nextauth]/options.ts
+# Below user specification is mimicking the users as they are defined in apps/admin-panel/app/api/auth/[...nextauth]/options.ts
 
 # Full admin access with all permissions
 login_admin() {
