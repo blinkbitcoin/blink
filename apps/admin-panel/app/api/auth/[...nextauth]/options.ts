@@ -88,7 +88,7 @@ const callbacks: Partial<CallbacksOptions> = {
         "bobtest@blinkbitcoin.test": "SUPPORT",
       }
     } else {
-      role_mapping = env.ROLE_MAPPING
+      role_mapping = env.USER_ROLE_MAP
     }
     if (user) {
       const userRole = role_mapping[user.email as keyof typeof role_mapping] || "VIEWER"
