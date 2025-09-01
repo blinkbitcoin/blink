@@ -79,7 +79,7 @@ const callbacks: Partial<CallbacksOptions> = {
     const verified = new Boolean("email_verified" in profile && profile.email_verified)
     return verified && env.AUTHORIZED_EMAILS.includes(email)
   },
-  async jwt({ token, account, profile, user }) {
+  async jwt({ token, user }) {
     let role_mapping: { [key: string]: string }
     if (env.NODE_ENV === "development") {
       role_mapping = {
