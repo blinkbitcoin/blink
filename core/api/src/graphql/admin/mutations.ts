@@ -21,8 +21,6 @@ export const mutationFields = {
     merchantMapValidate: MerchantMapValidateMutation,
     merchantMapDelete: MerchantMapDeleteMutation,
     marketingNotificationTrigger: TriggerMarketingNotificationMutation,
-    merchantMapDelete: MerchantMapDeleteMutation,
-    merchantMapValidate: MerchantMapValidateMutation,
     userUpdateEmail: UserUpdateEmailMutation,
     userUpdatePhone: UserUpdatePhoneMutation,
   },
