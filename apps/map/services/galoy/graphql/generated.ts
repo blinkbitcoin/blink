@@ -1580,6 +1580,11 @@ export type Query = {
   readonly payoutSpeeds: ReadonlyArray<PayoutSpeeds>;
   /** Returns 1 Sat and 1 Usd Cent price for the given currency in minor unit */
   readonly realtimePrice: RealtimePrice;
+  /**
+   * Get a StableSats quote for buying or selling USD.
+   * Returns a quote with pricing and expiration information.
+   */
+  readonly stableSatsGetQuote: StableSatsQuotePayload;
   /** @deprecated will be migrated to AccountDefaultWalletId */
   readonly userDefaultWalletId: Scalars['WalletId']['output'];
   readonly usernameAvailable?: Maybe<Scalars['Boolean']['output']>;
@@ -1647,6 +1652,11 @@ export type QueryRealtimePriceArgs = {
 };
 
 
+export type QueryStableSatsGetQuoteArgs = {
+  input: StableSatsGetQuoteInput;
+};
+
+
 export type QueryUserDefaultWalletIdArgs = {
   username: Scalars['Username']['input'];
 };
@@ -1676,6 +1686,14 @@ export type QuizClaimPayload = {
   readonly quizzes: ReadonlyArray<Quiz>;
 };
 
+export const QuoteType = {
+  BuyUsdWithCents: 'BUY_USD_WITH_CENTS',
+  BuyUsdWithSats: 'BUY_USD_WITH_SATS',
+  SellUsdForCents: 'SELL_USD_FOR_CENTS',
+  SellUsdForSats: 'SELL_USD_FOR_SATS'
+} as const;
+
+export type QuoteType = typeof QuoteType[keyof typeof QuoteType];
 export type RealtimePrice = {
   readonly __typename: 'RealtimePrice';
   readonly btcSatPrice: PriceOfOneSatInMinorUnit;
@@ -1733,6 +1751,43 @@ export type SettlementViaOnChain = {
   readonly arrivalInMempoolEstimatedAt?: Maybe<Scalars['Timestamp']['output']>;
   readonly transactionHash?: Maybe<Scalars['OnChainTxHash']['output']>;
   readonly vout?: Maybe<Scalars['Int']['output']>;
+};
+
+export type StableSatsGetQuoteInput = {
+  /** Amount in cents (for cent-based quotes) */
+  readonly centAmount?: InputMaybe<Scalars['CentAmount']['input']>;
+  /** Whether to execute the quote immediately */
+  readonly immediateExecution?: InputMaybe<Scalars['Boolean']['input']>;
+  /** Type of quote to request */
+  readonly quoteType: QuoteType;
+  /** Amount in satoshis (for sat-based quotes) */
+  readonly satAmount?: InputMaybe<Scalars['SatAmount']['input']>;
+  /** WalletId of the requesting wallet */
+  readonly walletId: Scalars['WalletId']['input'];
+};
+
+export type StableSatsQuote = {
+  readonly __typename: 'StableSatsQuote';
+  /** Amount to buy in cents (for buy USD quotes) */
+  readonly amountToBuyInCents?: Maybe<Scalars['Int']['output']>;
+  /** Amount to buy in satoshis (for sell USD quotes) */
+  readonly amountToBuyInSats?: Maybe<Scalars['Int']['output']>;
+  /** Amount to sell in cents (for sell USD quotes) */
+  readonly amountToSellInCents?: Maybe<Scalars['Int']['output']>;
+  /** Amount to sell in satoshis (for buy USD quotes) */
+  readonly amountToSellInSats?: Maybe<Scalars['Int']['output']>;
+  /** Whether the quote has been executed */
+  readonly executed: Scalars['Boolean']['output'];
+  /** Quote expiration timestamp */
+  readonly expiresAt: Scalars['Int']['output'];
+  /** Unique identifier for the quote */
+  readonly quoteId: Scalars['String']['output'];
+};
+
+export type StableSatsQuotePayload = {
+  readonly __typename: 'StableSatsQuotePayload';
+  readonly errors: ReadonlyArray<Error>;
+  readonly quote?: Maybe<StableSatsQuote>;
 };
 
 export type Subscription = {

@@ -1,12 +1,17 @@
 import QuoteType from "@/graphql/public/types/scalar/quote-type"
 import CentAmount from "@/graphql/public/types/scalar/cent-amount"
 import SatAmount from "@/graphql/shared/types/scalar/sat-amount"
+import WalletId from "@/graphql/shared/types/scalar/wallet-id"
 
 import { GT } from "@/graphql"
 
 const StableSatsGetQuoteInput = GT.Input({
   name: "StableSatsGetQuoteInput",
   fields: () => ({
+    walletId: {
+      type: GT.NonNull(WalletId),
+      description: "Wallet id of the requesting wallet",
+    },
     quoteType: {
       type: GT.NonNull(QuoteType),
       description: "Type of quote to request",

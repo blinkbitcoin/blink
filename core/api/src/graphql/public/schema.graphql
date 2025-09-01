@@ -1462,6 +1462,9 @@ input StableSatsGetQuoteInput {
 
   """Amount in satoshis (for sat-based quotes)"""
   satAmount: SatAmount
+
+  """WalletId of the requesting wallet"""
+  walletId: WalletId!
 }
 
 type StableSatsQuote {
