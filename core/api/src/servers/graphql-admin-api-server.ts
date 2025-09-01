@@ -16,8 +16,6 @@ import { queryPermissions } from "@/graphql/admin/queries"
 
 import { mutationPermissions } from "@/graphql/admin/mutations"
 
-
-
 import { GALOY_ADMIN_PORT } from "@/config"
 
 import {
@@ -62,7 +60,7 @@ const setGqlAdminContext = async (
 
   const userEmail = tokenPayload.sub as string // This should be the email from OAuth
   const role = tokenPayload.role as string
-  const scopeString = tokenPayload.scope as string || "[]"
+  const scopeString = (tokenPayload.scope as string) || "[]"
   const scope = JSON.parse(scopeString) as string[]
   const privilegedClientId = tokenPayload.sub as PrivilegedClientId
 
@@ -87,11 +85,7 @@ const setGqlAdminContext = async (
 
 // Helper function to create access right rules
 const createAccessRightRule = (accessRight: AdminAccessRight) =>
-  rule({ cache: "contextual" })(async (
-    parent,
-    args,
-    ctx: GraphQLAdminContext,
-  ) => {
+  rule({ cache: "contextual" })(async (parent, args, ctx: GraphQLAdminContext) => {
     if (!ctx.userEmail || !ctx.scope) return false
     return hasAccessRightInScope(ctx.scope, accessRight)
   })

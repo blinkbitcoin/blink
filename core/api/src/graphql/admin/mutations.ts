@@ -39,9 +39,7 @@ export const mutationPermissions = {
   ] as (keyof typeof mutationFields.authed)[],
 
   // Account deletion operations - require DELETE_ACCOUNTS
-  deleteAccounts: [
-    "accountForceDelete",
-  ] as (keyof typeof mutationFields.authed)[],
+  deleteAccounts: ["accountForceDelete"] as (keyof typeof mutationFields.authed)[],
 
   // Notification operations - require SEND_NOTIFICATIONS
   sendNotifications: [
