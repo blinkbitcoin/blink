@@ -1463,7 +1463,7 @@ input StableSatsGetQuoteInput {
   """Amount in satoshis (for sat-based quotes)"""
   satAmount: SatAmount
 
-  """WalletId of the requesting wallet"""
+  """Wallet id of the requesting wallet"""
   walletId: WalletId!
 }
 

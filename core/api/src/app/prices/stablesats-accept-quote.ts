@@ -1,5 +1,5 @@
-import { QuoteId } from "@/domain/dealer-quote/index.types"
-import { DealerQuoteService } from "@/services/dealer-quote"
+import { QuoteId } from "@/domain/quotes/index.types"
+import { QuotesService } from "@/services/quotes"
 
 export const acceptStableSatsQuote = async ({
   quoteId,
@@ -10,10 +10,6 @@ export const acceptStableSatsQuote = async ({
     return new Error("Invalid quote ID provided")
   }
 
-  const dealerQuoteService = DealerQuoteService()
-  const result = await dealerQuoteService.acceptQuote(quoteId)
-
-  if (result instanceof Error) return result
-
-  return true
+  const quotesService = QuotesService()
+  return quotesService.acceptQuote(quoteId)
 }
