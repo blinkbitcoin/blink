@@ -5,7 +5,8 @@
   "scripts": {
     "preinstall": "npx only-allow pnpm",
     "nodev": "node -v",
-    "whichnode": "which node"
+    "whichnode": "which node",
+    "prepare": "husky || true # prepare sometimes called without dev-deps"
   },
   "engines": {
     "node": "20",

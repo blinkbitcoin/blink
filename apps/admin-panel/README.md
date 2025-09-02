@@ -13,18 +13,16 @@ With a default installation, Admin Panel can be accessed with `admin.domain.com`
 copy `.env` to `.env.local`. and edit environment variable accordingly.
 
 ```
-yarn install
-export PORT=3004
-yarn dev
+pnpm install
+pnpm dev
 ```
 
 Runs the app in the development mode.
 Open [http://localhost:3004](http://localhost:3004) to view it in the browser.
 
 The page will reload if you make edits.
-You will also see any lint errors in the console.
 
-### `yarn build`
+### `pnpm build`
 
 Builds the app for production to the `build` folder.
 It correctly bundles React in production mode and optimizes the build for the best performance.
@@ -34,5 +32,16 @@ Your app is ready to be deployed!
 
 ### Development mode credentials
 
+As we have three different roles in the admin panel, we have three different credentials for development mode:
+
+#### Admin
 - username: `admin`
 - password: `admin`
+
+#### Support
+- username: `bob`
+- password: `bob`
+
+#### Viewer
+- username: `alice`
+- password: `alice`
