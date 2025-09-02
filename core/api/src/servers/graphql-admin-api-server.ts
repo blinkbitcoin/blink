@@ -28,7 +28,23 @@ import { Transactions } from "@/app"
 
 import { AuthorizationError } from "@/graphql/error"
 
-import { AdminAccessRight, hasAccessRightInScope } from "@/services/auth/role-checker"
+// Admin access rights - duplicated from admin-panel to avoid dependency
+enum AdminAccessRight {
+  VIEW_ACCOUNTS = "VIEW_ACCOUNTS",
+  MODIFY_ACCOUNTS = "MODIFY_ACCOUNTS",
+  DELETE_ACCOUNTS = "DELETE_ACCOUNTS",
+  VIEW_TRANSACTIONS = "VIEW_TRANSACTIONS",
+  SEND_NOTIFICATIONS = "SEND_NOTIFICATIONS",
+  SYSTEM_CONFIG = "SYSTEM_CONFIG",
+}
+
+// Simple inline function to check if scope contains access right
+const hasAccessRightInScope = (
+  scope: string[],
+  accessRight: AdminAccessRight,
+): boolean => {
+  return scope.includes(accessRight)
+}
 
 // TODO: loaders probably not needed for the admin panel
 const loaders = {
