@@ -21,8 +21,12 @@ export const env = createEnv({
       .transform((str) => {
         try {
           return JSON.parse(str)
-        } catch {
-          return {}
+        } catch (error) {
+          throw new Error(
+            `Invalid JSON in USER_ROLE_MAP environment variable: ${
+              error instanceof Error ? error.message : "Unknown parsing error"
+            }`,
+          )
         }
       })
       .default("{}"),
@@ -50,6 +54,6 @@ export const env = createEnv({
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
     NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
     AUTHORIZED_EMAILS: process.env.AUTHORIZED_EMAILS,
-    USER_ROLE_MAP: process.env.ROLE_MAPPING || "{}",
+    USER_ROLE_MAP: process.env.USER_ROLE_MAP || "{}",
   },
 })

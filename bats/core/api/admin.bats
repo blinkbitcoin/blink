@@ -37,6 +37,68 @@ getEmailCode() {
   echo "$code"
 }
 
+
+@test "no_token: access denied without JWT token" {
+  # Test multiple endpoints to ensure comprehensive access control
+  exec_admin_graphql "" 'all-levels' '{}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
+
+  exec_admin_graphql "" 'account-details-by-user-phone' '{"phone": "+1234567890"}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
+
+  exec_admin_graphql "" 'account-details-by-username' '{"username": "test"}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
+
+  exec_admin_graphql "" 'account-details-by-account-id' '{"accountId": "test-id"}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
+
+  exec_admin_graphql "" 'account-details-by-user-id' '{"userId": "test-id"}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
+
+  exec_admin_graphql "" 'user-update-phone' '{"input": {"phone": "+1234567890", "accountId": "test-id"}}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
+
+  exec_admin_graphql "" 'user-update-email' '{"input": {"email": "test@example.com", "accountId": "test-id"}}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
+
+  exec_admin_graphql "" 'account-update-level' '{"input": {"level": "TWO", "accountId": "test-id"}}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
+
+  exec_admin_graphql "" 'account-update-status' '{"input": {"status": "LOCKED", "accountId": "test-id", "comment": "test"}}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
+
+  exec_admin_graphql "" 'filtered-user-count' '{}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
+
+  exec_admin_graphql "" 'marketing-notification-trigger' '{"input": {"localizedNotificationContents": [{"language": "en", "title": "Test", "body": "Test"}], "shouldSendPush": false, "shouldAddToHistory": true, "shouldAddToBulletin": true}}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
+
+  exec_admin_graphql "" 'account-force-delete' '{"input": {"accountId": "test-id"}}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
+}
+
+@test "empty_scope: access denied with empty scope token" {
+  _create_admin_client_and_token '[]' "empty_scope.token"
+  empty_token="$(read_value 'empty_scope.token')"
+
+  # Test different endpoints than the no_token test for broader coverage (using only existing .gql files)
+  echo "Testing inactive-merchants..." >&2
+  exec_admin_graphql "$empty_token" 'inactive-merchants' '{}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" ]] || exit 1
+
+  echo "Testing merchants-pending-approval..." >&2
+  exec_admin_graphql "$empty_token" 'merchants-pending-approval' '{}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" ]] || exit 1
+
+  echo "Testing merchant-map-validate..." >&2
+  exec_admin_graphql "$empty_token" 'merchant-map-validate' '{"input": {"id": "test-merchant-id"}}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" ]] || exit 1
+
+  echo "Testing merchant-map-delete..." >&2
+  exec_admin_graphql "$empty_token" 'merchant-map-delete' '{"input": {"id": "test-merchant-id"}}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" ]] || exit 1
+}
+
 @test "view_user: can query account details by phone" {
   token="$(read_value 'view_user.token')"
   variables=$(

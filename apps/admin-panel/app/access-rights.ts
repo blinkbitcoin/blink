@@ -58,6 +58,19 @@ export function getAllAccessRights(): AdminAccessRight[] {
 }
 
 /**
+ * Check if a scope array contains a specific access right
+ * @param scope - Array of access rights from JWT token scope
+ * @param accessRight - The access right to check for
+ * @returns True if the scope contains the access right
+ */
+export function hasAccessRightInScope(
+  scope: string[],
+  accessRight: AdminAccessRight,
+): boolean {
+  return scope.includes(accessRight)
+}
+
+/**
  * Validate if a string is a valid admin role
  * @param role - The role string to validate
  * @returns True if the role is valid

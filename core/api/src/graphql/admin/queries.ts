@@ -14,58 +14,91 @@ import MerchantsPendingApprovalQuery from "./root/query/merchants-pending-approv
 import InactiveMerchantsQuery from "./root/query/inactive-merchants-listing"
 import FilteredUserCountQuery from "./root/query/filtered-user-count"
 
+import { accessRules, extractFields, buildPermissionMappings } from "./access-rules"
+
 import { GT } from "@/graphql/index"
 
+// Query fields with embedded access rules
 export const queryFields = {
   unauthed: {},
   authed: {
-    accountDetailsByAccountId: AccountDetailsByAccountId,
-    accountDetailsByEmail: AccountDetailsByUserEmailQuery,
-    accountDetailsByUserPhone: AccountDetailsByUserPhoneQuery,
-    accountDetailsByUserId: AccountDetailsByUserId,
-    accountDetailsByUsername: AccountDetailsByUsernameQuery,
-    allLevels: AllLevelsQuery,
-    filteredUserCount: FilteredUserCountQuery,
-    inactiveMerchants: InactiveMerchantsQuery,
-    lightningInvoice: LightningInvoiceQuery,
-    lightningPayment: LightningPaymentQuery,
-    merchantsPendingApproval: MerchantsPendingApprovalQuery,
-    transactionById: TransactionByIdQuery,
-    transactionsByHash: TransactionsByHashQuery,
-    transactionsByPaymentRequest: TransactionsByPaymentRequestQuery,
-    wallet: WalletQuery,
+    // Account viewing operations - require VIEW_ACCOUNTS
+    accountDetailsByAccountId: {
+      field: AccountDetailsByAccountId,
+      rule: accessRules.viewAccounts,
+    },
+    accountDetailsByEmail: {
+      field: AccountDetailsByUserEmailQuery,
+      rule: accessRules.viewAccounts,
+    },
+    accountDetailsByUserPhone: {
+      field: AccountDetailsByUserPhoneQuery,
+      rule: accessRules.viewAccounts,
+    },
+    accountDetailsByUserId: {
+      field: AccountDetailsByUserId,
+      rule: accessRules.viewAccounts,
+    },
+    accountDetailsByUsername: {
+      field: AccountDetailsByUsernameQuery,
+      rule: accessRules.viewAccounts,
+    },
+    filteredUserCount: {
+      field: FilteredUserCountQuery,
+      rule: accessRules.viewAccounts,
+    },
+    wallet: {
+      field: WalletQuery,
+      rule: accessRules.viewAccounts,
+    },
+    inactiveMerchants: {
+      field: InactiveMerchantsQuery,
+      rule: accessRules.viewAccounts,
+    },
+    merchantsPendingApproval: {
+      field: MerchantsPendingApprovalQuery,
+      rule: accessRules.viewAccounts,
+    },
+
+    // Transaction viewing operations - require VIEW_TRANSACTIONS
+    lightningInvoice: {
+      field: LightningInvoiceQuery,
+      rule: accessRules.viewTransactions,
+    },
+    lightningPayment: {
+      field: LightningPaymentQuery,
+      rule: accessRules.viewTransactions,
+    },
+    transactionById: {
+      field: TransactionByIdQuery,
+      rule: accessRules.viewTransactions,
+    },
+    transactionsByHash: {
+      field: TransactionsByHashQuery,
+      rule: accessRules.viewTransactions,
+    },
+    transactionsByPaymentRequest: {
+      field: TransactionsByPaymentRequestQuery,
+      rule: accessRules.viewTransactions,
+    },
+
+    // System configuration operations - require SYSTEM_CONFIG
+    allLevels: {
+      field: AllLevelsQuery,
+      rule: accessRules.systemConfig,
+    },
   },
 }
 
-// Detailed query permissions mapping by access right
-export const queryPermissions = {
-  // Account viewing operations - require VIEW_ACCOUNTS
-  viewAccounts: [
-    "accountDetailsByAccountId",
-    "accountDetailsByEmail",
-    "accountDetailsByUserPhone",
-    "accountDetailsByUserId",
-    "accountDetailsByUsername",
-    "filteredUserCount",
-    "wallet",
-    "inactiveMerchants",
-    "merchantsPendingApproval",
-  ] as (keyof typeof queryFields.authed)[],
+// Helper functions are now imported from access-rules.ts to avoid duplication
 
-  // Transaction viewing operations - require VIEW_TRANSACTIONS
-  viewTransactions: [
-    "lightningInvoice",
-    "lightningPayment",
-    "transactionById",
-    "transactionsByHash",
-    "transactionsByPaymentRequest",
-  ] as (keyof typeof queryFields.authed)[],
+// Extract the actual GraphQL fields for the schema
+const extractedQueryFields = extractFields(queryFields.authed)
 
-  // System configuration operations - require SYSTEM_CONFIG
-  systemConfig: ["allLevels"] as (keyof typeof queryFields.authed)[],
-} as const
+// Build permission mappings automatically from the field definitions (now field -> rule mapping)
+export const queryPermissions = buildPermissionMappings(queryFields.authed)
 
 export const QueryType = GT.Object({
   name: "Query",
-  fields: () => ({ ...queryFields.unauthed, ...queryFields.authed }),
+  fields: () => ({ ...queryFields.unauthed, ...extractedQueryFields }),
 })

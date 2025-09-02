@@ -10,44 +10,60 @@ import AccountForceDeleteMutation from "./root/mutation/account-force-delete"
 
 import TriggerMarketingNotificationMutation from "./root/mutation/marketing-notification-trigger"
 
+import { accessRules, extractFields, buildPermissionMappings } from "./access-rules"
+
 import { GT } from "@/graphql/index"
 
+// Mutation fields with embedded access rules
 export const mutationFields = {
   unauthed: {},
   authed: {
-    accountUpdateLevel: AccountUpdateLevelMutation,
-    accountUpdateStatus: AccountUpdateStatusMutation,
-    accountForceDelete: AccountForceDeleteMutation,
-    merchantMapValidate: MerchantMapValidateMutation,
-    merchantMapDelete: MerchantMapDeleteMutation,
-    marketingNotificationTrigger: TriggerMarketingNotificationMutation,
-    userUpdateEmail: UserUpdateEmailMutation,
-    userUpdatePhone: UserUpdatePhoneMutation,
+    // Account modification operations - require MODIFY_ACCOUNTS
+    accountUpdateLevel: {
+      field: AccountUpdateLevelMutation,
+      rule: accessRules.modifyAccounts,
+    },
+    accountUpdateStatus: {
+      field: AccountUpdateStatusMutation,
+      rule: accessRules.modifyAccounts,
+    },
+    userUpdateEmail: {
+      field: UserUpdateEmailMutation,
+      rule: accessRules.modifyAccounts,
+    },
+    userUpdatePhone: {
+      field: UserUpdatePhoneMutation,
+      rule: accessRules.modifyAccounts,
+    },
+    merchantMapValidate: {
+      field: MerchantMapValidateMutation,
+      rule: accessRules.modifyAccounts,
+    },
+    merchantMapDelete: {
+      field: MerchantMapDeleteMutation,
+      rule: accessRules.modifyAccounts,
+    },
+
+    // Account deletion operations - require DELETE_ACCOUNTS
+    accountForceDelete: {
+      field: AccountForceDeleteMutation,
+      rule: accessRules.deleteAccounts,
+    },
+
+    // Notification operations - require SEND_NOTIFICATIONS
+    marketingNotificationTrigger: {
+      field: TriggerMarketingNotificationMutation,
+      rule: accessRules.sendNotifications,
+    },
   },
 }
+// Extract the actual GraphQL fields for the schema
+const extractedMutationFields = extractFields(mutationFields.authed)
 
-// Detailed mutation permissions mapping by access right
-export const mutationPermissions = {
-  // Account modification operations - require MODIFY_ACCOUNTS
-  modifyAccounts: [
-    "accountUpdateLevel",
-    "accountUpdateStatus",
-    "userUpdateEmail",
-    "userUpdatePhone",
-    "merchantMapValidate",
-    "merchantMapDelete",
-  ] as (keyof typeof mutationFields.authed)[],
-
-  // Account deletion operations - require DELETE_ACCOUNTS
-  deleteAccounts: ["accountForceDelete"] as (keyof typeof mutationFields.authed)[],
-
-  // Notification operations - require SEND_NOTIFICATIONS
-  sendNotifications: [
-    "marketingNotificationTrigger",
-  ] as (keyof typeof mutationFields.authed)[],
-} as const
+// Build permission mappings automatically from the field definitions (now field -> rule mapping)
+export const mutationPermissions = buildPermissionMappings(mutationFields.authed)
 
 export const MutationType = GT.Object<null, GraphQLAdminContext>({
   name: "Mutation",
-  fields: () => ({ ...mutationFields.authed }),
+  fields: () => ({ ...extractedMutationFields }),
 })

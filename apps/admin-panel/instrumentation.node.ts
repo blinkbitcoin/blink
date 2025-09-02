@@ -8,6 +8,13 @@ import { HttpInstrumentation } from "@opentelemetry/instrumentation-http"
 import { GraphQLInstrumentation } from "@opentelemetry/instrumentation-graphql"
 import { W3CTraceContextPropagator } from "@opentelemetry/core"
 
+import { env } from "./app/env"
+
+console.log("Validating environment variables...")
+// Simply accessing the env object triggers validation of all variables
+JSON.stringify(env)
+console.log("✅ Environment variables validated successfully")
+
 const sdk = new NodeSDK({
   textMapPropagator: new W3CTraceContextPropagator(),
   resource: new Resource({
