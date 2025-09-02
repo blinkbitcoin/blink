@@ -21,8 +21,12 @@ export const env = createEnv({
       .transform((str) => {
         try {
           return JSON.parse(str)
-        } catch {
-          return {}
+        } catch (error) {
+          throw new Error(
+            `Invalid JSON in USER_ROLE_MAP environment variable: ${
+              error instanceof Error ? error.message : "Unknown parsing error"
+            }`,
+          )
         }
       })
       .default("{}"),
