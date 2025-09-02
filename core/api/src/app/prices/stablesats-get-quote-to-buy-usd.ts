@@ -1,6 +1,6 @@
 import { checkedToBtcPaymentAmount, checkedToUsdPaymentAmount } from "@/domain/shared"
-import { DealerQuoteService } from "@/services/dealer-quote"
-import type { QuoteToBuyUsd } from "@/domain/dealer-quote/index.types"
+import { QuotesService } from "@/services/quotes"
+import type { QuoteToBuyUsd } from "@/domain/quotes/index.types"
 
 export const getStableSatsQuoteToBuyUsdWithSats = async ({
   btcAmount,
@@ -12,13 +12,11 @@ export const getStableSatsQuoteToBuyUsdWithSats = async ({
   const validatedBtcAmount = checkedToBtcPaymentAmount(btcAmount)
   if (validatedBtcAmount instanceof Error) return validatedBtcAmount
 
-  const dealerQuoteService = DealerQuoteService()
-  const result = await dealerQuoteService.getQuoteToBuyUsdWithSats(
-    validatedBtcAmount,
+  const quotesService = QuotesService()
+  return quotesService.getQuoteToBuyUsdWithSats({
+    btcAmount: validatedBtcAmount,
     immediateExecution,
-  )
-
-  return result
+  })
 }
 
 export const getStableSatsQuoteToBuyUsdWithCents = async ({
@@ -31,11 +29,9 @@ export const getStableSatsQuoteToBuyUsdWithCents = async ({
   const validatedUsdAmount = checkedToUsdPaymentAmount(usdAmount)
   if (validatedUsdAmount instanceof Error) return validatedUsdAmount
 
-  const dealerQuoteService = DealerQuoteService()
-  const result = await dealerQuoteService.getQuoteToBuyUsdWithCents(
-    validatedUsdAmount,
+  const quotesService = QuotesService()
+  return quotesService.getQuoteToBuyUsdWithCents({
+    usdAmount: validatedUsdAmount,
     immediateExecution,
-  )
-
-  return result
+  })
 }

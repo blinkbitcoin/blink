@@ -1762,7 +1762,7 @@ export type StableSatsGetQuoteInput = {
   readonly quoteType: QuoteType;
   /** Amount in satoshis (for sat-based quotes) */
   readonly satAmount?: InputMaybe<Scalars['SatAmount']['input']>;
-  /** WalletId of the requesting wallet */
+  /** Wallet id of the requesting wallet */
   readonly walletId: Scalars['WalletId']['input'];
 };
 
