@@ -128,10 +128,6 @@ const callbacks: Partial<CallbacksOptions> = {
   },
   // https://next-auth.js.org/configuration/callbacks#session-callback
   async session({ session, token }) {
-    // If token has an error (like NoUser), deny the session
-    if (token.error) {
-      throw new Error("Access denied: Invalid authentication")
-    }
     session.scope = token.scope as string
     session.role = token.role as string
     return session
