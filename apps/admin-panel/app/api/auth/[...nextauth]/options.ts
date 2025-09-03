@@ -3,8 +3,23 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import type { Provider } from "next-auth/providers"
 
 import { CallbacksOptions } from "next-auth"
+import { trace } from "@opentelemetry/api"
 
 import { env } from "../../../env"
+import {
+  getAccessRightsForRole,
+  isValidAdminRole,
+  type AdminRole,
+} from "../../../access-rights"
+
+declare module "next-auth" {
+  interface Session {
+    sub: string | null
+    accessToken: string
+    role: string
+    scope: string
+  }
+}
 
 const providers: Provider[] = [
   GoogleProvider({
@@ -30,7 +45,13 @@ if (env.NODE_ENV === "development") {
       },
       authorize: async (credentials) => {
         if (credentials?.username === "admin" && credentials?.password === "admin") {
-          return { id: "1", name: "admin", email: "test@galoy.io" }
+          return { id: "1", name: "admin", email: "admintest@blinkbitcoin.test" }
+        }
+        if (credentials?.username === "alice" && credentials?.password === "alice") {
+          return { id: "2", name: "alice", email: "alicetest@blinkbitcoin.test" }
+        }
+        if (credentials?.username === "bob" && credentials?.password === "bob") {
+          return { id: "2", name: "bob", email: "bobtest@blinkbitcoin.test" }
         }
         return null
       },
@@ -56,6 +77,60 @@ const callbacks: Partial<CallbacksOptions> = {
     // eslint-disable-next-line no-new-wrappers
     const verified = new Boolean("email_verified" in profile && profile.email_verified)
     return verified && env.AUTHORIZED_EMAILS.includes(email)
+  },
+  // https://next-auth.js.org/configuration/callbacks#jwt-callback
+  async jwt({ token, user }) {
+    const tracer = trace.getTracer("admin-panel-auth")
+
+    return tracer.startActiveSpan("jwt-callback", (span) => {
+      span.setAttributes({
+        "auth.user_email": user?.email || token.email || "notSet",
+        "auth.has_user": !!user,
+      })
+
+      let role_mapping: { [key: string]: string }
+      if (env.NODE_ENV === "development") {
+        role_mapping = {
+          "admintest@blinkbitcoin.test": "ADMIN",
+          "alicetest@blinkbitcoin.test": "VIEWER",
+          "bobtest@blinkbitcoin.test": "SUPPORT",
+        }
+      } else {
+        role_mapping = env.USER_ROLE_MAP
+      }
+
+      if (user) {
+        const userRole = role_mapping[user.email as keyof typeof role_mapping] || "VIEWER"
+
+        if (isValidAdminRole(userRole)) {
+          const accessRights = getAccessRightsForRole(userRole as AdminRole)
+          token.scope = JSON.stringify(accessRights)
+          token.role = userRole
+        } else {
+          token.scope = JSON.stringify([])
+          token.role = ""
+        }
+      } else {
+        if (!(token.email && token.scope && token.role)) {
+          token.scope = JSON.stringify([])
+          token.role = ""
+        }
+      }
+
+      span.setAttributes({
+        "auth.final_role": (token.role as string) || "notSet",
+        "auth.has_scope": !!token.scope,
+      })
+
+      span.end()
+      return token
+    })
+  },
+  // https://next-auth.js.org/configuration/callbacks#session-callback
+  async session({ session, token }) {
+    session.scope = token.scope as string
+    session.role = token.role as string
+    return session
   },
 }
 

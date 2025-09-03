@@ -16,6 +16,20 @@ export const env = createEnv({
       .string()
       .transform((x) => x.split(",").map((email) => email.trim()))
       .default("test@galoy.io"),
+    USER_ROLE_MAP: z
+      .string()
+      .transform((str) => {
+        try {
+          return JSON.parse(str)
+        } catch (error) {
+          throw new Error(
+            `Invalid JSON in USER_ROLE_MAP environment variable: ${
+              error instanceof Error ? error.message : "Unknown parsing error"
+            }`,
+          )
+        }
+      })
+      .default("{}"),
   },
   /*
    * Environment variables available on the client (and server).
@@ -40,5 +54,6 @@ export const env = createEnv({
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
     NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
     AUTHORIZED_EMAILS: process.env.AUTHORIZED_EMAILS,
+    USER_ROLE_MAP: process.env.USER_ROLE_MAP || "{}",
   },
 })
