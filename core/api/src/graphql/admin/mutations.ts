@@ -10,8 +10,9 @@ import AccountForceDeleteMutation from "./root/mutation/account-force-delete"
 
 import TriggerMarketingNotificationMutation from "./root/mutation/marketing-notification-trigger"
 
-import { GT } from "@/graphql/index"
 import { accessRules, extractFields, buildPermissionMappings } from "./access-rules"
+
+import { GT } from "@/graphql/index"
 
 // Mutation fields with embedded access rules
 export const mutationFields = {
@@ -20,39 +21,39 @@ export const mutationFields = {
     // Account modification operations - require MODIFY_ACCOUNTS
     accountUpdateLevel: {
       field: AccountUpdateLevelMutation,
-      rule: accessRules.modifyAccounts
+      rule: accessRules.modifyAccounts,
     },
     accountUpdateStatus: {
       field: AccountUpdateStatusMutation,
-      rule: accessRules.modifyAccounts
+      rule: accessRules.modifyAccounts,
     },
     userUpdateEmail: {
       field: UserUpdateEmailMutation,
-      rule: accessRules.modifyAccounts
+      rule: accessRules.modifyAccounts,
     },
     userUpdatePhone: {
       field: UserUpdatePhoneMutation,
-      rule: accessRules.modifyAccounts
+      rule: accessRules.modifyAccounts,
     },
     merchantMapValidate: {
       field: MerchantMapValidateMutation,
-      rule: accessRules.modifyAccounts
+      rule: accessRules.modifyAccounts,
     },
     merchantMapDelete: {
       field: MerchantMapDeleteMutation,
-      rule: accessRules.modifyAccounts
+      rule: accessRules.modifyAccounts,
     },
 
     // Account deletion operations - require DELETE_ACCOUNTS
     accountForceDelete: {
       field: AccountForceDeleteMutation,
-      rule: accessRules.deleteAccounts
+      rule: accessRules.deleteAccounts,
     },
 
     // Notification operations - require SEND_NOTIFICATIONS
     marketingNotificationTrigger: {
       field: TriggerMarketingNotificationMutation,
-      rule: accessRules.sendNotifications
+      rule: accessRules.sendNotifications,
     },
   },
 }
