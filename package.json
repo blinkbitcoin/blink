@@ -6,7 +6,7 @@
     "preinstall": "npx only-allow pnpm",
     "nodev": "node -v",
     "whichnode": "which node",
-    "prepare": "husky"
+    "prepare": "husky || true # prepare sometimes called withoud dev-deps"
   },
   "engines": {
     "node": "20",
