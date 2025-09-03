@@ -1,6 +1,5 @@
 import { applyMiddleware } from "graphql-middleware"
-import { rule, shield } from "graphql-shield"
-
+import { shield } from "graphql-shield"
 
 import { NextFunction, Request, Response } from "express"
 

@@ -1,8 +1,10 @@
 import { rule } from "graphql-shield"
+import { Rule } from "graphql-shield/typings/rules"
+import { GraphQLFieldConfig } from "graphql"
 
 /**
  * Admin Access Rules for GraphQL Shield
- * 
+ *
  * This module contains the actual GraphQL Shield rules that can be used
  * directly in field definitions. Each rule checks if the user has the
  * required permission in their JWT scope.
@@ -12,7 +14,7 @@ import { rule } from "graphql-shield"
 enum AdminAccessRight {
   VIEW_ACCOUNTS = "VIEW_ACCOUNTS",
   MODIFY_ACCOUNTS = "MODIFY_ACCOUNTS",
-  DELETE_ACCOUNTS = "DELETE_ACCOUNTS", 
+  DELETE_ACCOUNTS = "DELETE_ACCOUNTS",
   VIEW_TRANSACTIONS = "VIEW_TRANSACTIONS",
   SEND_NOTIFICATIONS = "SEND_NOTIFICATIONS",
   SYSTEM_CONFIG = "SYSTEM_CONFIG",
@@ -20,7 +22,7 @@ enum AdminAccessRight {
 
 // Helper function to create access right rules
 const createAccessRightRule = (accessRight: AdminAccessRight) =>
-  rule({ cache: "contextual" })(async (parent, args, ctx: GraphQLAdminContext) => {
+  rule({ cache: "contextual" })(async (_parent, _args, ctx: GraphQLAdminContext) => {
     if (!ctx.userEmail || !ctx.scope) return false
     return ctx.scope.includes(accessRight)
   })
@@ -55,15 +57,18 @@ export const accessRules = {
  * const fields = extractFields(input)
  * // Result: { userQuery: UserQueryField, adminQuery: AdminQueryField }
  * ```javascript
-*/
-export function extractFields<T extends Record<string, { field: any; rule: any }>>(
-  fieldsWithRules: T
-): Record<keyof T, any> {
-  const result: Record<string, any> = {}
+ */
+export function extractFields<
+  T extends Record<
+    string,
+    { field: GraphQLFieldConfig<unknown, GraphQLAdminContext>; rule: Rule }
+  >,
+>(fieldsWithRules: T): Record<keyof T, GraphQLFieldConfig<unknown, GraphQLAdminContext>> {
+  const result: Record<string, GraphQLFieldConfig<unknown, GraphQLAdminContext>> = {}
   for (const [key, value] of Object.entries(fieldsWithRules)) {
     result[key] = value.field
   }
-  return result as Record<keyof T, any>
+  return result as Record<keyof T, GraphQLFieldConfig<unknown, GraphQLAdminContext>>
 }
 
 /**
@@ -89,10 +94,13 @@ export function extractFields<T extends Record<string, { field: any; rule: any }
  * ```
 
  */
-export function buildPermissionMappings<T extends Record<string, { field: any; rule: any }>>(
-  fieldsWithRules: T
-): Record<string, any> {
-  const permissionMap: Record<string, any> = {}
+export function buildPermissionMappings<
+  T extends Record<
+    string,
+    { field: GraphQLFieldConfig<unknown, GraphQLAdminContext>; rule: Rule }
+  >,
+>(fieldsWithRules: T): Record<string, Rule> {
+  const permissionMap: Record<string, Rule> = {}
 
   for (const [fieldName, { rule }] of Object.entries(fieldsWithRules)) {
     permissionMap[fieldName] = rule
