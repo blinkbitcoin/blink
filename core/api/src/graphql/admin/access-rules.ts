@@ -61,14 +61,14 @@ export const accessRules = {
 export function extractFields<
   T extends Record<
     string,
-    { field: GraphQLFieldConfig<unknown, GraphQLAdminContext>; rule: Rule }
+    { field: GraphQLFieldConfig<any, GraphQLAdminContext, any>; rule: Rule }
   >,
->(fieldsWithRules: T): Record<keyof T, GraphQLFieldConfig<unknown, GraphQLAdminContext>> {
-  const result: Record<string, GraphQLFieldConfig<unknown, GraphQLAdminContext>> = {}
+>(fieldsWithRules: T): Record<keyof T, GraphQLFieldConfig<any, GraphQLAdminContext, any>> {
+  const result: Record<string, GraphQLFieldConfig<any, GraphQLAdminContext, any>> = {}
   for (const [key, value] of Object.entries(fieldsWithRules)) {
     result[key] = value.field
   }
-  return result as Record<keyof T, GraphQLFieldConfig<unknown, GraphQLAdminContext>>
+  return result as Record<keyof T, GraphQLFieldConfig<any, GraphQLAdminContext, any>>
 }
 
 /**
@@ -97,7 +97,7 @@ export function extractFields<
 export function buildPermissionMappings<
   T extends Record<
     string,
-    { field: GraphQLFieldConfig<unknown, GraphQLAdminContext>; rule: Rule }
+    { field: GraphQLFieldConfig<any, GraphQLAdminContext, any>; rule: Rule }
   >,
 >(fieldsWithRules: T): Record<string, Rule> {
   const permissionMap: Record<string, Rule> = {}
