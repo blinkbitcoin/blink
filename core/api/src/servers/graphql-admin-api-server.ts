@@ -28,24 +28,6 @@ import { Transactions } from "@/app"
 
 import { AuthorizationError } from "@/graphql/error"
 
-// Admin access rights - duplicated from admin-panel to avoid dependency
-enum AdminAccessRight {
-  VIEW_ACCOUNTS = "VIEW_ACCOUNTS",
-  MODIFY_ACCOUNTS = "MODIFY_ACCOUNTS",
-  DELETE_ACCOUNTS = "DELETE_ACCOUNTS",
-  VIEW_TRANSACTIONS = "VIEW_TRANSACTIONS",
-  SEND_NOTIFICATIONS = "SEND_NOTIFICATIONS",
-  SYSTEM_CONFIG = "SYSTEM_CONFIG",
-}
-
-// Simple inline function to check if scope contains access right
-const hasAccessRightInScope = (
-  scope: string[],
-  accessRight: AdminAccessRight,
-): boolean => {
-  return scope.includes(accessRight)
-}
-
 // TODO: loaders probably not needed for the admin panel
 const loaders = {
   txnMetadata: new DataLoader(async (keys) => {
@@ -99,64 +81,14 @@ const setGqlAdminContext = async (
   )
 }
 
-// Helper function to create access right rules
-const createAccessRightRule = (accessRight: AdminAccessRight) =>
-  rule({ cache: "contextual" })(async (parent, args, ctx: GraphQLAdminContext) => {
-    if (!ctx.userEmail || !ctx.scope) return false
-    return hasAccessRightInScope(ctx.scope, accessRight)
-  })
-
-// Create access right rules object
-const accessRules = {
-  viewAccounts: createAccessRightRule(AdminAccessRight.VIEW_ACCOUNTS),
-  modifyAccounts: createAccessRightRule(AdminAccessRight.MODIFY_ACCOUNTS),
-  deleteAccounts: createAccessRightRule(AdminAccessRight.DELETE_ACCOUNTS),
-  viewTransactions: createAccessRightRule(AdminAccessRight.VIEW_TRANSACTIONS),
-  sendNotifications: createAccessRightRule(AdminAccessRight.SEND_NOTIFICATIONS),
-  systemConfig: createAccessRightRule(AdminAccessRight.SYSTEM_CONFIG),
-}
+// No need for complex permission mapping - the queries and mutations now export direct field -> rule mappings
 
 export async function startApolloServerForAdminSchema() {
-  // Build query permissions from queries.ts definitions
-  const queryFields: { [key: string]: Rule } = {}
-
-  // Apply VIEW_ACCOUNTS permission to specified queries
-  for (const queryName of queryPermissions.viewAccounts) {
-    queryFields[queryName] = accessRules.viewAccounts
-  }
-
-  // Apply VIEW_TRANSACTIONS permission to specified queries
-  for (const queryName of queryPermissions.viewTransactions) {
-    queryFields[queryName] = accessRules.viewTransactions
-  }
-
-  // Apply SYSTEM_CONFIG permission to specified queries
-  for (const queryName of queryPermissions.systemConfig) {
-    queryFields[queryName] = accessRules.systemConfig
-  }
-
-  // Build mutation permissions from mutations.ts definitions
-  const mutationFields: { [key: string]: Rule } = {}
-
-  // Apply MODIFY_ACCOUNTS permission to specified mutations
-  for (const mutationName of mutationPermissions.modifyAccounts) {
-    mutationFields[mutationName] = accessRules.modifyAccounts
-  }
-
-  // Apply DELETE_ACCOUNTS permission to specified mutations
-  for (const mutationName of mutationPermissions.deleteAccounts) {
-    mutationFields[mutationName] = accessRules.deleteAccounts
-  }
-
-  // Apply SEND_NOTIFICATIONS permission to specified mutations
-  for (const mutationName of mutationPermissions.sendNotifications) {
-    mutationFields[mutationName] = accessRules.sendNotifications
-  }
-
+  // The permission mappings are now direct field -> rule mappings, so we can use them directly
   const permissions = shield(
     {
-      Query: queryFields,
-      Mutation: mutationFields,
+      Query: queryPermissions,
+      Mutation: mutationPermissions,
     },
     {
       allowExternalErrors: true,
