@@ -1,0 +1,6 @@
+{
+    "core/api/**/*.{ts,js}": [
+      "cd core/api && pnpm eslint-fix ${filenames.join(' ')}",
+      "cd core/api && pnpm tsc-check  ${filenames.join(' ')}"
+    ]
+}
