@@ -54,8 +54,8 @@ export const accessRules = {
  * }
  * const fields = extractFields(input)
  * // Result: { userQuery: UserQueryField, adminQuery: AdminQueryField }
- * ```
- */
+ * ```javascript
+*/
 export function extractFields<T extends Record<string, { field: any; rule: any }>>(
   fieldsWithRules: T
 ): Record<keyof T, any> {
@@ -78,7 +78,8 @@ export function extractFields<T extends Record<string, { field: any; rule: any }
  * @returns Object mapping field names to their access rules
  *
  * @example
- * ```typescript
+ *
+```typescript
  * const input = {
  *   userQuery: { field: UserQueryField, rule: viewAccountsRule },
  *   adminQuery: { field: AdminQueryField, rule: adminRule }
@@ -86,6 +87,7 @@ export function extractFields<T extends Record<string, { field: any; rule: any }
  * const permissions = buildPermissionMappings(input)
  * // Result: { userQuery: viewAccountsRule, adminQuery: adminRule }
  * ```
+
  */
 export function buildPermissionMappings<T extends Record<string, { field: any; rule: any }>>(
   fieldsWithRules: T
