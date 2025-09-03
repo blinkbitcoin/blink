@@ -14,8 +14,9 @@ import MerchantsPendingApprovalQuery from "./root/query/merchants-pending-approv
 import InactiveMerchantsQuery from "./root/query/inactive-merchants-listing"
 import FilteredUserCountQuery from "./root/query/filtered-user-count"
 
-import { GT } from "@/graphql/index"
 import { accessRules, extractFields, buildPermissionMappings } from "./access-rules"
+
+import { GT } from "@/graphql/index"
 
 // Query fields with embedded access rules
 export const queryFields = {
@@ -24,67 +25,67 @@ export const queryFields = {
     // Account viewing operations - require VIEW_ACCOUNTS
     accountDetailsByAccountId: {
       field: AccountDetailsByAccountId,
-      rule: accessRules.viewAccounts
+      rule: accessRules.viewAccounts,
     },
     accountDetailsByEmail: {
       field: AccountDetailsByUserEmailQuery,
-      rule: accessRules.viewAccounts
+      rule: accessRules.viewAccounts,
     },
     accountDetailsByUserPhone: {
       field: AccountDetailsByUserPhoneQuery,
-      rule: accessRules.viewAccounts
+      rule: accessRules.viewAccounts,
     },
     accountDetailsByUserId: {
       field: AccountDetailsByUserId,
-      rule: accessRules.viewAccounts
+      rule: accessRules.viewAccounts,
     },
     accountDetailsByUsername: {
       field: AccountDetailsByUsernameQuery,
-      rule: accessRules.viewAccounts
+      rule: accessRules.viewAccounts,
     },
     filteredUserCount: {
       field: FilteredUserCountQuery,
-      rule: accessRules.viewAccounts
+      rule: accessRules.viewAccounts,
     },
     wallet: {
       field: WalletQuery,
-      rule: accessRules.viewAccounts
+      rule: accessRules.viewAccounts,
     },
     inactiveMerchants: {
       field: InactiveMerchantsQuery,
-      rule: accessRules.viewAccounts
+      rule: accessRules.viewAccounts,
     },
     merchantsPendingApproval: {
       field: MerchantsPendingApprovalQuery,
-      rule: accessRules.viewAccounts
+      rule: accessRules.viewAccounts,
     },
 
     // Transaction viewing operations - require VIEW_TRANSACTIONS
     lightningInvoice: {
       field: LightningInvoiceQuery,
-      rule: accessRules.viewTransactions
+      rule: accessRules.viewTransactions,
     },
     lightningPayment: {
       field: LightningPaymentQuery,
-      rule: accessRules.viewTransactions
+      rule: accessRules.viewTransactions,
     },
     transactionById: {
       field: TransactionByIdQuery,
-      rule: accessRules.viewTransactions
+      rule: accessRules.viewTransactions,
     },
     transactionsByHash: {
       field: TransactionsByHashQuery,
-      rule: accessRules.viewTransactions
+      rule: accessRules.viewTransactions,
     },
     transactionsByPaymentRequest: {
       field: TransactionsByPaymentRequestQuery,
-      rule: accessRules.viewTransactions
+      rule: accessRules.viewTransactions,
     },
 
     // System configuration operations - require SYSTEM_CONFIG
     allLevels: {
       field: AllLevelsQuery,
-      rule: accessRules.systemConfig
+      rule: accessRules.systemConfig,
     },
   },
 }
