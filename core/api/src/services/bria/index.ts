@@ -439,7 +439,7 @@ export const OnChainService = (): IOnChainService => {
     address,
     amount,
     speed,
-  }: EstimatePayoutFeeArgs): Promise<BtcPaymentAmount | OnChainServiceError> => {
+  }: EstimatePayoutFeeArgs): Promise<EstimateFeeForPayoutRes | OnChainServiceError> => {
     const estimate = async ({
       speed,
       address,
@@ -448,7 +448,7 @@ export const OnChainService = (): IOnChainService => {
       speed: PayoutSpeed
       address: OnChainAddress
       amount: BtcPaymentAmount
-    }): Promise<BtcPaymentAmount | BriaEventError> => {
+    }): Promise<EstimateFeeForPayoutRes | BriaEventError> => {
       try {
         const queueName = queueNameForSpeed(speed)
         if (queueName instanceof Error) return queueName
@@ -460,10 +460,19 @@ export const OnChainService = (): IOnChainService => {
         request.setSatoshis(Number(amount.amount))
 
         const response = await estimatePayoutFee(request, metadata)
-        return paymentAmountFromNumber({
+
+        const estimateFee = paymentAmountFromNumber({
           amount: response.getSatoshis(),
           currency: WalletCurrency.Btc,
         })
+        if (estimateFee instanceof Error) {
+          return new UnknownOnChainServiceError(estimateFee)
+        }
+
+        return {
+          fee: estimateFee,
+          feeRate: response.getFeeRate(),
+        }
       } catch (error) {
         return new UnknownOnChainServiceError(error)
       }
