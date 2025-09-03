@@ -9,7 +9,7 @@ import { rule } from "graphql-shield"
  */
 
 // Admin access rights enum
-export enum AdminAccessRight {
+enum AdminAccessRight {
   VIEW_ACCOUNTS = "VIEW_ACCOUNTS",
   MODIFY_ACCOUNTS = "MODIFY_ACCOUNTS",
   DELETE_ACCOUNTS = "DELETE_ACCOUNTS", 
@@ -35,7 +35,27 @@ export const accessRules = {
   systemConfig: createAccessRightRule(AdminAccessRight.SYSTEM_CONFIG),
 }
 
-// Helper function to extract just the GraphQL fields from our structure
+/**
+ * Extracts GraphQL field configurations from a structure that contains both fields and rules.
+ *
+ * This function takes an object where each property contains both a GraphQL field configuration
+ * and an access rule, and returns a new object with just the field configurations. This is
+ * used to prepare the fields for GraphQL schema construction.
+ *
+ * @template T - The type of the input object containing field/rule pairs
+ * @param fieldsWithRules - Object where each property has { field, rule } structure
+ * @returns Object containing only the GraphQL field configurations
+ *
+ * @example
+ * ```typescript
+ * const input = {
+ *   userQuery: { field: UserQueryField, rule: viewAccountsRule },
+ *   adminQuery: { field: AdminQueryField, rule: adminRule }
+ * }
+ * const fields = extractFields(input)
+ * // Result: { userQuery: UserQueryField, adminQuery: AdminQueryField }
+ * ```
+ */
 export function extractFields<T extends Record<string, { field: any; rule: any }>>(
   fieldsWithRules: T
 ): Record<keyof T, any> {
@@ -46,7 +66,27 @@ export function extractFields<T extends Record<string, { field: any; rule: any }
   return result as Record<keyof T, any>
 }
 
-// Helper function to build permission mappings from our flat structure
+/**
+ * Builds a permission mapping from field names to their corresponding access rules.
+ *
+ * This function takes an object where each property contains both a GraphQL field configuration
+ * and an access rule, and returns a mapping from field names to their access rules. This
+ * mapping is used by GraphQL Shield to apply authorization rules to specific fields.
+ *
+ * @template T - The type of the input object containing field/rule pairs
+ * @param fieldsWithRules - Object where each property has { field, rule } structure
+ * @returns Object mapping field names to their access rules
+ *
+ * @example
+ * ```typescript
+ * const input = {
+ *   userQuery: { field: UserQueryField, rule: viewAccountsRule },
+ *   adminQuery: { field: AdminQueryField, rule: adminRule }
+ * }
+ * const permissions = buildPermissionMappings(input)
+ * // Result: { userQuery: viewAccountsRule, adminQuery: adminRule }
+ * ```
+ */
 export function buildPermissionMappings<T extends Record<string, { field: any; rule: any }>>(
   fieldsWithRules: T
 ): Record<string, any> {
