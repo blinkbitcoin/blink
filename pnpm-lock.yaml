@@ -1104,8 +1104,8 @@ importers:
         specifier: ^0.7.15
         version: 0.7.15
       '@ip1sms/disposable-phone-numbers':
-        specifier: ^2.1.1279
-        version: 2.1.1279
+        specifier: ^2.1.1280
+        version: 2.1.1280
       '@merqva/telegram-passport':
         specifier: ^1.0.2
         version: 1.0.2
@@ -7231,8 +7231,8 @@ packages:
     resolution: {integrity: sha512-Sx1pU8EM64o2BrqNpEO1CNLtKQwyhuXuqyfH7oGKCk+1a33d2r5saW8zNwm3j6BTExtjrv2BxTgzzkMwts6vGg==}
     dev: false
 
-  /@ip1sms/disposable-phone-numbers@2.1.1279:
-    resolution: {integrity: sha512-+VhDH7FPRmxRm4K4Q9+DzSIZhVhe1p0XGdLsdHXPleC1Y89imTSzH9vaMwQeS1EWD1//OR7eyWQEYZ/D9Ie7VA==}
+  /@ip1sms/disposable-phone-numbers@2.1.1280:
+    resolution: {integrity: sha512-QaGMWur3Ct+z2SfcR2zY5JiRzg0jB/KSSNS5OJJr+bAk43Bgkj7hbYoRoaIXyBSjtJGlHL7TeKMX8Ob1nuZt8w==}
     dev: false
 
   /@isaacs/cliui@8.0.2:
@@ -16012,8 +16012,8 @@ packages:
     dev: false
     optional: true
 
-  /bare-fs@4.2.2:
-    resolution: {integrity: sha512-5vn+bdnlCYMwETIm1FqQXDP6TYPbxr2uJd88ve40kr4oPbiTZJVrTNzqA3/4sfWZeWKuQR/RkboBt7qEEDtfMA==}
+  /bare-fs@4.2.3:
+    resolution: {integrity: sha512-1aGs5pRVLToMQ79elP+7cc0u0s/wXAzfBv/7hDloT7WFggLqECCas5qqPky7WHCFdsBH5WDq6sD4fAoz5sJbtA==}
     engines: {bare: '>=1.16.0'}
     requiresBuild: true
     peerDependencies:
@@ -16418,7 +16418,7 @@ packages:
     hasBin: true
     dependencies:
       caniuse-lite: 1.0.30001739
-      electron-to-chromium: 1.5.213
+      electron-to-chromium: 1.5.214
       node-releases: 2.0.19
       update-browserslist-db: 1.1.3(browserslist@4.25.4)
     dev: true
@@ -18463,8 +18463,8 @@ packages:
   /electron-to-chromium@1.5.178:
     resolution: {integrity: sha512-wObbz/ar3Bc6e4X5vf0iO8xTN8YAjN/tgiAOJLr7yjYFtP9wAjq8Mb5h0yn6kResir+VYx2DXBj9NNobs0ETSA==}
 
-  /electron-to-chromium@1.5.213:
-    resolution: {integrity: sha512-xr9eRzSLNa4neDO0xVFrkXu3vyIzG4Ay08dApecw42Z1NbmCt+keEpXdvlYGVe0wtvY5dhW0Ay0lY0IOfsCg0Q==}
+  /electron-to-chromium@1.5.214:
+    resolution: {integrity: sha512-TpvUNdha+X3ybfU78NoQatKvQEm1oq3lf2QbnmCEdw+Bd9RuIAY+hJTvq1avzHM0f7EJfnH3vbCnbzKzisc/9Q==}
     dev: true
 
   /elliptic@6.6.1:
@@ -29316,7 +29316,7 @@ packages:
       pump: 3.0.3
       tar-stream: 3.1.7
     optionalDependencies:
-      bare-fs: 4.2.2
+      bare-fs: 4.2.3
       bare-path: 3.0.0
     transitivePeerDependencies:
       - bare-buffer
