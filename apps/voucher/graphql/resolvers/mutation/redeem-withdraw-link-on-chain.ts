@@ -11,7 +11,7 @@ import { lockVoucherSecret } from "@/services/lock"
 import { fetchUserData } from "@/services/galoy/query/me"
 import { escrowApolloClient } from "@/services/galoy/client/escrow"
 import { onChainUsdTxFee } from "@/services/galoy/query/on-chain-usd-tx-fee"
-import { onChainUsdPaymentSend } from "@/services/galoy/mutation/on-chain-payment-sned"
+import { onChainUsdPaymentSend } from "@/services/galoy/mutation/on-chain-payment-send"
 
 export const redeemWithdrawLinkOnChain = async (
   _: undefined,
