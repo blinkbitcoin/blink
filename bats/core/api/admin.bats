@@ -14,9 +14,12 @@ setup_file() {
 
   create_user 'tester2'
 
+  # Login all role types for comprehensive testing
   login_admin
-  login_support_user
-  login_view_user
+  login_supportlv2_user
+  login_supportlv1_user
+  login_marketing_user
+  login_viewer_user
 }
 
 getEmailCode() {
@@ -99,8 +102,8 @@ getEmailCode() {
   [[ "$(graphql_output '.errors[0].message')" == "Not authorized" ]] || exit 1
 }
 
-@test "view_user: can query account details by phone" {
-  token="$(read_value 'view_user.token')"
+@test "viewer_user: can query account details by phone" {
+  token="$(read_value 'viewer_user.token')"
   variables=$(
     jq -n \
     --arg phone "$(read_value 'tester.phone')" \
@@ -112,8 +115,21 @@ getEmailCode() {
   cache_value 'tester.id' "$id"
 }
 
-@test "support_user: can update user phone number" {
-  token="$(read_value 'support_user.token')"
+@test "admin: can query account details for tester2 by phone" {
+  token="$(read_value 'admin.token')"
+  variables=$(
+    jq -n \
+    --arg phone "$(read_value 'tester2.phone')" \
+    '{phone: $phone}'
+  )
+  exec_admin_graphql $token 'account-details-by-user-phone' "$variables"
+  id="$(graphql_output '.data.accountDetailsByUserPhone.id')"
+  [[ "$id" != "null" && "$id" != "" ]] || exit 1
+  cache_value 'tester2.id' "$id"
+}
+
+@test "supportlv2_user: can update user phone number" {
+  token="$(read_value 'supportlv2_user.token')"
   id="$(read_value 'tester.id')"
   new_phone="$(random_phone)"
   variables=$(
@@ -137,25 +153,8 @@ getEmailCode() {
   [[ "$refetched_id" == "$id" ]] || exit 1
 }
 
-@test "view_user: cannot update user phone number" {
-  token="$(read_value 'view_user.token')"
-  id="$(read_value 'tester.id')"
-  new_phone="$(random_phone)"
-  variables=$(
-    jq -n \
-    --arg phone "$new_phone" \
-    --arg accountId "$id" \
-    '{input: {phone: $phone, accountId:$accountId}}'
-  )
 
-  # Attempt to update phone number - should fail with authorization error
-  exec_admin_graphql $token 'user-update-phone' "$variables"
-  error_message="$(graphql_output '.errors[0].message')"
-  echo "error_message: $error_message" >&2
-  [[ "$error_message" == "Not authorized" ]] || exit 1
-}
-
-@test "support_user: can update user email" {
+@test "admin: can update user email" {
   email="$(read_value tester.username)@blink.sv"
   cache_value "tester.email" "$email"
 
@@ -356,31 +355,7 @@ getEmailCode() {
   [[ "$count" -eq 1 ]] || exit 1
 }
 
-@test "support_user: can trigger marketing notification" {
-  token="$(read_value 'support_user.token')"
 
-  variables=$(
-    jq -n \
-    '{
-      input: {
-        localizedNotificationContents: [
-          {
-            language: "en",
-            title: "Test title",
-            body: "test body"
-          }
-        ],
-        shouldSendPush: false,
-        shouldAddToHistory: true,
-        shouldAddToBulletin: true,
-      }
-    }'
-  )
-  exec_admin_graphql "$token" 'marketing-notification-trigger' "$variables"
-  num_errors="$(graphql_output '.data.marketingNotificationTrigger.errors | length')"
-  success="$(graphql_output '.data.marketingNotificationTrigger.success')"
-  [[ "$num_errors" == "0" && "$success" == "true" ]] || exit 1
-}
 
 @test "admin: can force delete account" {
   admin_token="$(read_value 'admin.token')"
@@ -418,21 +393,85 @@ getEmailCode() {
   [[ "$level_count" -gt 0 ]] || exit 1
 }
 
-@test "support_user: cannot access system configuration (SYSTEM_CONFIG scope)" {
-  support_token="$(read_value 'support_user.token')"
 
-  # Use allLevels query as a proxy for system configuration access
-  # Support user should not have SYSTEM_CONFIG scope, so this should fail
+
+# ============================================================================
+# ACCESS DENIED TESTS - ONE PER ROLE
+# ============================================================================
+
+# VIEWER role - cannot lock accounts (should only have VIEW_ACCOUNTS, VIEW_TRANSACTIONS, VIEW_MERCHANTS)
+@test "viewer_user: cannot lock accounts (LOCK_ACCOUNT scope)" {
+  viewer_token="$(read_value 'viewer_user.token')"
+  id="$(read_value 'tester.id')"
+
   variables=$(
     jq -n \
-    '{}'
+    --arg account_status "LOCKED" \
+    --arg accountId "$id" \
+    --arg comment "Test lock attempt by viewer" \
+    '{input: {status: $account_status, accountId: $accountId, comment: $comment}}'
   )
-  exec_admin_graphql "$support_token" 'all-levels' "$variables"
+  exec_admin_graphql "$viewer_token" 'account-update-status' "$variables"
   error_message="$(graphql_output '.errors[0].message')"
-  echo "error_message: $error_message" >&2
+  [[ "$error_message" == "Not authorized" ]] || exit 1
+}
+
+# MARKETING role - cannot view accounts (should only have SEND_NOTIFICATIONS)
+@test "marketing_user: cannot view accounts (VIEW_ACCOUNTS scope)" {
+  marketing_token="$(read_value 'marketing_user.token')"
+  id="$(read_value 'tester.id')"
+
+  variables=$(
+    jq -n \
+    --arg accountId "$id" \
+    '{accountId: $accountId}'
+  )
+  exec_admin_graphql "$marketing_token" 'account-details-by-account-id' "$variables"
+  error_message="$(graphql_output '.errors[0].message')"
+  [[ "$error_message" == "Not authorized" ]] || exit 1
+}
+
+# SUPPORTLV1 role - cannot change account level (missing CHANGELEVEL_ACCOUNT)
+@test "supportlv1_user: cannot change account level (CHANGELEVEL_ACCOUNT scope)" {
+  supportlv1_token="$(read_value 'supportlv1_user.token')"
+  id="$(read_value 'tester.id')"
+
+  variables=$(
+    jq -n \
+    --arg level "TWO" \
+    --arg accountId "$id" \
+    '{input: {level: $level, accountId: $accountId}}'
+  )
+  exec_admin_graphql "$supportlv1_token" 'account-update-level' "$variables"
+  error_message="$(graphql_output '.errors[0].message')"
+  [[ "$error_message" == "Not authorized" ]] || exit 1
+}
+
+# SUPPORTLV2 role - cannot send notifications (missing SEND_NOTIFICATIONS)
+@test "supportlv2_user: cannot send notifications (SEND_NOTIFICATIONS scope)" {
+  supportlv2_token="$(read_value 'supportlv2_user.token')"
+
+  variables=$(
+    jq -n \
+    '{
+      input: {
+        localizedNotificationContents: [
+          {
+            language: "en",
+            title: "Test title",
+            body: "test body"
+          }
+        ],
+        shouldSendPush: false,
+        shouldAddToHistory: true,
+        shouldAddToBulletin: true,
+      }
+    }'
+  )
+  exec_admin_graphql "$supportlv2_token" 'marketing-notification-trigger' "$variables"
+  error_message="$(graphql_output '.errors[0].message')"
   [[ "$error_message" == "Not authorized" ]] || exit 1
 }
 
 # TODO: add check by email
-
 # TODO: business update map info

@@ -53,11 +53,11 @@ export const queryFields = {
     },
     inactiveMerchants: {
       field: InactiveMerchantsQuery,
-      rule: accessRules.viewAccounts,
+      rule: accessRules.viewMerchants,
     },
     merchantsPendingApproval: {
       field: MerchantsPendingApprovalQuery,
-      rule: accessRules.viewAccounts,
+      rule: accessRules.viewMerchants,
     },
 
     // Transaction viewing operations - require VIEW_TRANSACTIONS

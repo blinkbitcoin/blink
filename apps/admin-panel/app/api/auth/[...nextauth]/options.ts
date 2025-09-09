@@ -92,7 +92,8 @@ const callbacks: Partial<CallbacksOptions> = {
         role_mapping = {
           "admintest@blinkbitcoin.test": ["ADMIN"],
           "alicetest@blinkbitcoin.test": ["VIEWER"],
-          "bobtest@blinkbitcoin.test": ["SUPPORT"],
+          "bobtest@blinkbitcoin.test": ["SUPPORTLV1"],
+          "caroltest@blinkbitcoin.test": ["SUPPORTLV2", "MARKETING"],
         }
       } else {
         role_mapping = env.USER_ROLE_MAP
