@@ -1,32 +1,69 @@
 // Admin access rights definitions
 export enum AdminAccessRight {
   VIEW_ACCOUNTS = "VIEW_ACCOUNTS",
-  MODIFY_ACCOUNTS = "MODIFY_ACCOUNTS",
+  MODIFY_ACCOUNTS = "MODIFY_ACCOUNTS", // Legacy - will be removed
   DELETE_ACCOUNTS = "DELETE_ACCOUNTS",
   VIEW_TRANSACTIONS = "VIEW_TRANSACTIONS",
   SEND_NOTIFICATIONS = "SEND_NOTIFICATIONS",
   SYSTEM_CONFIG = "SYSTEM_CONFIG",
+
+  // New granular access rights
+  APPROVE_MERCHANT = "APPROVE_MERCHANT",
+  CHANGECONTACTS_ACCOUNT = "CHANGECONTACTS_ACCOUNT",
+  CHANGELEVEL_ACCOUNT = "CHANGELEVEL_ACCOUNT",
+  LOCK_ACCOUNT = "LOCK_ACCOUNT",
+  VIEW_MERCHANTS = "VIEW_MERCHANTS",
 }
 
 // Role types
-export type AdminRole = "VIEWER" | "SUPPORT" | "ADMIN"
+export type AdminRole =
+  | "VIEWER"
+  | "SUPPORT"
+  | "MARKETING"
+  | "SUPPORTLV1"
+  | "SUPPORTLV2"
+  | "ADMIN"
 
 // Role to access rights mapping
 const ROLE_ACCESS_RIGHTS: Record<AdminRole, AdminAccessRight[]> = {
   VIEWER: [AdminAccessRight.VIEW_ACCOUNTS, AdminAccessRight.VIEW_TRANSACTIONS],
   SUPPORT: [
+    // Legacy role - will be removed
     AdminAccessRight.VIEW_ACCOUNTS,
     AdminAccessRight.MODIFY_ACCOUNTS,
     AdminAccessRight.VIEW_TRANSACTIONS,
     AdminAccessRight.SEND_NOTIFICATIONS,
   ],
+  MARKETING: [AdminAccessRight.SEND_NOTIFICATIONS],
+  SUPPORTLV1: [
+    AdminAccessRight.VIEW_ACCOUNTS,
+    AdminAccessRight.VIEW_MERCHANTS,
+    AdminAccessRight.LOCK_ACCOUNT,
+    AdminAccessRight.APPROVE_MERCHANT,
+    AdminAccessRight.VIEW_TRANSACTIONS,
+  ],
+  SUPPORTLV2: [
+    // Inherits all SUPPORTLV1 rights plus additional ones
+    AdminAccessRight.VIEW_ACCOUNTS,
+    AdminAccessRight.VIEW_MERCHANTS,
+    AdminAccessRight.LOCK_ACCOUNT,
+    AdminAccessRight.APPROVE_MERCHANT,
+    AdminAccessRight.VIEW_TRANSACTIONS,
+    AdminAccessRight.CHANGECONTACTS_ACCOUNT,
+    AdminAccessRight.CHANGELEVEL_ACCOUNT,
+  ],
   ADMIN: [
     AdminAccessRight.VIEW_ACCOUNTS,
-    AdminAccessRight.MODIFY_ACCOUNTS,
+    AdminAccessRight.MODIFY_ACCOUNTS, // Legacy - will be removed
     AdminAccessRight.DELETE_ACCOUNTS,
     AdminAccessRight.VIEW_TRANSACTIONS,
     AdminAccessRight.SEND_NOTIFICATIONS,
     AdminAccessRight.SYSTEM_CONFIG,
+    AdminAccessRight.APPROVE_MERCHANT,
+    AdminAccessRight.CHANGECONTACTS_ACCOUNT,
+    AdminAccessRight.CHANGELEVEL_ACCOUNT,
+    AdminAccessRight.LOCK_ACCOUNT,
+    AdminAccessRight.VIEW_MERCHANTS,
   ],
 }
 
@@ -105,7 +142,14 @@ export function hasAccessRightInScope(
  * @returns True if the role is valid
  */
 export function isValidAdminRole(role: string): role is AdminRole {
-  return role === "VIEWER" || role === "SUPPORT" || role === "ADMIN"
+  return (
+    role === "VIEWER" ||
+    role === "SUPPORT" ||
+    role === "MARKETING" ||
+    role === "SUPPORTLV1" ||
+    role === "SUPPORTLV2" ||
+    role === "ADMIN"
+  )
 }
 
 /**
