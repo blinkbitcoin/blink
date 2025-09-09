@@ -18,30 +18,33 @@ import { GT } from "@/graphql/index"
 export const mutationFields = {
   unauthed: {},
   authed: {
-    // Account modification operations - require MODIFY_ACCOUNTS
+    // Account level operations - require CHANGELEVEL_ACCOUNT
     accountUpdateLevel: {
       field: AccountUpdateLevelMutation,
-      rule: accessRules.modifyAccounts,
+      rule: accessRules.changeLevelAccount,
     },
+    // Account status operations - require LOCK_ACCOUNT
     accountUpdateStatus: {
       field: AccountUpdateStatusMutation,
-      rule: accessRules.modifyAccounts,
+      rule: accessRules.lockAccount,
     },
+    // Contact update operations - require CHANGECONTACTS_ACCOUNT
     userUpdateEmail: {
       field: UserUpdateEmailMutation,
-      rule: accessRules.modifyAccounts,
+      rule: accessRules.changeContactsAccount,
     },
     userUpdatePhone: {
       field: UserUpdatePhoneMutation,
-      rule: accessRules.modifyAccounts,
+      rule: accessRules.changeContactsAccount,
     },
+    // Merchant operations - require APPROVE_MERCHANT
     merchantMapValidate: {
       field: MerchantMapValidateMutation,
-      rule: accessRules.modifyAccounts,
+      rule: accessRules.approveMerchant,
     },
     merchantMapDelete: {
       field: MerchantMapDeleteMutation,
-      rule: accessRules.modifyAccounts,
+      rule: accessRules.approveMerchant,
     },
 
     // Account deletion operations - require DELETE_ACCOUNTS

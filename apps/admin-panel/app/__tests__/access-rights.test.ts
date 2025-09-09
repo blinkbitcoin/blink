@@ -18,16 +18,6 @@ describe("Access Rights - Multiple Roles Support", () => {
       ])
     })
 
-    test("getAccessRightsForRole returns correct rights for SUPPORT", () => {
-      const rights = getAccessRightsForRole("SUPPORT")
-      expect(rights).toEqual([
-        AdminAccessRight.VIEW_ACCOUNTS,
-        AdminAccessRight.MODIFY_ACCOUNTS,
-        AdminAccessRight.VIEW_TRANSACTIONS,
-        AdminAccessRight.SEND_NOTIFICATIONS,
-      ])
-    })
-
     test("getAccessRightsForRole returns correct rights for MARKETING", () => {
       const rights = getAccessRightsForRole("MARKETING")
       expect(rights).toEqual([AdminAccessRight.SEND_NOTIFICATIONS])
@@ -62,7 +52,6 @@ describe("Access Rights - Multiple Roles Support", () => {
       expect(rights).toEqual(
         expect.arrayContaining([
           AdminAccessRight.VIEW_ACCOUNTS,
-          AdminAccessRight.MODIFY_ACCOUNTS, // Legacy
           AdminAccessRight.DELETE_ACCOUNTS,
           AdminAccessRight.VIEW_TRANSACTIONS,
           AdminAccessRight.SEND_NOTIFICATIONS,
@@ -74,7 +63,7 @@ describe("Access Rights - Multiple Roles Support", () => {
           AdminAccessRight.VIEW_MERCHANTS,
         ]),
       )
-      expect(rights).toHaveLength(11) // All rights
+      expect(rights).toHaveLength(10) // All rights
     })
 
     test("hasAccessRight works correctly", () => {
@@ -97,16 +86,15 @@ describe("Access Rights - Multiple Roles Support", () => {
 
   describe("Multiple Roles Functions (new functionality)", () => {
     test("getAccessRightsForRoles combines rights from multiple roles", () => {
-      const rights = getAccessRightsForRoles(["VIEWER", "SUPPORT"])
+      const rights = getAccessRightsForRoles(["VIEWER", "MARKETING"])
       expect(rights).toEqual(
         expect.arrayContaining([
           AdminAccessRight.VIEW_ACCOUNTS,
-          AdminAccessRight.MODIFY_ACCOUNTS,
           AdminAccessRight.VIEW_TRANSACTIONS,
           AdminAccessRight.SEND_NOTIFICATIONS,
         ]),
       )
-      expect(rights).toHaveLength(4) // No duplicates
+      expect(rights).toHaveLength(3) // No duplicates
     })
 
     test("getAccessRightsForRoles handles single role in array", () => {
@@ -118,11 +106,16 @@ describe("Access Rights - Multiple Roles Support", () => {
     })
 
     test("getAccessRightsForRoles handles all roles", () => {
-      const rights = getAccessRightsForRoles(["VIEWER", "SUPPORT", "ADMIN"])
+      const rights = getAccessRightsForRoles([
+        "VIEWER",
+        "MARKETING",
+        "SUPPORTLV1",
+        "SUPPORTLV2",
+        "ADMIN",
+      ])
       expect(rights).toEqual(
         expect.arrayContaining([
           AdminAccessRight.VIEW_ACCOUNTS,
-          AdminAccessRight.MODIFY_ACCOUNTS,
           AdminAccessRight.DELETE_ACCOUNTS,
           AdminAccessRight.VIEW_TRANSACTIONS,
           AdminAccessRight.SEND_NOTIFICATIONS,
@@ -134,7 +127,7 @@ describe("Access Rights - Multiple Roles Support", () => {
           AdminAccessRight.VIEW_MERCHANTS,
         ]),
       )
-      expect(rights).toHaveLength(11) // All unique rights
+      expect(rights).toHaveLength(10) // All unique rights
     })
 
     test("getAccessRightsForRoles handles empty array", () => {
@@ -151,12 +144,12 @@ describe("Access Rights - Multiple Roles Support", () => {
         hasAccessRightInRoles(["VIEWER", "ADMIN"], AdminAccessRight.DELETE_ACCOUNTS),
       ).toBe(true)
       expect(
-        hasAccessRightInRoles(["VIEWER", "SUPPORT"], AdminAccessRight.DELETE_ACCOUNTS),
+        hasAccessRightInRoles(["VIEWER", "MARKETING"], AdminAccessRight.DELETE_ACCOUNTS),
       ).toBe(false)
     })
 
     test("areValidAdminRoles validates role arrays correctly", () => {
-      expect(areValidAdminRoles(["VIEWER", "SUPPORT"])).toBe(true)
+      expect(areValidAdminRoles(["VIEWER", "MARKETING"])).toBe(true)
       expect(areValidAdminRoles(["MARKETING", "SUPPORTLV1"])).toBe(true)
       expect(areValidAdminRoles(["SUPPORTLV2", "ADMIN"])).toBe(true)
       expect(areValidAdminRoles(["ADMIN"])).toBe(true)
@@ -168,16 +161,15 @@ describe("Access Rights - Multiple Roles Support", () => {
 
   describe("Edge Cases", () => {
     test("duplicate roles in array are handled correctly", () => {
-      const rights = getAccessRightsForRoles(["VIEWER", "VIEWER", "SUPPORT"])
+      const rights = getAccessRightsForRoles(["VIEWER", "VIEWER", "MARKETING"])
       expect(rights).toEqual(
         expect.arrayContaining([
           AdminAccessRight.VIEW_ACCOUNTS,
-          AdminAccessRight.MODIFY_ACCOUNTS,
           AdminAccessRight.VIEW_TRANSACTIONS,
           AdminAccessRight.SEND_NOTIFICATIONS,
         ]),
       )
-      expect(rights).toHaveLength(4) // No duplicates despite duplicate roles
+      expect(rights).toHaveLength(3) // No duplicates despite duplicate roles
     })
 
     test("invalid role in getAccessRightsForRole returns empty array", () => {
