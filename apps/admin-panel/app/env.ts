@@ -20,7 +20,23 @@ export const env = createEnv({
       .string()
       .transform((str) => {
         try {
-          return JSON.parse(str)
+          const parsed = JSON.parse(str)
+          // Normalize the parsed object to support both single roles and arrays
+          const normalized: { [key: string]: string[] } = {}
+          for (const [email, roles] of Object.entries(parsed)) {
+            if (typeof roles === "string") {
+              // Convert single role string to array
+              normalized[email] = [roles]
+            } else if (Array.isArray(roles)) {
+              // Keep arrays as is
+              normalized[email] = roles
+            } else {
+              throw new Error(
+                `Invalid role format for ${email}: must be string or array of strings`,
+              )
+            }
+          }
+          return normalized
         } catch (error) {
           throw new Error(
             `Invalid JSON in USER_ROLE_MAP environment variable: ${
