@@ -7,8 +7,8 @@ import { trace } from "@opentelemetry/api"
 
 import { env } from "../../../env"
 import {
-  getAccessRightsForRole,
-  isValidAdminRole,
+  getAccessRightsForRoles,
+  areValidAdminRoles,
   type AdminRole,
 } from "../../../access-rights"
 
@@ -16,7 +16,6 @@ declare module "next-auth" {
   interface Session {
     sub: string | null
     accessToken: string
-    role: string
     scope: string
   }
 }
@@ -88,37 +87,35 @@ const callbacks: Partial<CallbacksOptions> = {
         "auth.has_user": !!user,
       })
 
-      let role_mapping: { [key: string]: string }
+      let role_mapping: { [key: string]: string[] }
       if (env.NODE_ENV === "development") {
         role_mapping = {
-          "admintest@blinkbitcoin.test": "ADMIN",
-          "alicetest@blinkbitcoin.test": "VIEWER",
-          "bobtest@blinkbitcoin.test": "SUPPORT",
+          "admintest@blinkbitcoin.test": ["ADMIN"],
+          "alicetest@blinkbitcoin.test": ["VIEWER"],
+          "bobtest@blinkbitcoin.test": ["SUPPORT"],
         }
       } else {
         role_mapping = env.USER_ROLE_MAP
       }
 
       if (user) {
-        const userRole = role_mapping[user.email as keyof typeof role_mapping] || "VIEWER"
+        const userRoles = role_mapping[user.email as keyof typeof role_mapping] || [
+          "VIEWER",
+        ]
 
-        if (isValidAdminRole(userRole)) {
-          const accessRights = getAccessRightsForRole(userRole as AdminRole)
+        if (areValidAdminRoles(userRoles)) {
+          const accessRights = getAccessRightsForRoles(userRoles as AdminRole[])
           token.scope = JSON.stringify(accessRights)
-          token.role = userRole
         } else {
           token.scope = JSON.stringify([])
-          token.role = ""
         }
       } else {
-        if (!(token.email && token.scope && token.role)) {
+        if (!(token.email && token.scope)) {
           token.scope = JSON.stringify([])
-          token.role = ""
         }
       }
 
       span.setAttributes({
-        "auth.final_role": (token.role as string) || "notSet",
         "auth.has_scope": !!token.scope,
       })
 
@@ -129,7 +126,6 @@ const callbacks: Partial<CallbacksOptions> = {
   // https://next-auth.js.org/configuration/callbacks#session-callback
   async session({ session, token }) {
     session.scope = token.scope as string
-    session.role = token.role as string
     return session
   },
 }
