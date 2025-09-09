@@ -40,6 +40,22 @@ export function getAccessRightsForRole(role: AdminRole): AdminAccessRight[] {
 }
 
 /**
+ * Get aggregated access rights for multiple roles
+ * @param roles - Array of admin roles
+ * @returns Array of unique access rights from all roles
+ */
+export function getAccessRightsForRoles(roles: AdminRole[]): AdminAccessRight[] {
+  const allRights = new Set<AdminAccessRight>()
+
+  for (const role of roles) {
+    const roleRights = getAccessRightsForRole(role)
+    roleRights.forEach((right) => allRights.add(right))
+  }
+
+  return Array.from(allRights)
+}
+
+/**
  * Check if a role has a specific access right
  * @param role - The admin role
  * @param accessRight - The access right to check
@@ -47,6 +63,19 @@ export function getAccessRightsForRole(role: AdminRole): AdminAccessRight[] {
  */
 export function hasAccessRight(role: AdminRole, accessRight: AdminAccessRight): boolean {
   return ROLE_ACCESS_RIGHTS[role]?.includes(accessRight) || false
+}
+
+/**
+ * Check if any of the roles has a specific access right
+ * @param roles - Array of admin roles
+ * @param accessRight - The access right to check
+ * @returns True if any role has the access right
+ */
+export function hasAccessRightInRoles(
+  roles: AdminRole[],
+  accessRight: AdminAccessRight,
+): boolean {
+  return roles.some((role) => hasAccessRight(role, accessRight))
 }
 
 /**
@@ -77,4 +106,13 @@ export function hasAccessRightInScope(
  */
 export function isValidAdminRole(role: string): role is AdminRole {
   return role === "VIEWER" || role === "SUPPORT" || role === "ADMIN"
+}
+
+/**
+ * Validate if all strings in an array are valid admin roles
+ * @param roles - Array of role strings to validate
+ * @returns True if all roles are valid
+ */
+export function areValidAdminRoles(roles: string[]): roles is AdminRole[] {
+  return roles.every((role) => isValidAdminRole(role))
 }
