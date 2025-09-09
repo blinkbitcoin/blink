@@ -15,13 +15,10 @@ import { AdminFieldDefinitions } from "./types"
 // Admin access rights enum
 enum AdminAccessRight {
   VIEW_ACCOUNTS = "VIEW_ACCOUNTS",
-  MODIFY_ACCOUNTS = "MODIFY_ACCOUNTS", // Legacy - will be removed
   DELETE_ACCOUNTS = "DELETE_ACCOUNTS",
   VIEW_TRANSACTIONS = "VIEW_TRANSACTIONS",
   SEND_NOTIFICATIONS = "SEND_NOTIFICATIONS",
   SYSTEM_CONFIG = "SYSTEM_CONFIG",
-
-  // New granular access rights
   APPROVE_MERCHANT = "APPROVE_MERCHANT",
   CHANGECONTACTS_ACCOUNT = "CHANGECONTACTS_ACCOUNT",
   CHANGELEVEL_ACCOUNT = "CHANGELEVEL_ACCOUNT",
@@ -39,13 +36,10 @@ const createAccessRightRule = (accessRight: AdminAccessRight) =>
 // Export the actual GraphQL Shield rules that can be used directly
 export const accessRules = {
   viewAccounts: createAccessRightRule(AdminAccessRight.VIEW_ACCOUNTS),
-  modifyAccounts: createAccessRightRule(AdminAccessRight.MODIFY_ACCOUNTS), // Legacy - will be removed
   deleteAccounts: createAccessRightRule(AdminAccessRight.DELETE_ACCOUNTS),
   viewTransactions: createAccessRightRule(AdminAccessRight.VIEW_TRANSACTIONS),
   sendNotifications: createAccessRightRule(AdminAccessRight.SEND_NOTIFICATIONS),
   systemConfig: createAccessRightRule(AdminAccessRight.SYSTEM_CONFIG),
-
-  // New granular access rules
   approveMerchant: createAccessRightRule(AdminAccessRight.APPROVE_MERCHANT),
   changeContactsAccount: createAccessRightRule(AdminAccessRight.CHANGECONTACTS_ACCOUNT),
   changeLevelAccount: createAccessRightRule(AdminAccessRight.CHANGELEVEL_ACCOUNT),

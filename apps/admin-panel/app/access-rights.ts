@@ -1,13 +1,12 @@
 // Admin access rights definitions
 export enum AdminAccessRight {
   VIEW_ACCOUNTS = "VIEW_ACCOUNTS",
-  MODIFY_ACCOUNTS = "MODIFY_ACCOUNTS", // Legacy - will be removed
   DELETE_ACCOUNTS = "DELETE_ACCOUNTS",
   VIEW_TRANSACTIONS = "VIEW_TRANSACTIONS",
   SEND_NOTIFICATIONS = "SEND_NOTIFICATIONS",
   SYSTEM_CONFIG = "SYSTEM_CONFIG",
 
-  // New granular access rights
+  // Granular access rights
   APPROVE_MERCHANT = "APPROVE_MERCHANT",
   CHANGECONTACTS_ACCOUNT = "CHANGECONTACTS_ACCOUNT",
   CHANGELEVEL_ACCOUNT = "CHANGELEVEL_ACCOUNT",
@@ -16,24 +15,11 @@ export enum AdminAccessRight {
 }
 
 // Role types
-export type AdminRole =
-  | "VIEWER"
-  | "SUPPORT"
-  | "MARKETING"
-  | "SUPPORTLV1"
-  | "SUPPORTLV2"
-  | "ADMIN"
+export type AdminRole = "VIEWER" | "MARKETING" | "SUPPORTLV1" | "SUPPORTLV2" | "ADMIN"
 
 // Role to access rights mapping
 const ROLE_ACCESS_RIGHTS: Record<AdminRole, AdminAccessRight[]> = {
   VIEWER: [AdminAccessRight.VIEW_ACCOUNTS, AdminAccessRight.VIEW_TRANSACTIONS],
-  SUPPORT: [
-    // Legacy role - will be removed
-    AdminAccessRight.VIEW_ACCOUNTS,
-    AdminAccessRight.MODIFY_ACCOUNTS,
-    AdminAccessRight.VIEW_TRANSACTIONS,
-    AdminAccessRight.SEND_NOTIFICATIONS,
-  ],
   MARKETING: [AdminAccessRight.SEND_NOTIFICATIONS],
   SUPPORTLV1: [
     AdminAccessRight.VIEW_ACCOUNTS,
@@ -54,7 +40,6 @@ const ROLE_ACCESS_RIGHTS: Record<AdminRole, AdminAccessRight[]> = {
   ],
   ADMIN: [
     AdminAccessRight.VIEW_ACCOUNTS,
-    AdminAccessRight.MODIFY_ACCOUNTS, // Legacy - will be removed
     AdminAccessRight.DELETE_ACCOUNTS,
     AdminAccessRight.VIEW_TRANSACTIONS,
     AdminAccessRight.SEND_NOTIFICATIONS,
@@ -144,7 +129,6 @@ export function hasAccessRightInScope(
 export function isValidAdminRole(role: string): role is AdminRole {
   return (
     role === "VIEWER" ||
-    role === "SUPPORT" ||
     role === "MARKETING" ||
     role === "SUPPORTLV1" ||
     role === "SUPPORTLV2" ||
