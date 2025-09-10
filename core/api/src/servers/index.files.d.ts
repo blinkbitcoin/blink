@@ -26,7 +26,6 @@ type GraphQLAdminContext = {
   loaders: Loaders
   privilegedClientId: PrivilegedClientId
   userEmail: string
-  role: string
   scope: string[]
 }
 

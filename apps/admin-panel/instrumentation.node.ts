@@ -10,10 +10,16 @@ import { W3CTraceContextPropagator } from "@opentelemetry/core"
 
 import { env } from "./app/env"
 
-console.log("Validating environment variables...")
 // Simply accessing the env object triggers validation of all variables
-JSON.stringify(env)
-console.log("✅ Environment variables validated successfully")
+try {
+  JSON.stringify(env)
+} catch (error) {
+  const errorMessage = error instanceof Error ? error.message : String(error)
+  throw new Error(
+    `Failed to validate environment variables: ${errorMessage}. ` +
+      `Please check your environment configuration.`
+  )
+}
 
 const sdk = new NodeSDK({
   textMapPropagator: new W3CTraceContextPropagator(),
