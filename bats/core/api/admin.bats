@@ -399,7 +399,7 @@ getEmailCode() {
 # ACCESS DENIED TESTS - ONE PER ROLE
 # ============================================================================
 
-# VIEWER role - cannot lock accounts (should only have VIEW_ACCOUNTS, VIEW_TRANSACTIONS)
+# VIEWER role - cannot lock accounts (should only have VIEW_ACCOUNTS, VIEW_TRANSACTIONS, VIEW_MERCHANTS)
 @test "viewer_user: cannot lock accounts (LOCK_ACCOUNT scope)" {
   viewer_token="$(read_value 'viewer_user.token')"
   id="$(read_value 'tester.id')"
