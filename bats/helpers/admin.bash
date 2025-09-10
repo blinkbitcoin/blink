@@ -36,31 +36,31 @@ _create_admin_client_and_token() {
 
 # ADMIN role - Full system access
 login_admin() {
-  local scopes='["VIEW_ACCOUNTS","VIEW_TRANSACTIONS","DELETE_ACCOUNTS","SEND_NOTIFICATIONS","SYSTEM_CONFIG","APPROVE_MERCHANT","CHANGECONTACTS_ACCOUNT","CHANGELEVEL_ACCOUNT","LOCK_ACCOUNT","VIEW_MERCHANTS"]'
+  local scopes='VIEW_ACCOUNTS VIEW_TRANSACTIONS DELETE_ACCOUNTS SEND_NOTIFICATIONS SYSTEM_CONFIG APPROVE_MERCHANT CHANGECONTACTS_ACCOUNT CHANGELEVEL_ACCOUNT LOCK_ACCOUNT VIEW_MERCHANTS'
   _create_admin_client_and_token "$scopes" "admin.token"
 }
 
 # SUPPORTLV2 role - Advanced support operations (all SUPPORTLV1 + change contacts and levels)
 login_supportlv2_user() {
-  local scopes='["VIEW_ACCOUNTS","VIEW_TRANSACTIONS","VIEW_MERCHANTS","LOCK_ACCOUNT","APPROVE_MERCHANT","CHANGECONTACTS_ACCOUNT","CHANGELEVEL_ACCOUNT"]'
+  local scopes='VIEW_ACCOUNTS VIEW_TRANSACTIONS VIEW_MERCHANTS LOCK_ACCOUNT APPROVE_MERCHANT CHANGECONTACTS_ACCOUNT CHANGELEVEL_ACCOUNT'
   _create_admin_client_and_token "$scopes" "supportlv2_user.token"
 }
 
 # SUPPORTLV1 role - Basic support operations (view accounts/merchants, lock accounts, approve merchants)
 login_supportlv1_user() {
-  local scopes='["VIEW_ACCOUNTS","VIEW_TRANSACTIONS","VIEW_MERCHANTS","LOCK_ACCOUNT","APPROVE_MERCHANT"]'
+  local scopes='VIEW_ACCOUNTS VIEW_TRANSACTIONS VIEW_MERCHANTS LOCK_ACCOUNT APPROVE_MERCHANT'
   _create_admin_client_and_token "$scopes" "supportlv1_user.token"
 }
 
 # MARKETING role - Can send notifications only
 login_marketing_user() {
-  local scopes='["SEND_NOTIFICATIONS"]'
+  local scopes='SEND_NOTIFICATIONS'
   _create_admin_client_and_token "$scopes" "marketing_user.token"
 }
 
 # VIEWER role - Read-only access (can view accounts, transactions, and merchants)
 login_viewer_user() {
-  local scopes='["VIEW_ACCOUNTS","VIEW_TRANSACTIONS","VIEW_MERCHANTS"]'
+  local scopes='VIEW_ACCOUNTS VIEW_TRANSACTIONS VIEW_MERCHANTS'
   _create_admin_client_and_token "$scopes" "viewer_user.token"
 }
 

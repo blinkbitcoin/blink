@@ -38,10 +38,14 @@ As we have three different roles in the admin panel, we have three different cre
 - username: `admin`
 - password: `admin`
 
-#### Support
+#### VIEWER
+- username: `alice`
+- password: `alice`
+
+#### SUPPORTLV1
 - username: `bob`
 - password: `bob`
 
-#### Viewer
-- username: `alice`
-- password: `alice`
+#### SUPPORTLV2 + MARKETING_GLOBAL
+- username: `carol`
+- password: `carol`
