@@ -19,7 +19,7 @@ export type AdminRole = "VIEWER" | "MARKETING" | "SUPPORTLV1" | "SUPPORTLV2" | "
 
 // Role to access rights mapping
 const ROLE_ACCESS_RIGHTS: Record<AdminRole, AdminAccessRight[]> = {
-  VIEWER: [AdminAccessRight.VIEW_ACCOUNTS, AdminAccessRight.VIEW_TRANSACTIONS],
+  VIEWER: [AdminAccessRight.VIEW_ACCOUNTS, AdminAccessRight.VIEW_TRANSACTIONS, AdminAccessRight.VIEW_MERCHANTS],
   MARKETING: [AdminAccessRight.SEND_NOTIFICATIONS],
   SUPPORTLV1: [
     AdminAccessRight.VIEW_ACCOUNTS,

@@ -15,6 +15,7 @@ describe("Access Rights - Multiple Roles Support", () => {
       expect(rights).toEqual([
         AdminAccessRight.VIEW_ACCOUNTS,
         AdminAccessRight.VIEW_TRANSACTIONS,
+        AdminAccessRight.VIEW_MERCHANTS,
       ])
     })
 
@@ -94,7 +95,7 @@ describe("Access Rights - Multiple Roles Support", () => {
           AdminAccessRight.SEND_NOTIFICATIONS,
         ]),
       )
-      expect(rights).toHaveLength(3) // No duplicates
+      expect(rights).toHaveLength(4) // No duplicates
     })
 
     test("getAccessRightsForRoles handles single role in array", () => {
@@ -102,6 +103,7 @@ describe("Access Rights - Multiple Roles Support", () => {
       expect(rights).toEqual([
         AdminAccessRight.VIEW_ACCOUNTS,
         AdminAccessRight.VIEW_TRANSACTIONS,
+        AdminAccessRight.VIEW_MERCHANTS,
       ])
     })
 
@@ -169,7 +171,7 @@ describe("Access Rights - Multiple Roles Support", () => {
           AdminAccessRight.SEND_NOTIFICATIONS,
         ]),
       )
-      expect(rights).toHaveLength(3) // No duplicates despite duplicate roles
+      expect(rights).toHaveLength(4) // No duplicates despite duplicate roles
     })
 
     test("invalid role in getAccessRightsForRole returns empty array", () => {
