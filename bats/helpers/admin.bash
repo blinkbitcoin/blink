@@ -58,9 +58,9 @@ login_marketing_user() {
   _create_admin_client_and_token "$scopes" "marketing_user.token"
 }
 
-# VIEWER role - Read-only access (can only view accounts and transactions)
+# VIEWER role - Read-only access (can view accounts, transactions, and merchants)
 login_viewer_user() {
-  local scopes='["VIEW_ACCOUNTS","VIEW_TRANSACTIONS"]'
+  local scopes='["VIEW_ACCOUNTS","VIEW_TRANSACTIONS","VIEW_MERCHANTS"]'
   _create_admin_client_and_token "$scopes" "viewer_user.token"
 }
 
