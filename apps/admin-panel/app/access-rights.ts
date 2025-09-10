@@ -17,39 +17,34 @@ export enum AdminAccessRight {
 // Role types
 export type AdminRole = "VIEWER" | "MARKETING" | "SUPPORTLV1" | "SUPPORTLV2" | "ADMIN"
 
+// Define roles individually so they can be used as bases
+const VIEWER_RIGHTS = [
+  AdminAccessRight.VIEW_ACCOUNTS,
+  AdminAccessRight.VIEW_TRANSACTIONS,
+  AdminAccessRight.VIEW_MERCHANTS,
+]
+const MARKETING_RIGHTS = [AdminAccessRight.SEND_NOTIFICATIONS]
+const SUPPORTLV1_RIGHTS = [
+  ...VIEWER_RIGHTS,
+  AdminAccessRight.LOCK_ACCOUNT,
+  AdminAccessRight.APPROVE_MERCHANT,
+]
+const SUPPORTLV2_RIGHTS = [
+  ...SUPPORTLV1_RIGHTS,
+  AdminAccessRight.CHANGECONTACTS_ACCOUNT,
+  AdminAccessRight.CHANGELEVEL_ACCOUNT,
+]
+
+// ADMIN has all rights
+const ADMIN_RIGHTS = Object.values(AdminAccessRight)
+
 // Role to access rights mapping
 const ROLE_ACCESS_RIGHTS: Record<AdminRole, AdminAccessRight[]> = {
-  VIEWER: [AdminAccessRight.VIEW_ACCOUNTS, AdminAccessRight.VIEW_TRANSACTIONS, AdminAccessRight.VIEW_MERCHANTS],
-  MARKETING: [AdminAccessRight.SEND_NOTIFICATIONS],
-  SUPPORTLV1: [
-    AdminAccessRight.VIEW_ACCOUNTS,
-    AdminAccessRight.VIEW_MERCHANTS,
-    AdminAccessRight.LOCK_ACCOUNT,
-    AdminAccessRight.APPROVE_MERCHANT,
-    AdminAccessRight.VIEW_TRANSACTIONS,
-  ],
-  SUPPORTLV2: [
-    // Inherits all SUPPORTLV1 rights plus additional ones
-    AdminAccessRight.VIEW_ACCOUNTS,
-    AdminAccessRight.VIEW_MERCHANTS,
-    AdminAccessRight.LOCK_ACCOUNT,
-    AdminAccessRight.APPROVE_MERCHANT,
-    AdminAccessRight.VIEW_TRANSACTIONS,
-    AdminAccessRight.CHANGECONTACTS_ACCOUNT,
-    AdminAccessRight.CHANGELEVEL_ACCOUNT,
-  ],
-  ADMIN: [
-    AdminAccessRight.VIEW_ACCOUNTS,
-    AdminAccessRight.DELETE_ACCOUNTS,
-    AdminAccessRight.VIEW_TRANSACTIONS,
-    AdminAccessRight.SEND_NOTIFICATIONS,
-    AdminAccessRight.SYSTEM_CONFIG,
-    AdminAccessRight.APPROVE_MERCHANT,
-    AdminAccessRight.CHANGECONTACTS_ACCOUNT,
-    AdminAccessRight.CHANGELEVEL_ACCOUNT,
-    AdminAccessRight.LOCK_ACCOUNT,
-    AdminAccessRight.VIEW_MERCHANTS,
-  ],
+  VIEWER: VIEWER_RIGHTS,
+  MARKETING: MARKETING_RIGHTS,
+  SUPPORTLV1: SUPPORTLV1_RIGHTS,
+  SUPPORTLV2: SUPPORTLV2_RIGHTS,
+  ADMIN: ADMIN_RIGHTS,
 }
 
 /**

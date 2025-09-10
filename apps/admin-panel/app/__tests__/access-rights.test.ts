@@ -12,11 +12,14 @@ describe("Access Rights - Multiple Roles Support", () => {
   describe("Single Role Functions (existing functionality)", () => {
     test("getAccessRightsForRole returns correct rights for VIEWER", () => {
       const rights = getAccessRightsForRole("VIEWER")
-      expect(rights).toEqual([
-        AdminAccessRight.VIEW_ACCOUNTS,
-        AdminAccessRight.VIEW_TRANSACTIONS,
-        AdminAccessRight.VIEW_MERCHANTS,
-      ])
+      expect(rights).toEqual(
+        expect.arrayContaining([
+          AdminAccessRight.VIEW_ACCOUNTS,
+          AdminAccessRight.VIEW_TRANSACTIONS,
+          AdminAccessRight.VIEW_MERCHANTS,
+        ]),
+      )
+      expect(rights).toHaveLength(3)
     })
 
     test("getAccessRightsForRole returns correct rights for MARKETING", () => {
@@ -26,26 +29,32 @@ describe("Access Rights - Multiple Roles Support", () => {
 
     test("getAccessRightsForRole returns correct rights for SUPPORTLV1", () => {
       const rights = getAccessRightsForRole("SUPPORTLV1")
-      expect(rights).toEqual([
-        AdminAccessRight.VIEW_ACCOUNTS,
-        AdminAccessRight.VIEW_MERCHANTS,
-        AdminAccessRight.LOCK_ACCOUNT,
-        AdminAccessRight.APPROVE_MERCHANT,
-        AdminAccessRight.VIEW_TRANSACTIONS,
-      ])
+      expect(rights).toEqual(
+        expect.arrayContaining([
+          AdminAccessRight.VIEW_ACCOUNTS,
+          AdminAccessRight.VIEW_MERCHANTS,
+          AdminAccessRight.LOCK_ACCOUNT,
+          AdminAccessRight.APPROVE_MERCHANT,
+          AdminAccessRight.VIEW_TRANSACTIONS,
+        ]),
+      )
+      expect(rights).toHaveLength(5)
     })
 
     test("getAccessRightsForRole returns correct rights for SUPPORTLV2", () => {
       const rights = getAccessRightsForRole("SUPPORTLV2")
-      expect(rights).toEqual([
-        AdminAccessRight.VIEW_ACCOUNTS,
-        AdminAccessRight.VIEW_MERCHANTS,
-        AdminAccessRight.LOCK_ACCOUNT,
-        AdminAccessRight.APPROVE_MERCHANT,
-        AdminAccessRight.VIEW_TRANSACTIONS,
-        AdminAccessRight.CHANGECONTACTS_ACCOUNT,
-        AdminAccessRight.CHANGELEVEL_ACCOUNT,
-      ])
+      expect(rights).toEqual(
+        expect.arrayContaining([
+          AdminAccessRight.VIEW_ACCOUNTS,
+          AdminAccessRight.VIEW_MERCHANTS,
+          AdminAccessRight.LOCK_ACCOUNT,
+          AdminAccessRight.APPROVE_MERCHANT,
+          AdminAccessRight.VIEW_TRANSACTIONS,
+          AdminAccessRight.CHANGECONTACTS_ACCOUNT,
+          AdminAccessRight.CHANGELEVEL_ACCOUNT,
+        ]),
+      )
+      expect(rights).toHaveLength(7)
     })
 
     test("getAccessRightsForRole returns correct rights for ADMIN", () => {
@@ -100,11 +109,14 @@ describe("Access Rights - Multiple Roles Support", () => {
 
     test("getAccessRightsForRoles handles single role in array", () => {
       const rights = getAccessRightsForRoles(["VIEWER"])
-      expect(rights).toEqual([
-        AdminAccessRight.VIEW_ACCOUNTS,
-        AdminAccessRight.VIEW_TRANSACTIONS,
-        AdminAccessRight.VIEW_MERCHANTS,
-      ])
+      expect(rights).toEqual(
+        expect.arrayContaining([
+          AdminAccessRight.VIEW_ACCOUNTS,
+          AdminAccessRight.VIEW_TRANSACTIONS,
+          AdminAccessRight.VIEW_MERCHANTS,
+        ]),
+      )
+      expect(rights).toHaveLength(3)
     })
 
     test("getAccessRightsForRoles handles all roles", () => {
