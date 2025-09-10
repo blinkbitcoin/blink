@@ -22,7 +22,6 @@ import { GT } from "@/graphql/index"
 export const queryFields = {
   unauthed: {},
   authed: {
-    // Account viewing operations - require VIEW_ACCOUNTS
     accountDetailsByAccountId: {
       field: AccountDetailsByAccountId,
       rule: accessRules.viewAccounts,
@@ -60,7 +59,6 @@ export const queryFields = {
       rule: accessRules.viewMerchants,
     },
 
-    // Transaction viewing operations - require VIEW_TRANSACTIONS
     lightningInvoice: {
       field: LightningInvoiceQuery,
       rule: accessRules.viewTransactions,
@@ -82,7 +80,6 @@ export const queryFields = {
       rule: accessRules.viewTransactions,
     },
 
-    // System configuration operations - require SYSTEM_CONFIG
     allLevels: {
       field: AllLevelsQuery,
       rule: accessRules.systemConfig,
@@ -90,12 +87,8 @@ export const queryFields = {
   },
 }
 
-// Helper functions are now imported from access-rules.ts to avoid duplication
-
-// Extract the actual GraphQL fields for the schema
 const extractedQueryFields = extractFields(queryFields.authed)
 
-// Build permission mappings automatically from the field definitions (now field -> rule mapping)
 export const queryPermissions = buildPermissionMappings(queryFields.authed)
 
 export const QueryType = GT.Object({
