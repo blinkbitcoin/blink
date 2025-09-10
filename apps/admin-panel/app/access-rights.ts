@@ -15,41 +15,41 @@ export enum AdminAccessRight {
 }
 
 // Role types
-export type AdminRole = "VIEWER" | "MARKETING" | "SUPPORTLV1" | "SUPPORTLV2" | "ADMIN"
+export type AdminRole =
+  | "VIEWER"
+  | "MARKETING_GLOBAL"
+  | "SUPPORTLV1"
+  | "SUPPORTLV2"
+  | "ADMIN"
+
+// Define roles individually so they can be used as bases
+const VIEWER_RIGHTS = [
+  AdminAccessRight.VIEW_ACCOUNTS,
+  AdminAccessRight.VIEW_TRANSACTIONS,
+  AdminAccessRight.VIEW_MERCHANTS,
+]
+const MARKETING_GLOBAL_RIGHTS = [AdminAccessRight.SEND_NOTIFICATIONS]
+const SUPPORTLV1_RIGHTS = [
+  ...VIEWER_RIGHTS,
+  AdminAccessRight.LOCK_ACCOUNT,
+  AdminAccessRight.APPROVE_MERCHANT,
+  AdminAccessRight.CHANGELEVEL_ACCOUNT,
+]
+const SUPPORTLV2_RIGHTS = [
+  ...SUPPORTLV1_RIGHTS,
+  AdminAccessRight.CHANGECONTACTS_ACCOUNT,
+]
+
+// ADMIN has all rights
+const ADMIN_RIGHTS = Object.values(AdminAccessRight)
 
 // Role to access rights mapping
 const ROLE_ACCESS_RIGHTS: Record<AdminRole, AdminAccessRight[]> = {
-  VIEWER: [AdminAccessRight.VIEW_ACCOUNTS, AdminAccessRight.VIEW_TRANSACTIONS, AdminAccessRight.VIEW_MERCHANTS],
-  MARKETING: [AdminAccessRight.SEND_NOTIFICATIONS],
-  SUPPORTLV1: [
-    AdminAccessRight.VIEW_ACCOUNTS,
-    AdminAccessRight.VIEW_MERCHANTS,
-    AdminAccessRight.LOCK_ACCOUNT,
-    AdminAccessRight.APPROVE_MERCHANT,
-    AdminAccessRight.VIEW_TRANSACTIONS,
-  ],
-  SUPPORTLV2: [
-    // Inherits all SUPPORTLV1 rights plus additional ones
-    AdminAccessRight.VIEW_ACCOUNTS,
-    AdminAccessRight.VIEW_MERCHANTS,
-    AdminAccessRight.LOCK_ACCOUNT,
-    AdminAccessRight.APPROVE_MERCHANT,
-    AdminAccessRight.VIEW_TRANSACTIONS,
-    AdminAccessRight.CHANGECONTACTS_ACCOUNT,
-    AdminAccessRight.CHANGELEVEL_ACCOUNT,
-  ],
-  ADMIN: [
-    AdminAccessRight.VIEW_ACCOUNTS,
-    AdminAccessRight.DELETE_ACCOUNTS,
-    AdminAccessRight.VIEW_TRANSACTIONS,
-    AdminAccessRight.SEND_NOTIFICATIONS,
-    AdminAccessRight.SYSTEM_CONFIG,
-    AdminAccessRight.APPROVE_MERCHANT,
-    AdminAccessRight.CHANGECONTACTS_ACCOUNT,
-    AdminAccessRight.CHANGELEVEL_ACCOUNT,
-    AdminAccessRight.LOCK_ACCOUNT,
-    AdminAccessRight.VIEW_MERCHANTS,
-  ],
+  VIEWER: VIEWER_RIGHTS,
+  MARKETING_GLOBAL: MARKETING_GLOBAL_RIGHTS,
+  SUPPORTLV1: SUPPORTLV1_RIGHTS,
+  SUPPORTLV2: SUPPORTLV2_RIGHTS,
+  ADMIN: ADMIN_RIGHTS,
 }
 
 /**
@@ -109,16 +109,19 @@ export function getAllAccessRights(): AdminAccessRight[] {
 }
 
 /**
- * Check if a scope array contains a specific access right
- * @param scope - Array of access rights from JWT token scope
+ * Check if a scope string contains a specific access right
+ * @param scope - Space-separated string of access rights from JWT token scope
  * @param accessRight - The access right to check for
  * @returns True if the scope contains the access right
  */
 export function hasAccessRightInScope(
-  scope: string[],
+  scope: string,
   accessRight: AdminAccessRight,
 ): boolean {
-  return scope.includes(accessRight)
+  return scope
+    .split(" ")
+    .filter((s) => s.trim() !== "")
+    .includes(accessRight)
 }
 
 /**
@@ -127,13 +130,7 @@ export function hasAccessRightInScope(
  * @returns True if the role is valid
  */
 export function isValidAdminRole(role: string): role is AdminRole {
-  return (
-    role === "VIEWER" ||
-    role === "MARKETING" ||
-    role === "SUPPORTLV1" ||
-    role === "SUPPORTLV2" ||
-    role === "ADMIN"
-  )
+  return Object.keys(ROLE_ACCESS_RIGHTS).includes(role)
 }
 
 /**
