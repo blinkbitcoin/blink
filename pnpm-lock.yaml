@@ -1104,8 +1104,8 @@ importers:
         specifier: ^0.7.15
         version: 0.7.15
       '@ip1sms/disposable-phone-numbers':
-        specifier: ^2.1.1285
-        version: 2.1.1285
+        specifier: ^2.1.1286
+        version: 2.1.1286
       '@merqva/telegram-passport':
         specifier: ^1.0.2
         version: 1.0.2
@@ -7231,8 +7231,8 @@ packages:
     resolution: {integrity: sha512-Sx1pU8EM64o2BrqNpEO1CNLtKQwyhuXuqyfH7oGKCk+1a33d2r5saW8zNwm3j6BTExtjrv2BxTgzzkMwts6vGg==}
     dev: false
 
-  /@ip1sms/disposable-phone-numbers@2.1.1285:
-    resolution: {integrity: sha512-2t4ddvuQPXyxLGPyV8zBv6xyUPHDRTZw8SGgfjWcuMuSmVWodCYHoDcMJTn1c4+ZzsHb1hJjPjJEwMkVmEVTxg==}
+  /@ip1sms/disposable-phone-numbers@2.1.1286:
+    resolution: {integrity: sha512-LVnTXj68RfOTLPWCzp1OsXl/3EhiUip0IBQ8wEUR2qNrAXPVJC54K5g7albSiP3DkvKTfqCzj2nYgun3FXyy/Q==}
     dev: false
 
   /@isaacs/cliui@8.0.2:
@@ -16018,14 +16018,17 @@ packages:
     dev: false
     optional: true
 
-  /bare-fs@4.2.3:
-    resolution: {integrity: sha512-1aGs5pRVLToMQ79elP+7cc0u0s/wXAzfBv/7hDloT7WFggLqECCas5qqPky7WHCFdsBH5WDq6sD4fAoz5sJbtA==}
+  /bare-fs@4.3.2:
+    resolution: {integrity: sha512-FAJ00JF69O6/oKAP+oiJYgdem1biZoGAR0NbRkBRQZ26shA87DmdHWbpeY3EVKPrAzHByLoLo+hAzTT6NTJWCg==}
     engines: {bare: '>=1.16.0'}
     requiresBuild: true
     peerDependencies:
       bare-buffer: '*'
+      bare-url: '*'
     peerDependenciesMeta:
       bare-buffer:
+        optional: true
+      bare-url:
         optional: true
     dependencies:
       bare-events: 2.5.4
@@ -28291,6 +28294,7 @@ packages:
       tunnel-agent: 0.6.0
     transitivePeerDependencies:
       - bare-buffer
+      - bare-url
     dev: false
 
   /shebang-command@2.0.0:
@@ -29326,10 +29330,11 @@ packages:
       pump: 3.0.3
       tar-stream: 3.1.7
     optionalDependencies:
-      bare-fs: 4.2.3
+      bare-fs: 4.3.2
       bare-path: 3.0.0
     transitivePeerDependencies:
       - bare-buffer
+      - bare-url
     dev: false
 
   /tar-stream@2.2.0:
