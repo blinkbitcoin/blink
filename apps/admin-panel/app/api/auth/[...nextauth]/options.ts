@@ -93,7 +93,7 @@ const callbacks: Partial<CallbacksOptions> = {
           "admintest@blinkbitcoin.test": ["ADMIN"],
           "alicetest@blinkbitcoin.test": ["VIEWER"],
           "bobtest@blinkbitcoin.test": ["SUPPORTLV1"],
-          "caroltest@blinkbitcoin.test": ["SUPPORTLV2", "MARKETING"],
+          "caroltest@blinkbitcoin.test": ["SUPPORTLV2", "MARKETING_GLOBAL"],
         }
       } else {
         role_mapping = env.USER_ROLE_MAP
@@ -106,13 +106,13 @@ const callbacks: Partial<CallbacksOptions> = {
 
         if (areValidAdminRoles(userRoles)) {
           const accessRights = getAccessRightsForRoles(userRoles as AdminRole[])
-          token.scope = JSON.stringify(accessRights)
+          token.scope = accessRights.join(" ")
         } else {
-          token.scope = JSON.stringify([])
+          token.scope = ""
         }
       } else {
         if (!(token.email && token.scope)) {
-          token.scope = JSON.stringify([])
+          token.scope = ""
         }
       }
 
