@@ -104,16 +104,19 @@ export function getAllAccessRights(): AdminAccessRight[] {
 }
 
 /**
- * Check if a scope array contains a specific access right
- * @param scope - Array of access rights from JWT token scope
+ * Check if a scope string contains a specific access right
+ * @param scope - Space-separated string of access rights from JWT token scope
  * @param accessRight - The access right to check for
  * @returns True if the scope contains the access right
  */
 export function hasAccessRightInScope(
-  scope: string[],
+  scope: string,
   accessRight: AdminAccessRight,
 ): boolean {
-  return scope.includes(accessRight)
+  return scope
+    .split(" ")
+    .filter((s) => s.trim() !== "")
+    .includes(accessRight)
 }
 
 /**

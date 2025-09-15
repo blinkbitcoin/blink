@@ -3,6 +3,7 @@ import {
   getAccessRightsForRoles,
   hasAccessRight,
   hasAccessRightInRoles,
+  hasAccessRightInScope,
   areValidAdminRoles,
   AdminAccessRight,
   type AdminRole,
@@ -189,6 +190,33 @@ describe("Access Rights - Multiple Roles Support", () => {
     test("invalid role in getAccessRightsForRole returns empty array", () => {
       const rights = getAccessRightsForRole("INVALID" as AdminRole)
       expect(rights).toEqual([])
+    })
+  })
+
+  describe("Scope Functions (space-separated format)", () => {
+    test("hasAccessRightInScope works with space-separated string", () => {
+      const scope = "VIEW_ACCOUNTS VIEW_TRANSACTIONS SEND_NOTIFICATIONS"
+      expect(hasAccessRightInScope(scope, AdminAccessRight.VIEW_ACCOUNTS)).toBe(true)
+      expect(hasAccessRightInScope(scope, AdminAccessRight.VIEW_TRANSACTIONS)).toBe(true)
+      expect(hasAccessRightInScope(scope, AdminAccessRight.SEND_NOTIFICATIONS)).toBe(true)
+      expect(hasAccessRightInScope(scope, AdminAccessRight.DELETE_ACCOUNTS)).toBe(false)
+    })
+
+    test("hasAccessRightInScope works with single permission", () => {
+      const scope = "VIEW_ACCOUNTS"
+      expect(hasAccessRightInScope(scope, AdminAccessRight.VIEW_ACCOUNTS)).toBe(true)
+      expect(hasAccessRightInScope(scope, AdminAccessRight.DELETE_ACCOUNTS)).toBe(false)
+    })
+
+    test("hasAccessRightInScope works with empty string", () => {
+      const scope = ""
+      expect(hasAccessRightInScope(scope, AdminAccessRight.VIEW_ACCOUNTS)).toBe(false)
+    })
+
+    test("hasAccessRightInScope handles extra spaces", () => {
+      const scope = "  VIEW_ACCOUNTS   VIEW_TRANSACTIONS  "
+      expect(hasAccessRightInScope(scope, AdminAccessRight.VIEW_ACCOUNTS)).toBe(true)
+      expect(hasAccessRightInScope(scope, AdminAccessRight.VIEW_TRANSACTIONS)).toBe(true)
     })
   })
 })

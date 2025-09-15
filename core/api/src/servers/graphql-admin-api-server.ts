@@ -57,8 +57,8 @@ const setGqlAdminContext = async (
 
   const userEmail = tokenPayload.sub as string // This should be the email from OAuth
   const role = tokenPayload.role as string
-  const scopeString = (tokenPayload.scope as string) || "[]"
-  const scope = JSON.parse(scopeString) as string[]
+  const scopeString = (tokenPayload.scope as string) || ""
+  const scope = scopeString.split(" ").filter((s) => s.trim() !== "")
   const privilegedClientId = tokenPayload.sub as PrivilegedClientId
 
   req.gqlContext = {

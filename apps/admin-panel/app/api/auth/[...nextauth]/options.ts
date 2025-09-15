@@ -106,13 +106,13 @@ const callbacks: Partial<CallbacksOptions> = {
 
         if (areValidAdminRoles(userRoles)) {
           const accessRights = getAccessRightsForRoles(userRoles as AdminRole[])
-          token.scope = JSON.stringify(accessRights)
+          token.scope = accessRights.join(" ")
         } else {
-          token.scope = JSON.stringify([])
+          token.scope = ""
         }
       } else {
         if (!(token.email && token.scope)) {
-          token.scope = JSON.stringify([])
+          token.scope = ""
         }
       }
 
