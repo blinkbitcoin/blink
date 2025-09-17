@@ -16,6 +16,36 @@ export const env = createEnv({
       .string()
       .transform((x) => x.split(",").map((email) => email.trim()))
       .default("test@galoy.io"),
+    USER_ROLE_MAP: z
+      .string()
+      .transform((str) => {
+        try {
+          const parsed = JSON.parse(str)
+          // Normalize the parsed object to support both single roles and arrays
+          const normalized: { [key: string]: string[] } = {}
+          for (const [email, roles] of Object.entries(parsed)) {
+            if (typeof roles === "string") {
+              // Convert single role string to array
+              normalized[email] = [roles]
+            } else if (Array.isArray(roles)) {
+              // Keep arrays as is
+              normalized[email] = roles
+            } else {
+              throw new Error(
+                `Invalid role format for ${email}: must be string or array of strings`,
+              )
+            }
+          }
+          return normalized
+        } catch (error) {
+          throw new Error(
+            `Invalid JSON in USER_ROLE_MAP environment variable: ${
+              error instanceof Error ? error.message : "Unknown parsing error"
+            }`,
+          )
+        }
+      })
+      .default("{}"),
   },
   /*
    * Environment variables available on the client (and server).
@@ -40,5 +70,6 @@ export const env = createEnv({
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
     NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
     AUTHORIZED_EMAILS: process.env.AUTHORIZED_EMAILS,
+    USER_ROLE_MAP: process.env.USER_ROLE_MAP || "{}",
   },
 })
