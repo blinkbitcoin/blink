@@ -15,7 +15,12 @@ export enum AdminAccessRight {
 }
 
 // Role types
-export type AdminRole = "VIEWER" | "MARKETING" | "SUPPORTLV1" | "SUPPORTLV2" | "ADMIN"
+export type AdminRole =
+  | "VIEWER"
+  | "MARKETING_GLOBAL"
+  | "SUPPORTLV1"
+  | "SUPPORTLV2"
+  | "ADMIN"
 
 // Define roles individually so they can be used as bases
 const VIEWER_RIGHTS = [
@@ -23,7 +28,7 @@ const VIEWER_RIGHTS = [
   AdminAccessRight.VIEW_TRANSACTIONS,
   AdminAccessRight.VIEW_MERCHANTS,
 ]
-const MARKETING_RIGHTS = [AdminAccessRight.SEND_NOTIFICATIONS]
+const MARKETING_GLOBAL_RIGHTS = [AdminAccessRight.SEND_NOTIFICATIONS]
 const SUPPORTLV1_RIGHTS = [
   ...VIEWER_RIGHTS,
   AdminAccessRight.LOCK_ACCOUNT,
@@ -41,7 +46,7 @@ const ADMIN_RIGHTS = Object.values(AdminAccessRight)
 // Role to access rights mapping
 const ROLE_ACCESS_RIGHTS: Record<AdminRole, AdminAccessRight[]> = {
   VIEWER: VIEWER_RIGHTS,
-  MARKETING: MARKETING_RIGHTS,
+  MARKETING_GLOBAL: MARKETING_GLOBAL_RIGHTS,
   SUPPORTLV1: SUPPORTLV1_RIGHTS,
   SUPPORTLV2: SUPPORTLV2_RIGHTS,
   ADMIN: ADMIN_RIGHTS,
@@ -125,13 +130,7 @@ export function hasAccessRightInScope(
  * @returns True if the role is valid
  */
 export function isValidAdminRole(role: string): role is AdminRole {
-  return (
-    role === "VIEWER" ||
-    role === "MARKETING" ||
-    role === "SUPPORTLV1" ||
-    role === "SUPPORTLV2" ||
-    role === "ADMIN"
-  )
+  return Object.keys(ROLE_ACCESS_RIGHTS).includes(role)
 }
 
 /**

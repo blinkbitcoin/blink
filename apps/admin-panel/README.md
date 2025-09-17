@@ -46,6 +46,6 @@ As we have three different roles in the admin panel, we have three different cre
 - username: `bob`
 - password: `bob`
 
-#### SUPPORTLV2 + MARKETING
+#### SUPPORTLV2 + MARKETING_GLOBAL
 - username: `carol`
 - password: `carol`
