@@ -1722,6 +1722,7 @@ type UserEmailDeletePayload {
 
 input UserEmailRegistrationInitiateInput {
   email: EmailAddress!
+  requireUniqueEmail: Boolean = false
 }
 
 type UserEmailRegistrationInitiatePayload {
@@ -1762,6 +1763,7 @@ type UserPhoneDeletePayload {
 input UserPhoneRegistrationInitiateInput {
   channel: PhoneCodeChannelType
   phone: Phone!
+  requireUniquePhone: Boolean = false
 }
 
 input UserPhoneRegistrationValidateInput {

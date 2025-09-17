@@ -10,6 +10,7 @@ import { ChannelType, checkedToChannel } from "@/domain/phone-provider"
 import { TestAccountsChecker } from "@/domain/accounts/test-accounts-checker"
 import { PhoneAlreadyExistsError } from "@/domain/authentication/errors"
 import {
+  CouldNotFindUserFromPhoneError,
   InvalidChannel,
   InvalidIpMetadataError,
   MissingIPMetadataError,
@@ -20,6 +21,7 @@ import { RateLimitConfig } from "@/domain/rate-limit"
 import { IpFetcherServiceError } from "@/domain/ipfetcher"
 import { RateLimiterExceededError } from "@/domain/rate-limit/errors"
 import { IPMetadataAuthorizer } from "@/domain/accounts-ips/ip-metadata-authorizer"
+import { checkedToPhoneNumber } from "@/domain/users"
 
 import {
   addAttributesToCurrentSpan,
@@ -103,11 +105,13 @@ export const requestPhoneCodeForAuthedUser = async ({
   ip,
   channel,
   user,
+  requireUniquePhone,
 }: {
   phone: PhoneNumber
   ip: IpAddress
   channel: string
   user: User
+  requireUniquePhone?: boolean
 }): Promise<true | PhoneProviderServiceError> => {
   {
     const limitOk = await checkRequestCodeAttemptPerIpLimits(ip)
@@ -121,6 +125,18 @@ export const requestPhoneCodeForAuthedUser = async ({
 
   if (user.phone) {
     return new PhoneAlreadyExistsError()
+  }
+
+  if (requireUniquePhone) {
+    const checkedPhone = checkedToPhoneNumber(phone)
+    if (checkedPhone instanceof Error) return checkedPhone
+
+    const existingPhone = await UsersRepository().findByPhone(phone)
+    if (!(existingPhone instanceof CouldNotFindUserFromPhoneError)) {
+      if (existingPhone instanceof Error) return existingPhone
+
+      return new PhoneAlreadyExistsError()
+    }
   }
 
   if (UNSECURE_DEFAULT_LOGIN_CODE) {

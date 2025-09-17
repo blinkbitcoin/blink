@@ -2237,6 +2237,7 @@ export type UserEmailDeletePayload = {
 
 export type UserEmailRegistrationInitiateInput = {
   readonly email: Scalars['EmailAddress']['input'];
+  readonly requireUniqueEmail?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 export type UserEmailRegistrationInitiatePayload = {
@@ -2280,6 +2281,7 @@ export type UserPhoneDeletePayload = {
 export type UserPhoneRegistrationInitiateInput = {
   readonly channel?: InputMaybe<PhoneCodeChannelType>;
   readonly phone: Scalars['Phone']['input'];
+  readonly requireUniquePhone?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 export type UserPhoneRegistrationValidateInput = {
