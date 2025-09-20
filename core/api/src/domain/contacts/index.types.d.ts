@@ -1,7 +1,7 @@
 type ContactType =
   (typeof import("./primitives").ContactType)[keyof typeof import("./primitives").ContactType]
 
-type Handle = Username | LightningAddress
+type Handle = Username | LightningAddress | PhoneNumber
 
 type Contact = {
   readonly id: ContactId
