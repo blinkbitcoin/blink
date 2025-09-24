@@ -1,4 +1,5 @@
 import { checkedToLightningAddress, checkedToUsername } from "../accounts"
+import { checkedToPhoneNumber } from "../users"
 
 import {
   InvalidContactIdError,
@@ -23,6 +24,9 @@ export const checkedToContactId = (
 export const checkedToHandle = (handle: string): Handle | InvalidHandleError => {
   const username = checkedToUsername(handle)
   if (!(username instanceof Error)) return handle as Handle
+
+  const phoneNumber = checkedToPhoneNumber(handle)
+  if (!(phoneNumber instanceof Error)) return handle as Handle
 
   const lnAddress = checkedToLightningAddress(handle)
   if (!(lnAddress instanceof Error)) return handle as Handle
