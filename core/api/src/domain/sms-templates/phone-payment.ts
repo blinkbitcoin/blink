@@ -2,13 +2,13 @@ import { WalletCurrency } from "@/domain/shared"
 import { toSats } from "@/domain/bitcoin"
 import { toCents } from "@/domain/fiat"
 
-import { TWILIO_WELCOME_CONTENT_SID } from "@/config"
+import { TWILIO_PHONE_PAYMENT_CONTENT_SID } from "@/config"
 
-export const welcomeSmsTemplate = ({
+export const phonePaymentSmsTemplate = ({
   amount,
   currency,
   phoneNumber,
-}: WelcomeTemplateParams): SmsTemplateResponse => {
+}: PhonePaymentTemplateParams): SmsTemplateResponse => {
   const currencyAmount =
     currency === WalletCurrency.Btc
       ? Number(toSats(amount))
@@ -20,7 +20,7 @@ export const welcomeSmsTemplate = ({
       : `$${currencyAmount.toFixed(2)}`
 
   return {
-    contentSid: TWILIO_WELCOME_CONTENT_SID || "",
+    contentSid: TWILIO_PHONE_PAYMENT_CONTENT_SID || "",
     contentVariables: {
       formattedAmount,
       phoneNumber,
