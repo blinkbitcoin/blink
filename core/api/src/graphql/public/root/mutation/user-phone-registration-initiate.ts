@@ -13,6 +13,7 @@ const UserPhoneRegistrationInitiateInput = GT.Input({
   fields: () => ({
     phone: { type: GT.NonNull(Phone) },
     channel: { type: PhoneCodeChannelType },
+    requireUniquePhone: { type: GT.Boolean, defaultValue: false },
   }),
 })
 
@@ -23,6 +24,7 @@ const UserPhoneRegistrationInitiateMutation = GT.Field<
     input: {
       phone: PhoneNumber | InputValidationError
       channel: ChannelType | InputValidationError
+      requireUniquePhone?: boolean | InputValidationError
     }
   }
 >({
@@ -34,7 +36,7 @@ const UserPhoneRegistrationInitiateMutation = GT.Field<
     input: { type: GT.NonNull(UserPhoneRegistrationInitiateInput) },
   },
   resolve: async (_, args, { ip, user }) => {
-    const { phone, channel } = args.input
+    const { phone, channel, requireUniquePhone } = args.input
 
     if (ip === undefined) {
       return { errors: [{ message: "ip is undefined" }] }
@@ -44,6 +46,10 @@ const UserPhoneRegistrationInitiateMutation = GT.Field<
       return { errors: [{ message: phone.message }] }
     }
 
+    if (requireUniquePhone instanceof Error) {
+      return { errors: [{ message: requireUniquePhone.message }] }
+    }
+
     if (channel instanceof Error) return { errors: [{ message: channel.message }] }
 
     const success = await Authentication.requestPhoneCodeForAuthedUser({
@@ -51,6 +57,7 @@ const UserPhoneRegistrationInitiateMutation = GT.Field<
       ip,
       channel,
       user,
+      requireUniquePhone,
     })
 
     if (success instanceof Error) {

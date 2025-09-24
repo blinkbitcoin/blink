@@ -2311,6 +2311,7 @@ input UserEmailRegistrationInitiateInput
   @join__type(graph: PUBLIC)
 {
   email: EmailAddress!
+  requireUniqueEmail: Boolean = false
 }
 
 type UserEmailRegistrationInitiatePayload
@@ -2371,6 +2372,7 @@ input UserPhoneRegistrationInitiateInput
 {
   channel: PhoneCodeChannelType
   phone: Phone!
+  requireUniquePhone: Boolean = false
 }
 
 input UserPhoneRegistrationValidateInput

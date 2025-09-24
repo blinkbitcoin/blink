@@ -11,6 +11,7 @@ const UserEmailRegistrationInitiateInput = GT.Input({
     email: {
       type: GT.NonNull(EmailAddress),
     },
+    requireUniqueEmail: { type: GT.Boolean, defaultValue: false },
   }),
 })
 
@@ -20,6 +21,7 @@ const UserEmailRegistrationInitiateMutation = GT.Field<
   {
     input: {
       email: EmailAddress | InputValidationError
+      requireUniqueEmail?: boolean | InputValidationError
     }
   }
 >({
@@ -31,15 +33,20 @@ const UserEmailRegistrationInitiateMutation = GT.Field<
     input: { type: GT.NonNull(UserEmailRegistrationInitiateInput) },
   },
   resolve: async (_, args, { user }) => {
-    const { email } = args.input
+    const { email, requireUniqueEmail } = args.input
 
     if (email instanceof Error) {
       return { errors: [{ message: email.message }] }
     }
 
+    if (requireUniqueEmail instanceof Error) {
+      return { errors: [{ message: requireUniqueEmail.message }] }
+    }
+
     const res = await Authentication.addEmailToIdentity({
       email,
       userId: user.id,
+      requireUniqueEmail,
     })
 
     if (res instanceof Error) {
