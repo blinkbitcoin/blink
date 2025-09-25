@@ -1104,8 +1104,8 @@ importers:
         specifier: ^0.7.15
         version: 0.7.15
       '@ip1sms/disposable-phone-numbers':
-        specifier: ^2.1.1299
-        version: 2.1.1299
+        specifier: ^2.1.1301
+        version: 2.1.1301
       '@merqva/telegram-passport':
         specifier: ^1.0.2
         version: 1.0.2
@@ -5371,8 +5371,8 @@ packages:
   /@floating-ui/utils@0.2.10:
     resolution: {integrity: sha512-aGTxbpbg8/b5JfU1HXSrbH3wXZuLPJcNEcZQFMxLs3oSzgtVu6nFPkbbGGUvBcUjKV2YyB9Wxxabo+HEH9tcRQ==}
 
-  /@google-cloud/firestore@7.11.4:
-    resolution: {integrity: sha512-9jwx87tnm0x8QMfppT543oqIvcPaBKvfn0t5toygqlwh17lN92OwCDsUl7S+jg3a9Nhxjl9/Y3TZAusVJzugrA==}
+  /@google-cloud/firestore@7.11.5:
+    resolution: {integrity: sha512-61xGOvRPi6Zg7b9JslD844dXRatwk+RtnXs4c4KtCdg30TkExRHx9QfJgnoIMvuffYBgDtzOdhvecUgTPboi/A==}
     engines: {node: '>=14.0.0'}
     requiresBuild: true
     dependencies:
@@ -7231,8 +7231,8 @@ packages:
     resolution: {integrity: sha512-Sx1pU8EM64o2BrqNpEO1CNLtKQwyhuXuqyfH7oGKCk+1a33d2r5saW8zNwm3j6BTExtjrv2BxTgzzkMwts6vGg==}
     dev: false
 
-  /@ip1sms/disposable-phone-numbers@2.1.1299:
-    resolution: {integrity: sha512-+LlqaQzWpmCIOkdrNNKMNxgGaDq8ph69ypwXhNxPM4lpbCiKL7FKXCBHHDsRMizBma6E9amYdTj85xFnZYVOyg==}
+  /@ip1sms/disposable-phone-numbers@2.1.1301:
+    resolution: {integrity: sha512-23I7Fd2eSos9fY3SNAqCqkpbAWMk3T6eA40je61z0c5M6kWn73OiOhn/xQd80Z8R9xgoPa57+b3FyOZTq/0xlQ==}
     dev: false
 
   /@isaacs/cliui@8.0.2:
@@ -16440,7 +16440,7 @@ packages:
     dependencies:
       baseline-browser-mapping: 2.8.6
       caniuse-lite: 1.0.30001743
-      electron-to-chromium: 1.5.222
+      electron-to-chromium: 1.5.223
       node-releases: 2.0.21
       update-browserslist-db: 1.1.3(browserslist@4.26.2)
     dev: true
@@ -18496,8 +18496,8 @@ packages:
   /electron-to-chromium@1.5.178:
     resolution: {integrity: sha512-wObbz/ar3Bc6e4X5vf0iO8xTN8YAjN/tgiAOJLr7yjYFtP9wAjq8Mb5h0yn6kResir+VYx2DXBj9NNobs0ETSA==}
 
-  /electron-to-chromium@1.5.222:
-    resolution: {integrity: sha512-gA7psSwSwQRE60CEoLz6JBCQPIxNeuzB2nL8vE03GK/OHxlvykbLyeiumQy1iH5C2f3YbRAZpGCMT12a/9ih9w==}
+  /electron-to-chromium@1.5.223:
+    resolution: {integrity: sha512-qKm55ic6nbEmagFlTFczML33rF90aU+WtrJ9MdTCThrcvDNdUHN4p6QfVN78U06ZmguqXIyMPyYhw2TrbDUwPQ==}
     dev: true
 
   /elliptic@6.6.1:
@@ -20554,7 +20554,7 @@ packages:
       node-forge: 1.3.1
       uuid: 10.0.0
     optionalDependencies:
-      '@google-cloud/firestore': 7.11.4
+      '@google-cloud/firestore': 7.11.5
       '@google-cloud/storage': 7.16.0
     transitivePeerDependencies:
       - encoding
