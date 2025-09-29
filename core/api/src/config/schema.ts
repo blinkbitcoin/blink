@@ -74,6 +74,27 @@ const rateLimitConfigSchema = {
   additionalProperties: false,
 }
 
+const feeMethodConfigSchema = {
+  type: "object",
+  properties: {
+    exponentialDecay: {
+      type: "object",
+      properties: {
+        minRate: { type: "number" },
+        maxRate: { type: "number" },
+        divisor: { type: "integer" },
+        targetRate: { type: "number" },
+        offset: { type: "number" },
+        factor: { type: "number" },
+      },
+      required: ["minRate", "maxRate", "divisor", "targetRate", "offset", "factor"],
+      additionalProperties: false,
+    },
+  },
+  required: ["exponentialDecay"],
+  additionalProperties: false,
+}
+
 export const configSchema = {
   type: "object",
   properties: {
@@ -181,8 +202,15 @@ export const configSchema = {
               queueName: { type: "string" },
               displayName: { type: "string" },
               description: { type: "string" },
+              feeMethodConfig: feeMethodConfigSchema,
             },
-            required: ["speed", "queueName", "displayName", "description"],
+            required: [
+              "speed",
+              "queueName",
+              "displayName",
+              "description",
+              "feeMethodConfig",
+            ],
             additionalProperties: false,
           },
           default: [
@@ -191,18 +219,48 @@ export const configSchema = {
               queueName: "dev-queue",
               displayName: "Priority",
               description: "Estimated broadcast ~10 minutes",
+              feeMethodConfig: {
+                exponentialDecay: {
+                  minRate: 0.0075,
+                  maxRate: 0.04,
+                  divisor: 30000,
+                  targetRate: 0.005,
+                  offset: 1.3,
+                  factor: 2,
+                },
+              },
             },
             {
               speed: "medium",
               queueName: "dev-medium-queue",
               displayName: "Standard",
               description: "Estimated broadcast ~1 hour",
+              feeMethodConfig: {
+                exponentialDecay: {
+                  minRate: 0.005,
+                  maxRate: 0.03,
+                  divisor: 20000,
+                  targetRate: 0.0025,
+                  offset: 1.1,
+                  factor: 1,
+                },
+              },
             },
             {
               speed: "slow",
               queueName: "dev-slow-queue",
               displayName: "Flexible",
               description: "Estimated broadcast ~24 hours",
+              feeMethodConfig: {
+                exponentialDecay: {
+                  minRate: 0.003125,
+                  maxRate: 0.02,
+                  divisor: 12500,
+                  targetRate: 0.001,
+                  offset: 1.1,
+                  factor: 2,
+                },
+              },
             },
           ],
         },
@@ -599,7 +657,7 @@ export const configSchema = {
           properties: {
             method: {
               type: "string",
-              enum: ["flat", "proportionalOnImbalance"],
+              enum: ["flat", "proportionalOnImbalance", "exponentialDecay"],
             },
             ratioAsBasisPoints: { type: "integer" },
             threshold: { type: "integer" },
@@ -622,8 +680,27 @@ export const configSchema = {
             daysLookback: 30,
           },
         },
+        exponentialDecay: {
+          type: "object",
+          properties: {
+            threshold: { type: "integer" },
+            minSats: { type: "integer" },
+            exponentialFactor: { type: "integer" },
+            networkFeeRange: {
+              type: "object",
+              properties: {
+                min: { type: "integer" },
+                max: { type: "integer" },
+              },
+              required: ["min", "max"],
+              additionalProperties: false,
+            },
+          },
+          required: ["threshold", "minSats", "exponentialFactor", "networkFeeRange"],
+          additionalProperties: false,
+        },
       },
-      required: ["withdraw", "deposit"],
+      required: ["withdraw", "deposit", "exponentialDecay"],
       additionalProperties: false,
       default: {
         withdraw: {
@@ -634,6 +711,12 @@ export const configSchema = {
           daysLookback: 30,
         },
         deposit: { defaultMin: 3000, threshold: 1000000, ratioAsBasisPoints: 30 },
+        exponentialDecay: {
+          threshold: 4000000,
+          minSats: 21000,
+          exponentialFactor: 21,
+          networkFeeRange: { min: 1, max: 2000 },
+        },
       },
     },
     onChainWallet: {
