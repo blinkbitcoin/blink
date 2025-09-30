@@ -332,7 +332,7 @@ const getWalletBalance = async (walletId: WalletId): Promise<number> => {
       }
       return walletBalance
     } catch (err) {
-      logger.warn({ err }, `Could not get wallet balace for id: ${walletId}.`)
+      logger.warn({ err }, `Could not get wallet balance for id: ${walletId}.`)
       return 0
     } finally {
       inProgressBalanceQueries.delete(inProgressKey)

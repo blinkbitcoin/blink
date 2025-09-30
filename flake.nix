@@ -176,7 +176,7 @@
             cp -rpv build/$name-$system/app/* "$out/"
 
             # Need to escape this shell variable which should not be
-            # iterpreted in Nix as a variable nor a shell variable when run
+            # interpreted in Nix as a variable nor a shell variable when run
             # but rather a literal string which happens to be a shell
             # variable. Nuclear arms race of quoting and escaping special
             # characters to make this work...
