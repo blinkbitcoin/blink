@@ -41,23 +41,22 @@ export const redeemWithdrawLinkOnChain = async (
   if (!escrowUsdWallet || !escrowUsdWallet.id) return new Error("Internal Server Error")
 
   return lockVoucherSecret(voucherSecret, async () => {
-    const getWithdrawLinkBySecretResponse = await getWithdrawLinkBySecret({
+    const withdrawLink = await getWithdrawLinkBySecret({
       voucherSecret,
     })
-    if (getWithdrawLinkBySecretResponse instanceof Error)
-      return getWithdrawLinkBySecretResponse
+    if (withdrawLink instanceof Error) return withdrawLink
 
-    if (!getWithdrawLinkBySecretResponse) {
+    if (!withdrawLink) {
       return new Error("Withdraw link not found")
     }
 
-    if (getWithdrawLinkBySecretResponse.status === Status.Pending) {
+    if (withdrawLink.status === Status.Pending) {
       return new Error(
         "Withdrawal link is in pending state. Please contact support if the error persists.",
       )
     }
 
-    if (getWithdrawLinkBySecretResponse.status === Status.Paid) {
+    if (withdrawLink.status === Status.Paid) {
       return new Error("Withdraw link claimed")
     }
 
@@ -65,7 +64,7 @@ export const redeemWithdrawLinkOnChain = async (
       client: escrowClient,
       input: {
         address: onChainAddress,
-        amount: getWithdrawLinkBySecretResponse.voucherAmountInCents,
+        amount: withdrawLink.voucherAmountInCents,
         walletId: escrowUsdWallet?.id,
         speed: PayoutSpeed.Fast,
       },
@@ -73,14 +72,13 @@ export const redeemWithdrawLinkOnChain = async (
 
     if (onChainUsdTxFeeResponse instanceof Error) return onChainUsdTxFeeResponse
     const totalAmountToBePaid =
-      getWithdrawLinkBySecretResponse.voucherAmountInCents -
-      onChainUsdTxFeeResponse.onChainUsdTxFee.amount
+      withdrawLink.voucherAmountInCents - onChainUsdTxFeeResponse.onChainUsdTxFee.amount
 
     if (totalAmountToBePaid <= 0)
       return new Error("This Voucher Cannot Withdraw On Chain amount is less than fees")
 
     const response = await updateWithdrawLinkStatus({
-      id: getWithdrawLinkBySecretResponse.id,
+      id: withdrawLink.id,
       status: Status.Paid,
     })
 
@@ -92,9 +90,9 @@ export const redeemWithdrawLinkOnChain = async (
         address: onChainAddress,
         amount: totalAmountToBePaid,
         memo: createMemo({
-          voucherAmountInCents: getWithdrawLinkBySecretResponse.voucherAmountInCents,
-          commissionPercentage: getWithdrawLinkBySecretResponse.commissionPercentage,
-          identifierCode: getWithdrawLinkBySecretResponse.identifierCode,
+          voucherAmountInCents: withdrawLink.voucherAmountInCents,
+          commissionPercentage: withdrawLink.commissionPercentage,
+          identifierCode: withdrawLink.identifierCode,
         }),
         speed: PayoutSpeed.Fast,
         walletId: escrowUsdWallet?.id,
@@ -103,7 +101,7 @@ export const redeemWithdrawLinkOnChain = async (
 
     if (onChainUsdPaymentSendResponse instanceof Error) {
       await updateWithdrawLinkStatus({
-        id: getWithdrawLinkBySecretResponse.id,
+        id: withdrawLink.id,
         status: Status.Active,
       })
       return onChainUsdPaymentSendResponse
@@ -111,7 +109,7 @@ export const redeemWithdrawLinkOnChain = async (
 
     if (onChainUsdPaymentSendResponse.onChainUsdPaymentSend.errors.length > 0) {
       await updateWithdrawLinkStatus({
-        id: getWithdrawLinkBySecretResponse.id,
+        id: withdrawLink.id,
         status: Status.Active,
       })
       return new Error(
@@ -124,7 +122,7 @@ export const redeemWithdrawLinkOnChain = async (
       PaymentSendResult.Success
     ) {
       await updateWithdrawLinkStatus({
-        id: getWithdrawLinkBySecretResponse.id,
+        id: withdrawLink.id,
         status: Status.Active,
       })
       return new Error(

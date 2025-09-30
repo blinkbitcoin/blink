@@ -42,12 +42,16 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     withdrawLink = await getWithdrawLinkByK1Query({ k1 })
   } catch (error) {
     console.error("error paying lnurlw", error)
-    return new Error("Internal Server Error")
+    return Response.json({ status: "ERROR", reason: "Internal Server Error" })
   }
 
-  if (!withdrawLink) return new Error("Withdraw link not found")
+  if (!withdrawLink) {
+    return Response.json({ status: "ERROR", reason: "Withdraw link not found" })
+  }
 
-  if (withdrawLink instanceof Error) return new Error("Internal Server Error")
+  if (withdrawLink instanceof Error) {
+    return Response.json({ status: "ERROR", reason: "Internal Server Error" })
+  }
 
   if (withdrawLink.id !== id)
     return Response.json({ error: "Invalid Request", status: 400 })
