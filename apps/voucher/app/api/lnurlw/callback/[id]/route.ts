@@ -52,7 +52,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   if (withdrawLink.id !== id)
     return Response.json({ error: "Invalid Request", status: 400 })
 
-  return lockVoucherSecret(withdrawLink.voucherSecret, async () => {
+  const result = await lockVoucherSecret(withdrawLink.voucherSecret, async () => {
     try {
       const withdrawLink = await getWithdrawLinkByK1Query({ k1 })
 
