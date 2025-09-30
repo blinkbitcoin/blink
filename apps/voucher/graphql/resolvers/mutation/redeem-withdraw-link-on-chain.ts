@@ -51,6 +51,12 @@ export const redeemWithdrawLinkOnChain = async (
       return new Error("Withdraw link not found")
     }
 
+    if (getWithdrawLinkBySecretResponse.status === Status.Pending) {
+      return new Error(
+        "Withdrawal link is in pending state. Please contact support if the error persists.",
+      )
+    }
+
     if (getWithdrawLinkBySecretResponse.status === Status.Paid) {
       return new Error("Withdraw link claimed")
     }
