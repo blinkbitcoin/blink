@@ -1,7 +1,11 @@
 import { NextRequest } from "next/server"
 
-import { lockVoucherK1 } from "@/services/lock"
-import { getWithdrawLinkByK1Query, updateWithdrawLinkStatus } from "@/services/db"
+import { lockVoucherSecret } from "@/services/lock"
+import {
+  getWithdrawLinkByK1Query,
+  updateWithdrawLinkStatus,
+  WithdrawLink,
+} from "@/services/db"
 import { createMemo, getWalletDetails, decodeInvoice } from "@/utils/helpers"
 import { PaymentSendResult, Status } from "@/lib/graphql/generated"
 import { escrowApolloClient } from "@/services/galoy/client/escrow"
@@ -33,7 +37,26 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   if (usdWallet instanceof Error || !usdWallet)
     return Response.json({ status: "ERROR", reason: "Internal Server Error" })
 
-  const result = await lockVoucherK1(k1, async () => {
+  let withdrawLink: WithdrawLink | undefined | Error
+  try {
+    withdrawLink = await getWithdrawLinkByK1Query({ k1 })
+  } catch (error) {
+    console.error("error paying lnurlw", error)
+    return Response.json({ status: "ERROR", reason: "Internal Server Error" })
+  }
+
+  if (!withdrawLink) {
+    return Response.json({ status: "ERROR", reason: "Withdraw link not found" })
+  }
+
+  if (withdrawLink instanceof Error) {
+    return Response.json({ status: "ERROR", reason: "Internal Server Error" })
+  }
+
+  if (withdrawLink.id !== id)
+    return Response.json({ error: "Invalid Request", status: 400 })
+
+  const result = await lockVoucherSecret(withdrawLink.voucherSecret, async () => {
     try {
       const withdrawLink = await getWithdrawLinkByK1Query({ k1 })
 

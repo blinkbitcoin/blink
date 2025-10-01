@@ -5,7 +5,7 @@ import { knex } from "./knex"
 import { generateCode, generateRandomHash } from "@/utils/helpers"
 import { Status } from "@/lib/graphql/generated"
 
-type WithdrawLink = {
+export type WithdrawLink = {
   id: string
   userId: string
   identifierCode: string
