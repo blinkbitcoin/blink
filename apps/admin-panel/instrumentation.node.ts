@@ -17,7 +17,7 @@ try {
   const errorMessage = error instanceof Error ? error.message : String(error)
   throw new Error(
     `Failed to validate environment variables: ${errorMessage}. ` +
-      `Please check your environment configuration.`
+      `Please check your environment configuration.`,
   )
 }
 

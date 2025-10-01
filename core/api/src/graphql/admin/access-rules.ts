@@ -29,7 +29,7 @@ enum AdminAccessRight {
 // Helper function to create access right rules
 const createAccessRightRule = (accessRight: AdminAccessRight) =>
   rule({ cache: "contextual" })(async (_parent, _args, ctx: GraphQLAdminContext) => {
-    if (!ctx.userEmail || !ctx.scope) return false
+    if (!ctx.privilegedClientId || !ctx.scope) return false
     return ctx.scope.includes(accessRight)
   })
 
