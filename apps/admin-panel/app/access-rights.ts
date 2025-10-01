@@ -35,10 +35,7 @@ const SUPPORTLV1_RIGHTS = [
   AdminAccessRight.APPROVE_MERCHANT,
   AdminAccessRight.CHANGELEVEL_ACCOUNT,
 ]
-const SUPPORTLV2_RIGHTS = [
-  ...SUPPORTLV1_RIGHTS,
-  AdminAccessRight.CHANGECONTACTS_ACCOUNT,
-]
+const SUPPORTLV2_RIGHTS = [...SUPPORTLV1_RIGHTS, AdminAccessRight.CHANGECONTACTS_ACCOUNT]
 
 // ADMIN has all rights
 const ADMIN_RIGHTS = Object.values(AdminAccessRight)
@@ -121,7 +118,7 @@ export function hasAccessRightInScope(
   return scope
     .split(" ")
     .filter((s) => s.trim() !== "")
-    .includes(accessRight)
+    .some((s) => s.toUpperCase() === accessRight.toUpperCase())
 }
 
 /**

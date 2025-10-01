@@ -37,7 +37,7 @@ describe("Access Rights - Multiple Roles Support", () => {
           AdminAccessRight.LOCK_ACCOUNT,
           AdminAccessRight.APPROVE_MERCHANT,
           AdminAccessRight.VIEW_TRANSACTIONS,
-          AdminAccessRight.CHANGELEVEL_ACCOUNT
+          AdminAccessRight.CHANGELEVEL_ACCOUNT,
         ]),
       )
       expect(rights).toHaveLength(6)
