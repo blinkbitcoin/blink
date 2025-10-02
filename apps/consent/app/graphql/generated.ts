@@ -1756,8 +1756,6 @@ export type SettlementViaOnChain = {
 export type StableSatsGetQuoteInput = {
   /** Amount in cents (for cent-based quotes) */
   readonly centAmount?: InputMaybe<Scalars['CentAmount']['input']>;
-  /** Whether to execute the quote immediately */
-  readonly immediateExecution?: InputMaybe<Scalars['Boolean']['input']>;
   /** Type of quote to request */
   readonly quoteType: QuoteType;
   /** Amount in satoshis (for sat-based quotes) */

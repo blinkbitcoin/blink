@@ -1454,9 +1454,6 @@ input StableSatsGetQuoteInput {
   """Amount in cents (for cent-based quotes)"""
   centAmount: CentAmount
 
-  """Whether to execute the quote immediately"""
-  immediateExecution: Boolean = false
-
   """Type of quote to request"""
   quoteType: QuoteType!
 
