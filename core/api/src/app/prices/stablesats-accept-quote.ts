@@ -1,15 +1,15 @@
-import { QuoteId } from "@/domain/quotes/index.types"
+import { checkedToQuoteId } from "@/domain/quotes"
 import { QuotesService } from "@/services/quotes"
 
-export const acceptStableSatsQuote = async ({
+export const stableSatsAcceptQuote = async ({
   quoteId,
 }: {
-  quoteId: QuoteId
+  quoteId: string
 }): Promise<true | ApplicationError> => {
-  if (!quoteId || typeof quoteId !== "string") {
-    return new Error("Invalid quote ID provided")
-  }
+  const checkedQuoteId = checkedToQuoteId(quoteId)
+
+  if (checkedQuoteId instanceof Error) return checkedQuoteId
 
   const quotesService = QuotesService()
-  return quotesService.acceptQuote(quoteId)
+  return quotesService.acceptQuote(checkedQuoteId)
 }

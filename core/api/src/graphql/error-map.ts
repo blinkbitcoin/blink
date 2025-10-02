@@ -447,6 +447,10 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       message = "Invalid currency."
       return new ValidationInternalError({ message, logger: baseLogger })
 
+    case "InvalidQuoteIdError":
+      message = "Invalid quote id."
+      return new ValidationInternalError({ message, logger: baseLogger })
+
     case "MismatchedCurrencyForWalletError":
       message = "Unsupported operation for wallet's currency."
       return new ValidationInternalError({ message, logger: baseLogger })
