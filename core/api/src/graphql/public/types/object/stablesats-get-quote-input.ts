@@ -24,11 +24,6 @@ const StableSatsGetQuoteInput = GT.Input({
       type: CentAmount,
       description: "Amount in cents (for cent-based quotes)",
     },
-    immediateExecution: {
-      type: GT.Boolean,
-      description: "Whether to execute the quote immediately",
-      defaultValue: false,
-    },
   }),
 })
 

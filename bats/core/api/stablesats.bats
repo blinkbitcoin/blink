@@ -218,32 +218,6 @@ setup_file() {
   [[ "$error_message" =~ (Not authorized|Unauthorized|Authentication|Authorization|access) ]] || exit 1
 }
 
-@test "stablesats: can request quote with immediateExecution flag" {
-  token_name='alice'
-  btc_wallet_name="$token_name.btc_wallet_id"
-  sat_amount="2000"
-
-  variables=$(
-    jq -n \
-    --arg wallet_id "$(read_value $btc_wallet_name)" \
-    --arg quote_type "BUY_USD_WITH_SATS" \
-    --arg sat_amount "$sat_amount" \
-    '{input: {walletId: $wallet_id, quoteType: $quote_type, satAmount: ($sat_amount | tonumber), immediateExecution: true}}'
-  )
-  
-  exec_graphql "$token_name" 'stablesats-get-quote' "$variables"
-  
-  errors="$(graphql_output '.data.stableSatsGetQuote.errors | length')"
-  [[ "${errors}" = "0" ]] || exit 1
-  
-  quote_id="$(graphql_output '.data.stableSatsGetQuote.quote.quoteId')"
-  executed="$(graphql_output '.data.stableSatsGetQuote.quote.executed')"
-  
-  [[ -n "$quote_id" ]] || exit 1
-  # With immediateExecution, the quote might be executed immediately
-  [[ "$executed" = "true" || "$executed" = "false" ]] || exit 1
-}
-
 @test "stablesats: returns error for missing required parameters in SELL quotes" {
   token_name='alice'
   usd_wallet_name="$token_name.usd_wallet_id"

@@ -3,12 +3,12 @@ import dedent from "dedent"
 import StableSatsGetQuoteInput from "@/graphql/public/types/object/stablesats-get-quote-input"
 
 import {
-  getStableSatsQuoteToBuyUsdWithSats,
-  getStableSatsQuoteToBuyUsdWithCents,
+  stableSatsGetQuoteToBuyUsdWithSats,
+  stableSatsGetQuoteToBuyUsdWithCents,
 } from "@/app/prices/stablesats-get-quote-to-buy-usd"
 import {
-  getStableSatsQuoteToSellUsdWithSats,
-  getStableSatsQuoteToSellUsdWithCents,
+  stableSatsGetQuoteToSellUsdWithSats,
+  stableSatsGetQuoteToSellUsdWithCents,
 } from "@/app/prices/stablesats-get-quote-to-sell-usd"
 
 import { GT } from "@/graphql/index"
@@ -26,7 +26,7 @@ const StableSatsGetQuoteQuery = GT.Field({
     input: { type: GT.NonNull(StableSatsGetQuoteInput) },
   },
   resolve: async (_, args) => {
-    const { quoteType, satAmount, centAmount, immediateExecution } = args.input
+    const { quoteType, satAmount, centAmount } = args.input
 
     // Validate input parameters
     for (const input of [quoteType, satAmount, centAmount]) {
@@ -42,9 +42,9 @@ const StableSatsGetQuoteQuery = GT.Field({
         if (!satAmount) {
           return { errors: [{ message: "satAmount is required for BUY_USD_WITH_SATS" }] }
         }
-        result = await getStableSatsQuoteToBuyUsdWithSats({
+        result = await stableSatsGetQuoteToBuyUsdWithSats({
           btcAmount: satAmount,
-          immediateExecution,
+          immediateExecution: false,
         })
         break
 
@@ -54,9 +54,9 @@ const StableSatsGetQuoteQuery = GT.Field({
             errors: [{ message: "centAmount is required for BUY_USD_WITH_CENTS" }],
           }
         }
-        result = await getStableSatsQuoteToBuyUsdWithCents({
+        result = await stableSatsGetQuoteToBuyUsdWithCents({
           usdAmount: centAmount,
-          immediateExecution,
+          immediateExecution: false,
         })
         break
 
@@ -64,9 +64,9 @@ const StableSatsGetQuoteQuery = GT.Field({
         if (!satAmount) {
           return { errors: [{ message: "satAmount is required for SELL_USD_FOR_SATS" }] }
         }
-        result = await getStableSatsQuoteToSellUsdWithSats({
+        result = await stableSatsGetQuoteToSellUsdWithSats({
           btcAmount: satAmount,
-          immediateExecution,
+          immediateExecution: false,
         })
         break
 
@@ -76,9 +76,9 @@ const StableSatsGetQuoteQuery = GT.Field({
             errors: [{ message: "centAmount is required for SELL_USD_FOR_CENTS" }],
           }
         }
-        result = await getStableSatsQuoteToSellUsdWithCents({
+        result = await stableSatsGetQuoteToSellUsdWithCents({
           usdAmount: centAmount,
-          immediateExecution,
+          immediateExecution: false,
         })
         break
 
