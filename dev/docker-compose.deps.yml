@@ -356,8 +356,6 @@ services:
     image: postgres:14.1
     environment:
       POSTGRES_PASSWORD: postgres
-
-
   stablesats-pg:
     image: postgres:15.1
     environment:
@@ -369,7 +367,6 @@ services:
       interval: 5s
       timeout: 30s
       retries: 5
-
   stablesats:
     image: us.gcr.io/galoy-org/stablesats-rs:latest
     ports:

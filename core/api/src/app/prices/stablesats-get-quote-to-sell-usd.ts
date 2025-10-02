@@ -2,7 +2,7 @@ import { checkedToBtcPaymentAmount, checkedToUsdPaymentAmount } from "@/domain/s
 import { QuotesService } from "@/services/quotes"
 import type { QuoteToSellUsd } from "@/domain/quotes/index.types"
 
-export const getStableSatsQuoteToSellUsdWithSats = async ({
+export const stableSatsGetQuoteToSellUsdWithSats = async ({
   btcAmount,
   immediateExecution = false,
 }: {
@@ -19,7 +19,7 @@ export const getStableSatsQuoteToSellUsdWithSats = async ({
   })
 }
 
-export const getStableSatsQuoteToSellUsdWithCents = async ({
+export const stableSatsGetQuoteToSellUsdWithCents = async ({
   usdAmount,
   immediateExecution = false,
 }: {
