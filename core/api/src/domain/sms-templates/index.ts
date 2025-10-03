@@ -1,1 +1,1 @@
-export * from "./welcome"
+export * from "./phone-payment"

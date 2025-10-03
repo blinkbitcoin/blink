@@ -47,7 +47,7 @@ import {
 } from "@/domain/notifications"
 import { toSats } from "@/domain/bitcoin"
 import { AccountLevel, AccountStatus } from "@/domain/accounts"
-import { welcomeSmsTemplate } from "@/domain/sms-templates"
+import { phonePaymentSmsTemplate } from "@/domain/sms-templates"
 import { WalletCurrency } from "@/domain/shared"
 import { TxStatus } from "@/domain/wallets/tx-status"
 import { CallbackEventType } from "@/domain/callback"
@@ -264,7 +264,7 @@ export const NotificationsService = (): INotificationsService => {
       const { status, phoneNumber } = recipient
       if (status !== AccountStatus.Invited || !phoneNumber) return true
 
-      const { contentSid, contentVariables } = welcomeSmsTemplate({
+      const { contentSid, contentVariables } = phonePaymentSmsTemplate({
         currency: settlementCurrency,
         amount: settlementAmount,
         phoneNumber,
