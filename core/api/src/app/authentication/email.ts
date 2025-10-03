@@ -1,5 +1,9 @@
-import { AccountAlreadyHasEmailError } from "@/domain/authentication/errors"
-import { AuthWithEmailPasswordlessService } from "@/services/kratos"
+import {
+  AccountAlreadyHasEmailError,
+  IdentifierNotFoundError,
+} from "@/domain/authentication/errors"
+import { checkedToEmailAddress } from "@/domain/users"
+import { AuthWithEmailPasswordlessService, IdentityRepository } from "@/services/kratos"
 import { baseLogger } from "@/services/logger"
 import { UsersRepository } from "@/services/mongoose"
 import { NotificationsService } from "@/services/notifications"
@@ -7,15 +11,29 @@ import { NotificationsService } from "@/services/notifications"
 export const addEmailToIdentity = async ({
   email,
   userId,
+  requireUniqueEmail,
 }: {
   email: EmailAddress
   userId: UserId
+  requireUniqueEmail?: boolean
 }): Promise<AddEmailToIdentityResult | KratosError> => {
   const authServiceEmail = AuthWithEmailPasswordlessService()
 
   const hasEmail = await authServiceEmail.hasEmail({ kratosUserId: userId })
   if (hasEmail instanceof Error) return hasEmail
   if (hasEmail) return new AccountAlreadyHasEmailError()
+
+  if (requireUniqueEmail) {
+    const checkedEmail = checkedToEmailAddress(email)
+    if (checkedEmail instanceof Error) return checkedEmail
+
+    const userIdResult = await IdentityRepository().getUserIdFromIdentifier(checkedEmail)
+    if (!(userIdResult instanceof IdentifierNotFoundError)) {
+      if (userIdResult instanceof Error) return userIdResult
+
+      return new AccountAlreadyHasEmailError()
+    }
+  }
 
   const res = await authServiceEmail.addUnverifiedEmailToIdentity({
     email,
