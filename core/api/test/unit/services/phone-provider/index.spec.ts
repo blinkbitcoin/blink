@@ -4,7 +4,6 @@ import {
   isPhoneCodeValid,
 } from "@/services/phone-provider"
 
-// Mock config
 jest.mock("@/config", () => ({
   ...jest.requireActual("@/config"),
   getPhoneProviderConfig: jest.fn(),
@@ -17,7 +16,6 @@ jest.mock("@/config", () => ({
   getTestAccounts: jest.fn(),
 }))
 
-// Mock phone provider services
 jest.mock("@/services/phone-provider/twilio-service", () => ({
   TwilioClient: jest.fn(),
   TWILIO_ACCOUNT_TEST: "AC_twilio_id",
@@ -27,7 +25,6 @@ jest.mock("@/services/phone-provider/prelude-service", () => ({
   PreludeClient: jest.fn(),
 }))
 
-// Mock domain modules
 jest.mock("@/domain/accounts/test-accounts-checker", () => ({
   TestAccountsChecker: jest.fn(),
 }))
@@ -136,7 +133,6 @@ describe("Phone Provider Factory", () => {
 
     it("returns error when provider lacks verify capabilities", () => {
       const mockIncompleteService = {
-        // Missing verify capabilities
         sendTemplatedSMS: jest.fn(),
       }
 
@@ -209,7 +205,6 @@ describe("Phone Provider Factory", () => {
 
     it("returns error when provider lacks transactional capabilities", () => {
       const mockIncompleteService = {
-        // Missing sendTemplatedSMS capability
         getCarrier: jest.fn(),
         validateDestination: jest.fn(),
         initiateVerify: jest.fn(),
@@ -238,7 +233,6 @@ describe("Phone Provider Factory", () => {
         validateDestination: jest.fn(),
         initiateVerify: jest.fn(),
         validateVerify: jest.fn(),
-        // No sendTemplatedSMS method
       }
 
       mockGetPhoneProviderConfig.mockReturnValue({
@@ -300,7 +294,6 @@ describe("Phone Provider Factory", () => {
     const defaultCode = "000000" as PhoneCode
 
     beforeEach(() => {
-      // Reset TWILIO_ACCOUNT_SID for each test
       jest.doMock("@/config", () => ({
         ...jest.requireActual("@/config"),
         TWILIO_ACCOUNT_SID: "test_account_sid",
@@ -364,7 +357,6 @@ describe("Phone Provider Factory", () => {
         isPhoneTestAndCodeValid: jest.fn(),
       }
 
-      // Mock TWILIO_ACCOUNT_SID to be test account
       jest.resetModules()
       jest.doMock("@/config", () => ({
         ...jest.requireActual("@/config"),
@@ -376,7 +368,6 @@ describe("Phone Provider Factory", () => {
         TestAccountsChecker: jest.fn().mockReturnValue(mockChecker),
       }))
 
-      // Re-import the function and error class after mocking
       const { isPhoneCodeValid: mockedIsPhoneCodeValid } = await import(
         "@/services/phone-provider"
       )
