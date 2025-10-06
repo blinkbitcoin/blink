@@ -31,7 +31,8 @@ import { AuthWithEmailPasswordlessService } from "@/services/kratos"
 import { baseLogger } from "@/services/logger"
 import { UsersRepository } from "@/services/mongoose"
 import { consumeLimiter } from "@/services/rate-limit"
-import { TWILIO_ACCOUNT_TEST, TwilioClient } from "@/services/twilio-service"
+import { TWILIO_ACCOUNT_TEST } from "@/services/phone-provider/twilio-service"
+import { getPhoneProviderVerifyService } from "@/services/phone-provider"
 
 export const requestPhoneCodeWithCaptcha = async ({
   phone,
@@ -91,10 +92,14 @@ export const requestPhoneCodeWithCaptcha = async ({
     return new InvalidChannel(channel)
   }
 
-  return TwilioClient().initiateVerify({
+  const verifyService = getPhoneProviderVerifyService()
+  if (verifyService instanceof Error) return verifyService
+
+  return verifyService.initiateVerify({
     to: phone,
     channel: checkedChannel,
     phoneExists,
+    ip,
   })
 }
 
@@ -143,10 +148,14 @@ export const requestPhoneCodeForAuthedUser = async ({
     return new InvalidChannel(channel)
   }
 
-  return TwilioClient().initiateVerify({
+  const verifyService = getPhoneProviderVerifyService()
+  if (verifyService instanceof Error) return verifyService
+
+  return verifyService.initiateVerify({
     to: phone,
     channel: checkedChannel,
     phoneExists: false,
+    ip,
   })
 }
 
@@ -201,10 +210,14 @@ export const requestPhoneCodeWithAppcheckJti = async ({
     return new InvalidChannel(channel)
   }
 
-  return TwilioClient().initiateVerify({
+  const verifyService = getPhoneProviderVerifyService()
+  if (verifyService instanceof Error) return verifyService
+
+  return verifyService.initiateVerify({
     to: phone,
     channel: checkedChannel,
     phoneExists,
+    ip,
   })
 }
 

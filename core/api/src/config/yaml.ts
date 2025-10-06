@@ -340,3 +340,8 @@ export const getWhatsAppAuthUnsupportedCountries = (): CountryCode[] => {
 export const getTelegramAuthUnsupportedCountries = (): CountryCode[] => {
   return yamlConfig.telegramAuthUnsupportedCountries as CountryCode[]
 }
+
+export const getPhoneProviderConfig = () => ({
+  verify: yamlConfig.phoneProvider.verify,
+  transactional: yamlConfig.phoneProvider.transactional,
+})

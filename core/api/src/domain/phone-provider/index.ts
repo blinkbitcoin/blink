@@ -1,4 +1,5 @@
 import { parsePhoneNumberFromString } from "libphonenumber-js"
+import disposablePhoneList from "@ip1sms/disposable-phone-numbers"
 
 import {
   InvalidPhoneNumber,
@@ -78,4 +79,9 @@ export const checkedToChannel = (
   }
 
   return normalizedChannel as ChannelType
+}
+
+export const isDisposablePhoneNumber = (phone: PhoneNumber) => {
+  const phoneNumber = phone.replace(/[^0-9]/, "")
+  return phoneNumber in disposablePhoneList
 }

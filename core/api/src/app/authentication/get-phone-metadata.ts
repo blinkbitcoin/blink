@@ -7,12 +7,20 @@ import {
 } from "@/domain/users/errors"
 
 import { addAttributesToCurrentSpan } from "@/services/tracing"
-import { TwilioClient } from "@/services/twilio-service"
+import { getPhoneProviderVerifyService } from "@/services/phone-provider"
 
 export const getPhoneMetadata = async ({ phone }: { phone: PhoneNumber }) => {
   const { phoneMetadataValidationSettings } = getAccountsOnboardConfig()
 
-  const newPhoneMetadata = await TwilioClient().getCarrier(phone)
+  const verifyService = getPhoneProviderVerifyService()
+  if (verifyService instanceof Error) {
+    if (!phoneMetadataValidationSettings.enabled) {
+      return undefined
+    }
+    return new InvalidPhoneMetadataForOnboardingError()
+  }
+
+  const newPhoneMetadata = await verifyService.getCarrier(phone)
   if (newPhoneMetadata instanceof Error) {
     if (!phoneMetadataValidationSettings.enabled) {
       return undefined

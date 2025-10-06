@@ -6,7 +6,7 @@ import {
 
 import { PhoneAlreadyExistsError } from "@/domain/authentication/errors"
 
-import { isPhoneCodeValid } from "@/services/twilio-service"
+import { isPhoneCodeValid } from "@/services/phone-provider"
 
 import { UsersRepository } from "@/services/mongoose"
 

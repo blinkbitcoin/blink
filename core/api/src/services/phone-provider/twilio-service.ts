@@ -1,17 +1,16 @@
 import twilio from "twilio"
 import { isAxiosError } from "axios"
-import disposablePhoneList from "@ip1sms/disposable-phone-numbers"
 
-import { wrapAsyncFunctionsToRunInSpan } from "./tracing"
+import { wrapAsyncFunctionsToRunInSpan } from "../tracing"
 
 import {
   TWILIO_ACCOUNT_SID,
   TWILIO_AUTH_TOKEN,
   TWILIO_VERIFY_SERVICE_ID,
   TWILIO_MESSAGING_SERVICE_ID,
-  UNSECURE_DEFAULT_LOGIN_CODE,
-  getTestAccounts,
+  PhoneProviderConfigError,
 } from "@/config"
+
 import {
   ExpiredOrNonExistentPhoneNumberError,
   InvalidOrApprovedVerificationError,
@@ -26,20 +25,36 @@ import {
   RestrictedRegionPhoneProviderError,
   UnknownPhoneProviderServiceError,
   UnsubscribedRecipientPhoneProviderError,
+  isDisposablePhoneNumber,
 } from "@/domain/phone-provider"
-import { baseLogger } from "@/services/logger"
-
-import { TestAccountsChecker } from "@/domain/accounts/test-accounts-checker"
-import { NotImplementedError } from "@/domain/errors"
 import { parseErrorMessageFromUnknown } from "@/domain/shared"
+
+import { baseLogger } from "@/services/logger"
 
 export const TWILIO_ACCOUNT_TEST = "AC_twilio_id"
 
-export const TwilioClient = (): IPhoneProviderService => {
+export const TwilioClient = ():
+  | IPhoneProviderService
+  | PhoneProviderConfigError<unknown> => {
   const accountSid = TWILIO_ACCOUNT_SID
+  if (!accountSid) {
+    return new PhoneProviderConfigError("TWILIO_ACCOUNT_SID is required")
+  }
+
   const authToken = TWILIO_AUTH_TOKEN
+  if (!authToken) {
+    return new PhoneProviderConfigError("TWILIO_AUTH_TOKEN is required")
+  }
+
   const verifyService = TWILIO_VERIFY_SERVICE_ID
+  if (!verifyService) {
+    return new PhoneProviderConfigError("TWILIO_VERIFY_SERVICE_ID is required")
+  }
+
   const messagingServiceSid = TWILIO_MESSAGING_SERVICE_ID
+  if (!messagingServiceSid) {
+    return new PhoneProviderConfigError("TWILIO_MESSAGING_SERVICE_ID is required")
+  }
 
   const client = twilio(accountSid, authToken)
   const verify = client.verify.v2.services(verifyService)
@@ -271,41 +286,3 @@ export const KnownTwilioErrorMessages = {
   InvalidOrApprovedVerification:
     /The requested resource \/(?:v2\/)?Services\/(.*?)\/VerificationCheck was not found/,
 } as const
-
-export const isPhoneCodeValid = async ({
-  code,
-  phone,
-}: {
-  phone: PhoneNumber
-  code: PhoneCode
-}) => {
-  if (code === UNSECURE_DEFAULT_LOGIN_CODE) {
-    return true
-  }
-
-  const testAccounts = getTestAccounts()
-  if (TestAccountsChecker(testAccounts).isPhoneTest(phone)) {
-    const validTestCode = TestAccountsChecker(testAccounts).isPhoneTestAndCodeValid({
-      code,
-      phone,
-    })
-    if (!validTestCode) {
-      return new PhoneCodeInvalidError()
-    }
-    return true
-  }
-
-  // we can't mock this function properly because in the e2e test,
-  // the server is been launched as a sub process,
-  // so it's not been mocked by jest
-  if (TWILIO_ACCOUNT_SID === TWILIO_ACCOUNT_TEST) {
-    return new NotImplementedError("use test account for local dev and tests")
-  }
-
-  return TwilioClient().validateVerify({ to: phone, code })
-}
-
-export const isDisposablePhoneNumber = (phone: PhoneNumber) => {
-  const phoneNumber = phone.replace(/[^0-9]/, "")
-  return phoneNumber in disposablePhoneList
-}

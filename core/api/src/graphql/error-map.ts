@@ -227,6 +227,10 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       message = "Phone number is not from a valid region"
       return new ValidationInternalError({ message, logger: baseLogger })
 
+    case "SpendingLimitExceededPhoneProviderError":
+      message = "Service spending limit exceeded. Please contact support."
+      return new ValidationInternalError({ message, logger: baseLogger })
+
     case "PhoneProviderConnectionError":
     case "PhoneProviderUnavailableError":
       message = "Phone provider temporarily unreachable"

@@ -47,7 +47,7 @@ import {
   addAttributesToCurrentSpan,
   recordExceptionInCurrentSpan,
 } from "@/services/tracing"
-import { isPhoneCodeValid } from "@/services/twilio-service"
+import { isPhoneCodeValid } from "@/services/phone-provider"
 
 import { IPMetadataAuthorizer } from "@/domain/accounts-ips/ip-metadata-authorizer"
 

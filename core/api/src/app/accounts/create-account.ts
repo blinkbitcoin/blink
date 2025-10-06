@@ -17,7 +17,7 @@ import {
   WalletsRepository,
 } from "@/services/mongoose"
 import { PriceService } from "@/services/price"
-import { TwilioClient } from "@/services/twilio-service"
+import { getPhoneProviderVerifyService } from "@/services/phone-provider"
 
 const { phoneMetadataValidationSettings } = getAccountsOnboardConfig()
 
@@ -139,7 +139,10 @@ export const createInvitedAccountFromPhone = async ({
   phone: PhoneNumber
 }): Promise<Account | ApplicationError> => {
   if (phoneMetadataValidationSettings.enabled) {
-    const validationResult = await TwilioClient().validateDestination(phone)
+    const verifyService = getPhoneProviderVerifyService()
+    if (verifyService instanceof Error) return verifyService
+
+    const validationResult = await verifyService.validateDestination(phone)
     if (validationResult instanceof Error) return validationResult
   }
 

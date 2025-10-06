@@ -20,4 +20,6 @@ export class MissingUsdDealerWalletConfigError<T> extends MissingDealerConfigErr
 export class MissingFunderConfigError<T> extends ConfigError<T> {}
 export class MissingFunderAccountConfigError<T> extends MissingFunderConfigError<T> {}
 
+export class PhoneProviderConfigError<T> extends ConfigError<T> {}
+
 export class UnknownConfigError<T> extends ConfigError<T> {}
