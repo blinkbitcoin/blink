@@ -231,6 +231,7 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       message = "Service spending limit exceeded. Please contact support."
       return new ValidationInternalError({ message, logger: baseLogger })
 
+    case "PhoneProviderConfigError":
     case "PhoneProviderConnectionError":
     case "PhoneProviderUnavailableError":
       message = "Phone provider temporarily unreachable"

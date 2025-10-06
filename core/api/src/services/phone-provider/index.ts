@@ -1,7 +1,6 @@
 import { TwilioClient, TWILIO_ACCOUNT_TEST } from "./twilio-service"
 import { PreludeClient } from "./prelude-service"
 
-import { PhoneProviderConfigError } from "@/config/error"
 import {
   getPhoneProviderConfig,
   UNSECURE_DEFAULT_LOGIN_CODE,
@@ -9,7 +8,7 @@ import {
   TWILIO_ACCOUNT_SID,
 } from "@/config"
 import { NotImplementedError } from "@/domain/errors"
-import { PhoneCodeInvalidError } from "@/domain/phone-provider"
+import { PhoneCodeInvalidError, PhoneProviderConfigError } from "@/domain/phone-provider"
 import { TestAccountsChecker } from "@/domain/accounts/test-accounts-checker"
 
 const PROVIDERS = {
@@ -19,7 +18,7 @@ const PROVIDERS = {
 
 export const getPhoneProviderVerifyService = ():
   | IPhoneProviderVerifyService
-  | PhoneProviderConfigError<unknown> => {
+  | PhoneProviderConfigError => {
   const config = getPhoneProviderConfig()
   const providerFactory = PROVIDERS[config.verify]
 
@@ -43,7 +42,7 @@ export const getPhoneProviderVerifyService = ():
 
 export const getPhoneProviderTransactionalService = ():
   | IPhoneProviderTransactionalService
-  | PhoneProviderConfigError<unknown> => {
+  | PhoneProviderConfigError => {
   const config = getPhoneProviderConfig()
   const providerFactory = PROVIDERS[config.transactional]
 

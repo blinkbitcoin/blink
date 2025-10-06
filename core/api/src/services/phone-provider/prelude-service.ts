@@ -3,13 +3,13 @@ import Prelude from "@prelude.so/sdk"
 import { wrapAsyncFunctionsToRunInSpan } from "../tracing"
 
 import { PRELUDE_API_KEY } from "@/config"
-import { PhoneProviderConfigError } from "@/config/error"
 import {
   ExpiredOrNonExistentPhoneNumberError,
   InvalidPhoneNumberPhoneProviderError,
   InvalidTypePhoneProviderError,
   MissingTypePhoneProviderError,
   PhoneCodeInvalidError,
+  PhoneProviderConfigError,
   PhoneProviderConnectionError,
   PhoneProviderRateLimitExceededError,
   PhoneProviderUnavailableError,
@@ -25,7 +25,7 @@ import { parseErrorMessageFromUnknown } from "@/domain/shared"
 
 export const PreludeClient = ():
   | IPhoneProviderVerifyService
-  | PhoneProviderConfigError<unknown> => {
+  | PhoneProviderConfigError => {
   const apiKey = PRELUDE_API_KEY
 
   if (!apiKey) {

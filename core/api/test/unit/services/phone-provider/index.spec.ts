@@ -3,7 +3,6 @@ import {
   getPhoneProviderTransactionalService,
   isPhoneCodeValid,
 } from "@/services/phone-provider"
-import { PhoneProviderConfigError } from "@/config/error"
 
 // Mock config
 jest.mock("@/config", () => ({
@@ -48,7 +47,7 @@ import { getPhoneProviderConfig, getTestAccounts } from "@/config"
 import { TwilioClient } from "@/services/phone-provider/twilio-service"
 import { PreludeClient } from "@/services/phone-provider/prelude-service"
 import { TestAccountsChecker } from "@/domain/accounts/test-accounts-checker"
-import { PhoneCodeInvalidError } from "@/domain/phone-provider"
+import { PhoneCodeInvalidError, PhoneProviderConfigError } from "@/domain/phone-provider"
 
 const mockGetPhoneProviderConfig = getPhoneProviderConfig as jest.MockedFunction<
   typeof getPhoneProviderConfig
@@ -116,7 +115,7 @@ describe("Phone Provider Factory", () => {
       const result = getPhoneProviderVerifyService()
 
       expect(result).toBeInstanceOf(PhoneProviderConfigError)
-      expect((result as PhoneProviderConfigError<unknown>).message).toContain(
+      expect((result as PhoneProviderConfigError).message).toContain(
         "Unsupported verify provider: invalid-provider",
       )
     })
@@ -152,7 +151,7 @@ describe("Phone Provider Factory", () => {
       const result = getPhoneProviderVerifyService()
 
       expect(result).toBeInstanceOf(PhoneProviderConfigError)
-      expect((result as PhoneProviderConfigError<unknown>).message).toContain(
+      expect((result as PhoneProviderConfigError).message).toContain(
         "Provider 'twilio' does not support verify operations",
       )
     })
@@ -189,7 +188,7 @@ describe("Phone Provider Factory", () => {
       const result = getPhoneProviderTransactionalService()
 
       expect(result).toBeInstanceOf(PhoneProviderConfigError)
-      expect((result as PhoneProviderConfigError<unknown>).message).toContain(
+      expect((result as PhoneProviderConfigError).message).toContain(
         "Unsupported transactional provider: invalid-provider",
       )
     })
@@ -228,7 +227,7 @@ describe("Phone Provider Factory", () => {
       const result = getPhoneProviderTransactionalService()
 
       expect(result).toBeInstanceOf(PhoneProviderConfigError)
-      expect((result as PhoneProviderConfigError<unknown>).message).toContain(
+      expect((result as PhoneProviderConfigError).message).toContain(
         "Provider 'twilio' does not support transactional SMS operations",
       )
     })
@@ -251,7 +250,7 @@ describe("Phone Provider Factory", () => {
       const result = getPhoneProviderTransactionalService()
 
       expect(result).toBeInstanceOf(PhoneProviderConfigError)
-      expect((result as PhoneProviderConfigError<unknown>).message).toContain(
+      expect((result as PhoneProviderConfigError).message).toContain(
         "Provider 'prelude' does not support transactional SMS operations",
       )
     })

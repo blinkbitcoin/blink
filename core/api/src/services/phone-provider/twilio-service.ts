@@ -8,7 +8,6 @@ import {
   TWILIO_AUTH_TOKEN,
   TWILIO_VERIFY_SERVICE_ID,
   TWILIO_MESSAGING_SERVICE_ID,
-  PhoneProviderConfigError,
 } from "@/config"
 
 import {
@@ -18,6 +17,7 @@ import {
   InvalidTypePhoneProviderError,
   MissingTypePhoneProviderError,
   PhoneCodeInvalidError,
+  PhoneProviderConfigError,
   PhoneProviderConnectionError,
   PhoneProviderRateLimitExceededError,
   PhoneProviderUnavailableError,
@@ -33,9 +33,7 @@ import { baseLogger } from "@/services/logger"
 
 export const TWILIO_ACCOUNT_TEST = "AC_twilio_id"
 
-export const TwilioClient = ():
-  | IPhoneProviderService
-  | PhoneProviderConfigError<unknown> => {
+export const TwilioClient = (): IPhoneProviderService | PhoneProviderConfigError => {
   const accountSid = TWILIO_ACCOUNT_SID
   if (!accountSid) {
     return new PhoneProviderConfigError("TWILIO_ACCOUNT_SID is required")
