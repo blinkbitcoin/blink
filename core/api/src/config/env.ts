@@ -40,9 +40,9 @@ export const env = createEnv({
     PRICE_SERVER_PORT: z.number().or(z.string()).pipe(z.coerce.number()).default(3325),
     PRICE_SERVER_HOST: z.string().default("localhost"),
 
-    TWILIO_ACCOUNT_SID: z.string().min(1),
-    TWILIO_AUTH_TOKEN: z.string().min(1),
-    TWILIO_VERIFY_SERVICE_ID: z.string().min(1),
+    TWILIO_ACCOUNT_SID: z.string().min(1).optional(),
+    TWILIO_AUTH_TOKEN: z.string().min(1).optional(),
+    TWILIO_VERIFY_SERVICE_ID: z.string().min(1).optional(),
     TWILIO_MESSAGING_SERVICE_ID: z.string().min(1).optional(),
     TWILIO_WELCOME_CONTENT_SID: z.string().min(1).optional(),
 
