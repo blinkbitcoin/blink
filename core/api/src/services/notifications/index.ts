@@ -59,7 +59,7 @@ import { majorToMinorUnit, toCents, UsdDisplayCurrency } from "@/domain/fiat"
 import { PubSubService } from "@/services/pubsub"
 import { CallbackService } from "@/services/svix"
 import { wrapAsyncFunctionsToRunInSpan, wrapAsyncToRunInSpan } from "@/services/tracing"
-import { TwilioClient } from "@/services/twilio-service"
+import { getPhoneProviderTransactionalService } from "@/services/phone-provider"
 
 export const NotificationsService = (): INotificationsService => {
   const pubsub = PubSubService()
@@ -271,7 +271,10 @@ export const NotificationsService = (): INotificationsService => {
       })
       if (!contentSid) return true
 
-      const result = await TwilioClient().sendTemplatedSMS({
+      const transactionalService = getPhoneProviderTransactionalService()
+      if (transactionalService instanceof Error) return transactionalService
+
+      const result = await transactionalService.sendTemplatedSMS({
         to: phoneNumber,
         contentSid,
         contentVariables,

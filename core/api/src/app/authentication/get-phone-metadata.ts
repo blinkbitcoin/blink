@@ -7,30 +7,30 @@ import {
 } from "@/domain/users/errors"
 
 import { addAttributesToCurrentSpan } from "@/services/tracing"
-import { TwilioClient } from "@/services/twilio-service"
+import { getPhoneProviderVerifyService } from "@/services/phone-provider"
 
 export const getPhoneMetadata = async ({ phone }: { phone: PhoneNumber }) => {
   const { phoneMetadataValidationSettings } = getAccountsOnboardConfig()
+  const isValidationEnabled = phoneMetadataValidationSettings.enabled
 
-  const newPhoneMetadata = await TwilioClient().getCarrier(phone)
-  if (newPhoneMetadata instanceof Error) {
-    if (!phoneMetadataValidationSettings.enabled) {
-      return undefined
-    }
-
-    return new InvalidPhoneMetadataForOnboardingError()
+  const verifyService = getPhoneProviderVerifyService()
+  if (verifyService instanceof Error) {
+    return isValidationEnabled ? new InvalidPhoneMetadataForOnboardingError() : undefined
   }
 
-  const phoneMetadata = newPhoneMetadata
+  const phoneMetadata = await verifyService.getCarrier(phone)
+  if (phoneMetadata instanceof Error) {
+    return isValidationEnabled ? new InvalidPhoneMetadataForOnboardingError() : undefined
+  }
 
-  if (phoneMetadataValidationSettings.enabled) {
-    const authorizedPhoneMetadata = PhoneMetadataAuthorizer(
-      phoneMetadataValidationSettings,
-    ).authorize(phoneMetadata)
-
+  if (isValidationEnabled) {
     addAttributesToCurrentSpan({
       "login.phoneMetadata": JSON.stringify(phoneMetadata),
     })
+
+    const authorizedPhoneMetadata = PhoneMetadataAuthorizer(
+      phoneMetadataValidationSettings,
+    ).authorize(phoneMetadata)
 
     if (authorizedPhoneMetadata instanceof Error) {
       return new InvalidPhoneForOnboardingError(authorizedPhoneMetadata.name)

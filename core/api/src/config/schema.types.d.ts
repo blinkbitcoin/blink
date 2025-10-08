@@ -162,4 +162,8 @@ type YamlSchema = {
   smsAuthUnsupportedCountries: string[]
   whatsAppAuthUnsupportedCountries: string[]
   telegramAuthUnsupportedCountries: string[]
+  phoneProvider: {
+    verify: "prelude" | "twilio"
+    transactional: "prelude" | "twilio"
+  }
 }

@@ -32,7 +32,7 @@ import {
 } from "@/services/mongoose"
 import { consumeLimiter } from "@/services/rate-limit"
 import { getFunderWalletId } from "@/services/ledger/caching"
-import { isDisposablePhoneNumber } from "@/services/twilio-service"
+import { isDisposablePhoneNumber } from "@/domain/phone-provider"
 import { AccountsIpsRepository } from "@/services/mongoose/accounts-ips"
 
 type ClaimQuizResult = {

@@ -194,3 +194,6 @@ skipFeeProbeConfig:
 smsAuthUnsupportedCountries: []
 whatsAppAuthUnsupportedCountries: []
 telegramAuthUnsupportedCountries: []
+phoneProvider:
+  verify: twilio
+  transactional: twilio

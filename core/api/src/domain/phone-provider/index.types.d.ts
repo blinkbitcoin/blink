@@ -3,17 +3,19 @@ type UnknownPhoneProviderServiceError =
   import("@/domain/phone-provider").UnknownPhoneProviderServiceError
 type PhoneCodeInvalidError = import("./errors").PhoneCodeInvalidError
 
-interface IPhoneProviderService {
+interface IPhoneProviderVerifyService {
   getCarrier(phone: PhoneNumber): Promise<PhoneMetadata | PhoneProviderServiceError>
   validateDestination(phone: PhoneNumber): Promise<true | PhoneProviderServiceError>
   initiateVerify({
     to,
     channel,
     phoneExists,
+    ip,
   }: {
     to: PhoneNumber
     channel: ChannelType
     phoneExists: boolean
+    ip: IpAddress
   }): Promise<true | PhoneProviderServiceError>
   validateVerify({
     to,
@@ -22,6 +24,9 @@ interface IPhoneProviderService {
     to: PhoneNumber
     code: PhoneCode
   }): Promise<true | PhoneProviderServiceError>
+}
+
+interface IPhoneProviderTransactionalService {
   sendTemplatedSMS({
     to,
     contentSid,
@@ -32,3 +37,7 @@ interface IPhoneProviderService {
     contentVariables: Record<string, string>
   }): Promise<true | PhoneProviderServiceError>
 }
+
+interface IPhoneProviderService
+  extends IPhoneProviderVerifyService,
+    IPhoneProviderTransactionalService {}

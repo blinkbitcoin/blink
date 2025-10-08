@@ -25,3 +25,9 @@ export class PhoneProviderUnavailableError extends PhoneProviderServiceError {
 export class UnknownPhoneProviderServiceError extends PhoneProviderServiceError {
   level = ErrorLevel.Critical
 }
+export class SpendingLimitExceededPhoneProviderError extends PhoneProviderServiceError {
+  level = ErrorLevel.Critical
+}
+export class PhoneProviderConfigError extends PhoneProviderServiceError {
+  level = ErrorLevel.Critical
+}

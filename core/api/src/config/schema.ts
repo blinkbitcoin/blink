@@ -719,6 +719,19 @@ export const configSchema = {
       items: { type: "string" },
       default: [],
     },
+    phoneProvider: {
+      type: "object",
+      properties: {
+        verify: { type: "string", enum: ["prelude", "twilio"] },
+        transactional: { type: "string", enum: ["prelude", "twilio"] },
+      },
+      required: ["verify", "transactional"],
+      additionalProperties: false,
+      default: {
+        verify: "twilio",
+        transactional: "twilio",
+      },
+    },
   },
   required: [
     "lightningAddressDomain",
@@ -748,6 +761,7 @@ export const configSchema = {
     "smsAuthUnsupportedCountries",
     "whatsAppAuthUnsupportedCountries",
     "telegramAuthUnsupportedCountries",
+    "phoneProvider",
   ],
   additionalProperties: false,
 } as const
