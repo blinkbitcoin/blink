@@ -50,9 +50,6 @@ export const TwilioClient = (): IPhoneProviderService | PhoneProviderConfigError
   }
 
   const messagingServiceSid = TWILIO_MESSAGING_SERVICE_ID
-  if (!messagingServiceSid) {
-    return new PhoneProviderConfigError("TWILIO_MESSAGING_SERVICE_ID is required")
-  }
 
   const client = twilio(accountSid, authToken)
   const verify = client.verify.v2.services(verifyService)
@@ -65,25 +62,13 @@ export const TwilioClient = (): IPhoneProviderService | PhoneProviderConfigError
     to: PhoneNumber
     channel: ChannelType
     phoneExists: boolean
+    ip: IpAddress
   }): Promise<true | PhoneProviderServiceError> => {
     try {
       if (!phoneExists) {
-        if (isDisposablePhoneNumber(to)) {
-          return new InvalidTypePhoneProviderError("disposable")
-        }
-
-        const lookup = await client.lookups.v2.phoneNumbers(to).fetch({
-          fields: "line_type_intelligence",
-        })
-        // https://www.twilio.com/docs/lookup/v2-api/line-type-intelligence#type-property-values
-        if (!lookup.lineTypeIntelligence) {
-          return new MissingTypePhoneProviderError()
-        }
-        if (
-          lookup.lineTypeIntelligence["type"] &&
-          String(lookup.lineTypeIntelligence["type"]) === "nonFixedVoip"
-        ) {
-          return new InvalidTypePhoneProviderError("nonFixedVoip")
+        const validation = await validateDestination(to)
+        if (validation instanceof Error) {
+          return validation
         }
       }
 
@@ -179,7 +164,6 @@ export const TwilioClient = (): IPhoneProviderService | PhoneProviderConfigError
       const result = await client.lookups.v1
         .phoneNumbers(phone)
         .fetch({ type: ["carrier"] })
-      baseLogger.info({ result }, "result carrier info")
 
       // TODO: migration to save the converted value to mongoose instead
       // of the one returned from twilio
@@ -207,7 +191,7 @@ export const TwilioClient = (): IPhoneProviderService | PhoneProviderConfigError
 
       return phoneMetadata
     } catch (err) {
-      return new UnknownPhoneProviderServiceError(err)
+      return handleCommonErrors(err)
     }
   }
 

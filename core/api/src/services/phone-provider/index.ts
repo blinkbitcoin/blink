@@ -63,7 +63,7 @@ export const getPhoneProviderTransactionalService = ():
     )
   }
 
-  return provider as IPhoneProviderTransactionalService
+  return provider
 }
 
 const hasVerifyCapabilities = (

@@ -50,7 +50,7 @@ export const PreludeClient = ():
     try {
       if (!phoneExists) {
         const validation = await validateDestination(to)
-        if (validation !== true) {
+        if (validation instanceof Error) {
           return validation
         }
       }
@@ -69,13 +69,11 @@ export const PreludeClient = ():
         },
       })
 
-      baseLogger.error({ response }, "Verification info")
-
       if (response.status === "blocked") {
         return new RestrictedRecipientPhoneNumberError("Verification blocked")
       }
     } catch (err) {
-      baseLogger.error({ err }, "impossible to send verification with Prelude")
+      baseLogger.error({ err }, "impossible to send verification")
       return handleCommonErrors(err)
     }
 
@@ -122,8 +120,6 @@ export const PreludeClient = ():
         code,
       })
 
-      baseLogger.error({ response }, "Verification check response")
-
       if (response.status === "success") {
         return true
       }
@@ -136,7 +132,7 @@ export const PreludeClient = ():
 
       return new PhoneCodeInvalidError()
     } catch (err) {
-      baseLogger.error({ err }, "impossible to verify phone and code with Prelude")
+      baseLogger.error({ err }, "impossible to verify phone and code")
       return handleCommonErrors(err)
     }
   }
@@ -144,8 +140,6 @@ export const PreludeClient = ():
   const getCarrier = async (phone: PhoneNumber) => {
     try {
       const lookup = await client.lookup.lookup(phone)
-
-      baseLogger.info({ lookup }, "result carrier info from Prelude")
 
       const phoneMetadata: PhoneMetadata = {
         carrier: {
