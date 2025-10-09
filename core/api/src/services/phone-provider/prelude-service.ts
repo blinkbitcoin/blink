@@ -168,10 +168,18 @@ export const PreludeClient = ():
   })
 }
 
-const handleCommonErrors = (err: Error | string | unknown) => {
+const handleCommonErrors = (error: Error | string | unknown) => {
+  const err =
+    typeof error === "object" &&
+    error !== null &&
+    "error" in error &&
+    typeof error.error === "object" &&
+    error.error !== null
+      ? error.error
+      : error
   const errMsg = parseErrorMessageFromUnknown(err)
 
-  // Check for Prelude-specific error codes
+  // Check for Prelude-specific error codes https://docs.prelude.so/introduction/errors
   if (typeof err === "object" && err !== null && "code" in err) {
     const errorCode = (err as { code: string }).code
 
