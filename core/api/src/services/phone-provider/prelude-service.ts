@@ -64,7 +64,6 @@ export const PreludeClient = ():
           preferred_channel: channel,
         },
         signals: {
-          is_trusted_user: phoneExists,
           ip,
         },
       })
