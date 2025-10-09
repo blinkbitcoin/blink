@@ -177,6 +177,8 @@ const handleCommonErrors = (err: Error | string | unknown) => {
 
     switch (errorCode) {
       // Phone number validation errors
+      case "impossible_code":
+        return new PhoneCodeInvalidError()
       case "invalid_phone_number":
         return new InvalidPhoneNumberPhoneProviderError(errMsg)
       case "invalid_line_type":
@@ -193,6 +195,7 @@ const handleCommonErrors = (err: Error | string | unknown) => {
         return new RestrictedRecipientPhoneNumberError(errMsg)
 
       // Rate limiting and balance errors
+      case "premature_retry":
       case "too_many_checks":
       case "too_many_attempts":
         return new PhoneProviderRateLimitExceededError(errMsg)
@@ -210,8 +213,11 @@ const handleCommonErrors = (err: Error | string | unknown) => {
       case "invalid_api_key":
       case "missing_api_key":
       case "suspended_account":
+      case "unauthorized_sender_id":
       case "invalid_request":
+      case "template_not_found":
       case "invalid_template_id":
+      case "template_not_registered_in_country":
       case "invalid_integration":
       case "invalid_sender_id":
       case "invalid_callback_url":
