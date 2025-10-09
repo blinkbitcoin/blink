@@ -185,6 +185,9 @@ const handleCommonErrors = (err: Error | string | unknown) => {
 
       // Blocking/restriction errors
       case "blocked":
+      case "unsupported_country":
+      case "region_blocked_by_customer":
+      case "region_missing_registration":
       case "in_block_list": // legacy, keeping for backwards compatibility
       case "suspicious": // legacy, keeping for backwards compatibility
         return new RestrictedRecipientPhoneNumberError(errMsg)
@@ -214,6 +217,24 @@ const handleCommonErrors = (err: Error | string | unknown) => {
       case "invalid_callback_url":
       case "custom_code_not_allowed":
       case "custom_size_conflict":
+      case "invalid_app_realm":
+      case "invalid_app_realm_platform":
+      case "invalid_app_realm_value":
+      case "invalid_correlation_id":
+      case "invalid_custom_code":
+      case "invalid_customer_uuid":
+      case "invalid_date_format":
+      case "invalid_method":
+      case "invalid_template_variables":
+      case "invalid_locale":
+      case "invalid_device_id":
+      case "invalid_os_version":
+      case "invalid_device_model":
+      case "invalid_device_platform":
+      case "invalid_ja4_fingerprint":
+      case "invalid_app_version":
+      case "invalid_device_type":
+      case "invalid_user_agent":
         return new PhoneProviderConfigError(errMsg)
 
       // Internal system errors
