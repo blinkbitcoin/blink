@@ -1,15 +1,24 @@
 export const parseErrorMessageFromUnknown = (error: unknown): string => {
-  const errMsg =
-    error instanceof Error
-      ? error.message
-        ? error.message
-        : error.name
-      : typeof error === "string"
-        ? error
-        : error instanceof Object
-          ? JSON.stringify(error)
-          : "Unknown error"
-  return errMsg
+  if (error instanceof Error) {
+    return error.message || error.name
+  }
+
+  if (typeof error === "string") {
+    return error
+  }
+
+  if (error && typeof error === "object" && "message" in error) {
+    const message = error.message
+    if (typeof message === "string") {
+      return message
+    }
+  }
+
+  if (error instanceof Object) {
+    return JSON.stringify(error)
+  }
+
+  return "Unknown error"
 }
 
 export const parseErrorFromUnknown = (error: unknown): Error => {
