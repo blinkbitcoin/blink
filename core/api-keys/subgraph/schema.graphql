@@ -8,6 +8,38 @@ type ApiKey {
 	expiresAt: Timestamp
 	readOnly: Boolean!
 	scopes: [Scope!]!
+	"""
+	Daily spending limit in satoshis (rolling 24h window). Returns null if no limit is set.
+	"""
+	dailyLimitSats: Int
+	"""
+	Weekly spending limit in satoshis (rolling 7 days). Returns null if no limit is set.
+	"""
+	weeklyLimitSats: Int
+	"""
+	Monthly spending limit in satoshis (rolling 30 days). Returns null if no limit is set.
+	"""
+	monthlyLimitSats: Int
+	"""
+	Annual spending limit in satoshis (rolling 365 days). Returns null if no limit is set.
+	"""
+	annualLimitSats: Int
+	"""
+	Amount spent in the last 24 hours (rolling window) in satoshis
+	"""
+	spentLast24HSats: Int!
+	"""
+	Amount spent in the last 7 days (rolling window) in satoshis
+	"""
+	spentLast7DSats: Int!
+	"""
+	Amount spent in the last 30 days (rolling window) in satoshis
+	"""
+	spentLast30DSats: Int!
+	"""
+	Amount spent in the last 365 days (rolling window) in satoshis
+	"""
+	spentLast365DSats: Int!
 }
 
 input ApiKeyCreateInput {
@@ -21,12 +53,40 @@ type ApiKeyCreatePayload {
 	apiKeySecret: String!
 }
 
+input ApiKeyRemoveLimitInput {
+	id: ID!
+}
+
 input ApiKeyRevokeInput {
 	id: ID!
 }
 
 type ApiKeyRevokePayload {
 	apiKey: ApiKey!
+}
+
+input ApiKeySetAnnualLimitInput {
+	id: ID!
+	annualLimitSats: Int!
+}
+
+input ApiKeySetDailyLimitInput {
+	id: ID!
+	dailyLimitSats: Int!
+}
+
+type ApiKeySetLimitPayload {
+	apiKey: ApiKey!
+}
+
+input ApiKeySetMonthlyLimitInput {
+	id: ID!
+	monthlyLimitSats: Int!
+}
+
+input ApiKeySetWeeklyLimitInput {
+	id: ID!
+	weeklyLimitSats: Int!
 }
 
 
@@ -36,6 +96,14 @@ type ApiKeyRevokePayload {
 type Mutation {
 	apiKeyCreate(input: ApiKeyCreateInput!): ApiKeyCreatePayload!
 	apiKeyRevoke(input: ApiKeyRevokeInput!): ApiKeyRevokePayload!
+	apiKeySetDailyLimit(input: ApiKeySetDailyLimitInput!): ApiKeySetLimitPayload!
+	apiKeySetWeeklyLimit(input: ApiKeySetWeeklyLimitInput!): ApiKeySetLimitPayload!
+	apiKeySetMonthlyLimit(input: ApiKeySetMonthlyLimitInput!): ApiKeySetLimitPayload!
+	apiKeySetAnnualLimit(input: ApiKeySetAnnualLimitInput!): ApiKeySetLimitPayload!
+	apiKeyRemoveDailyLimit(input: ApiKeyRemoveLimitInput!): ApiKeySetLimitPayload!
+	apiKeyRemoveWeeklyLimit(input: ApiKeyRemoveLimitInput!): ApiKeySetLimitPayload!
+	apiKeyRemoveMonthlyLimit(input: ApiKeyRemoveLimitInput!): ApiKeySetLimitPayload!
+	apiKeyRemoveAnnualLimit(input: ApiKeyRemoveLimitInput!): ApiKeySetLimitPayload!
 }
 
 

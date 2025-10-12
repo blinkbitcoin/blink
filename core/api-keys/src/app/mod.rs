@@ -79,4 +79,8 @@ impl ApiKeysApp {
     ) -> Result<IdentityApiKey, ApplicationError> {
         Ok(self.identities.revoke_api_key(subject, key_id).await?)
     }
+
+    pub fn pool(&self) -> Pool<Postgres> {
+        self.pool.clone()
+    }
 }
