@@ -98,6 +98,7 @@ type PaymentSendArgs = {
   senderWalletId: WalletId
   senderAccount: Account
   memo: string | null
+  apiKeyId?: string
 }
 
 type PayInvoiceByWalletIdArgs = PaymentSendArgs & {

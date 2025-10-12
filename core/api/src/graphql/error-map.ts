@@ -63,6 +63,18 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       message = error.message
       return new TransactionRestrictedError({ message, logger: baseLogger })
 
+    case "ApiKeyDailyLimitExceededError":
+      message = error.message
+      return new TransactionRestrictedError({ message, logger: baseLogger })
+
+    case "ApiKeyLimitCheckError":
+      message = error.message || "Failed to check API key spending limit"
+      return new UnknownClientError({ message, logger: baseLogger })
+
+    case "ApiKeySpendingRecordError":
+      message = error.message || "Failed to record API key spending"
+      return new UnknownClientError({ message, logger: baseLogger })
+
     case "AlreadyPaidError":
       message = "Invoice is already paid"
       return new LightningPaymentError({ message, logger: baseLogger })

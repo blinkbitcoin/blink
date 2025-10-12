@@ -153,6 +153,13 @@ export class LimitsExceededError extends ValidationError {}
 export class WithdrawalLimitsExceededError extends LimitsExceededError {}
 export class IntraledgerLimitsExceededError extends LimitsExceededError {}
 export class TradeIntraAccountLimitsExceededError extends LimitsExceededError {}
+export class ApiKeyDailyLimitExceededError extends LimitsExceededError {}
+export class ApiKeyLimitCheckError extends DomainError {
+  level = ErrorLevel.Warn
+}
+export class ApiKeySpendingRecordError extends DomainError {
+  level = ErrorLevel.Critical
+}
 
 export class LnRouteValidationError extends ValidationError {}
 export class BadAmountForRouteError extends LnRouteValidationError {}

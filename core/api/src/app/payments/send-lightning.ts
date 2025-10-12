@@ -54,6 +54,11 @@ import { DealerPriceService } from "@/services/dealer-price"
 import { LedgerService } from "@/services/ledger"
 import { LockService } from "@/services/lock"
 import { NotificationsService } from "@/services/notifications"
+import {
+  checkApiKeySpendingLimit,
+  recordApiKeySpending,
+} from "@/services/api-keys/client"
+import { ApiKeyDailyLimitExceededError } from "@/domain/errors"
 
 import * as LedgerFacade from "@/services/ledger/facade"
 import {
@@ -85,6 +90,7 @@ export const payInvoiceByWalletId = async ({
   memo,
   senderWalletId: uncheckedSenderWalletId,
   senderAccount,
+  apiKeyId,
 }: PayInvoiceByWalletIdArgs): Promise<PaymentSendResult | ApplicationError> => {
   addAttributesToCurrentSpan({
     "payment.initiation_method": PaymentInitiationMethod.Lightning,
@@ -121,6 +127,7 @@ export const payInvoiceByWalletId = async ({
       paymentFlow,
       senderAccount,
       memo,
+      apiKeyId,
     })
   }
 
@@ -144,6 +151,7 @@ export const payInvoiceByWalletId = async ({
     senderAccount,
     recipientAccount,
     memo,
+    apiKeyId,
   })
   if (paymentSendResult instanceof Error) return paymentSendResult
 
@@ -166,6 +174,7 @@ const payNoAmountInvoiceByWalletId = async ({
   memo,
   senderWalletId: uncheckedSenderWalletId,
   senderAccount,
+  apiKeyId,
 }: PayNoAmountInvoiceByWalletIdArgs): Promise<PaymentSendResult | ApplicationError> => {
   addAttributesToCurrentSpan({
     "payment.initiation_method": PaymentInitiationMethod.Lightning,
@@ -204,6 +213,7 @@ const payNoAmountInvoiceByWalletId = async ({
       paymentFlow,
       senderAccount,
       memo,
+      apiKeyId,
     })
   }
 
@@ -228,6 +238,7 @@ const payNoAmountInvoiceByWalletId = async ({
     senderAccount,
     recipientAccount,
     memo,
+    apiKeyId,
   })
   if (paymentSendResult instanceof Error) return paymentSendResult
 
@@ -432,12 +443,14 @@ const executePaymentViaIntraledger = async <
   senderWalletId,
   recipientAccount,
   memo,
+  apiKeyId,
 }: {
   paymentFlow: PaymentFlow<S, R>
   senderAccount: Account
   senderWalletId: WalletId
   recipientAccount: Account
   memo: string | null
+  apiKeyId?: string
 }): Promise<PaymentSendResult | ApplicationError> => {
   addAttributesToCurrentSpan({
     "payment.settlement_method": SettlementMethod.IntraLedger,
@@ -445,6 +458,18 @@ const executePaymentViaIntraledger = async <
 
   const priceRatioForLimits = await getPriceRatioForLimits(paymentFlow.paymentAmounts())
   if (priceRatioForLimits instanceof Error) return priceRatioForLimits
+  // Check API key spending limit if authenticated via API key
+  if (apiKeyId) {
+    const amountSats = Number(paymentFlow.btcPaymentAmount.amount)
+    const apiKeyLimitCheck = await checkApiKeySpendingLimit({
+      apiKeyId,
+      amountSats,
+    })
+    if (apiKeyLimitCheck instanceof Error) return apiKeyLimitCheck
+    if (!apiKeyLimitCheck.allowed) {
+      return new ApiKeyDailyLimitExceededError(apiKeyLimitCheck.remaining_sats)
+    }
+  }
 
   const paymentHash = paymentFlow.paymentHashForFlow()
   if (paymentHash instanceof Error) return paymentHash
@@ -545,6 +570,17 @@ const executePaymentViaIntraledger = async <
     recipient: senderAsNotificationRecipient,
     transaction: senderWalletTransaction,
   })
+
+  // Record API key spending after successful payment
+  if (apiKeyId) {
+    const amountSats = Number(paymentFlow.btcPaymentAmount.amount)
+    const recordResult = await recordApiKeySpending({
+      apiKeyId,
+      amountSats,
+      transactionId: journalId,
+    })
+    if (recordResult instanceof Error) return recordResult
+  }
 
   return {
     status: PaymentSendStatus.Success,
@@ -727,11 +763,13 @@ const executePaymentViaLn = async ({
   paymentFlow,
   senderAccount,
   memo,
+  apiKeyId,
 }: {
   decodedInvoice: LnInvoice
   paymentFlow: PaymentFlow<WalletCurrency, WalletCurrency>
   senderAccount: Account
   memo: string | null
+  apiKeyId?: string
 }): Promise<PaymentSendResult | ApplicationError> => {
   addAttributesToCurrentSpan({
     "payment.settlement_method": SettlementMethod.Lightning,
@@ -741,6 +779,18 @@ const executePaymentViaLn = async ({
 
   const priceRatioForLimits = await getPriceRatioForLimits(paymentFlow.paymentAmounts())
   if (priceRatioForLimits instanceof Error) return priceRatioForLimits
+  // Check API key spending limit if authenticated via API key
+  if (apiKeyId) {
+    const amountSats = Number(paymentFlow.btcPaymentAmount.amount)
+    const apiKeyLimitCheck = await checkApiKeySpendingLimit({
+      apiKeyId,
+      amountSats,
+    })
+    if (apiKeyLimitCheck instanceof Error) return apiKeyLimitCheck
+    if (!apiKeyLimitCheck.allowed) {
+      return new ApiKeyDailyLimitExceededError(apiKeyLimitCheck.remaining_sats)
+    }
+  }
 
   const limitCheck = await checkWithdrawalLimits({
     amount: paymentFlow.usdPaymentAmount,
@@ -813,6 +863,17 @@ const executePaymentViaLn = async ({
       })
 
     default:
+      // Record API key spending after successful payment
+      if (apiKeyId) {
+        const amountSats = Number(paymentFlow.btcPaymentAmount.amount)
+        const recordResult = await recordApiKeySpending({
+          apiKeyId,
+          amountSats,
+          transactionId: paymentSendAttemptResult.journalId,
+        })
+        if (recordResult instanceof Error) return recordResult
+      }
+
       return {
         status: PaymentSendStatus.Success,
         transaction: walletTransaction,

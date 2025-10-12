@@ -62,6 +62,8 @@ export const env = createEnv({
       .pipe(z.coerce.number())
       .default(6685),
 
+    API_KEYS_SERVICE_URL: z.string().url().default("http://localhost:5397"),
+
     GEETEST_ID: z.string().min(1).optional(),
     GEETEST_KEY: z.string().min(1).optional(),
 
@@ -192,6 +194,8 @@ export const env = createEnv({
 
     NOTIFICATIONS_HOST: process.env.NOTIFICATIONS_HOST,
     NOTIFICATIONS_PORT: process.env.NOTIFICATIONS_PORT,
+
+    API_KEYS_SERVICE_URL: process.env.API_KEYS_SERVICE_URL || "http://localhost:5397",
 
     GEETEST_ID: process.env.GEETEST_ID,
     GEETEST_KEY: process.env.GEETEST_KEY,

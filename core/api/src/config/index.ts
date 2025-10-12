@@ -84,6 +84,8 @@ export const getCallbackServiceConfig = (): SvixConfig => {
 
 export const getBriaConfig = getBriaPartialConfigFromYaml
 
+export const getApiKeysServiceUrl = () => env.API_KEYS_SERVICE_URL
+
 export const isTelegramPassportEnabled = () =>
   !!env.TELEGRAM_BOT_API_TOKEN && !!env.TELEGRAM_PASSPORT_PRIVATE_KEY
 
