@@ -5,7 +5,18 @@ import { revalidatePath } from "next/cache"
 import { ApiKeyResponse } from "./api-key.types"
 
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { createApiKey, revokeApiKey } from "@/services/graphql/mutations/api-keys"
+import {
+  createApiKey,
+  revokeApiKey,
+  setApiKeyDailyLimit,
+  setApiKeyWeeklyLimit,
+  setApiKeyMonthlyLimit,
+  setApiKeyAnnualLimit,
+  removeApiKeyLimit,
+  removeApiKeyWeeklyLimit,
+  removeApiKeyMonthlyLimit,
+  removeApiKeyAnnualLimit,
+} from "@/services/graphql/mutations/api-keys"
 import { Scope } from "@/services/graphql/generated"
 
 export const revokeApiKeyServerAction = async (id: string) => {
@@ -118,4 +129,215 @@ export const createApiKeyServerAction = async (
     message: "API Key created successfully",
     responsePayload: { apiKeySecret: data?.apiKeyCreate.apiKeySecret },
   }
+}
+
+export const setDailyLimit = async ({
+  id,
+  dailyLimitSats,
+}: {
+  id: string
+  dailyLimitSats: number
+}) => {
+  if (!id || typeof id !== "string") {
+    throw new Error("API Key ID is not present")
+  }
+
+  if (!dailyLimitSats || dailyLimitSats <= 0) {
+    throw new Error("Daily limit must be greater than 0")
+  }
+
+  const session = await getServerSession(authOptions)
+  const token = session?.accessToken
+  if (!token || typeof token !== "string") {
+    throw new Error("Token is not present")
+  }
+
+  try {
+    await setApiKeyDailyLimit({ id, dailyLimitSats })
+  } catch (err) {
+    console.log("error in setApiKeyDailyLimit ", err)
+    throw new Error("Failed to set API key daily limit")
+  }
+
+  revalidatePath("/api-keys")
+}
+
+// Keep old name for backward compatibility
+export const setLimit = setDailyLimit
+
+export const setWeeklyLimit = async ({
+  id,
+  weeklyLimitSats,
+}: {
+  id: string
+  weeklyLimitSats: number
+}) => {
+  if (!id || typeof id !== "string") {
+    throw new Error("API Key ID is not present")
+  }
+
+  if (!weeklyLimitSats || weeklyLimitSats <= 0) {
+    throw new Error("Weekly limit must be greater than 0")
+  }
+
+  const session = await getServerSession(authOptions)
+  const token = session?.accessToken
+  if (!token || typeof token !== "string") {
+    throw new Error("Token is not present")
+  }
+
+  try {
+    await setApiKeyWeeklyLimit({ id, weeklyLimitSats })
+  } catch (err) {
+    console.log("error in setApiKeyWeeklyLimit ", err)
+    throw new Error("Failed to set API key weekly limit")
+  }
+
+  revalidatePath("/api-keys")
+}
+
+export const setMonthlyLimit = async ({
+  id,
+  monthlyLimitSats,
+}: {
+  id: string
+  monthlyLimitSats: number
+}) => {
+  if (!id || typeof id !== "string") {
+    throw new Error("API Key ID is not present")
+  }
+
+  if (!monthlyLimitSats || monthlyLimitSats <= 0) {
+    throw new Error("Monthly limit must be greater than 0")
+  }
+
+  const session = await getServerSession(authOptions)
+  const token = session?.accessToken
+  if (!token || typeof token !== "string") {
+    throw new Error("Token is not present")
+  }
+
+  try {
+    await setApiKeyMonthlyLimit({ id, monthlyLimitSats })
+  } catch (err) {
+    console.log("error in setApiKeyMonthlyLimit ", err)
+    throw new Error("Failed to set API key monthly limit")
+  }
+
+  revalidatePath("/api-keys")
+}
+
+export const setAnnualLimit = async ({
+  id,
+  annualLimitSats,
+}: {
+  id: string
+  annualLimitSats: number
+}) => {
+  if (!id || typeof id !== "string") {
+    throw new Error("API Key ID is not present")
+  }
+
+  if (!annualLimitSats || annualLimitSats <= 0) {
+    throw new Error("Annual limit must be greater than 0")
+  }
+
+  const session = await getServerSession(authOptions)
+  const token = session?.accessToken
+  if (!token || typeof token !== "string") {
+    throw new Error("Token is not present")
+  }
+
+  try {
+    await setApiKeyAnnualLimit({ id, annualLimitSats })
+  } catch (err) {
+    console.log("error in setApiKeyAnnualLimit ", err)
+    throw new Error("Failed to set API key annual limit")
+  }
+
+  revalidatePath("/api-keys")
+}
+
+export const removeLimit = async ({ id }: { id: string }) => {
+  if (!id || typeof id !== "string") {
+    throw new Error("API Key ID is not present")
+  }
+
+  const session = await getServerSession(authOptions)
+  const token = session?.accessToken
+  if (!token || typeof token !== "string") {
+    throw new Error("Token is not present")
+  }
+
+  try {
+    await removeApiKeyLimit({ id })
+  } catch (err) {
+    console.log("error in removeApiKeyLimit ", err)
+    throw new Error("Failed to remove API key limit")
+  }
+
+  revalidatePath("/api-keys")
+}
+
+export const removeWeeklyLimit = async ({ id }: { id: string }) => {
+  if (!id || typeof id !== "string") {
+    throw new Error("API Key ID is not present")
+  }
+
+  const session = await getServerSession(authOptions)
+  const token = session?.accessToken
+  if (!token || typeof token !== "string") {
+    throw new Error("Token is not present")
+  }
+
+  try {
+    await removeApiKeyWeeklyLimit({ id })
+  } catch (err) {
+    console.log("error in removeApiKeyWeeklyLimit ", err)
+    throw new Error("Failed to remove API key weekly limit")
+  }
+
+  revalidatePath("/api-keys")
+}
+
+export const removeMonthlyLimit = async ({ id }: { id: string }) => {
+  if (!id || typeof id !== "string") {
+    throw new Error("API Key ID is not present")
+  }
+
+  const session = await getServerSession(authOptions)
+  const token = session?.accessToken
+  if (!token || typeof token !== "string") {
+    throw new Error("Token is not present")
+  }
+
+  try {
+    await removeApiKeyMonthlyLimit({ id })
+  } catch (err) {
+    console.log("error in removeApiKeyMonthlyLimit ", err)
+    throw new Error("Failed to remove API key monthly limit")
+  }
+
+  revalidatePath("/api-keys")
+}
+
+export const removeAnnualLimit = async ({ id }: { id: string }) => {
+  if (!id || typeof id !== "string") {
+    throw new Error("API Key ID is not present")
+  }
+
+  const session = await getServerSession(authOptions)
+  const token = session?.accessToken
+  if (!token || typeof token !== "string") {
+    throw new Error("Token is not present")
+  }
+
+  try {
+    await removeApiKeyAnnualLimit({ id })
+  } catch (err) {
+    console.log("error in removeApiKeyAnnualLimit ", err)
+    throw new Error("Failed to remove API key annual limit")
+  }
+
+  revalidatePath("/api-keys")
 }
