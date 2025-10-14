@@ -124,6 +124,48 @@ export const createApiKeyServerAction = async (
     }
   }
 
+  // Set budget limits if provided
+  if (data?.apiKeyCreate.apiKey.id) {
+    const apiKeyId = data.apiKeyCreate.apiKey.id
+    try {
+      const dailyLimitSats = form.get("dailyLimitSats")
+      if (dailyLimitSats && dailyLimitSats !== "") {
+        const limit = parseInt(dailyLimitSats as string, 10)
+        if (limit > 0) {
+          await setApiKeyDailyLimit({ id: apiKeyId, dailyLimitSats: limit })
+        }
+      }
+
+      const weeklyLimitSats = form.get("weeklyLimitSats")
+      if (weeklyLimitSats && weeklyLimitSats !== "") {
+        const limit = parseInt(weeklyLimitSats as string, 10)
+        if (limit > 0) {
+          await setApiKeyWeeklyLimit({ id: apiKeyId, weeklyLimitSats: limit })
+        }
+      }
+
+      const monthlyLimitSats = form.get("monthlyLimitSats")
+      if (monthlyLimitSats && monthlyLimitSats !== "") {
+        const limit = parseInt(monthlyLimitSats as string, 10)
+        if (limit > 0) {
+          await setApiKeyMonthlyLimit({ id: apiKeyId, monthlyLimitSats: limit })
+        }
+      }
+
+      const annualLimitSats = form.get("annualLimitSats")
+      if (annualLimitSats && annualLimitSats !== "") {
+        const limit = parseInt(annualLimitSats as string, 10)
+        if (limit > 0) {
+          await setApiKeyAnnualLimit({ id: apiKeyId, annualLimitSats: limit })
+        }
+      }
+    } catch (err) {
+      console.log("error in setting API key limits ", err)
+      // Don't fail the entire operation if limits fail to set
+      // The API key was created successfully
+    }
+  }
+
   return {
     error: false,
     message: "API Key created successfully",
