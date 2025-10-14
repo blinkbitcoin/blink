@@ -128,6 +128,7 @@ type PayAllOnChainByWalletIdArgs = {
   address: string
   speed: PayoutSpeed
   memo: string | null
+  apiKeyId?: string
 }
 
 type PayOnChainByWalletIdWithoutCurrencyArgs = {
@@ -137,6 +138,7 @@ type PayOnChainByWalletIdWithoutCurrencyArgs = {
   address: string
   speed: PayoutSpeed
   memo: string | null
+  apiKeyId?: string
 }
 
 type PayOnChainByWalletIdArgs = PayOnChainByWalletIdWithoutCurrencyArgs & {
