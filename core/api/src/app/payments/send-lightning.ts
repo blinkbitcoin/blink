@@ -58,7 +58,6 @@ import {
   checkApiKeySpendingLimit,
   recordApiKeySpending,
 } from "@/services/api-keys/client"
-import { ApiKeyDailyLimitExceededError } from "@/domain/errors"
 
 import * as LedgerFacade from "@/services/ledger/facade"
 import {
@@ -81,6 +80,7 @@ import {
 } from "@/app/wallets"
 
 import { ResourceExpiredLockServiceError } from "@/domain/lock"
+import { ApiKeyLimitExceededError } from "@/domain/api-keys"
 
 const dealer = DealerPriceService()
 const paymentFlowRepo = PaymentFlowStateRepository(defaultTimeToExpiryInSeconds)
@@ -467,7 +467,12 @@ const executePaymentViaIntraledger = async <
     })
     if (apiKeyLimitCheck instanceof Error) return apiKeyLimitCheck
     if (!apiKeyLimitCheck.allowed) {
-      return new ApiKeyDailyLimitExceededError(apiKeyLimitCheck.remaining_sats)
+      return new ApiKeyLimitExceededError({
+        daily: apiKeyLimitCheck.remaining_daily_sats ?? null,
+        weekly: apiKeyLimitCheck.remaining_weekly_sats ?? null,
+        monthly: apiKeyLimitCheck.remaining_monthly_sats ?? null,
+        annual: apiKeyLimitCheck.remaining_annual_sats ?? null,
+      })
     }
   }
 
@@ -788,7 +793,12 @@ const executePaymentViaLn = async ({
     })
     if (apiKeyLimitCheck instanceof Error) return apiKeyLimitCheck
     if (!apiKeyLimitCheck.allowed) {
-      return new ApiKeyDailyLimitExceededError(apiKeyLimitCheck.remaining_sats)
+      return new ApiKeyLimitExceededError({
+        daily: apiKeyLimitCheck.remaining_daily_sats ?? null,
+        weekly: apiKeyLimitCheck.remaining_weekly_sats ?? null,
+        monthly: apiKeyLimitCheck.remaining_monthly_sats ?? null,
+        annual: apiKeyLimitCheck.remaining_annual_sats ?? null,
+      })
     }
   }
 

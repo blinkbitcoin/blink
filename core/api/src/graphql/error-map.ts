@@ -63,7 +63,7 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       message = error.message
       return new TransactionRestrictedError({ message, logger: baseLogger })
 
-    case "ApiKeyDailyLimitExceededError":
+    case "ApiKeyLimitExceededError":
       message = error.message
       return new TransactionRestrictedError({ message, logger: baseLogger })
 

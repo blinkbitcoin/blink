@@ -44,6 +44,11 @@ import {
   WalletsRepository,
 } from "@/services/mongoose"
 import { NotificationsService } from "@/services/notifications"
+import {
+  checkApiKeySpendingLimit,
+  recordApiKeySpending,
+} from "@/services/api-keys/client"
+import { ApiKeyLimitExceededError } from "@/domain/api-keys"
 
 const dealer = DealerPriceService()
 
@@ -53,6 +58,7 @@ const intraledgerPaymentSendWalletId = async ({
   amount: uncheckedAmount,
   memo,
   senderWalletId: uncheckedSenderWalletId,
+  apiKeyId,
 }: IntraLedgerPaymentSendWalletIdArgs): Promise<PaymentSendResult | ApplicationError> => {
   const validatedPaymentInputs = await validateIntraledgerPaymentInputs({
     uncheckedSenderWalletId,
@@ -128,6 +134,7 @@ const intraledgerPaymentSendWalletId = async ({
     recipientUser,
     senderUser,
     memo,
+    apiKeyId,
   })
   if (paymentSendResult instanceof Error) return paymentSendResult
 
@@ -231,6 +238,7 @@ const executePaymentViaIntraledger = async <
   recipientUser,
   senderUser,
   memo,
+  apiKeyId,
 }: {
   paymentFlow: PaymentFlow<S, R>
   senderAccount: Account
@@ -239,6 +247,7 @@ const executePaymentViaIntraledger = async <
   recipientUser: User
   senderUser: User
   memo: string | null
+  apiKeyId?: string
 }): Promise<PaymentSendResult | ApplicationError> => {
   addAttributesToCurrentSpan({
     "payment.settlement_method": SettlementMethod.IntraLedger,
@@ -246,6 +255,24 @@ const executePaymentViaIntraledger = async <
 
   const priceRatioForLimits = await getPriceRatioForLimits(paymentFlow.paymentAmounts())
   if (priceRatioForLimits instanceof Error) return priceRatioForLimits
+
+  // Check API key spending limit if authenticated via API key
+  if (apiKeyId) {
+    const amountSats = Number(paymentFlow.btcPaymentAmount.amount)
+    const apiKeyLimitCheck = await checkApiKeySpendingLimit({
+      apiKeyId,
+      amountSats,
+    })
+    if (apiKeyLimitCheck instanceof Error) return apiKeyLimitCheck
+    if (!apiKeyLimitCheck.allowed) {
+      return new ApiKeyLimitExceededError({
+        daily: apiKeyLimitCheck.remaining_daily_sats ?? null,
+        weekly: apiKeyLimitCheck.remaining_weekly_sats ?? null,
+        monthly: apiKeyLimitCheck.remaining_monthly_sats ?? null,
+        annual: apiKeyLimitCheck.remaining_annual_sats ?? null,
+      })
+    }
+  }
 
   const checkLimits =
     senderAccount.id === recipientAccount.id
@@ -317,6 +344,17 @@ const executePaymentViaIntraledger = async <
     recipient: senderAsNotificationRecipient,
     transaction: senderWalletTransaction,
   })
+
+  // Record API key spending after successful payment
+  if (apiKeyId) {
+    const amountSats = Number(paymentFlow.btcPaymentAmount.amount)
+    const recordResult = await recordApiKeySpending({
+      apiKeyId,
+      amountSats,
+      transactionId: journalId,
+    })
+    if (recordResult instanceof Error) return recordResult
+  }
 
   return {
     status: PaymentSendStatus.Success,

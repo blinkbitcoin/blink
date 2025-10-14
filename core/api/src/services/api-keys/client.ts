@@ -1,24 +1,31 @@
 import axios from "axios"
 
 import { baseLogger } from "@/services/logger"
-import {
-  ApiKeyLimitCheckError,
-  ApiKeySpendingRecordError,
-} from "@/domain/api-keys"
+import { ApiKeyLimitCheckError, ApiKeySpendingRecordError } from "@/domain/api-keys"
 import { getApiKeysServiceUrl } from "@/config"
 
 const API_KEYS_SERVICE_URL = getApiKeysServiceUrl()
 
 export type LimitCheckResult = {
   allowed: boolean
-  remaining_sats: number | null
   daily_limit_sats: number | null
+  weekly_limit_sats: number | null
+  monthly_limit_sats: number | null
+  annual_limit_sats: number | null
   spent_last_24h_sats: number
+  spent_last_7d_sats: number
+  spent_last_30d_sats: number
+  spent_last_365d_sats: number
+  remaining_daily_sats: number | null
+  remaining_weekly_sats: number | null
+  remaining_monthly_sats: number | null
+  remaining_annual_sats: number | null
 }
 
 /**
- * Check if a spending amount would exceed the API key's daily limit (rolling 24h window)
- * Returns allowed=true if no limit is configured for the API key
+ * Check if a spending amount would exceed any of the API key's spending limits
+ * (daily, weekly, monthly, or annual - all using rolling time windows)
+ * Returns allowed=true if no limits are configured for the API key
  */
 export const checkApiKeySpendingLimit = async ({
   apiKeyId,
