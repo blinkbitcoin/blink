@@ -100,10 +100,25 @@ struct LimitsCheckQuery {
 struct LimitsCheckResponse {
     allowed: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
-    remaining_sats: Option<i64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     daily_limit_sats: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    weekly_limit_sats: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    monthly_limit_sats: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    annual_limit_sats: Option<i64>,
     spent_last_24h_sats: i64,
+    spent_last_7d_sats: i64,
+    spent_last_30d_sats: i64,
+    spent_last_365d_sats: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    remaining_daily_sats: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    remaining_weekly_sats: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    remaining_monthly_sats: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    remaining_annual_sats: Option<i64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -115,10 +130,24 @@ struct LimitsRemainingQuery {
 struct LimitsRemainingResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     daily_limit_sats: Option<i64>,
-    spent_last_24h_sats: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
-    remaining_sats: Option<i64>,
-    transaction_count: i32,
+    weekly_limit_sats: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    monthly_limit_sats: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    annual_limit_sats: Option<i64>,
+    spent_last_24h_sats: i64,
+    spent_last_7d_sats: i64,
+    spent_last_30d_sats: i64,
+    spent_last_365d_sats: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    remaining_daily_sats: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    remaining_weekly_sats: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    remaining_monthly_sats: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    remaining_annual_sats: Option<i64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -205,16 +234,34 @@ async fn limits_check_handler(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    // Calculate remaining from limit and spent
-    let remaining_sats = result
+    // Calculate remaining for each time period
+    let remaining_daily_sats = result
         .daily_limit_sats
         .map(|limit| limit - result.spent_last_24h_sats);
+    let remaining_weekly_sats = result
+        .weekly_limit_sats
+        .map(|limit| limit - result.spent_last_7d_sats);
+    let remaining_monthly_sats = result
+        .monthly_limit_sats
+        .map(|limit| limit - result.spent_last_30d_sats);
+    let remaining_annual_sats = result
+        .annual_limit_sats
+        .map(|limit| limit - result.spent_last_365d_sats);
 
     Ok(Json(LimitsCheckResponse {
         allowed: result.allowed,
-        remaining_sats,
         daily_limit_sats: result.daily_limit_sats,
+        weekly_limit_sats: result.weekly_limit_sats,
+        monthly_limit_sats: result.monthly_limit_sats,
+        annual_limit_sats: result.annual_limit_sats,
         spent_last_24h_sats: result.spent_last_24h_sats,
+        spent_last_7d_sats: result.spent_last_7d_sats,
+        spent_last_30d_sats: result.spent_last_30d_sats,
+        spent_last_365d_sats: result.spent_last_365d_sats,
+        remaining_daily_sats,
+        remaining_weekly_sats,
+        remaining_monthly_sats,
+        remaining_annual_sats,
     }))
 }
 
@@ -242,16 +289,33 @@ async fn limits_remaining_handler(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    // Calculate remaining from limit and spent
-    let remaining_sats = summary
+    // Calculate remaining for each time period
+    let remaining_daily_sats = summary
         .daily_limit_sats
         .map(|limit| limit - summary.spent_last_24h_sats);
+    let remaining_weekly_sats = summary
+        .weekly_limit_sats
+        .map(|limit| limit - summary.spent_last_7d_sats);
+    let remaining_monthly_sats = summary
+        .monthly_limit_sats
+        .map(|limit| limit - summary.spent_last_30d_sats);
+    let remaining_annual_sats = summary
+        .annual_limit_sats
+        .map(|limit| limit - summary.spent_last_365d_sats);
 
     Ok(Json(LimitsRemainingResponse {
         daily_limit_sats: summary.daily_limit_sats,
+        weekly_limit_sats: summary.weekly_limit_sats,
+        monthly_limit_sats: summary.monthly_limit_sats,
+        annual_limit_sats: summary.annual_limit_sats,
         spent_last_24h_sats: summary.spent_last_24h_sats,
-        remaining_sats,
-        transaction_count: summary.transaction_count_24h,
+        spent_last_7d_sats: summary.spent_last_7d_sats,
+        spent_last_30d_sats: summary.spent_last_30d_sats,
+        spent_last_365d_sats: summary.spent_last_365d_sats,
+        remaining_daily_sats,
+        remaining_weekly_sats,
+        remaining_monthly_sats,
+        remaining_annual_sats,
     }))
 }
 

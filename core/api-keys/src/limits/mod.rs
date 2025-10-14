@@ -11,10 +11,10 @@ pub use error::*;
 #[derive(Debug, Clone)]
 pub struct LimitCheckResult {
     pub allowed: bool,
-    pub daily_limit_sats: Option<i64>,          // None if no limit configured
-    pub weekly_limit_sats: Option<i64>,         // None if no limit configured
-    pub monthly_limit_sats: Option<i64>,        // None if no limit configured
-    pub annual_limit_sats: Option<i64>,         // None if no limit configured
+    pub daily_limit_sats: Option<i64>, // None if no limit configured
+    pub weekly_limit_sats: Option<i64>, // None if no limit configured
+    pub monthly_limit_sats: Option<i64>, // None if no limit configured
+    pub annual_limit_sats: Option<i64>, // None if no limit configured
     pub spent_last_24h_sats: i64,
     pub spent_last_7d_sats: i64,
     pub spent_last_30d_sats: i64,
@@ -23,18 +23,14 @@ pub struct LimitCheckResult {
 
 #[derive(Debug, Clone)]
 pub struct SpendingSummary {
-    pub daily_limit_sats: Option<i64>,          // None if no limit configured
-    pub weekly_limit_sats: Option<i64>,         // None if no limit configured
-    pub monthly_limit_sats: Option<i64>,        // None if no limit configured
-    pub annual_limit_sats: Option<i64>,         // None if no limit configured
+    pub daily_limit_sats: Option<i64>,   // None if no limit configured
+    pub weekly_limit_sats: Option<i64>,  // None if no limit configured
+    pub monthly_limit_sats: Option<i64>, // None if no limit configured
+    pub annual_limit_sats: Option<i64>,  // None if no limit configured
     pub spent_last_24h_sats: i64,
     pub spent_last_7d_sats: i64,
     pub spent_last_30d_sats: i64,
     pub spent_last_365d_sats: i64,
-    pub transaction_count_24h: i32,
-    pub transaction_count_7d: i32,
-    pub transaction_count_30d: i32,
-    pub transaction_count_365d: i32,
 }
 
 #[derive(Debug, Clone)]
@@ -174,11 +170,6 @@ impl Limits {
         let spent_30d = self.get_spending_last_30d(api_key_id).await?;
         let spent_365d = self.get_spending_last_365d(api_key_id).await?;
 
-        let transaction_count_24h = self.get_transaction_count_last_24h(api_key_id).await?;
-        let transaction_count_7d = self.get_transaction_count_last_7d(api_key_id).await?;
-        let transaction_count_30d = self.get_transaction_count_last_30d(api_key_id).await?;
-        let transaction_count_365d = self.get_transaction_count_last_365d(api_key_id).await?;
-
         Ok(SpendingSummary {
             daily_limit_sats: limits.daily_limit_sats,
             weekly_limit_sats: limits.weekly_limit_sats,
@@ -188,10 +179,6 @@ impl Limits {
             spent_last_7d_sats: spent_7d,
             spent_last_30d_sats: spent_30d,
             spent_last_365d_sats: spent_365d,
-            transaction_count_24h,
-            transaction_count_7d,
-            transaction_count_30d,
-            transaction_count_365d,
         })
     }
 
@@ -305,10 +292,7 @@ impl Limits {
 
     /// Remove a daily limit for an API key
     #[tracing::instrument(name = "limits.remove_daily_limit", skip(self))]
-    pub async fn remove_daily_limit(
-        &self,
-        api_key_id: IdentityApiKeyId,
-    ) -> Result<(), LimitError> {
+    pub async fn remove_daily_limit(&self, api_key_id: IdentityApiKeyId) -> Result<(), LimitError> {
         sqlx::query(
             r#"
             UPDATE api_key_limits
@@ -397,10 +381,7 @@ impl Limits {
 
     /// Remove all limits for an API key (reverts to unlimited)
     #[tracing::instrument(name = "limits.remove_all_limits", skip(self))]
-    pub async fn remove_all_limits(
-        &self,
-        api_key_id: IdentityApiKeyId,
-    ) -> Result<(), LimitError> {
+    pub async fn remove_all_limits(&self, api_key_id: IdentityApiKeyId) -> Result<(), LimitError> {
         sqlx::query(
             r#"
             DELETE FROM api_key_limits
@@ -433,10 +414,7 @@ impl Limits {
     // Private helper methods
 
     /// Get all configured limits for an API key
-    async fn get_all_limits(
-        &self,
-        api_key_id: IdentityApiKeyId,
-    ) -> Result<AllLimits, LimitError> {
+    async fn get_all_limits(&self, api_key_id: IdentityApiKeyId) -> Result<AllLimits, LimitError> {
         let row = sqlx::query(
             r#"
             SELECT daily_limit_sats, weekly_limit_sats, monthly_limit_sats, annual_limit_sats
@@ -466,10 +444,7 @@ impl Limits {
     }
 
     /// Delete limit row if all limits are NULL
-    async fn cleanup_empty_limits(
-        &self,
-        api_key_id: IdentityApiKeyId,
-    ) -> Result<(), LimitError> {
+    async fn cleanup_empty_limits(&self, api_key_id: IdentityApiKeyId) -> Result<(), LimitError> {
         sqlx::query(
             r#"
             DELETE FROM api_key_limits
@@ -488,10 +463,7 @@ impl Limits {
     }
 
     /// Calculate total spending in the last 24 hours (rolling window)
-    async fn get_spending_last_24h(
-        &self,
-        api_key_id: IdentityApiKeyId,
-    ) -> Result<i64, LimitError> {
+    async fn get_spending_last_24h(&self, api_key_id: IdentityApiKeyId) -> Result<i64, LimitError> {
         let row = sqlx::query(
             r#"
             SELECT COALESCE(SUM(amount_sats), 0)::bigint as spent
@@ -508,10 +480,7 @@ impl Limits {
     }
 
     /// Calculate total spending in the last 7 days (rolling window)
-    async fn get_spending_last_7d(
-        &self,
-        api_key_id: IdentityApiKeyId,
-    ) -> Result<i64, LimitError> {
+    async fn get_spending_last_7d(&self, api_key_id: IdentityApiKeyId) -> Result<i64, LimitError> {
         let row = sqlx::query(
             r#"
             SELECT COALESCE(SUM(amount_sats), 0)::bigint as spent
@@ -528,10 +497,7 @@ impl Limits {
     }
 
     /// Calculate total spending in the last 30 days (rolling window)
-    async fn get_spending_last_30d(
-        &self,
-        api_key_id: IdentityApiKeyId,
-    ) -> Result<i64, LimitError> {
+    async fn get_spending_last_30d(&self, api_key_id: IdentityApiKeyId) -> Result<i64, LimitError> {
         let row = sqlx::query(
             r#"
             SELECT COALESCE(SUM(amount_sats), 0)::bigint as spent
@@ -565,85 +531,5 @@ impl Limits {
         .await?;
 
         Ok(row.get("spent"))
-    }
-
-    /// Get transaction count in the last 24 hours
-    async fn get_transaction_count_last_24h(
-        &self,
-        api_key_id: IdentityApiKeyId,
-    ) -> Result<i32, LimitError> {
-        let row = sqlx::query(
-            r#"
-            SELECT COUNT(*)::int as count
-            FROM api_key_transactions
-            WHERE api_key_id = $1
-              AND created_at > NOW() - INTERVAL '24 hours'
-            "#,
-        )
-        .bind(api_key_id)
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(row.get("count"))
-    }
-
-    /// Get transaction count in the last 7 days
-    async fn get_transaction_count_last_7d(
-        &self,
-        api_key_id: IdentityApiKeyId,
-    ) -> Result<i32, LimitError> {
-        let row = sqlx::query(
-            r#"
-            SELECT COUNT(*)::int as count
-            FROM api_key_transactions
-            WHERE api_key_id = $1
-              AND created_at > NOW() - INTERVAL '7 days'
-            "#,
-        )
-        .bind(api_key_id)
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(row.get("count"))
-    }
-
-    /// Get transaction count in the last 30 days
-    async fn get_transaction_count_last_30d(
-        &self,
-        api_key_id: IdentityApiKeyId,
-    ) -> Result<i32, LimitError> {
-        let row = sqlx::query(
-            r#"
-            SELECT COUNT(*)::int as count
-            FROM api_key_transactions
-            WHERE api_key_id = $1
-              AND created_at > NOW() - INTERVAL '30 days'
-            "#,
-        )
-        .bind(api_key_id)
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(row.get("count"))
-    }
-
-    /// Get transaction count in the last 365 days
-    async fn get_transaction_count_last_365d(
-        &self,
-        api_key_id: IdentityApiKeyId,
-    ) -> Result<i32, LimitError> {
-        let row = sqlx::query(
-            r#"
-            SELECT COUNT(*)::int as count
-            FROM api_key_transactions
-            WHERE api_key_id = $1
-              AND created_at > NOW() - INTERVAL '365 days'
-            "#,
-        )
-        .bind(api_key_id)
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(row.get("count"))
     }
 }
