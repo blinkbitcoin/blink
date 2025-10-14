@@ -31,8 +31,8 @@ const ApiKeysList: React.FC<ApiKeysListProps> = ({
           <tr>
             <th style={{ width: "12%" }}>Name</th>
             <th style={{ width: "18%" }}>API Key ID</th>
-            <th style={{ width: "8%" }}>Scope</th>
-            <th style={{ width: "25%" }}>Budget Limits</th>
+            <th style={{ width: "12%" }}>Scope</th>
+            <th style={{ width: "22%" }}>Budget Limits</th>
             <th style={{ width: "10%" }}>Expires At</th>
             <th style={{ width: "10%" }}>Last Used</th>
             <th style={{ width: "10%", textAlign: "right" }}>Actions</th>
