@@ -113,7 +113,7 @@ new_key_name() {
 
   exec_graphql 'api-key-secret' 'api-keys'
 
-  name="$(graphql_output '.data.me.apiKeys[-1].name')"
+  name="$(graphql_output '.data.me.apiKeys[] | select(.name == "'${key_name}'") | .name')"
   [[ "${name}" = "${key_name}" ]] || exit 1
 
   exec_graphql 'api-key-secret' 'authorization'
@@ -206,7 +206,7 @@ new_key_name() {
   cache_value "api-key-id" "$key_id"
 
   exec_graphql 'api-key-secret' 'api-keys'
-  name="$(graphql_output '.data.me.apiKeys[-1].name')"
+  name="$(graphql_output '.data.me.apiKeys[] | select(.name == "'${key_name}'") | .name')"
   [[ "${name}" = "${key_name}" ]] || exit 1
 
   exec_graphql 'api-key-secret' 'authorization'
@@ -234,7 +234,7 @@ new_key_name() {
 
   exec_graphql 'api-key-secret' 'api-keys'
 
-  name="$(graphql_output '.data.me.apiKeys[-1].name')"
+  name="$(graphql_output '.data.me.apiKeys[] | select(.name == "'${key_name}'") | .name')"
   [[ "${name}" = "${key_name}" ]] || exit 1
 
   exec_graphql 'api-key-secret' 'authorization'
