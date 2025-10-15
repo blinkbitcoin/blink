@@ -109,18 +109,9 @@ pub async fn run_server(config: ServerConfig, api_keys_app: ApiKeysApp) -> anyho
 
     // Internal routes that require internal auth
     let internal_routes = Router::new()
-        .route(
-            "/limits/check",
-            get(limits_check_handler),
-        )
-        .route(
-            "/limits/remaining",
-            get(limits_remaining_handler),
-        )
-        .route(
-            "/spending/record",
-            post(spending_record_handler),
-        )
+        .route("/limits/check", get(limits_check_handler))
+        .route("/limits/remaining", get(limits_remaining_handler))
+        .route("/spending/record", post(spending_record_handler))
         .with_state(internal_state);
 
     // Public routes
