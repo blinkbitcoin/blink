@@ -4,8 +4,8 @@ mod jwks;
 use async_graphql::*;
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::{
-    extract::{Query, State},
-    http::StatusCode,
+    extract::{FromRef, FromRequestParts, Query, State},
+    http::{request::Parts, StatusCode},
     routing::{get, post},
     Extension, Json, Router,
 };
@@ -33,6 +33,59 @@ pub struct JwtClaims {
     scope: String,
 }
 
+#[derive(Clone)]
+struct InternalAuthSecret(String);
+
+#[derive(Clone)]
+struct InternalState {
+    limits: Arc<Limits>,
+    internal_auth_secret: InternalAuthSecret,
+}
+
+impl axum::extract::FromRef<InternalState> for Arc<Limits> {
+    fn from_ref(state: &InternalState) -> Self {
+        state.limits.clone()
+    }
+}
+
+impl axum::extract::FromRef<InternalState> for InternalAuthSecret {
+    fn from_ref(state: &InternalState) -> Self {
+        state.internal_auth_secret.clone()
+    }
+}
+
+struct InternalAuth;
+
+#[axum::async_trait]
+impl<S> FromRequestParts<S> for InternalAuth
+where
+    InternalAuthSecret: axum::extract::FromRef<S>,
+    S: Send + Sync,
+{
+    type Rejection = (StatusCode, String);
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let secret = InternalAuthSecret::from_ref(state);
+        let auth_header = parts
+            .headers
+            .get("X-Internal-Auth")
+            .and_then(|h| h.to_str().ok())
+            .ok_or((
+                StatusCode::UNAUTHORIZED,
+                "Missing X-Internal-Auth header".to_string(),
+            ))?;
+
+        if auth_header != secret.0 {
+            return Err((
+                StatusCode::UNAUTHORIZED,
+                "Invalid internal auth secret".to_string(),
+            ));
+        }
+
+        Ok(InternalAuth)
+    }
+}
+
 pub async fn run_server(config: ServerConfig, api_keys_app: ApiKeysApp) -> anyhow::Result<()> {
     let schema = graphql::schema(Some(api_keys_app.clone()));
     let limits = Arc::new(Limits::new(api_keys_app.pool()));
@@ -49,6 +102,28 @@ pub async fn run_server(config: ServerConfig, api_keys_app: ApiKeysApp) -> anyho
         cleanup_old_transactions_periodically(cleanup_limits).await;
     });
 
+    let internal_state = InternalState {
+        limits: limits.clone(),
+        internal_auth_secret: InternalAuthSecret(config.internal_auth_secret.clone()),
+    };
+
+    // Internal routes that require internal auth
+    let internal_routes = Router::new()
+        .route(
+            "/limits/check",
+            get(limits_check_handler),
+        )
+        .route(
+            "/limits/remaining",
+            get(limits_remaining_handler),
+        )
+        .route(
+            "/spending/record",
+            post(spending_record_handler),
+        )
+        .with_state(internal_state);
+
+    // Public routes
     let app = Router::new()
         .route(
             "/graphql",
@@ -58,18 +133,7 @@ pub async fn run_server(config: ServerConfig, api_keys_app: ApiKeysApp) -> anyho
             "/auth/check",
             get(check_handler).with_state((config.api_key_auth_header, api_keys_app)),
         )
-        .route(
-            "/limits/check",
-            get(limits_check_handler).with_state(limits.clone()),
-        )
-        .route(
-            "/limits/remaining",
-            get(limits_remaining_handler).with_state(limits.clone()),
-        )
-        .route(
-            "/spending/record",
-            post(spending_record_handler).with_state(limits.clone()),
-        )
+        .merge(internal_routes)
         .with_state(JwtDecoderState {
             decoder: jwks_decoder,
         })
@@ -215,6 +279,7 @@ async fn playground() -> impl axum::response::IntoResponse {
     fields(api_key_id, amount_sats)
 )]
 async fn limits_check_handler(
+    _auth: InternalAuth,
     State(limits): State<Arc<Limits>>,
     Query(params): Query<LimitsCheckQuery>,
 ) -> Result<Json<LimitsCheckResponse>, (StatusCode, String)> {
@@ -271,6 +336,7 @@ async fn limits_check_handler(
     fields(api_key_id)
 )]
 async fn limits_remaining_handler(
+    _auth: InternalAuth,
     State(limits): State<Arc<Limits>>,
     Query(params): Query<LimitsRemainingQuery>,
 ) -> Result<Json<LimitsRemainingResponse>, (StatusCode, String)> {
@@ -325,6 +391,7 @@ async fn limits_remaining_handler(
     fields(api_key_id, amount_sats)
 )]
 async fn spending_record_handler(
+    _auth: InternalAuth,
     State(limits): State<Arc<Limits>>,
     Json(payload): Json<SpendingRecordRequest>,
 ) -> Result<StatusCode, (StatusCode, String)> {

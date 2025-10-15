@@ -86,6 +86,8 @@ export const getBriaConfig = getBriaPartialConfigFromYaml
 
 export const getApiKeysServiceUrl = () => env.API_KEYS_SERVICE_URL
 
+export const getApiKeysInternalAuthSecret = () => env.API_KEYS_INTERNAL_AUTH_SECRET
+
 export const isTelegramPassportEnabled = () =>
   !!env.TELEGRAM_BOT_API_TOKEN && !!env.TELEGRAM_PASSPORT_PRIVATE_KEY
 

@@ -2,9 +2,10 @@ import axios from "axios"
 
 import { baseLogger } from "@/services/logger"
 import { ApiKeyLimitCheckError, ApiKeySpendingRecordError } from "@/domain/api-keys"
-import { getApiKeysServiceUrl } from "@/config"
+import { getApiKeysServiceUrl, getApiKeysInternalAuthSecret } from "@/config"
 
 const API_KEYS_SERVICE_URL = getApiKeysServiceUrl()
+const INTERNAL_AUTH_SECRET = getApiKeysInternalAuthSecret()
 
 export type LimitCheckResult = {
   allowed: boolean
@@ -42,6 +43,9 @@ export const checkApiKeySpendingLimit = async ({
           api_key_id: apiKeyId,
           amount_sats: amountSats,
         },
+        headers: {
+          "X-Internal-Auth": INTERNAL_AUTH_SECRET,
+        },
         timeout: 5000, // 5 second timeout
       },
     )
@@ -78,6 +82,9 @@ export const recordApiKeySpending = async ({
         transaction_id: transactionId,
       },
       {
+        headers: {
+          "X-Internal-Auth": INTERNAL_AUTH_SECRET,
+        },
         timeout: 5000, // 5 second timeout
       },
     )

@@ -63,6 +63,7 @@ export const env = createEnv({
       .default(6685),
 
     API_KEYS_SERVICE_URL: z.string().url().default("http://localhost:5397"),
+    API_KEYS_INTERNAL_AUTH_SECRET: z.string().min(1).default("dev-only-insecure-secret"),
 
     GEETEST_ID: z.string().min(1).optional(),
     GEETEST_KEY: z.string().min(1).optional(),
@@ -196,6 +197,7 @@ export const env = createEnv({
     NOTIFICATIONS_PORT: process.env.NOTIFICATIONS_PORT,
 
     API_KEYS_SERVICE_URL: process.env.API_KEYS_SERVICE_URL || "http://localhost:5397",
+    API_KEYS_INTERNAL_AUTH_SECRET: process.env.API_KEYS_INTERNAL_AUTH_SECRET,
 
     GEETEST_ID: process.env.GEETEST_ID,
     GEETEST_KEY: process.env.GEETEST_KEY,
