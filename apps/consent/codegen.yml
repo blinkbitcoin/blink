@@ -65,3 +65,4 @@ generates:
         ContactHandle: "string"
         ContactType: "string"
         ContactDisplayName: "string"
+        TelegramPassportNonce: "string"

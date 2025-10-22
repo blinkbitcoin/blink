@@ -72,6 +72,8 @@ export type Scalars = {
   SignedAmount: { input: number; output: number; }
   /** A string amount (of a currency) that can be negative (e.g. in a transaction) */
   SignedDisplayMajorAmount: { input: string; output: string; }
+  /** Nonce provided by Telegram Passport to validate the login/upgrade flow */
+  TelegramPassportNonce: { input: string; output: string; }
   /** Timestamp field, serialized as Unix time (the number of seconds since the Unix epoch) */
   Timestamp: { input: number; output: number; }
   /** A time-based one-time password */
@@ -1045,6 +1047,7 @@ export type Mutation = {
   readonly userEmailRegistrationValidate: UserEmailRegistrationValidatePayload;
   readonly userLogin: AuthTokenPayload;
   readonly userLoginUpgrade: UpgradePayload;
+  readonly userLoginUpgradeTelegram: UpgradePayload;
   readonly userLogout: SuccessPayload;
   readonly userPhoneDelete: UserPhoneDeletePayload;
   readonly userPhoneRegistrationInitiate: SuccessPayload;
@@ -1280,6 +1283,11 @@ export type MutationUserLoginArgs = {
 
 export type MutationUserLoginUpgradeArgs = {
   input: UserLoginUpgradeInput;
+};
+
+
+export type MutationUserLoginUpgradeTelegramArgs = {
+  input: UserLoginUpgradeTelegramInput;
 };
 
 
@@ -2075,6 +2083,11 @@ export type UserLoginInput = {
 
 export type UserLoginUpgradeInput = {
   readonly code: Scalars['OneTimeAuthCode']['input'];
+  readonly phone: Scalars['Phone']['input'];
+};
+
+export type UserLoginUpgradeTelegramInput = {
+  readonly nonce: Scalars['TelegramPassportNonce']['input'];
   readonly phone: Scalars['Phone']['input'];
 };
 

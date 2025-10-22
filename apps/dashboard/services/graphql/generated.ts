@@ -75,6 +75,8 @@ export type Scalars = {
   SignedAmount: { input: number; output: number; }
   /** A string amount (of a currency) that can be negative (e.g. in a transaction) */
   SignedDisplayMajorAmount: { input: string; output: string; }
+  /** Nonce provided by Telegram Passport to validate the login/upgrade flow */
+  TelegramPassportNonce: { input: string; output: string; }
   /** Timestamp field, serialized as Unix time (the number of seconds since the Unix epoch) */
   Timestamp: { input: number; output: number; }
   /** A time-based one-time password */
@@ -1143,6 +1145,7 @@ export type Mutation = {
   readonly userEmailRegistrationValidate: UserEmailRegistrationValidatePayload;
   readonly userLogin: AuthTokenPayload;
   readonly userLoginUpgrade: UpgradePayload;
+  readonly userLoginUpgradeTelegram: UpgradePayload;
   readonly userLogout: SuccessPayload;
   readonly userPhoneDelete: UserPhoneDeletePayload;
   readonly userPhoneRegistrationInitiate: SuccessPayload;
@@ -1393,6 +1396,11 @@ export type MutationUserLoginArgs = {
 
 export type MutationUserLoginUpgradeArgs = {
   input: UserLoginUpgradeInput;
+};
+
+
+export type MutationUserLoginUpgradeTelegramArgs = {
+  input: UserLoginUpgradeTelegramInput;
 };
 
 
@@ -2264,6 +2272,11 @@ export type UserLoginInput = {
 
 export type UserLoginUpgradeInput = {
   readonly code: Scalars['OneTimeAuthCode']['input'];
+  readonly phone: Scalars['Phone']['input'];
+};
+
+export type UserLoginUpgradeTelegramInput = {
+  readonly nonce: Scalars['TelegramPassportNonce']['input'];
   readonly phone: Scalars['Phone']['input'];
 };
 
@@ -3761,6 +3774,7 @@ export type ResolversTypes = {
   SupportChatMessageAddPayload: ResolverTypeWrapper<Omit<SupportChatMessageAddPayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
   SupportMessage: ResolverTypeWrapper<SupportMessage>;
   SupportRole: SupportRole;
+  TelegramPassportNonce: ResolverTypeWrapper<Scalars['TelegramPassportNonce']['output']>;
   Timestamp: ResolverTypeWrapper<Scalars['Timestamp']['output']>;
   TotpCode: ResolverTypeWrapper<Scalars['TotpCode']['output']>;
   TotpRegistrationId: ResolverTypeWrapper<Scalars['TotpRegistrationId']['output']>;
@@ -3785,6 +3799,7 @@ export type ResolversTypes = {
   UserEmailRegistrationValidatePayload: ResolverTypeWrapper<Omit<UserEmailRegistrationValidatePayload, 'errors' | 'me'> & { errors: ReadonlyArray<ResolversTypes['Error']>, me?: Maybe<ResolversTypes['User']> }>;
   UserLoginInput: UserLoginInput;
   UserLoginUpgradeInput: UserLoginUpgradeInput;
+  UserLoginUpgradeTelegramInput: UserLoginUpgradeTelegramInput;
   UserLogoutInput: UserLogoutInput;
   UserPhoneDeletePayload: ResolverTypeWrapper<Omit<UserPhoneDeletePayload, 'errors' | 'me'> & { errors: ReadonlyArray<ResolversTypes['Error']>, me?: Maybe<ResolversTypes['User']> }>;
   UserPhoneRegistrationInitiateInput: UserPhoneRegistrationInitiateInput;
@@ -3988,6 +4003,7 @@ export type ResolversParentTypes = {
   SupportChatMessageAddInput: SupportChatMessageAddInput;
   SupportChatMessageAddPayload: Omit<SupportChatMessageAddPayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
   SupportMessage: SupportMessage;
+  TelegramPassportNonce: Scalars['TelegramPassportNonce']['output'];
   Timestamp: Scalars['Timestamp']['output'];
   TotpCode: Scalars['TotpCode']['output'];
   TotpRegistrationId: Scalars['TotpRegistrationId']['output'];
@@ -4009,6 +4025,7 @@ export type ResolversParentTypes = {
   UserEmailRegistrationValidatePayload: Omit<UserEmailRegistrationValidatePayload, 'errors' | 'me'> & { errors: ReadonlyArray<ResolversParentTypes['Error']>, me?: Maybe<ResolversParentTypes['User']> };
   UserLoginInput: UserLoginInput;
   UserLoginUpgradeInput: UserLoginUpgradeInput;
+  UserLoginUpgradeTelegramInput: UserLoginUpgradeTelegramInput;
   UserLogoutInput: UserLogoutInput;
   UserPhoneDeletePayload: Omit<UserPhoneDeletePayload, 'errors' | 'me'> & { errors: ReadonlyArray<ResolversParentTypes['Error']>, me?: Maybe<ResolversParentTypes['User']> };
   UserPhoneRegistrationInitiateInput: UserPhoneRegistrationInitiateInput;
@@ -4626,6 +4643,7 @@ export type MutationResolvers<ContextType = any, ParentType extends ResolversPar
   userEmailRegistrationValidate?: Resolver<ResolversTypes['UserEmailRegistrationValidatePayload'], ParentType, ContextType, RequireFields<MutationUserEmailRegistrationValidateArgs, 'input'>>;
   userLogin?: Resolver<ResolversTypes['AuthTokenPayload'], ParentType, ContextType, RequireFields<MutationUserLoginArgs, 'input'>>;
   userLoginUpgrade?: Resolver<ResolversTypes['UpgradePayload'], ParentType, ContextType, RequireFields<MutationUserLoginUpgradeArgs, 'input'>>;
+  userLoginUpgradeTelegram?: Resolver<ResolversTypes['UpgradePayload'], ParentType, ContextType, RequireFields<MutationUserLoginUpgradeTelegramArgs, 'input'>>;
   userLogout?: Resolver<ResolversTypes['SuccessPayload'], ParentType, ContextType, Partial<MutationUserLogoutArgs>>;
   userPhoneDelete?: Resolver<ResolversTypes['UserPhoneDeletePayload'], ParentType, ContextType>;
   userPhoneRegistrationInitiate?: Resolver<ResolversTypes['SuccessPayload'], ParentType, ContextType, RequireFields<MutationUserPhoneRegistrationInitiateArgs, 'input'>>;
@@ -4967,6 +4985,10 @@ export type SupportMessageResolvers<ContextType = any, ParentType extends Resolv
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
+export interface TelegramPassportNonceScalarConfig extends GraphQLScalarTypeConfig<ResolversTypes['TelegramPassportNonce'], any> {
+  name: 'TelegramPassportNonce';
+}
+
 export interface TimestampScalarConfig extends GraphQLScalarTypeConfig<ResolversTypes['Timestamp'], any> {
   name: 'Timestamp';
 }
@@ -5304,6 +5326,7 @@ export type Resolvers<ContextType = any> = {
   SuccessPayload?: SuccessPayloadResolvers<ContextType>;
   SupportChatMessageAddPayload?: SupportChatMessageAddPayloadResolvers<ContextType>;
   SupportMessage?: SupportMessageResolvers<ContextType>;
+  TelegramPassportNonce?: GraphQLScalarType;
   Timestamp?: GraphQLScalarType;
   TotpCode?: GraphQLScalarType;
   TotpRegistrationId?: GraphQLScalarType;
