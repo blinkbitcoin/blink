@@ -146,6 +146,12 @@ type WithConversionArgs = {
   mid: ConversionFns
 }
 
+type WithMinerFeeArgs = {
+  minerFee: BtcPaymentAmount
+  speed: PayoutSpeed
+  feeRate: number
+}
+
 type LightningPaymentFlowBuilder<S extends WalletCurrency> = {
   withInvoice(invoice: LnInvoice): LPFBWithInvoice<S> | LPFBWithError
   withNoAmountInvoice({
@@ -326,9 +332,13 @@ type OPFBWithAmount<S extends WalletCurrency, R extends WalletCurrency> = {
 }
 
 type OPFBWithConversion<S extends WalletCurrency, R extends WalletCurrency> = {
-  withMinerFee(
-    minerFee: BtcPaymentAmount,
-  ): Promise<OnChainPaymentFlow<S, R> | ValidationError | DealerPriceServiceError>
+  withMinerFee({
+    minerFee,
+    feeRate,
+    speed,
+  }: WithMinerFeeArgs): Promise<
+    OnChainPaymentFlow<S, R> | ValidationError | DealerPriceServiceError
+  >
   withoutMinerFee(): Promise<
     OnChainPaymentFlow<S, R> | ValidationError | DealerPriceServiceError
   >

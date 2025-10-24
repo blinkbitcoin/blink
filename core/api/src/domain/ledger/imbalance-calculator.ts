@@ -37,7 +37,10 @@ export const ImbalanceCalculator = ({
   const getSwapOutImbalanceAmount = async <T extends WalletCurrency>(
     wallet: WalletDescriptor<T>,
   ): Promise<PaymentAmount<T> | LedgerServiceError | ValidationError> => {
-    if (method === WithdrawalFeePriceMethod.flat) {
+    if (
+      method === WithdrawalFeePriceMethod.flat ||
+      method === WithdrawalFeePriceMethod.exponentialDecay
+    ) {
       return paymentAmountFromNumber<T>({ amount: 0, currency: wallet.currency })
     }
 

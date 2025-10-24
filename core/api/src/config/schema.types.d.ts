@@ -17,11 +17,25 @@ type AccountLimitsConfig = {
   }
 }
 
+type ExponentialDecayConfig = {
+  minRate: number
+  maxRate: number
+  divisor: number
+  targetRate: number
+  offset: number
+  factor: number
+}
+
+type FeeMethodConfig = {
+  exponentialDecay: ExponentialDecayConfig
+}
+
 type PayoutQueueConfig = {
   speed: PayoutSpeed
   queueName: string
   displayName: string
   description: string
+  feeMethodConfig: FeeMethodConfig
 }
 
 type RebalanceConfig = {
@@ -29,6 +43,13 @@ type RebalanceConfig = {
   minRebalanceSize: Satoshis
   minBalance: Satoshis
   payoutQueueName: string
+}
+
+type ExponentialDecayFeesConfig = {
+  threshold: number
+  minSats: number
+  exponentialFactor: number
+  networkFeeRange: { min: number; max: number }
 }
 
 type YamlSchema = {
@@ -142,6 +163,7 @@ type YamlSchema = {
       daysLookback: number
       defaultMin: number
     }
+    exponentialDecay: ExponentialDecayFeesConfig
   }
   onChainWallet: {
     dustThreshold: number
