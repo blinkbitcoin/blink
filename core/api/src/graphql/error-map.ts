@@ -38,6 +38,8 @@ import {
   LnurlRequestInvoiceError,
   QuizClaimedTooEarlyError,
   PriceServiceOfflineError,
+  QuotesError,
+  QuotesOfflineError,
   OperationRestrictedError,
   AuthorizationError,
 } from "@/graphql/error"
@@ -392,6 +394,17 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       message = "Stale dealer price, can't perform USD operation."
       return new DealerOfflineError({ message, logger: baseLogger })
 
+    case "QuotesExchangePriceError":
+    case "QuotesEntityError":
+    case "QuotesLedgerError":
+    case "QuotesServerError":
+      message = error.message || "Quotes service internal error."
+      return new QuotesError({ message, logger: baseLogger })
+
+    case "NoConnectionToQuotesError":
+      message = "No connection to quotes to perform USD operation."
+      return new QuotesOfflineError({ message, logger: baseLogger })
+
     case "RouteNotFoundError":
     case "MaxFeeTooLargeForRoutelessPaymentError":
       message = "Unable to find a route for payment."
@@ -437,6 +450,10 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
 
     case "InvalidDisplayCurrencyError":
       message = "Invalid currency."
+      return new ValidationInternalError({ message, logger: baseLogger })
+
+    case "InvalidQuoteIdError":
+      message = "Invalid quote id."
       return new ValidationInternalError({ message, logger: baseLogger })
 
     case "MismatchedCurrencyForWalletError":
@@ -741,6 +758,12 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "NotReachableError":
     case "DealerPriceError":
     case "DealerPriceServiceError":
+    case "QuotesError":
+    case "QuotesServiceError":
+    case "QuotesNotAvailableError":
+    case "QuotesAlreadyAcceptedError":
+    case "QuotesExpiredError":
+    case "QuotesCouldNotParseIdError":
     case "InvalidNegativeAmountError":
     case "DomainError":
     case "ErrorLevel":
@@ -882,6 +905,7 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "UnknownCacheServiceError":
     case "UnknownPhoneProviderServiceError":
     case "UnknownDealerPriceServiceError":
+    case "UnknownQuotesServiceError":
     case "UnknownPubSubError":
     case "UnknownBigIntConversionError":
     case "UnknownDomainError":
