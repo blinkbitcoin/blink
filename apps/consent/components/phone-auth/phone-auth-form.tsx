@@ -37,7 +37,7 @@ import { GetCaptchaChallengeResponse } from "@/app/types/phone-auth.types"
 import { SupportedCountry } from "@/app/graphql/queries/get-supported-countries"
 
 interface AuthFormProps {
-  authAction: "Register" | "Login"
+  authAction: "Register" | "Log in"
   login_challenge: string
   countries: Array<SupportedCountry>
 }
