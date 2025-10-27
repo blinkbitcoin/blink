@@ -52,6 +52,7 @@ import UserEmailDeleteMutation from "@/graphql/public/root/mutation/user-email-d
 import UserEmailRegistrationInitiateMutation from "@/graphql/public/root/mutation/user-email-registration-initiate"
 import UserEmailRegistrationValidateMutation from "@/graphql/public/root/mutation/user-email-registration-validate"
 import UserLoginUpgradeMutation from "@/graphql/public/root/mutation/user-login-upgrade"
+import UserLoginUpgradeTelegramMutation from "@/graphql/public/root/mutation/user-login-upgrade-telegram"
 import UserLogoutMutation from "@/graphql/public/root/mutation/user-logout"
 import UserPhoneDeleteMutation from "@/graphql/public/root/mutation/user-phone-delete"
 import UserPhoneRegistrationInitiateMutation from "@/graphql/public/root/mutation/user-phone-registration-initiate"
@@ -88,6 +89,7 @@ export const mutationFields = {
   authed: {
     atAccountLevel: {
       userLoginUpgrade: UserLoginUpgradeMutation,
+      userLoginUpgradeTelegram: UserLoginUpgradeTelegramMutation,
       userEmailRegistrationInitiate: UserEmailRegistrationInitiateMutation,
       userEmailRegistrationValidate: UserEmailRegistrationValidateMutation,
       userEmailDelete: UserEmailDeleteMutation,

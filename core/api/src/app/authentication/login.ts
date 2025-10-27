@@ -24,6 +24,7 @@ import { getAccountsOnboardConfig, getDefaultAccountsConfig } from "@/config"
 import {
   EmailUnverifiedError,
   IdentifierNotFoundError,
+  PhoneAlreadyExistsError,
   InvalidNoncePhoneTelegramPassportError,
   InvalidNonceTelegramPassportError,
   WaitingDataTelegramPassportError,
@@ -41,13 +42,13 @@ import {
   AuthWithUsernamePasswordDeviceIdService,
   IdentityRepository,
 } from "@/services/kratos"
-import { LedgerService } from "@/services/ledger"
-import { WalletsRepository } from "@/services/mongoose"
 import {
   addAttributesToCurrentSpan,
   recordExceptionInCurrentSpan,
 } from "@/services/tracing"
 import { isPhoneCodeValid } from "@/services/phone-provider"
+import { consumeLimiter } from "@/services/rate-limit"
+import { RedisCacheService } from "@/services/cache"
 
 import { IPMetadataAuthorizer } from "@/domain/accounts-ips/ip-metadata-authorizer"
 
@@ -59,13 +60,9 @@ import {
 import { IpFetcher } from "@/services/ipfetcher"
 
 import { IpFetcherServiceError } from "@/domain/ipfetcher"
-import { PhoneAccountAlreadyExistsNeedToSweepFundsError } from "@/domain/kratos"
 import { RateLimitConfig } from "@/domain/rate-limit"
 import { RateLimiterExceededError } from "@/domain/rate-limit/errors"
 import { ErrorLevel } from "@/domain/shared"
-import { consumeLimiter } from "@/services/rate-limit"
-
-import { RedisCacheService } from "@/services/cache"
 
 const redisCache = RedisCacheService()
 
@@ -227,7 +224,6 @@ export const loginDeviceUpgradeWithPhone = async ({
   const identities = IdentityRepository()
   const userId = await identities.getUserIdFromIdentifier(phone)
 
-  // Happy Path - phone account does not exist
   if (userId instanceof IdentifierNotFoundError) {
     // a. create kratos account
     // b. and c. migrate account/user collection in mongo via kratos/registration webhook
@@ -251,26 +247,9 @@ export const loginDeviceUpgradeWithPhone = async ({
     return { success }
   }
 
-  // Complex path - Phone account already exists
-  // is there still txns left over on the device account?
-  const deviceWallets = await WalletsRepository().listByAccountId(account.id)
-  if (deviceWallets instanceof Error) return deviceWallets
-  const ledger = LedgerService()
-  let deviceAccountHasBalance = false
-  for (const wallet of deviceWallets) {
-    const balance = await ledger.getWalletBalance(wallet.id)
-    if (balance instanceof Error) return balance
-    if (balance > 0) {
-      deviceAccountHasBalance = true
-    }
-  }
-  if (deviceAccountHasBalance) return new PhoneAccountAlreadyExistsNeedToSweepFundsError()
+  if (userId instanceof Error) return userId
 
-  // no txns on device account but phone account exists, just log the user in with the phone account
-  const authService = AuthWithPhonePasswordlessService()
-  const kratosResult = await authService.loginToken({ phone })
-  if (kratosResult instanceof Error) return kratosResult
-  return { success: true, authToken: kratosResult.authToken }
+  return new PhoneAlreadyExistsError()
 }
 
 export const loginTelegramPassportNonceWithPhone = async ({
@@ -377,6 +356,84 @@ export const loginTelegramPassportNonceWithPhone = async ({
     totpRequired,
     id,
   }
+}
+
+export const loginDeviceUpgradeWithTelegramPassportNonce = async ({
+  phone,
+  nonce,
+  ip,
+  account,
+}: {
+  phone: PhoneNumber
+  nonce: TelegramPassportNonce
+  ip: IpAddress
+  account: Account
+}): Promise<LoginDeviceUpgradeWithPhoneResult | ApplicationError> => {
+  const isValidPhoneForChannel = checkedToChannel(phone, ChannelType.Telegram)
+  if (isValidPhoneForChannel instanceof Error) return isValidPhoneForChannel
+
+  {
+    const limitOk = await checkFailedLoginAttemptPerIpLimits(ip)
+    if (limitOk instanceof Error) return limitOk
+  }
+  {
+    const limitOk = await checkLoginAttemptPerLoginIdentifierLimits(phone)
+    if (limitOk instanceof Error) return limitOk
+  }
+
+  const loginKey = telegramPassportLoginKey(nonce)
+  const phoneNumberFromNonce = await redisCache.get<PhoneNumber>({ key: loginKey })
+  if (phoneNumberFromNonce instanceof Error) {
+    // if it is valid telegram has not sent data to the webhook
+    const requestKey = telegramPassportRequestKey(nonce)
+    const validRequestNonce = await redisCache.get<PhoneNumber>({ key: requestKey })
+    if (validRequestNonce instanceof Error)
+      return new InvalidNonceTelegramPassportError(nonce)
+
+    return new WaitingDataTelegramPassportError(nonce)
+  }
+
+  if (phoneNumberFromNonce !== phone) {
+    return new InvalidNoncePhoneTelegramPassportError(nonce)
+  }
+
+  // invalidate login with the same nonce
+  await redisCache.clear({ key: loginKey })
+
+  await rewardFailedLoginAttemptPerIpLimits(ip)
+
+  const identities = IdentityRepository()
+  const userId = await identities.getUserIdFromIdentifier(phone)
+
+  if (userId instanceof IdentifierNotFoundError) {
+    // user is a new user
+    // this branch exists because we currently make no difference between a registration and login
+    addAttributesToCurrentSpan({ "login.newAccount": true })
+
+    const phoneMetadata = await isAllowedToOnboard({ ip, phone })
+    if (phoneMetadata instanceof Error) return phoneMetadata
+
+    const upgraded = await AuthWithUsernamePasswordDeviceIdService().upgradeToPhoneSchema(
+      {
+        phone,
+        userId: account.kratosUserId,
+      },
+    )
+    if (upgraded instanceof Error) return upgraded
+
+    const res = await upgradeAccountFromDeviceToPhone({
+      userId: account.kratosUserId,
+      phone,
+      phoneMetadata,
+    })
+    if (res instanceof Error) return res
+
+    return { success: true }
+  }
+
+  if (userId instanceof Error) return userId
+
+  return new PhoneAlreadyExistsError()
 }
 
 export const loginWithDevice = async ({
