@@ -1,0 +1,10 @@
+mutation apiKeyRemoveWeeklyLimit($input: ApiKeyRemoveLimitInput!) {
+  apiKeyRemoveWeeklyLimit(input: $input) {
+    apiKey {
+      id
+      name
+      weeklyLimitSats
+      spentLast7DSats
+    }
+  }
+}

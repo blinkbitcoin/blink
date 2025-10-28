@@ -1,0 +1,10 @@
+mutation apiKeyRemoveDailyLimit($input: ApiKeyRemoveLimitInput!) {
+  apiKeyRemoveDailyLimit(input: $input) {
+    apiKey {
+      id
+      name
+      dailyLimitSats
+      spentLast24HSats
+    }
+  }
+}

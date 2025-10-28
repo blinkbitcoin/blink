@@ -23,6 +23,7 @@ type ApiKeyFormProps = {
 const ApiKeyForm = ({ state, formAction }: ApiKeyFormProps) => {
   const [enableCustomExpiresInDays, setEnableCustomExpiresInDays] = useState(false)
   const [expiresInDays, setExpiresInDays] = useState<number | null>(null)
+  const [showSpendingLimits, setShowSpendingLimits] = useState(false)
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -53,6 +54,11 @@ const ApiKeyForm = ({ state, formAction }: ApiKeyFormProps) => {
         )}
         {state.error && <ErrorMessage message={state.message} />}
         <ScopeCheckboxes />
+        <SpendingLimitsToggle
+          showSpendingLimits={showSpendingLimits}
+          setShowSpendingLimits={setShowSpendingLimits}
+        />
+        {showSpendingLimits && <SpendingLimitsInputs />}
         <SubmitButton />
       </form>
     </FormControl>
@@ -175,6 +181,84 @@ const ScopeCheckboxes = () => (
         value="WRITE"
         defaultChecked
       />
+    </Box>
+  </Box>
+)
+
+const SpendingLimitsToggle = ({
+  showSpendingLimits,
+  setShowSpendingLimits,
+}: {
+  showSpendingLimits: boolean
+  setShowSpendingLimits: (value: boolean) => void
+}) => (
+  <Box sx={{ display: "flex", flexDirection: "row", alignItems: "center", gap: "0.5em" }}>
+    <Checkbox
+      checked={showSpendingLimits}
+      onChange={(e) => setShowSpendingLimits(e.target.checked)}
+      label="Set budget limits"
+    />
+  </Box>
+)
+
+const SpendingLimitsInputs = () => (
+  <Box
+    sx={{
+      display: "flex",
+      flexDirection: "column",
+      gap: "1em",
+      padding: "1em",
+      border: "1px solid",
+      borderColor: "divider",
+      borderRadius: "8px",
+    }}
+  >
+    <Typography level="body-sm" sx={{ fontWeight: "bold" }}>
+      Limits (in satoshis)
+    </Typography>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: "0.2em" }}>
+      <Typography level="body-sm">Daily Limit</Typography>
+      <Input
+        name="dailyLimitSats"
+        id="dailyLimitSats"
+        type="number"
+        placeholder="e.g., 100000"
+        sx={{ padding: "0.6em", width: "100%" }}
+      />
+      <FormHelperText>Rolling 24-hour window</FormHelperText>
+    </Box>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: "0.2em" }}>
+      <Typography level="body-sm">Weekly Limit</Typography>
+      <Input
+        name="weeklyLimitSats"
+        id="weeklyLimitSats"
+        type="number"
+        placeholder="e.g., 500000"
+        sx={{ padding: "0.6em", width: "100%" }}
+      />
+      <FormHelperText>Rolling 7-day window</FormHelperText>
+    </Box>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: "0.2em" }}>
+      <Typography level="body-sm">Monthly Limit</Typography>
+      <Input
+        name="monthlyLimitSats"
+        id="monthlyLimitSats"
+        type="number"
+        placeholder="e.g., 2000000"
+        sx={{ padding: "0.6em", width: "100%" }}
+      />
+      <FormHelperText>Rolling 30-day window</FormHelperText>
+    </Box>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: "0.2em" }}>
+      <Typography level="body-sm">Annual Limit</Typography>
+      <Input
+        name="annualLimitSats"
+        id="annualLimitSats"
+        type="number"
+        placeholder="e.g., 20000000"
+        sx={{ padding: "0.6em", width: "100%" }}
+      />
+      <FormHelperText>Rolling 365-day window</FormHelperText>
     </Box>
   </Box>
 )
