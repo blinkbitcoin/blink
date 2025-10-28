@@ -9,7 +9,7 @@ import { WalletPriceRatio } from "./price-ratio"
 
 import { OnChainPaymentFlow } from "./payment-flow"
 
-import { getFeesConfig } from "@/config"
+import { getFeesConfig, getBriaPartialConfigFromYaml } from "@/config"
 import {
   AmountCalculator,
   ONE_CENT,
@@ -19,8 +19,14 @@ import {
   ZERO_BANK_FEE,
 } from "@/domain/shared"
 import { LessThanDustThresholdError, SelfPaymentError } from "@/domain/errors"
-import { OnChainFees, PaymentInitiationMethod, SettlementMethod } from "@/domain/wallets"
 import { ImbalanceCalculator } from "@/domain/ledger/imbalance-calculator"
+import {
+  OnChainExpDecayFees,
+  OnChainFees,
+  PaymentInitiationMethod,
+  SettlementMethod,
+  WithdrawalFeePriceMethod,
+} from "@/domain/wallets"
 
 const calc = AmountCalculator()
 const feeConfig = getFeesConfig()
@@ -30,6 +36,11 @@ const onChainFees = OnChainFees({
     amount: BigInt(feeConfig.withdrawThreshold),
     currency: WalletCurrency.Btc,
   },
+})
+const payoutQueueConfig = getBriaPartialConfigFromYaml()
+const onChainExpDecayFees = OnChainExpDecayFees({
+  exponentialDecayConfig: feeConfig.exponentialDecayMethod,
+  payoutQueueConfig: payoutQueueConfig.payoutQueues,
 })
 
 export const OnChainPaymentFlowBuilder = <S extends WalletCurrency>(
@@ -429,9 +440,13 @@ const OPFBWithConversion = <S extends WalletCurrency, R extends WalletCurrency>(
     })
   }
 
-  const withMinerFee = async (
-    minerFee: BtcPaymentAmount,
-  ): Promise<OnChainPaymentFlow<S, R> | ValidationError | DealerPriceServiceError> => {
+  const withMinerFee = async ({
+    minerFee,
+    feeRate,
+    speed,
+  }: WithMinerFeeArgs): Promise<
+    OnChainPaymentFlow<S, R> | ValidationError | DealerPriceServiceError
+  > => {
     const state = await stateFromPromise(statePromise)
     if (state instanceof Error) return state
 
@@ -465,12 +480,20 @@ const OPFBWithConversion = <S extends WalletCurrency, R extends WalletCurrency>(
         ? (imbalanceForWallet as BtcPaymentAmount)
         : priceRatio.convertFromUsd(imbalanceForWallet as UsdPaymentAmount)
 
-    const feeAmounts = onChainFees.withdrawalFee({
-      minerFee,
-      amount: state.btcProposedAmount,
-      minBankFee,
-      imbalance,
-    })
+    const feeAmounts =
+      feeConfig.withdrawMethod === WithdrawalFeePriceMethod.exponentialDecay
+        ? onChainExpDecayFees.expDecayFee({
+            amount: state.btcProposedAmount,
+            minerFee,
+            feeRate,
+            speed,
+          })
+        : onChainFees.withdrawalFee({
+            amount: state.btcProposedAmount,
+            minerFee,
+            minBankFee,
+            imbalance,
+          })
 
     // Calculate amounts & fees
     const btcProtocolAndBankFee = feeAmounts.totalFee

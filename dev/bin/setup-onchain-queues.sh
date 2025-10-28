@@ -13,7 +13,7 @@ if [[ -n "$EXISTING_QUEUE" ]]; then
   echo "Queue '$QUEUE_NAME' already exists."
 else
   echo "Creating queue '$QUEUE_NAME'..."
-  bria_cli create-payout-queue -n "$QUEUE_NAME" --interval-trigger "$INTERVAL"
+  bria_cli create-payout-queue -n "$QUEUE_NAME" --interval-trigger "$INTERVAL" --tx-priority half-hour
 fi
 
 # Create dev-slow-queue if not exist
@@ -25,7 +25,7 @@ if [[ -n "$EXISTING_QUEUE" ]]; then
   echo "Queue '$QUEUE_NAME' already exists."
 else
   echo "Creating queue '$QUEUE_NAME'..."
-  bria_cli create-payout-queue -n "$QUEUE_NAME" --interval-trigger "$INTERVAL"
+  bria_cli create-payout-queue -n "$QUEUE_NAME" --interval-trigger "$INTERVAL" --tx-priority one-hour
 fi
 
 # Validations
