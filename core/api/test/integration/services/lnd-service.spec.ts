@@ -530,8 +530,8 @@ describe("Lnd", () => {
       )
 
       expect(err).toHaveLength(3)
-      expect(err[0]).toEqual(500)
-      expect(err[1]).toBe("UnexpectedPayViaRoutesFailure")
+      expect(err[0]).toEqual(503)
+      expect(err[1]).toBe("UnexpectedErrorWhenPayingViaRoute")
 
       const nestedFailureErr = err[2].failures[0]
       expect(nestedFailureErr).toHaveLength(3)
@@ -543,10 +543,10 @@ describe("Lnd", () => {
       expect(nestedFailureErr[1]).toBe(err[1])
 
       // @ts-ignore-next-line no-implicit-any error
-      expect(nestedFailureErr[2]).toHaveProperty("channel", channel)
+      expect(nestedFailureErr[2]).toHaveProperty("err")
 
       const parsedErr = parseLndErrorDetails(err)
-      expect(parsedErr).toBe("UnexpectedPayViaRoutesFailure")
+      expect(parsedErr).toBe("invalid public key: unsupported format: 0")
     })
   })
 })
