@@ -2,12 +2,9 @@
 
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-HELPERS_DIR="${SCRIPT_DIR}/../helpers"
-
 # Source helper scripts
-source "${HELPERS_DIR}/auth.sh"
-source "${HELPERS_DIR}/gql.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/helpers.sh"
 
 # Configuration
 DEALER_PHONE="${DEALER_PHONE:-+16505554327}"
