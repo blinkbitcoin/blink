@@ -20,12 +20,10 @@ echo ""
 
 # Step 1: Login with dealer phone using auth helper
 echo "📞 Logging in with dealer phone..."
-auth_token=$(login_user "${DEALER_PHONE}")
+TOKEN_NAME="dealer"
 
-if [ -z "$auth_token" ] || [ "$auth_token" == "null" ]; then
-  echo "❌ Failed to login with phone ${DEALER_PHONE}"
-  exit 1
-fi
+# Use login_user helper function
+login_user "${TOKEN_NAME}" "${DEALER_PHONE}" "000000"
 
 echo "✅ Successfully logged in"
 echo ""
@@ -33,13 +31,23 @@ echo ""
 # Step 2: Create API key via GraphQL using gql helper
 echo "🔑 Creating API key via GraphQL..."
 variables="{\"input\": {\"name\": \"${API_KEY_NAME}\", \"expireInDays\": ${API_KEY_EXPIRE_DAYS}, \"scopes\": [\"READ\", \"WRITE\", \"RECEIVE\"]}}"
-api_key_response=$(exec_graphql "${auth_token}" 'api-key-create' "${variables}")
+
+# Call exec_graphql and capture the result in $output
+exec_graphql "${TOKEN_NAME}" 'api-key-create' "${variables}"
+
+# Debug: show the full response
+echo "Full GraphQL Response:"
+echo "$output" | jq '.' 2>/dev/null || echo "$output"
+echo ""
+
+# Parse the response which is now in $output
+api_key_response="$output"
 
 # Check for errors
-errors=$(echo "$api_key_response" | jq -r '.errors // empty')
-if [ -n "$errors" ] && [ "$errors" != "null" ]; then
+errors=$(echo "$api_key_response" | jq -r '.errors // empty' 2>/dev/null)
+if [ -n "$errors" ] && [ "$errors" != "null" ] && [ "$errors" != "" ]; then
   echo "❌ GraphQL Error:"
-  echo "$api_key_response" | jq '.errors'
+  echo "$api_key_response" | jq '.errors' 2>/dev/null || echo "$errors"
   exit 1
 fi
 
