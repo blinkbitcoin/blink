@@ -52,15 +52,13 @@ const setGqlAdminContext = async (
 ): Promise<void> => {
   const logger = baseLogger
   const tokenPayload = req.token
-  const userEmail = tokenPayload.sub as string // This should be the email from OAuth
   const scopeString = (tokenPayload.scope as string) || ""
   const scope = scopeString.split(" ").filter((s) => s.trim() !== "")
-  const privilegedClientId = tokenPayload.sub as PrivilegedClientId
+  const privilegedClientId = tokenPayload.sub as PrivilegedClientId // defacto email from OAuth
 
   req.gqlContext = {
     loaders,
     privilegedClientId,
-    userEmail, // Add email to context
     scope,
     logger,
   }
