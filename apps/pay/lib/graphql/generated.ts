@@ -23,6 +23,12 @@ export type Scalars = {
   CentAmount: { input: number; output: number; }
   /** An alias name that a user can set for a wallet (with which they have transactions) */
   ContactAlias: { input: string; output: string; }
+  /** A display name that a user can assign to a contact */
+  ContactDisplayName: { input: string; output: string; }
+  /** Unique handle used to identify a contact (e.g., username or lnAddress) */
+  ContactHandle: { input: string; output: string; }
+  /** Unique identifier of a contact */
+  ContactId: { input: string; output: string; }
   /** A CCA2 country code (ex US, FR, etc) */
   CountryCode: { input: string; output: string; }
   /** Display currency of an account */
@@ -66,6 +72,8 @@ export type Scalars = {
   SignedAmount: { input: number; output: number; }
   /** A string amount (of a currency) that can be negative (e.g. in a transaction) */
   SignedDisplayMajorAmount: { input: string; output: string; }
+  /** Nonce provided by Telegram Passport to validate the login/upgrade flow */
+  TelegramPassportNonce: { input: string; output: string; }
   /** Timestamp field, serialized as Unix time (the number of seconds since the Unix epoch) */
   Timestamp: { input: number; output: number; }
   /** A time-based one-time password */
@@ -419,6 +427,40 @@ export type ConsumerAccountWalletByIdArgs = {
   walletId: Scalars['WalletId']['input'];
 };
 
+export type Contact = {
+  readonly __typename: 'Contact';
+  /** Unix timestamp (number of seconds elapsed since January 1, 1970 00:00:00 UTC) */
+  readonly createdAt: Scalars['Timestamp']['output'];
+  /** DisplayName name the user assigns to the contact. */
+  readonly displayName?: Maybe<Scalars['ContactDisplayName']['output']>;
+  /** Username or lnAddress that identifies the contact. */
+  readonly handle: Scalars['ContactHandle']['output'];
+  /** ID of the contact user or external handle. */
+  readonly id: Scalars['ContactId']['output'];
+  /** Total number of transactions with this contact. */
+  readonly transactionsCount: Scalars['Int']['output'];
+  /** Type of the contact (intraledger, lnaddress, etc.). */
+  readonly type: ContactType;
+};
+
+export type ContactCreateInput = {
+  readonly displayName?: InputMaybe<Scalars['ContactAlias']['input']>;
+  readonly handle?: InputMaybe<Scalars['ContactHandle']['input']>;
+  readonly type: ContactType;
+};
+
+export type ContactPayload = {
+  readonly __typename: 'ContactPayload';
+  readonly contact?: Maybe<Contact>;
+  readonly errors: ReadonlyArray<Error>;
+};
+
+export const ContactType = {
+  Intraledger: 'INTRALEDGER',
+  Lnaddress: 'LNADDRESS'
+} as const;
+
+export type ContactType = typeof ContactType[keyof typeof ContactType];
 export type Coordinates = {
   readonly __typename: 'Coordinates';
   readonly latitude: Scalars['Float']['output'];
@@ -901,6 +943,7 @@ export type Mutation = {
   readonly callbackEndpointDelete: SuccessPayload;
   readonly captchaCreateChallenge: CaptchaCreateChallengePayload;
   readonly captchaRequestAuthCode: SuccessPayload;
+  readonly contactCreate: ContactPayload;
   readonly deviceNotificationTokenCreate: SuccessPayload;
   readonly feedbackSubmit: SuccessPayload;
   /**
@@ -1005,6 +1048,7 @@ export type Mutation = {
   readonly userEmailRegistrationValidate: UserEmailRegistrationValidatePayload;
   readonly userLogin: AuthTokenPayload;
   readonly userLoginUpgrade: UpgradePayload;
+  readonly userLoginUpgradeTelegram: UpgradePayload;
   readonly userLogout: SuccessPayload;
   readonly userPhoneDelete: UserPhoneDeletePayload;
   readonly userPhoneRegistrationInitiate: SuccessPayload;
@@ -1060,6 +1104,11 @@ export type MutationCallbackEndpointDeleteArgs = {
 
 export type MutationCaptchaRequestAuthCodeArgs = {
   input: CaptchaRequestAuthCodeInput;
+};
+
+
+export type MutationContactCreateArgs = {
+  input: ContactCreateInput;
 };
 
 
@@ -1235,6 +1284,11 @@ export type MutationUserLoginArgs = {
 
 export type MutationUserLoginUpgradeArgs = {
   input: UserLoginUpgradeInput;
+};
+
+
+export type MutationUserLoginUpgradeTelegramArgs = {
+  input: UserLoginUpgradeTelegramInput;
 };
 
 
@@ -1963,11 +2017,16 @@ export type UserContact = {
    * Only the user can see the alias attached to their contact.
    */
   readonly alias?: Maybe<Scalars['ContactAlias']['output']>;
-  readonly id: Scalars['Username']['output'];
+  /** Identifier of the contact (username or Lightning address). */
+  readonly handle: Scalars['ContactHandle']['output'];
+  readonly id: Scalars['ContactHandle']['output'];
   /** Paginated list of transactions sent to/from this contact. */
   readonly transactions?: Maybe<TransactionConnection>;
   readonly transactionsCount: Scalars['Int']['output'];
-  /** Actual identifier of the contact. */
+  /**
+   * Actual identifier of the contact. Deprecated: use `handle` instead.
+   * @deprecated Use `handle` field; this will be removed in a future release.
+   */
   readonly username: Scalars['Username']['output'];
 };
 
@@ -2025,6 +2084,11 @@ export type UserLoginInput = {
 
 export type UserLoginUpgradeInput = {
   readonly code: Scalars['OneTimeAuthCode']['input'];
+  readonly phone: Scalars['Phone']['input'];
+};
+
+export type UserLoginUpgradeTelegramInput = {
+  readonly nonce: Scalars['TelegramPassportNonce']['input'];
   readonly phone: Scalars['Phone']['input'];
 };
 
