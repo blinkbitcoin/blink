@@ -37,7 +37,7 @@ import { GetCaptchaChallengeResponse } from "@/app/types/phone-auth.types"
 import { SupportedCountry } from "@/app/graphql/queries/get-supported-countries"
 
 interface AuthFormProps {
-  authAction: "Register" | "Login"
+  authAction: "Register" | "Log in"
   login_challenge: string
   countries: Array<SupportedCountry>
 }
@@ -130,7 +130,7 @@ const PhoneAuthForm: React.FC<AuthFormProps> = ({
           data-testid="phone_number_input"
           value={phoneNumber}
           required
-          placeholder="Phone Number"
+          placeholder="Phone number"
           id="phone"
           name="phone"
           onChange={handlePhoneNumberChange}
