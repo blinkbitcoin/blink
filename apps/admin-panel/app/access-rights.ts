@@ -118,7 +118,7 @@ export function hasAccessRightInScope(
   return scope
     .split(" ")
     .filter((s) => s.trim() !== "")
-    .includes(accessRight)
+    .some((s) => s.toUpperCase() === accessRight.toUpperCase())
 }
 
 /**
