@@ -12,8 +12,7 @@ export const ALL_INTERFACE_TYPES = [GraphQLApplicationError, BtcWallet, UsdWalle
  * Used to define both the field behavior and authorization requirements in one place.
  */
 export type AdminFieldDefinition = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  field: GraphQLFieldConfig<any, any, any>
+  field: GraphQLFieldConfig<unknown, unknown, unknown>
   rule: Rule
 }
 
