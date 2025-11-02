@@ -4,6 +4,7 @@
 #@ galoy_trigger_image_digest = "sha256@ec70d6539beef7e348d68095f79067c7cbfdcd8627ff281e9c54cb2d170686f4"
 #@ mongodb_migrate_image_digest = "sha256@60a09f5b8120e60fe9b77897476aeb1f2495a45340fdb0733eb32562a8181b80"
 #@ galoy_notifications_image_digest = "sha256@511bd15563b22e3943e1581b51dc4dab615d02141ea7ca846eb067611b04a5cf"
+#@ galoy_api_keys_image_digest = "sha256@4b0b7bee8441dfaf623a1693dd60e24669db0b9e37baa30ecd8925cbe6590a1e"
 
 #@ core_env = [
 #@   "HELMREVISION=dev",
@@ -68,6 +69,7 @@ services:
       - stablesats
       - svix
       - hydra
+      - api-keys
     restart: on-failure:10
 
   #! Proxies
@@ -148,6 +150,34 @@ services:
     depends_on:
     - notifications-pg
   notifications-pg: #@ data.values.services["notifications-pg"]
+
+  api-keys:
+#@ if galoy_api_keys_image_digest == "local":
+    build:
+      context: ..
+      dockerfile: core/api-keys/Dockerfile
+#@ elif galoy_api_keys_image_digest.startswith("sha256@"):
+    image: #@ "us.gcr.io/galoy-org/galoy-api-keys@" + galoy_api_keys_image_digest.replace("@",":")
+#@ else:
+    image: #@ "us.gcr.io/galoy-org/galoy-api-keys:" + galoy_api_keys_image_digest
+#@ end
+    environment:
+    - PG_CON=postgres://user:password@api-keys-pg:5432/pg
+    - API_KEYS_CONFIG=/config/api-keys/api-keys.yml
+    ports:
+    - 5397:5397
+    volumes:
+    - ${HOST_PROJECT_PATH:-.}/config/api-keys/api-keys.yml:/config/api-keys/api-keys.yml
+    depends_on:
+    - api-keys-pg
+    - otel-agent
+    - kratos
+    - oathkeeper
+    networks:
+      default:
+        aliases:
+        - bats-tests
+  api-keys-pg:  #@ data.values.services["api-keys-pg"]
 
   #! Database
   redis: #@ data.values.services["redis"]

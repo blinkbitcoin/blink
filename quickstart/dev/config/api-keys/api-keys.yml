@@ -1,0 +1,15 @@
+db:
+  pool_size: 20
+
+server:
+  port: 5397
+  jwks_url: http://oathkeeper:4456/.well-known/jwks.json
+  api_key_auth_header: X-API-KEY
+
+app:
+  key_prefix: galoy_dev
+  default_expiry_days: 365
+
+tracing:
+  service_name: galoy-api-keys
+  otel_exporter_otlp_endpoint: http://otel-agent:4318
