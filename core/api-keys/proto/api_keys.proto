@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package services.api_keys.v1;
+
+service ApiKeysService {
+  rpc CheckSpendingLimit (CheckSpendingLimitRequest) returns (CheckSpendingLimitResponse) {}
+  rpc GetSpendingSummary (GetSpendingSummaryRequest) returns (GetSpendingSummaryResponse) {}
+  rpc RecordSpending (RecordSpendingRequest) returns (RecordSpendingResponse) {}
+}
+
+message CheckSpendingLimitRequest {
+  string api_key_id = 1;
+  int64 amount_sats = 2;
+}
+
+message CheckSpendingLimitResponse {
+  bool allowed = 1;
+  optional int64 daily_limit_sats = 2;
+  optional int64 weekly_limit_sats = 3;
+  optional int64 monthly_limit_sats = 4;
+  optional int64 annual_limit_sats = 5;
+  int64 spent_last_24h_sats = 6;
+  int64 spent_last_7d_sats = 7;
+  int64 spent_last_30d_sats = 8;
+  int64 spent_last_365d_sats = 9;
+  optional int64 remaining_daily_sats = 10;
+  optional int64 remaining_weekly_sats = 11;
+  optional int64 remaining_monthly_sats = 12;
+  optional int64 remaining_annual_sats = 13;
+}
+
+message GetSpendingSummaryRequest {
+  string api_key_id = 1;
+}
+
+message GetSpendingSummaryResponse {
+  optional int64 daily_limit_sats = 1;
+  optional int64 weekly_limit_sats = 2;
+  optional int64 monthly_limit_sats = 3;
+  optional int64 annual_limit_sats = 4;
+  int64 spent_last_24h_sats = 5;
+  int64 spent_last_7d_sats = 6;
+  int64 spent_last_30d_sats = 7;
+  int64 spent_last_365d_sats = 8;
+  optional int64 remaining_daily_sats = 9;
+  optional int64 remaining_weekly_sats = 10;
+  optional int64 remaining_monthly_sats = 11;
+  optional int64 remaining_annual_sats = 12;
+}
+
+message RecordSpendingRequest {
+  string api_key_id = 1;
+  int64 amount_sats = 2;
+  optional string transaction_id = 3;
+}
+
+message RecordSpendingResponse {
+}

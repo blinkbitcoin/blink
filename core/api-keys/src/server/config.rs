@@ -8,8 +8,6 @@ pub struct ServerConfig {
     pub api_key_auth_header: String,
     #[serde(default = "default_jwks_url")]
     pub jwks_url: String,
-    #[serde(default = "default_internal_auth_secret")]
-    pub internal_auth_secret: String,
 }
 
 impl Default for ServerConfig {
@@ -18,7 +16,6 @@ impl Default for ServerConfig {
             port: default_port(),
             api_key_auth_header: default_api_key_auth_header(),
             jwks_url: default_jwks_url(),
-            internal_auth_secret: default_internal_auth_secret(),
         }
     }
 }
@@ -33,8 +30,4 @@ fn default_api_key_auth_header() -> String {
 
 fn default_jwks_url() -> String {
     "http://localhost:4456/.well-known/jwks.json".to_string()
-}
-
-fn default_internal_auth_secret() -> String {
-    "dev-only-insecure-secret".to_string()
 }

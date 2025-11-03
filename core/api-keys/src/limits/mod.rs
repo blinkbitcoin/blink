@@ -395,22 +395,6 @@ impl Limits {
         Ok(())
     }
 
-    /// Cleanup old transaction records (delete transactions older than specified hours)
-    #[tracing::instrument(name = "limits.cleanup_old_transactions", skip(self))]
-    pub async fn cleanup_old_transactions(&self, hours_to_keep: i32) -> Result<u64, LimitError> {
-        let result = sqlx::query(
-            r#"
-            DELETE FROM api_key_transactions
-            WHERE created_at < NOW() - ($1 || ' hours')::INTERVAL
-            "#,
-        )
-        .bind(hours_to_keep)
-        .execute(&self.pool)
-        .await?;
-
-        Ok(result.rows_affected())
-    }
-
     // Private helper methods
 
     /// Get all configured limits for an API key

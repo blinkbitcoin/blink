@@ -5,7 +5,7 @@ use tracing::TracingConfig;
 use std::path::Path;
 
 use super::db::*;
-use crate::{app::AppConfig, server::ServerConfig};
+use crate::{app::AppConfig, grpc::GrpcServerConfig, server::ServerConfig};
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 pub struct Config {
@@ -13,6 +13,8 @@ pub struct Config {
     pub db: DbConfig,
     #[serde(default)]
     pub server: ServerConfig,
+    #[serde(default)]
+    pub grpc_server: GrpcServerConfig,
     #[serde(default)]
     pub app: AppConfig,
     #[serde(default = "default_tracing_config")]
