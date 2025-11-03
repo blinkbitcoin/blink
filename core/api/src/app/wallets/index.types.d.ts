@@ -151,6 +151,7 @@ type LnAddressPaymentSendArgs = {
   senderAccount: Account
   lnAddress: string
   amount: number
+  apiKeyId?: string
 }
 
 type LnurlPaymentSendArgs = {
@@ -158,6 +159,7 @@ type LnurlPaymentSendArgs = {
   senderAccount: Account
   lnurl: string
   amount: number
+  apiKeyId?: string
 }
 
 type GetDepositFeeConfigurationResult = {

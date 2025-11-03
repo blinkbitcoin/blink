@@ -8,6 +8,7 @@ export const lnAddressPaymentSend = async ({
   senderAccount,
   amount: uncheckedAmount,
   lnAddress,
+  apiKeyId,
 }: LnAddressPaymentSendArgs): Promise<PaymentSendResult | ApplicationError> => {
   const amount = checkedToBtcPaymentAmount(uncheckedAmount)
 
@@ -29,6 +30,7 @@ export const lnAddressPaymentSend = async ({
     memo: null,
     senderWalletId,
     senderAccount,
+    apiKeyId,
   })
 }
 
@@ -37,6 +39,7 @@ export const lnurlPaymentSend = async ({
   senderAccount,
   amount: uncheckedAmount,
   lnurl,
+  apiKeyId,
 }: LnurlPaymentSendArgs): Promise<PaymentSendResult | ApplicationError> => {
   const amount = checkedToBtcPaymentAmount(uncheckedAmount)
 
@@ -58,5 +61,6 @@ export const lnurlPaymentSend = async ({
     memo: null,
     senderWalletId,
     senderAccount,
+    apiKeyId,
   })
 }

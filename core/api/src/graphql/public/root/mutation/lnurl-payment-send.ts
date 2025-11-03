@@ -43,7 +43,7 @@ const LnurlPaymentSendMutation = GT.Field<
   args: {
     input: { type: GT.NonNull(LnurlPaymentSendInput) },
   },
-  resolve: async (_, args, { domainAccount }) => {
+  resolve: async (_, args, { domainAccount, apiKeyId }) => {
     const { walletId, amount, lnurl } = args.input
     if (lnurl instanceof Error) {
       return { errors: [{ message: lnurl.message }] }
@@ -62,6 +62,7 @@ const LnurlPaymentSendMutation = GT.Field<
       amount,
       senderWalletId: walletId,
       senderAccount: domainAccount,
+      apiKeyId,
     })
 
     if (result instanceof Error) {
