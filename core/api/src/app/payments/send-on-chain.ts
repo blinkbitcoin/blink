@@ -52,14 +52,12 @@ import {
 } from "@/services/mongoose"
 import { NotificationsService } from "@/services/notifications"
 import { addAttributesToCurrentSpan } from "@/services/tracing"
-import {
-  checkApiKeySpendingLimit,
-  recordApiKeySpending,
-} from "@/services/api-keys/client"
-import { ApiKeyLimitExceededError } from "@/domain/api-keys"
+import { ApiKeysService } from "@/services/api-keys"
+import { validateSpendingLimit } from "@/domain/api-keys"
 
 const { dustThreshold } = getOnChainWalletConfig()
 const dealer = DealerPriceService()
+const apiKeys = ApiKeysService()
 
 const payOnChainByWalletId = async ({
   senderAccount,
@@ -302,18 +300,15 @@ const executePaymentViaIntraledger = async <
   // Check API key spending limit if authenticated via API key
   if (apiKeyId) {
     const amountSats = Number(paymentFlow.btcPaymentAmount.amount)
-    const apiKeyLimitCheck = await checkApiKeySpendingLimit({
+    const limits = await apiKeys.getSpendingLimits({
       apiKeyId,
       amountSats,
     })
-    if (apiKeyLimitCheck instanceof Error) return apiKeyLimitCheck
-    if (!apiKeyLimitCheck.allowed) {
-      return new ApiKeyLimitExceededError({
-        daily: apiKeyLimitCheck.remaining_daily_sats ?? null,
-        weekly: apiKeyLimitCheck.remaining_weekly_sats ?? null,
-        monthly: apiKeyLimitCheck.remaining_monthly_sats ?? null,
-        annual: apiKeyLimitCheck.remaining_annual_sats ?? null,
-      })
+    if (limits instanceof Error) return limits
+
+    const validation = validateSpendingLimit(amountSats, limits)
+    if (!validation.allowed) {
+      return validation.error
     }
   }
 
@@ -388,7 +383,7 @@ const executePaymentViaIntraledger = async <
   // Record API key spending after successful payment
   if (apiKeyId) {
     const amountSats = Number(paymentFlow.btcPaymentAmount.amount)
-    const recordResult = await recordApiKeySpending({
+    const recordResult = await apiKeys.recordSpending({
       apiKeyId,
       amountSats,
       transactionId: journalId,
@@ -585,18 +580,15 @@ const executePaymentViaOnChain = async <
   // Check API key spending limit if authenticated via API key
   if (apiKeyId) {
     const amountSats = Number(proposedAmounts.btc.amount)
-    const apiKeyLimitCheck = await checkApiKeySpendingLimit({
+    const limits = await apiKeys.getSpendingLimits({
       apiKeyId,
       amountSats,
     })
-    if (apiKeyLimitCheck instanceof Error) return apiKeyLimitCheck
-    if (!apiKeyLimitCheck.allowed) {
-      return new ApiKeyLimitExceededError({
-        daily: apiKeyLimitCheck.remaining_daily_sats ?? null,
-        weekly: apiKeyLimitCheck.remaining_weekly_sats ?? null,
-        monthly: apiKeyLimitCheck.remaining_monthly_sats ?? null,
-        annual: apiKeyLimitCheck.remaining_annual_sats ?? null,
-      })
+    if (limits instanceof Error) return limits
+
+    const validation = validateSpendingLimit(amountSats, limits)
+    if (!validation.allowed) {
+      return validation.error
     }
   }
 
@@ -636,7 +628,7 @@ const executePaymentViaOnChain = async <
     const paymentFlow = await builder.proposedAmounts()
     if (!(paymentFlow instanceof Error)) {
       const amountSats = Number(paymentFlow.btc.amount)
-      const recordResult = await recordApiKeySpending({
+      const recordResult = await apiKeys.recordSpending({
         apiKeyId,
         amountSats,
         transactionId: journalId,
