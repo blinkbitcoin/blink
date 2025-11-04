@@ -52,3 +52,9 @@ type AccountsOnboardPhoneMetadataConfig = PhoneMetadataValidationSettings & {
 type AccountsOnboardIpMetadataConfig = IpMetadataValidationSettings & {
   enabled: boolean
 }
+
+type PreferredFirstHopConfig = {
+  enabled: boolean
+  outgoingChannels: ChanId[]
+  fallbackOnError: boolean
+}

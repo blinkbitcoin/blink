@@ -113,6 +113,15 @@ export const getValuesToSkipProbe = (): SkipFeeProbeConfig => {
   }
 }
 
+export const getPreferredFirstHopConfig = (): PreferredFirstHopConfig => {
+  return {
+    enabled: yamlConfig.preferredFirstHopConfig.enabled,
+    outgoingChannels: (yamlConfig.preferredFirstHopConfig.outgoingChannels ||
+      []) as ChanId[],
+    fallbackOnError: yamlConfig.preferredFirstHopConfig.fallbackOnError,
+  }
+}
+
 export const getDisplayCurrencyConfig = (): {
   code: DisplayCurrency
   symbol: string

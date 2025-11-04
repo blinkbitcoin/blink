@@ -9,6 +9,7 @@ export {
   INVOICE_EXPIRATIONS,
 } from "./invoice-expiration"
 export * from "./errors"
+export { shouldRetryWithoutFirstHop } from "./first-hop-fallback"
 
 export const PaymentStatus = {
   Settled: "settled",
