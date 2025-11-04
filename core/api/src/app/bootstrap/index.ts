@@ -55,12 +55,6 @@ export const bootstrap = async () => {
       const kratosUserIdResult = await createKratosIdentityByPhone(phone)
       if (kratosUserIdResult instanceof Error) return kratosUserIdResult
       kratosUserId = kratosUserIdResult
-
-      const res = await UsersRepository().update({
-        id: kratosUserId,
-        phone,
-      })
-      if (res instanceof Error) return res
     } else {
       if (user instanceof Error) return user
 
