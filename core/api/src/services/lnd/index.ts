@@ -457,7 +457,7 @@ export const LndService = (): ILightningService | LightningServiceError => {
         mTokens = decodedInvoice.milliSatsAmount.toString()
       }
 
-      const probeForRouteArgs: ProbeForRouteArgs = {
+      const probeForRouteArgs = {
         lnd: defaultLnd,
         destination: decodedInvoice.destination,
         mtokens: mTokens,
@@ -473,8 +473,10 @@ export const LndService = (): ILightningService | LightningServiceError => {
         max_fee: maxFee,
         payment: decodedInvoice.paymentSecret || undefined,
         total_mtokens: decodedInvoice.paymentSecret ? mTokens : undefined,
-        outgoing_channel: outgoingChannel || undefined,
-      }
+        // Use outgoing_channels (plural) instead of deprecated outgoing_channel (singular)
+        // TypeScript types not yet updated, but ln-service supports it
+        outgoing_channels: outgoingChannel ? [outgoingChannel] : undefined,
+      } as ProbeForRouteArgs
       const routePromise = lnService.probeForRoute(probeForRouteArgs)
       const [timeoutPromise, cancelTimeoutFn] = timeoutWithCancel(
         TIMEOUT_PAYMENT,
@@ -851,7 +853,7 @@ export const LndService = (): ILightningService | LightningServiceError => {
       )
     }
 
-    const paymentDetailsArgs: PayViaPaymentDetailsArgs = {
+    const paymentDetailsArgs = {
       lnd,
       id: decodedInvoice.paymentHash,
       destination: decodedInvoice.destination,
@@ -867,8 +869,10 @@ export const LndService = (): ILightningService | LightningServiceError => {
           }))
         : undefined,
       routes,
-      outgoing_channel: outgoingChannel || undefined,
-    }
+      // Use outgoing_channels (plural) instead of deprecated outgoing_channel (singular)
+      // TypeScript types not yet updated, but ln-service supports it
+      outgoing_channels: outgoingChannel ? [outgoingChannel] : undefined,
+    } as PayViaPaymentDetailsArgs
 
     let cancelTimeout = () => {
       return
