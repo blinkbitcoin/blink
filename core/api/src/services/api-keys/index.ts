@@ -7,7 +7,7 @@ import * as apiKeysGrpc from "./grpc-client"
 import { handleCommonApiKeysErrors } from "./errors"
 
 import { baseLogger } from "@/services/logger"
-import { ApiKeySpendingRecordError, SpendingLimits } from "@/domain/api-keys"
+import { SpendingLimits } from "@/domain/api-keys"
 
 export const ApiKeysService = (): IApiKeysService => {
   const getSpendingLimits = async ({
@@ -62,11 +62,7 @@ export const ApiKeysService = (): IApiKeysService => {
         { err, apiKeyId, amountSats, transactionId },
         "Failed to record API key spending",
       )
-      // For recording, we want to return the original error type for backward compatibility
-      // but still log the parsed error
-      const parsedError = handleCommonApiKeysErrors(err)
-      baseLogger.error({ parsedError }, "Parsed error details")
-      return new ApiKeySpendingRecordError("Failed to record API key spending")
+      return handleCommonApiKeysErrors(err)
     }
   }
 

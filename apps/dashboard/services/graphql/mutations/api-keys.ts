@@ -258,9 +258,6 @@ export async function setApiKeyDailyLimit({
   }
 }
 
-// Keep old name for backward compatibility
-export const setApiKeyLimit = setApiKeyDailyLimit
-
 export async function setApiKeyWeeklyLimit({
   id,
   weeklyLimitSats,

@@ -204,9 +204,6 @@ export const setDailyLimit = async ({
   revalidatePath("/api-keys")
 }
 
-// Keep old name for backward compatibility
-export const setLimit = setDailyLimit
-
 export const setWeeklyLimit = async ({
   id,
   weeklyLimitSats,

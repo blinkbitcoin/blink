@@ -42,7 +42,6 @@ impl ApiKeysService for ApiKeys {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        // Calculate remaining for each time period
         let remaining_daily_sats = result
             .daily_limit_sats
             .map(|limit| limit - result.spent_last_24h_sats);
@@ -92,7 +91,6 @@ impl ApiKeysService for ApiKeys {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        // Calculate remaining for each time period
         let remaining_daily_sats = summary
             .daily_limit_sats
             .map(|limit| limit - summary.spent_last_24h_sats);

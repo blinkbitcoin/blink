@@ -68,7 +68,6 @@ pub(super) struct ApiKey {
 
 #[ComplexObject]
 impl ApiKey {
-    /// Daily spending limit in satoshis (rolling 24h window). Returns null if no limit is set.
     async fn daily_limit_sats(&self, ctx: &Context<'_>) -> Result<Option<i64>> {
         let app = ctx.data_unchecked::<ApiKeysApp>();
         let limits = Limits::new(app.pool());
@@ -78,7 +77,6 @@ impl ApiKey {
         Ok(summary.daily_limit_sats)
     }
 
-    /// Weekly spending limit in satoshis (rolling 7 days). Returns null if no limit is set.
     async fn weekly_limit_sats(&self, ctx: &Context<'_>) -> Result<Option<i64>> {
         let app = ctx.data_unchecked::<ApiKeysApp>();
         let limits = Limits::new(app.pool());
@@ -88,7 +86,6 @@ impl ApiKey {
         Ok(summary.weekly_limit_sats)
     }
 
-    /// Monthly spending limit in satoshis (rolling 30 days). Returns null if no limit is set.
     async fn monthly_limit_sats(&self, ctx: &Context<'_>) -> Result<Option<i64>> {
         let app = ctx.data_unchecked::<ApiKeysApp>();
         let limits = Limits::new(app.pool());
@@ -98,7 +95,6 @@ impl ApiKey {
         Ok(summary.monthly_limit_sats)
     }
 
-    /// Annual spending limit in satoshis (rolling 365 days). Returns null if no limit is set.
     async fn annual_limit_sats(&self, ctx: &Context<'_>) -> Result<Option<i64>> {
         let app = ctx.data_unchecked::<ApiKeysApp>();
         let limits = Limits::new(app.pool());
@@ -108,7 +104,6 @@ impl ApiKey {
         Ok(summary.annual_limit_sats)
     }
 
-    /// Amount spent in the last 24 hours (rolling window) in satoshis
     async fn spent_last_24h_sats(&self, ctx: &Context<'_>) -> Result<i64> {
         let app = ctx.data_unchecked::<ApiKeysApp>();
         let limits = Limits::new(app.pool());
@@ -118,7 +113,6 @@ impl ApiKey {
         Ok(summary.spent_last_24h_sats)
     }
 
-    /// Amount spent in the last 7 days (rolling window) in satoshis
     async fn spent_last_7d_sats(&self, ctx: &Context<'_>) -> Result<i64> {
         let app = ctx.data_unchecked::<ApiKeysApp>();
         let limits = Limits::new(app.pool());
@@ -128,7 +122,6 @@ impl ApiKey {
         Ok(summary.spent_last_7d_sats)
     }
 
-    /// Amount spent in the last 30 days (rolling window) in satoshis
     async fn spent_last_30d_sats(&self, ctx: &Context<'_>) -> Result<i64> {
         let app = ctx.data_unchecked::<ApiKeysApp>();
         let limits = Limits::new(app.pool());
@@ -138,7 +131,6 @@ impl ApiKey {
         Ok(summary.spent_last_30d_sats)
     }
 
-    /// Amount spent in the last 365 days (rolling window) in satoshis
     async fn spent_last_365d_sats(&self, ctx: &Context<'_>) -> Result<i64> {
         let app = ctx.data_unchecked::<ApiKeysApp>();
         let limits = Limits::new(app.pool());
@@ -280,7 +272,6 @@ impl Mutation {
         let api_key_id = input.id.parse::<IdentityApiKeyId>()?;
         let limits = Limits::new(app.pool());
 
-        // Verify the API key belongs to the subject
         let api_keys = app.list_api_keys_for_subject(&subject.id).await?;
         let api_key = api_keys
             .into_iter()

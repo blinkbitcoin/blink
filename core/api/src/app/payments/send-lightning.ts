@@ -456,7 +456,7 @@ const executePaymentViaIntraledger = async <
 
   const priceRatioForLimits = await getPriceRatioForLimits(paymentFlow.paymentAmounts())
   if (priceRatioForLimits instanceof Error) return priceRatioForLimits
-  // Check API key spending limit if authenticated via API key
+
   if (apiKeyId) {
     const amountSats = Number(paymentFlow.btcPaymentAmount.amount)
     const limits = await apiKeys.getSpendingLimits({
@@ -781,7 +781,7 @@ const executePaymentViaLn = async ({
 
   const priceRatioForLimits = await getPriceRatioForLimits(paymentFlow.paymentAmounts())
   if (priceRatioForLimits instanceof Error) return priceRatioForLimits
-  // Check API key spending limit if authenticated via API key
+
   if (apiKeyId) {
     const amountSats = Number(paymentFlow.btcPaymentAmount.amount)
     const limits = await apiKeys.getSpendingLimits({

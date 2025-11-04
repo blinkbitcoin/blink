@@ -20,10 +20,6 @@ type ValidationResult =
       error: ApiKeyLimitExceededError
     }
 
-/**
- * Domain logic: Validate if a spending amount would exceed any configured limits
- * This is pure business logic - the service only fetches data, domain decides allowed/denied
- */
 export const validateSpendingLimit = (
   amountSats: number,
   limits: SpendingLimits,
@@ -49,7 +45,6 @@ export const validateSpendingLimit = (
   const remainingAnnualSats =
     annualLimitSats !== null ? annualLimitSats - spentLast365dSats : null
 
-  // Check if amount exceeds any limit
   if (
     dailyLimitSats !== null &&
     remainingDailySats !== null &&
@@ -114,6 +109,5 @@ export const validateSpendingLimit = (
     }
   }
 
-  // All checks passed
   return { allowed: true }
 }
