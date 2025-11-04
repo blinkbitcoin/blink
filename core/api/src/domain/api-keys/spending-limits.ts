@@ -20,10 +20,13 @@ type ValidationResult =
       error: ApiKeyLimitExceededError
     }
 
-export const validateSpendingLimit = (
-  amountSats: number,
-  limits: SpendingLimits,
-): ValidationResult => {
+export const validateSpendingLimit = ({
+  amountSats,
+  limits,
+}: {
+  amountSats: number
+  limits: SpendingLimits
+}): ValidationResult => {
   const {
     dailyLimitSats,
     weeklyLimitSats,

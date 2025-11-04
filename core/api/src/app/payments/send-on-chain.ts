@@ -305,7 +305,7 @@ const executePaymentViaIntraledger = async <
     })
     if (limits instanceof Error) return limits
 
-    const validation = validateSpendingLimit(amountSats, limits)
+    const validation = validateSpendingLimit({ amountSats, limits })
     if (!validation.allowed) {
       return validation.error
     }
@@ -584,7 +584,7 @@ const executePaymentViaOnChain = async <
     })
     if (limits instanceof Error) return limits
 
-    const validation = validateSpendingLimit(amountSats, limits)
+    const validation = validateSpendingLimit({ amountSats, limits })
     if (!validation.allowed) {
       return validation.error
     }

@@ -1,6 +1,8 @@
 type ApiKeysServiceError =
   | import("./errors").InvalidApiKeyIdError
-  | import("./errors").ApiKeysServiceUnreachableError
+  | import("./errors").ApiKeyLimitExceededError
+  | import("./errors").ApiKeySpendingRecordError
+  | import("./errors").ApiKeyInvalidLimitError
   | import("./errors").UnknownApiKeysServiceError
 
 type SpendingLimits = import("./spending-limits").SpendingLimits
