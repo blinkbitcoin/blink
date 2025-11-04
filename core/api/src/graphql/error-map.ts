@@ -67,13 +67,17 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       message = error.message
       return new TransactionRestrictedError({ message, logger: baseLogger })
 
-    case "ApiKeyLimitCheckError":
+    case "ApiKeyInvalidLimitError":
       message = error.message || "Failed to check API key spending limit"
-      return new UnknownClientError({ message, logger: baseLogger })
+      return new ValidationInternalError({ message, logger: baseLogger })
 
     case "ApiKeySpendingRecordError":
       message = error.message || "Failed to record API key spending"
-      return new UnknownClientError({ message, logger: baseLogger })
+      return new ValidationInternalError({ message, logger: baseLogger })
+
+    case "InvalidApiKeyIdError":
+      message = error.message || "Invalid API key ID"
+      return new ValidationInternalError({ message, logger: baseLogger })
 
     case "AlreadyPaidError":
       message = "Invoice is already paid"
@@ -622,6 +626,7 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "PayoutQueueNotFoundError":
       message = "Invalid or inactive speed"
       return new ValidationInternalError({ message, logger: baseLogger })
+
     // ----------
     // Unhandled below here
     // ----------
@@ -893,6 +898,7 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "UnknownBigIntConversionError":
     case "UnknownDomainError":
     case "UnknownBriaEventError":
+    case "UnknownApiKeysServiceError":
     case "CouldNotFindAccountError":
     case "OathkeeperError":
     case "OathkeeperUnauthorizedServiceError":

@@ -1,5 +1,6 @@
 import {
-  ApiKeysServiceUnreachableError,
+  ApiKeyInvalidLimitError,
+  ApiKeySpendingRecordError,
   InvalidApiKeyIdError,
   UnknownApiKeysServiceError,
 } from "@/domain/api-keys"
@@ -14,8 +15,11 @@ export const handleCommonApiKeysErrors = (err: Error | string | unknown) => {
     case match(KnownApiKeysErrorMessages.InvalidApiKeyId):
       return new InvalidApiKeyIdError(errMsg)
 
-    case match(KnownApiKeysErrorMessages.NoConnectionError):
-      return new ApiKeysServiceUnreachableError(errMsg)
+    case match(KnownApiKeysErrorMessages.InvalidAmountError):
+      return new ApiKeySpendingRecordError(errMsg)
+
+    case match(KnownApiKeysErrorMessages.InvalidLimitError):
+      return new ApiKeyInvalidLimitError(errMsg)
 
     default:
       return new UnknownApiKeysServiceError(errMsg)
@@ -24,5 +28,7 @@ export const handleCommonApiKeysErrors = (err: Error | string | unknown) => {
 
 export const KnownApiKeysErrorMessages = {
   InvalidApiKeyId: /Invalid API key ID/,
-  NoConnectionError: /UNAVAILABLE: No connection established/,
+  InvalidAmountError: /Negative amount not allowed|Amount must be positive/,
+  InvalidLimitError: /Invalid limit value/,
+  DatabaseError: /Database/,
 } as const
