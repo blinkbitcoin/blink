@@ -191,6 +191,10 @@ captcha:
 skipFeeProbeConfig:
   pubkey: []
   chanId: []
+preferredFirstHopConfig:
+  enabled: false
+  outgoingChannels: []
+  fallbackOnError: true
 smsAuthUnsupportedCountries: []
 whatsAppAuthUnsupportedCountries: []
 telegramAuthUnsupportedCountries: []

@@ -5,13 +5,12 @@ import {
   PaymentSendStatus,
   decodeInvoice,
   InsufficientBalanceForRoutingError,
-  RouteNotFoundError,
   LnAlreadyPaidError,
 } from "@/domain/bitcoin/lightning"
-import { AmountCalculator, WalletCurrency } from "@/domain/shared"
+import { WalletCurrency } from "@/domain/shared"
 
-import { LnPaymentsRepository } from "@/services/mongoose"
 import { LnPayment } from "@/services/lnd/schema"
+import { AccountsRepository } from "@/services/mongoose"
 import * as LndImpl from "@/services/lnd"
 
 import {
@@ -23,8 +22,6 @@ import {
 import * as ConfigImpl from "@/config"
 
 let lnInvoice: LnInvoice
-
-const calc = AmountCalculator()
 
 const DEFAULT_PUBKEY =
   "03ca1907342d5d37744cb7038375e1867c24a87564c293157c95b2a9d38dcfb4c2" as Pubkey
@@ -109,6 +106,9 @@ describe("Lightning payment with first hop preference", () => {
 
       // Create user and fund wallet
       const newWalletDescriptor = await createRandomUserAndBtcWallet()
+      const newAccount = await AccountsRepository().findById(newWalletDescriptor.accountId)
+      if (newAccount instanceof Error) throw newAccount
+
       const receive = await recordReceiveLnPayment({
         walletDescriptor: newWalletDescriptor,
         paymentAmount: receiveAmounts,
@@ -123,7 +123,7 @@ describe("Lightning payment with first hop preference", () => {
         uncheckedPaymentRequest: lnInvoice.paymentRequest,
         memo: "test payment with first hop fallback",
         senderWalletId: newWalletDescriptor.id,
-        senderAccount: receive.recipientAccount,
+        senderAccount: newAccount,
       })
 
       // Verify payment succeeded after fallback
@@ -169,6 +169,9 @@ describe("Lightning payment with first hop preference", () => {
 
       // Create user and fund wallet
       const newWalletDescriptor = await createRandomUserAndBtcWallet()
+      const newAccount = await AccountsRepository().findById(newWalletDescriptor.accountId)
+      if (newAccount instanceof Error) throw newAccount
+
       const receive = await recordReceiveLnPayment({
         walletDescriptor: newWalletDescriptor,
         paymentAmount: receiveAmounts,
@@ -183,7 +186,7 @@ describe("Lightning payment with first hop preference", () => {
         uncheckedPaymentRequest: lnInvoice.paymentRequest,
         memo: "test payment with non-retry-able error",
         senderWalletId: newWalletDescriptor.id,
-        senderAccount: receive.recipientAccount,
+        senderAccount: newAccount,
       })
 
       // Verify payment failed with the original error
@@ -228,6 +231,9 @@ describe("Lightning payment with first hop preference", () => {
 
       // Create user and fund wallet
       const newWalletDescriptor = await createRandomUserAndBtcWallet()
+      const newAccount = await AccountsRepository().findById(newWalletDescriptor.accountId)
+      if (newAccount instanceof Error) throw newAccount
+
       const receive = await recordReceiveLnPayment({
         walletDescriptor: newWalletDescriptor,
         paymentAmount: receiveAmounts,
@@ -242,7 +248,7 @@ describe("Lightning payment with first hop preference", () => {
         uncheckedPaymentRequest: lnInvoice.paymentRequest,
         memo: "test payment without first hop preference",
         senderWalletId: newWalletDescriptor.id,
-        senderAccount: receive.recipientAccount,
+        senderAccount: newAccount,
       })
 
       // Verify payment succeeded
@@ -259,4 +265,3 @@ describe("Lightning payment with first hop preference", () => {
     })
   })
 })
-

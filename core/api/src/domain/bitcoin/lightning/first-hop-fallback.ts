@@ -40,4 +40,3 @@ export const shouldRetryWithoutFirstHop = (error: Error): boolean => {
     error instanceof UnknownNextPeerError
   )
 }
-
