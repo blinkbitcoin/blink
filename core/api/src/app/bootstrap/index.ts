@@ -51,7 +51,6 @@ export const bootstrap = async () => {
     const user = await UsersRepository().findByPhone(phone)
     let kratosUserId: UserId
     if (user instanceof CouldNotFindError) {
-      // Create actual Kratos identity instead of random UUID
       const kratosUserIdResult = await createKratosIdentityByPhone(phone)
       if (kratosUserIdResult instanceof Error) return kratosUserIdResult
       kratosUserId = kratosUserIdResult
