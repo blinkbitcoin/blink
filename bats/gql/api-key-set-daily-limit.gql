@@ -3,8 +3,10 @@ mutation apiKeySetDailyLimit($input: ApiKeySetDailyLimitInput!) {
     apiKey {
       id
       name
-      dailyLimitSats
-      spentLast24HSats
+      limits {
+        dailyLimitSats
+        spentLast24HSats
+      }
     }
   }
 }

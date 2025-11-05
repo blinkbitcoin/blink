@@ -3,8 +3,10 @@ mutation apiKeySetWeeklyLimit($input: ApiKeySetWeeklyLimitInput!) {
     apiKey {
       id
       name
-      weeklyLimitSats
-      spentLast7DSats
+      limits {
+        weeklyLimitSats
+        spentLast7DSats
+      }
     }
   }
 }

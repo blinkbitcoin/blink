@@ -36,6 +36,8 @@ setup_file() {
   fund_user_onchain "$ALICE" 'usd_wallet'
 
   create_user "$BOB"
+  user_update_username "$BOB"
+  ensure_username_is_present "xyz_zap_receiver"
 }
 
 @test "api-keys-limits: create key and set daily limit" {
@@ -60,10 +62,10 @@ setup_file() {
   variables="{\"input\":{\"id\":\"${key_id}\",\"dailyLimitSats\":10000}}"
   exec_graphql 'alice' 'api-key-set-daily-limit' "$variables"
 
-  daily_limit="$(graphql_output '.data.apiKeySetDailyLimit.apiKey.dailyLimitSats')"
+  daily_limit="$(graphql_output '.data.apiKeySetDailyLimit.apiKey.limits.dailyLimitSats')"
   [[ "${daily_limit}" = "10000" ]] || exit 1
 
-  spent_24h="$(graphql_output '.data.apiKeySetDailyLimit.apiKey.spentLast24HSats')"
+  spent_24h="$(graphql_output '.data.apiKeySetDailyLimit.apiKey.limits.spentLast24HSats')"
   [[ "${spent_24h}" = "0" ]] || exit 1
 }
 
@@ -86,7 +88,7 @@ setup_file() {
 
   # Check spending was recorded
   exec_graphql 'alice' 'api-keys'
-  spent_24h="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'limit_key_name')'") | .spentLast24HSats')"
+  spent_24h="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'limit_key_name')'") | .limits.spentLast24HSats')"
   [[ "${spent_24h}" -ge "$amount" ]] || exit 1
 }
 
@@ -124,7 +126,7 @@ setup_file() {
   variables="{\"input\":{\"id\":\"${key_id}\",\"weeklyLimitSats\":50000}}"
   exec_graphql 'alice' 'api-key-set-weekly-limit' "$variables"
 
-  weekly_limit="$(graphql_output '.data.apiKeySetWeeklyLimit.apiKey.weeklyLimitSats')"
+  weekly_limit="$(graphql_output '.data.apiKeySetWeeklyLimit.apiKey.limits.weeklyLimitSats')"
   [[ "${weekly_limit}" = "50000" ]] || exit 1
 }
 
@@ -134,7 +136,7 @@ setup_file() {
   variables="{\"input\":{\"id\":\"${key_id}\"}}"
   exec_graphql 'alice' 'api-key-remove-daily-limit' "$variables"
 
-  daily_limit="$(graphql_output '.data.apiKeyRemoveDailyLimit.apiKey.dailyLimitSats')"
+  daily_limit="$(graphql_output '.data.apiKeyRemoveDailyLimit.apiKey.limits.dailyLimitSats')"
   [[ "${daily_limit}" = "null" ]] || exit 1
 }
 
@@ -157,7 +159,7 @@ setup_file() {
 
   # Check total spending across all time periods
   exec_graphql 'alice' 'api-keys'
-  spent_7d="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'limit_key_name')'") | .spentLast7DSats')"
+  spent_7d="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'limit_key_name')'") | .limits.spentLast7DSats')"
 
   # Should have accumulated spending from previous tests
   [[ "${spent_7d}" -ge "8000" ]] || exit 1
@@ -169,19 +171,19 @@ setup_file() {
   # Set monthly limit to 100000 sats
   variables="{\"input\":{\"id\":\"${key_id}\",\"monthlyLimitSats\":100000}}"
   exec_graphql 'alice' 'api-key-set-monthly-limit' "$variables"
-  monthly_limit="$(graphql_output '.data.apiKeySetMonthlyLimit.apiKey.monthlyLimitSats')"
+  monthly_limit="$(graphql_output '.data.apiKeySetMonthlyLimit.apiKey.limits.monthlyLimitSats')"
   [[ "${monthly_limit}" = "100000" ]] || exit 1
 
-  spent_30d="$(graphql_output '.data.apiKeySetMonthlyLimit.apiKey.spentLast30DSats')"
+  spent_30d="$(graphql_output '.data.apiKeySetMonthlyLimit.apiKey.limits.spentLast30DSats')"
   [[ "${spent_30d}" -ge "8000" ]] || exit 1
 
   # Set annual limit to 500000 sats
   variables="{\"input\":{\"id\":\"${key_id}\",\"annualLimitSats\":500000}}"
   exec_graphql 'alice' 'api-key-set-annual-limit' "$variables"
-  annual_limit="$(graphql_output '.data.apiKeySetAnnualLimit.apiKey.annualLimitSats')"
+  annual_limit="$(graphql_output '.data.apiKeySetAnnualLimit.apiKey.limits.annualLimitSats')"
   [[ "${annual_limit}" = "500000" ]] || exit 1
 
-  spent_365d="$(graphql_output '.data.apiKeySetAnnualLimit.apiKey.spentLast365DSats')"
+  spent_365d="$(graphql_output '.data.apiKeySetAnnualLimit.apiKey.limits.spentLast365DSats')"
   [[ "${spent_365d}" -ge "8000" ]] || exit 1
 }
 
@@ -238,10 +240,10 @@ setup_file() {
   exec_graphql 'alice' 'api-keys'
   key_data="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'limit_key_name')'")')"
 
-  spent_24h=$(echo "$key_data" | jq -r '.spentLast24HSats')
-  spent_7d=$(echo "$key_data" | jq -r '.spentLast7DSats')
-  spent_30d=$(echo "$key_data" | jq -r '.spentLast30DSats')
-  spent_365d=$(echo "$key_data" | jq -r '.spentLast365DSats')
+  spent_24h=$(echo "$key_data" | jq -r '.limits.spentLast24HSats')
+  spent_7d=$(echo "$key_data" | jq -r '.limits.spentLast7DSats')
+  spent_30d=$(echo "$key_data" | jq -r '.limits.spentLast30DSats')
+  spent_365d=$(echo "$key_data" | jq -r '.limits.spentLast365DSats')
 
   [[ "${spent_24h}" -ge "30000" ]] || exit 1
   [[ "${spent_7d}" -ge "38000" ]] || exit 1
@@ -254,10 +256,10 @@ setup_file() {
   key_data="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'limit_key_name')'")')"
 
   # Verify all limits are still set
-  daily_limit=$(echo "$key_data" | jq -r '.dailyLimitSats')
-  weekly_limit=$(echo "$key_data" | jq -r '.weeklyLimitSats')
-  monthly_limit=$(echo "$key_data" | jq -r '.monthlyLimitSats')
-  annual_limit=$(echo "$key_data" | jq -r '.annualLimitSats')
+  daily_limit=$(echo "$key_data" | jq -r '.limits.dailyLimitSats')
+  weekly_limit=$(echo "$key_data" | jq -r '.limits.weeklyLimitSats')
+  monthly_limit=$(echo "$key_data" | jq -r '.limits.monthlyLimitSats')
+  annual_limit=$(echo "$key_data" | jq -r '.limits.annualLimitSats')
 
   [[ "${daily_limit}" = "null" ]] || exit 1
   [[ "${weekly_limit}" = "50000" ]] || exit 1
@@ -265,10 +267,10 @@ setup_file() {
   [[ "${annual_limit}" = "500000" ]] || exit 1
 
   # Verify spending is consistent across all time windows (since all payments are within last 24h)
-  spent_24h=$(echo "$key_data" | jq -r '.spentLast24HSats')
-  spent_7d=$(echo "$key_data" | jq -r '.spentLast7DSats')
-  spent_30d=$(echo "$key_data" | jq -r '.spentLast30DSats')
-  spent_365d=$(echo "$key_data" | jq -r '.spentLast365DSats')
+  spent_24h=$(echo "$key_data" | jq -r '.limits.spentLast24HSats')
+  spent_7d=$(echo "$key_data" | jq -r '.limits.spentLast7DSats')
+  spent_30d=$(echo "$key_data" | jq -r '.limits.spentLast30DSats')
+  spent_365d=$(echo "$key_data" | jq -r '.limits.spentLast365DSats')
 
   [[ "${spent_24h}" = "${spent_7d}" ]] || exit 1
   [[ "${spent_7d}" = "${spent_30d}" ]] || exit 1
@@ -281,7 +283,7 @@ setup_file() {
   # Update weekly limit to 40000 (already spent ~38000)
   variables="{\"input\":{\"id\":\"${key_id}\",\"weeklyLimitSats\":40000}}"
   exec_graphql 'alice' 'api-key-set-weekly-limit' "$variables"
-  weekly_limit="$(graphql_output '.data.apiKeySetWeeklyLimit.apiKey.weeklyLimitSats')"
+  weekly_limit="$(graphql_output '.data.apiKeySetWeeklyLimit.apiKey.limits.weeklyLimitSats')"
   [[ "${weekly_limit}" = "40000" ]] || exit 1
 
   # Try to send 3000 - should fail as it would exceed updated limit
@@ -312,17 +314,17 @@ setup_file() {
   # Remove weekly limit
   variables="{\"input\":{\"id\":\"${key_id}\"}}"
   exec_graphql 'alice' 'api-key-remove-weekly-limit' "$variables"
-  weekly_limit="$(graphql_output '.data.apiKeyRemoveWeeklyLimit.apiKey.weeklyLimitSats')"
+  weekly_limit="$(graphql_output '.data.apiKeyRemoveWeeklyLimit.apiKey.limits.weeklyLimitSats')"
   [[ "${weekly_limit}" = "null" ]] || exit 1
 
   # Remove monthly limit
   exec_graphql 'alice' 'api-key-remove-monthly-limit' "$variables"
-  monthly_limit="$(graphql_output '.data.apiKeyRemoveMonthlyLimit.apiKey.monthlyLimitSats')"
+  monthly_limit="$(graphql_output '.data.apiKeyRemoveMonthlyLimit.apiKey.limits.monthlyLimitSats')"
   [[ "${monthly_limit}" = "null" ]] || exit 1
 
   # Remove annual limit
   exec_graphql 'alice' 'api-key-remove-annual-limit' "$variables"
-  annual_limit="$(graphql_output '.data.apiKeyRemoveAnnualLimit.apiKey.annualLimitSats')"
+  annual_limit="$(graphql_output '.data.apiKeyRemoveAnnualLimit.apiKey.limits.annualLimitSats')"
   [[ "${annual_limit}" = "null" ]] || exit 1
 }
 
@@ -346,12 +348,12 @@ setup_file() {
 
   # Spending should still be tracked even without limits
   exec_graphql 'alice' 'api-keys'
-  spent_24h="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'limit_key_name')'") | .spentLast24HSats')"
+  spent_24h="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'limit_key_name')'") | .limits.spentLast24HSats')"
   [[ "${spent_24h}" -ge "130000" ]] || exit 1
 }
 
 # ============================================================================
-# Tests for different payment flows (Lightning & Onchain)
+# Tests for different payment flows (lightning, on-chain, lnurl, no-amount invoices)
 # ============================================================================
 
 @test "api-keys-limits: lightning payment respects limits" {
@@ -392,7 +394,7 @@ setup_file() {
 
   # Verify spending was recorded
   exec_graphql 'alice' 'api-keys'
-  spent_24h="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'ln_key_name')'") | .spentLast24HSats')"
+  spent_24h="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'ln_key_name')'") | .limits.spentLast24HSats')"
   [[ "${spent_24h}" -ge "3000" ]] || exit 1
 }
 
@@ -454,7 +456,7 @@ setup_file() {
 
   # Verify spending was recorded
   exec_graphql 'alice' 'api-keys'
-  spent_24h="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'onchain_key_name')'") | .spentLast24HSats')"
+  spent_24h="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'onchain_key_name')'") | .limits.spentLast24HSats')"
   [[ "${spent_24h}" -ge "5000" ]] || exit 1
 }
 
@@ -484,16 +486,16 @@ setup_file() {
   
   # Check intraledger key spending (original key from earlier tests)
   exec_graphql 'alice' 'api-keys'
-  intraledger_spent="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'limit_key_name')'") | .spentLast24HSats')"
+  intraledger_spent="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'limit_key_name')'") | .limits.spentLast24HSats')"
   [[ "${intraledger_spent}" -ge "130000" ]] || exit 1
 
   # Check lightning key spending (separate key)
-  ln_spent="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'ln_key_name')'") | .spentLast24HSats')"
+  ln_spent="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'ln_key_name')'") | .limits.spentLast24HSats')"
   [[ "${ln_spent}" -ge "3000" ]] || exit 1
   [[ "${ln_spent}" -lt "10000" ]] || exit 1
 
   # Check onchain key spending (separate key)
-  onchain_spent="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'onchain_key_name')'") | .spentLast24HSats')"
+  onchain_spent="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'onchain_key_name')'") | .limits.spentLast24HSats')"
   [[ "${onchain_spent}" -ge "5000" ]] || exit 1
   [[ "${onchain_spent}" -lt "10000" ]] || exit 1
 
@@ -534,7 +536,172 @@ setup_file() {
 
   # Verify spending was recorded (converted to sats)
   exec_graphql 'alice' 'api-keys'
-  spent_24h="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$key_name'") | .spentLast24HSats')"
+  spent_24h="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$key_name'") | .limits.spentLast24HSats')"
   # USD amount converted to sats should be tracked
   [[ "${spent_24h}" -gt "0" ]] || exit 1
+}
+
+@test "api-keys-limits: lnNoAmountInvoicePaymentSend respects limits" {
+  # Create new API key with daily limit
+  key_name="$(new_key_name)"
+  cache_value 'ln_noamount_key_name' "$key_name"
+
+  variables="{\"input\":{\"name\":\"${key_name}\",\"scopes\":[\"READ\",\"WRITE\"]}}"
+  exec_graphql 'alice' 'api-key-create' "$variables"
+
+  key="$(graphql_output '.data.apiKeyCreate.apiKey')"
+  secret="$(graphql_output '.data.apiKeyCreate.apiKeySecret')"
+  key_id=$(echo "$key" | jq -r '.id')
+
+  cache_value "api-key-ln-noamount-secret" "$secret"
+  cache_value "ln-noamount-api-key-id" "$key_id"
+
+  # Set daily limit to 8000 sats
+  variables="{\"input\":{\"id\":\"${key_id}\",\"dailyLimitSats\":8000}}"
+  exec_graphql 'alice' 'api-key-set-daily-limit' "$variables"
+
+  # Create no-amount invoice
+  invoice_response="$(lnd_outside_cli addinvoice)"
+  payment_request="$(echo $invoice_response | jq -r '.payment_request')"
+
+  # Pay 4000 sats to the no-amount invoice
+  variables=$(
+    jq -n \
+    --arg wallet_id "$(read_value $ALICE.btc_wallet_id)" \
+    --arg payment_request "$payment_request" \
+    --argjson amount "4000" \
+    '{input: {walletId: $wallet_id, paymentRequest: $payment_request, amount: $amount}}'
+  )
+
+  exec_graphql 'api-key-ln-noamount-secret' 'ln-no-amount-invoice-payment-send' "$variables"
+  send_status="$(graphql_output '.data.lnNoAmountInvoicePaymentSend.status')"
+  [[ "${send_status}" = "SUCCESS" ]] || exit 1
+
+  # Verify spending was recorded
+  exec_graphql 'alice' 'api-keys'
+  spent_24h="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'ln_noamount_key_name')'") | .limits.spentLast24HSats')"
+  [[ "${spent_24h}" -ge "4000" ]] || exit 1
+}
+
+@test "api-keys-limits: lnNoAmountInvoicePaymentSend exceeding limit fails" {
+  # Try to pay 5000 more sats (would exceed 8000 limit)
+  invoice_response="$(lnd_outside_cli addinvoice)"
+  payment_request="$(echo $invoice_response | jq -r '.payment_request')"
+
+  variables=$(
+    jq -n \
+    --arg wallet_id "$(read_value $ALICE.btc_wallet_id)" \
+    --arg payment_request "$payment_request" \
+    --argjson amount "5000" \
+    '{input: {walletId: $wallet_id, paymentRequest: $payment_request, amount: $amount}}'
+  )
+
+  exec_graphql 'api-key-ln-noamount-secret' 'ln-no-amount-invoice-payment-send' "$variables"
+  send_status="$(graphql_output '.data.lnNoAmountInvoicePaymentSend.status')"
+  [[ "${send_status}" = "FAILURE" ]] || exit 1
+
+  # Verify error message contains limit information
+  error_msg="$(graphql_output '.data.lnNoAmountInvoicePaymentSend.errors[0].message')"
+  [[ "${error_msg}" == *"daily"* ]] || exit 1
+}
+
+@test "api-keys-limits: lnNoAmountUsdInvoicePaymentSend respects limits" {
+  # Create new API key with daily limit
+  key_name="$(new_key_name)"
+  cache_value 'ln_noamount_usd_key_name' "$key_name"
+
+  variables="{\"input\":{\"name\":\"${key_name}\",\"scopes\":[\"READ\",\"WRITE\"]}}"
+  exec_graphql 'alice' 'api-key-create' "$variables"
+
+  key="$(graphql_output '.data.apiKeyCreate.apiKey')"
+  secret="$(graphql_output '.data.apiKeyCreate.apiKeySecret')"
+  key_id=$(echo "$key" | jq -r '.id')
+
+  cache_value "api-key-ln-noamount-usd-secret" "$secret"
+
+  # Set daily limit to 8000 sats
+  variables="{\"input\":{\"id\":\"${key_id}\",\"dailyLimitSats\":8000}}"
+  exec_graphql 'alice' 'api-key-set-daily-limit' "$variables"
+
+  # Create no-amount invoice
+  invoice_response="$(lnd_outside_cli addinvoice)"
+  payment_request="$(echo $invoice_response | jq -r '.payment_request')"
+
+  # Pay 30 cents (USD) to the no-amount invoice from USD wallet
+  variables=$(
+    jq -n \
+    --arg wallet_id "$(read_value $ALICE.usd_wallet_id)" \
+    --arg payment_request "$payment_request" \
+    --argjson amount "30" \
+    '{input: {walletId: $wallet_id, paymentRequest: $payment_request, amount: $amount}}'
+  )
+
+  exec_graphql 'api-key-ln-noamount-usd-secret' 'ln-no-amount-usd-invoice-payment-send' "$variables"
+  send_status="$(graphql_output '.data.lnNoAmountUsdInvoicePaymentSend.status')"
+  [[ "${send_status}" = "SUCCESS" ]] || exit 1
+
+  # Verify spending was recorded (converted to sats)
+  exec_graphql 'alice' 'api-keys'
+  spent_24h="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'ln_noamount_usd_key_name')'") | .limits.spentLast24HSats')"
+  [[ "${spent_24h}" -gt "0" ]] || exit 1
+}
+
+@test "api-keys-limits: lnurlPaymentSend respects limits" {
+  # Create new API key with daily limit
+  key_name="$(new_key_name)"
+  cache_value 'lnurl_key_name' "$key_name"
+
+  variables="{\"input\":{\"name\":\"${key_name}\",\"scopes\":[\"READ\",\"WRITE\"]}}"
+  exec_graphql 'alice' 'api-key-create' "$variables"
+
+  key="$(graphql_output '.data.apiKeyCreate.apiKey')"
+  secret="$(graphql_output '.data.apiKeyCreate.apiKeySecret')"
+  key_id=$(echo "$key" | jq -r '.id')
+
+  cache_value "api-key-lnurl-secret" "$secret"
+
+  # Set daily limit to 5000 sats
+  variables="{\"input\":{\"id\":\"${key_id}\",\"dailyLimitSats\":5000}}"
+  exec_graphql 'alice' 'api-key-set-daily-limit' "$variables"
+
+  # Send payment via lnurl (to xyz_zap_receiver)
+  lnurl="lnurl1dp68gup69uhkcmmrv9kxsmmnwsarxvpsxghjuam9d3kz66mwdamkutmvde6hymrs9au8j7jl0fshqhmjv43k26tkv4eq5ndl2y"
+
+  variables=$(
+    jq -n \
+    --arg wallet_id "$(read_value $ALICE.btc_wallet_id)" \
+    --argjson amount "2000" \
+    --arg lnurl "$lnurl" \
+    '{input: {walletId: $wallet_id, amount: $amount, lnurl: $lnurl}}'
+  )
+
+  exec_graphql 'api-key-lnurl-secret' 'lnurl-payment-send' "$variables"
+  send_status="$(graphql_output '.data.lnurlPaymentSend.status')"
+  [[ "${send_status}" = "SUCCESS" ]] || exit 1
+
+  # Verify spending was recorded
+  exec_graphql 'alice' 'api-keys'
+  spent_24h="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'lnurl_key_name')'") | .limits.spentLast24HSats')"
+  [[ "${spent_24h}" -ge "2000" ]] || exit 1
+}
+
+@test "api-keys-limits: lnurlPaymentSend exceeding limit fails" {
+  # Try to send 4000 more sats (would exceed 5000 limit)
+  lnurl="lnurl1dp68gup69uhkcmmrv9kxsmmnwsarxvpsxghjuam9d3kz66mwdamkutmvde6hymrs9au8j7jl0fshqhmjv43k26tkv4eq5ndl2y"
+
+  variables=$(
+    jq -n \
+    --arg wallet_id "$(read_value $ALICE.btc_wallet_id)" \
+    --argjson amount "4000" \
+    --arg lnurl "$lnurl" \
+    '{input: {walletId: $wallet_id, amount: $amount, lnurl: $lnurl}}'
+  )
+
+  exec_graphql 'api-key-lnurl-secret' 'lnurl-payment-send' "$variables"
+  send_status="$(graphql_output '.data.lnurlPaymentSend.status')"
+  [[ "${send_status}" = "FAILURE" ]] || exit 1
+
+  # Verify error message contains limit information
+  error_msg="$(graphql_output '.data.lnurlPaymentSend.errors[0].message')"
+  [[ "${error_msg}" == *"daily"* ]] || exit 1
 }

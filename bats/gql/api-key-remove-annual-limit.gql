@@ -3,8 +3,10 @@ mutation apiKeyRemoveAnnualLimit($input: ApiKeyRemoveLimitInput!) {
     apiKey {
       id
       name
-      annualLimitSats
-      spentLast365DSats
+      limits {
+        annualLimitSats
+        spentLast365DSats
+      }
     }
   }
 }

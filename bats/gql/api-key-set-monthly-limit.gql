@@ -3,8 +3,10 @@ mutation apiKeySetMonthlyLimit($input: ApiKeySetMonthlyLimitInput!) {
     apiKey {
       id
       name
-      monthlyLimitSats
-      spentLast30DSats
+      limits {
+        monthlyLimitSats
+        spentLast30DSats
+      }
     }
   }
 }
