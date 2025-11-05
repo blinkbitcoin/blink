@@ -21,7 +21,6 @@ services:
     - stablesats
     - svix
     - hydra
-    - api-keys
     restart: on-failure:10
   apollo-router:
     image: ghcr.io/apollographql/router:v1.25.0
@@ -229,32 +228,6 @@ services:
       interval: 5s
       timeout: 30s
       retries: 5
-  api-keys:
-    image: us.gcr.io/galoy-org/galoy-api-keys@sha256:4b0b7bee8441dfaf623a1693dd60e24669db0b9e37baa30ecd8925cbe6590a1e
-    environment:
-    - PG_CON=postgres://user:password@api-keys-pg:5432/pg
-    - API_KEYS_CONFIG=/config/api-keys/api-keys.yml
-    ports:
-    - 5397:5397
-    volumes:
-    - ${HOST_PROJECT_PATH:-.}/${GALOY_QUICKSTART_PATH:-vendor/blink-quickstart}/dev/config/api-keys/api-keys.yml:/config/api-keys/api-keys.yml
-    depends_on:
-    - api-keys-pg
-    - otel-agent
-    - kratos
-    - oathkeeper
-    networks:
-      default:
-        aliases:
-        - bats-tests
-  api-keys-pg:
-    image: postgres:14.1
-    environment:
-    - POSTGRES_USER=user
-    - POSTGRES_PASSWORD=password
-    - POSTGRES_DB=pg
-    ports:
-    - 5434:5432
   redis:
     image: redis:7.0.8
     ports:
