@@ -238,14 +238,13 @@ initialize_user_from_onchain() {
 }
 
 create_dealer_api_key() {
-  local dealer_phone="${1:-+16505554327}"
-  local api_key_name="${2:-dealer-service-key}"
-  local api_key_expire_days="${3:-365}"
+  local dealer_phone="+16505554327"
+  local api_key_name="dealer-service-key"
   local token_name="dealer"
 
   login_user "${token_name}" "${dealer_phone}" "000000"
 
-  local variables="{\"input\": {\"name\": \"${api_key_name}\", \"expireInDays\": ${api_key_expire_days}, \"scopes\": [\"READ\", \"WRITE\", \"RECEIVE\"]}}"
+  local variables="{\"input\": {\"name\": \"${api_key_name}\", \"scopes\": [\"READ\", \"WRITE\", \"RECEIVE\"]}}"
 
   exec_graphql "${token_name}" 'api-key-create' "${variables}"
 
