@@ -39,127 +39,109 @@ const ApiKeysList: React.FC<ApiKeysListProps> = ({
           </tr>
         </thead>
         <tbody>
-          {activeKeys.map(
-            ({
-              id,
-              name,
-              expiresAt,
-              lastUsedAt,
-              scopes,
-              dailyLimitSats,
-              weeklyLimitSats,
-              monthlyLimitSats,
-              annualLimitSats,
-              spentLast24HSats,
-              spentLast7DSats,
-              spentLast30DSats,
-              spentLast365DSats,
-            }) => {
-              const remainingDailyLimitSats =
-                dailyLimitSats !== null && dailyLimitSats !== undefined
-                  ? dailyLimitSats - (spentLast24HSats || 0)
-                  : null
+          {activeKeys.map(({ id, name, expiresAt, lastUsedAt, scopes, limits }) => {
+            const dailyLimitSats = limits?.dailyLimitSats
+            const weeklyLimitSats = limits?.weeklyLimitSats
+            const monthlyLimitSats = limits?.monthlyLimitSats
+            const annualLimitSats = limits?.annualLimitSats
+            const spentLast24HSats = limits?.spentLast24HSats ?? 0
+            const spentLast7DSats = limits?.spentLast7DSats ?? 0
+            const spentLast30DSats = limits?.spentLast30DSats ?? 0
+            const spentLast365DSats = limits?.spentLast365DSats ?? 0
 
-              const hasAnyLimit =
-                dailyLimitSats || weeklyLimitSats || monthlyLimitSats || annualLimitSats
+            const remainingDailyLimitSats =
+              dailyLimitSats !== null && dailyLimitSats !== undefined
+                ? dailyLimitSats - spentLast24HSats
+                : null
 
-              return (
-                <tr key={id}>
-                  <td>{name}</td>
-                  <td>{id}</td>
-                  <td>{getScopeText(scopes)}</td>
-                  <td>
-                    {hasAnyLimit ? (
-                      <Stack spacing={0.5}>
-                        {dailyLimitSats && (
-                          <div>
-                            <Typography level="body-sm">
-                              <strong>Daily:</strong> {dailyLimitSats.toLocaleString()}{" "}
-                              sats
-                            </Typography>
-                            <Typography level="body-xs" color="neutral">
-                              Spent: {spentLast24HSats?.toLocaleString() || 0} /
-                              Remaining: {remainingDailyLimitSats?.toLocaleString() || 0}
-                            </Typography>
-                          </div>
-                        )}
-                        {weeklyLimitSats && (
-                          <div>
-                            <Typography level="body-sm">
-                              <strong>Weekly:</strong> {weeklyLimitSats.toLocaleString()}{" "}
-                              sats
-                            </Typography>
-                            <Typography level="body-xs" color="neutral">
-                              Spent: {spentLast7DSats?.toLocaleString() || 0} / Remaining:{" "}
-                              {(
-                                weeklyLimitSats - (spentLast7DSats || 0)
-                              ).toLocaleString()}
-                            </Typography>
-                          </div>
-                        )}
-                        {monthlyLimitSats && (
-                          <div>
-                            <Typography level="body-sm">
-                              <strong>Monthly:</strong>{" "}
-                              {monthlyLimitSats.toLocaleString()} sats
-                            </Typography>
-                            <Typography level="body-xs" color="neutral">
-                              Spent: {spentLast30DSats?.toLocaleString() || 0} /
-                              Remaining:{" "}
-                              {(
-                                monthlyLimitSats - (spentLast30DSats || 0)
-                              ).toLocaleString()}
-                            </Typography>
-                          </div>
-                        )}
-                        {annualLimitSats && (
-                          <div>
-                            <Typography level="body-sm">
-                              <strong>Annual:</strong> {annualLimitSats.toLocaleString()}{" "}
-                              sats
-                            </Typography>
-                            <Typography level="body-xs" color="neutral">
-                              Spent: {spentLast365DSats?.toLocaleString() || 0} /
-                              Remaining:{" "}
-                              {(
-                                annualLimitSats - (spentLast365DSats || 0)
-                              ).toLocaleString()}
-                            </Typography>
-                          </div>
-                        )}
-                      </Stack>
-                    ) : (
-                      <Typography level="body-sm" color="neutral">
-                        Unlimited
-                      </Typography>
-                    )}
-                  </td>
-                  <td>{expiresAt ? formatDate(expiresAt) : "Never"}</td>
-                  <td>{lastUsedAt ? formatDate(lastUsedAt) : "Never"}</td>
-                  <td style={{ textAlign: "right" }}>
-                    <Stack direction="row" spacing={1} justifyContent="flex-end">
-                      <Limit
-                        id={id}
-                        limits={{
-                          daily: dailyLimitSats ?? null,
-                          weekly: weeklyLimitSats ?? null,
-                          monthly: monthlyLimitSats ?? null,
-                          annual: annualLimitSats ?? null,
-                        }}
-                        spent={{
-                          last24h: spentLast24HSats ?? 0,
-                          last7d: spentLast7DSats ?? 0,
-                          last30d: spentLast30DSats ?? 0,
-                          last365d: spentLast365DSats ?? 0,
-                        }}
-                      />
-                      <RevokeKey id={id} />
+            const hasAnyLimit =
+              dailyLimitSats || weeklyLimitSats || monthlyLimitSats || annualLimitSats
+
+            return (
+              <tr key={id}>
+                <td>{name}</td>
+                <td>{id}</td>
+                <td>{getScopeText(scopes)}</td>
+                <td>
+                  {hasAnyLimit ? (
+                    <Stack spacing={0.5}>
+                      {dailyLimitSats && (
+                        <div>
+                          <Typography level="body-sm">
+                            <strong>Daily:</strong> {dailyLimitSats.toLocaleString()} sats
+                          </Typography>
+                          <Typography level="body-xs" color="neutral">
+                            Spent: {spentLast24HSats.toLocaleString()} / Remaining:{" "}
+                            {remainingDailyLimitSats?.toLocaleString() || 0}
+                          </Typography>
+                        </div>
+                      )}
+                      {weeklyLimitSats && (
+                        <div>
+                          <Typography level="body-sm">
+                            <strong>Weekly:</strong> {weeklyLimitSats.toLocaleString()} sats
+                          </Typography>
+                          <Typography level="body-xs" color="neutral">
+                            Spent: {spentLast7DSats.toLocaleString()} / Remaining:{" "}
+                            {(weeklyLimitSats - spentLast7DSats).toLocaleString()}
+                          </Typography>
+                        </div>
+                      )}
+                      {monthlyLimitSats && (
+                        <div>
+                          <Typography level="body-sm">
+                            <strong>Monthly:</strong> {monthlyLimitSats.toLocaleString()}{" "}
+                            sats
+                          </Typography>
+                          <Typography level="body-xs" color="neutral">
+                            Spent: {spentLast30DSats.toLocaleString()} / Remaining:{" "}
+                            {(monthlyLimitSats - spentLast30DSats).toLocaleString()}
+                          </Typography>
+                        </div>
+                      )}
+                      {annualLimitSats && (
+                        <div>
+                          <Typography level="body-sm">
+                            <strong>Annual:</strong> {annualLimitSats.toLocaleString()} sats
+                          </Typography>
+                          <Typography level="body-xs" color="neutral">
+                            Spent: {spentLast365DSats.toLocaleString()} / Remaining:{" "}
+                            {(annualLimitSats - spentLast365DSats).toLocaleString()}
+                          </Typography>
+                        </div>
+                      )}
                     </Stack>
-                  </td>
-                </tr>
-              )
-            },
-          )}
+                  ) : (
+                    <Typography level="body-sm" color="neutral">
+                      Unlimited
+                    </Typography>
+                  )}
+                </td>
+                <td>{expiresAt ? formatDate(expiresAt) : "Never"}</td>
+                <td>{lastUsedAt ? formatDate(lastUsedAt) : "Never"}</td>
+                <td style={{ textAlign: "right" }}>
+                  <Stack direction="row" spacing={1} justifyContent="flex-end">
+                    <Limit
+                      id={id}
+                      limits={{
+                        daily: dailyLimitSats ?? null,
+                        weekly: weeklyLimitSats ?? null,
+                        monthly: monthlyLimitSats ?? null,
+                        annual: annualLimitSats ?? null,
+                      }}
+                      spent={{
+                        last24h: spentLast24HSats,
+                        last7d: spentLast7DSats,
+                        last30d: spentLast30DSats,
+                        last365d: spentLast365DSats,
+                      }}
+                    />
+                    <RevokeKey id={id} />
+                  </Stack>
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </Table>
       {activeKeys.length === 0 && <Typography>No active keys to display.</Typography>}

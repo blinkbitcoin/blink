@@ -41,6 +41,7 @@ struct AllLimits {
     annual_limit_sats: Option<i64>,
 }
 
+#[derive(Clone)]
 pub struct Limits {
     pool: Pool<Postgres>,
 }
@@ -50,9 +51,6 @@ impl Limits {
         Self { pool }
     }
 
-    /// Check if a spending amount would exceed any configured limits
-    /// If no limits are configured for the API key, returns allowed=true with all limits=None
-    #[tracing::instrument(name = "limits.check_spending_limit", skip(self))]
     pub async fn check_spending_limit(
         &self,
         api_key_id: IdentityApiKeyId,
@@ -62,10 +60,8 @@ impl Limits {
             return Err(LimitError::NegativeAmount);
         }
 
-        // Get all configured limits for this API key
         let limits = self.get_all_limits(api_key_id).await?;
 
-        // If no limits configured, allow unlimited
         if limits.daily_limit_sats.is_none()
             && limits.weekly_limit_sats.is_none()
             && limits.monthly_limit_sats.is_none()
@@ -84,13 +80,11 @@ impl Limits {
             });
         }
 
-        // Calculate spent amounts for all windows
         let spent_24h = self.get_spending_last_24h(api_key_id).await?;
         let spent_7d = self.get_spending_last_7d(api_key_id).await?;
         let spent_30d = self.get_spending_last_30d(api_key_id).await?;
         let spent_365d = self.get_spending_last_365d(api_key_id).await?;
 
-        // Check each configured limit
         let mut allowed = true;
 
         if let Some(limit) = limits.daily_limit_sats {
@@ -130,8 +124,6 @@ impl Limits {
         })
     }
 
-    /// Record a transaction for an API key
-    /// Inserts a new record into api_key_transactions table
     #[tracing::instrument(name = "limits.record_spending", skip(self))]
     pub async fn record_spending(
         &self,
@@ -158,7 +150,6 @@ impl Limits {
         Ok(())
     }
 
-    /// Get spending summary for an API key (for GraphQL queries)
     #[tracing::instrument(name = "limits.get_spending_summary", skip(self))]
     pub async fn get_spending_summary(
         &self,
@@ -182,7 +173,6 @@ impl Limits {
         })
     }
 
-    /// Set a daily limit for an API key (in satoshis)
     #[tracing::instrument(name = "limits.set_daily_limit", skip(self))]
     pub async fn set_daily_limit(
         &self,
@@ -209,7 +199,6 @@ impl Limits {
         Ok(())
     }
 
-    /// Set a weekly limit for an API key (in satoshis)
     #[tracing::instrument(name = "limits.set_weekly_limit", skip(self))]
     pub async fn set_weekly_limit(
         &self,
@@ -236,7 +225,6 @@ impl Limits {
         Ok(())
     }
 
-    /// Set a monthly limit for an API key (in satoshis)
     #[tracing::instrument(name = "limits.set_monthly_limit", skip(self))]
     pub async fn set_monthly_limit(
         &self,
@@ -263,7 +251,6 @@ impl Limits {
         Ok(())
     }
 
-    /// Set an annual limit for an API key (in satoshis)
     #[tracing::instrument(name = "limits.set_annual_limit", skip(self))]
     pub async fn set_annual_limit(
         &self,
@@ -290,7 +277,6 @@ impl Limits {
         Ok(())
     }
 
-    /// Remove a daily limit for an API key
     #[tracing::instrument(name = "limits.remove_daily_limit", skip(self))]
     pub async fn remove_daily_limit(&self, api_key_id: IdentityApiKeyId) -> Result<(), LimitError> {
         sqlx::query(
@@ -304,13 +290,11 @@ impl Limits {
         .execute(&self.pool)
         .await?;
 
-        // Delete the row if no limits remain
         self.cleanup_empty_limits(api_key_id).await?;
 
         Ok(())
     }
 
-    /// Remove a weekly limit for an API key
     #[tracing::instrument(name = "limits.remove_weekly_limit", skip(self))]
     pub async fn remove_weekly_limit(
         &self,
@@ -327,13 +311,11 @@ impl Limits {
         .execute(&self.pool)
         .await?;
 
-        // Delete the row if no limits remain
         self.cleanup_empty_limits(api_key_id).await?;
 
         Ok(())
     }
 
-    /// Remove a monthly limit for an API key
     #[tracing::instrument(name = "limits.remove_monthly_limit", skip(self))]
     pub async fn remove_monthly_limit(
         &self,
@@ -350,13 +332,11 @@ impl Limits {
         .execute(&self.pool)
         .await?;
 
-        // Delete the row if no limits remain
         self.cleanup_empty_limits(api_key_id).await?;
 
         Ok(())
     }
 
-    /// Remove an annual limit for an API key
     #[tracing::instrument(name = "limits.remove_annual_limit", skip(self))]
     pub async fn remove_annual_limit(
         &self,
@@ -373,13 +353,11 @@ impl Limits {
         .execute(&self.pool)
         .await?;
 
-        // Delete the row if no limits remain
         self.cleanup_empty_limits(api_key_id).await?;
 
         Ok(())
     }
 
-    /// Remove all limits for an API key (reverts to unlimited)
     #[tracing::instrument(name = "limits.remove_all_limits", skip(self))]
     pub async fn remove_all_limits(&self, api_key_id: IdentityApiKeyId) -> Result<(), LimitError> {
         sqlx::query(
@@ -395,9 +373,6 @@ impl Limits {
         Ok(())
     }
 
-    // Private helper methods
-
-    /// Get all configured limits for an API key
     async fn get_all_limits(&self, api_key_id: IdentityApiKeyId) -> Result<AllLimits, LimitError> {
         let row = sqlx::query(
             r#"
@@ -427,7 +402,6 @@ impl Limits {
         }
     }
 
-    /// Delete limit row if all limits are NULL
     async fn cleanup_empty_limits(&self, api_key_id: IdentityApiKeyId) -> Result<(), LimitError> {
         sqlx::query(
             r#"
@@ -446,7 +420,6 @@ impl Limits {
         Ok(())
     }
 
-    /// Calculate total spending in the last 24 hours (rolling window)
     async fn get_spending_last_24h(&self, api_key_id: IdentityApiKeyId) -> Result<i64, LimitError> {
         let row = sqlx::query(
             r#"
@@ -463,7 +436,6 @@ impl Limits {
         Ok(row.get("spent"))
     }
 
-    /// Calculate total spending in the last 7 days (rolling window)
     async fn get_spending_last_7d(&self, api_key_id: IdentityApiKeyId) -> Result<i64, LimitError> {
         let row = sqlx::query(
             r#"
@@ -480,7 +452,6 @@ impl Limits {
         Ok(row.get("spent"))
     }
 
-    /// Calculate total spending in the last 30 days (rolling window)
     async fn get_spending_last_30d(&self, api_key_id: IdentityApiKeyId) -> Result<i64, LimitError> {
         let row = sqlx::query(
             r#"
@@ -497,7 +468,6 @@ impl Limits {
         Ok(row.get("spent"))
     }
 
-    /// Calculate total spending in the last 365 days (rolling window)
     async fn get_spending_last_365d(
         &self,
         api_key_id: IdentityApiKeyId,

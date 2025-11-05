@@ -8,38 +8,7 @@ type ApiKey {
 	expiresAt: Timestamp
 	readOnly: Boolean!
 	scopes: [Scope!]!
-	"""
-	Daily spending limit in satoshis (rolling 24h window). Returns null if no limit is set.
-	"""
-	dailyLimitSats: Int
-	"""
-	Weekly spending limit in satoshis (rolling 7 days). Returns null if no limit is set.
-	"""
-	weeklyLimitSats: Int
-	"""
-	Monthly spending limit in satoshis (rolling 30 days). Returns null if no limit is set.
-	"""
-	monthlyLimitSats: Int
-	"""
-	Annual spending limit in satoshis (rolling 365 days). Returns null if no limit is set.
-	"""
-	annualLimitSats: Int
-	"""
-	Amount spent in the last 24 hours (rolling window) in satoshis
-	"""
-	spentLast24HSats: Int!
-	"""
-	Amount spent in the last 7 days (rolling window) in satoshis
-	"""
-	spentLast7DSats: Int!
-	"""
-	Amount spent in the last 30 days (rolling window) in satoshis
-	"""
-	spentLast30DSats: Int!
-	"""
-	Amount spent in the last 365 days (rolling window) in satoshis
-	"""
-	spentLast365DSats: Int!
+	limits: ApiKeyLimits!
 }
 
 input ApiKeyCreateInput {
@@ -51,6 +20,17 @@ input ApiKeyCreateInput {
 type ApiKeyCreatePayload {
 	apiKey: ApiKey!
 	apiKeySecret: String!
+}
+
+type ApiKeyLimits {
+	dailyLimitSats: Int
+	weeklyLimitSats: Int
+	monthlyLimitSats: Int
+	annualLimitSats: Int
+	spentLast24HSats: Int!
+	spentLast7DSats: Int!
+	spentLast30DSats: Int!
+	spentLast365DSats: Int!
 }
 
 input ApiKeyRemoveLimitInput {

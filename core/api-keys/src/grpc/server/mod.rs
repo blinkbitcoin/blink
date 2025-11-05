@@ -11,11 +11,11 @@ use tracing::{grpc, instrument};
 use self::proto::{api_keys_service_server::ApiKeysService, *};
 
 use super::config::*;
-use crate::{identity::IdentityApiKeyId, limits::Limits};
+use crate::{app::ApiKeysApp, identity::IdentityApiKeyId};
 use std::sync::Arc;
 
 pub struct ApiKeys {
-    limits: Arc<Limits>,
+    app: Arc<ApiKeysApp>,
 }
 
 #[tonic::async_trait]
@@ -37,7 +37,7 @@ impl ApiKeysService for ApiKeys {
             .map_err(|e| Status::invalid_argument(format!("Invalid API key ID: {}", e)))?;
 
         let result = self
-            .limits
+            .app
             .check_spending_limit(api_key_id, amount_sats)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
@@ -86,7 +86,7 @@ impl ApiKeysService for ApiKeys {
             .map_err(|e| Status::invalid_argument(format!("Invalid API key ID: {}", e)))?;
 
         let summary = self
-            .limits
+            .app
             .get_spending_summary(api_key_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
@@ -137,7 +137,7 @@ impl ApiKeysService for ApiKeys {
             .parse::<IdentityApiKeyId>()
             .map_err(|e| Status::invalid_argument(format!("Invalid API key ID: {}", e)))?;
 
-        self.limits
+        self.app
             .record_spending(api_key_id, amount_sats, transaction_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
@@ -148,11 +148,11 @@ impl ApiKeysService for ApiKeys {
 
 pub(crate) async fn start(
     server_config: GrpcServerConfig,
-    limits: Arc<Limits>,
+    app: Arc<ApiKeysApp>,
 ) -> Result<(), tonic::transport::Error> {
     use proto::api_keys_service_server::ApiKeysServiceServer;
 
-    let api_keys = ApiKeys { limits };
+    let api_keys = ApiKeys { app };
     println!("Starting grpc server on port {}", server_config.port);
     let (mut health_reporter, health_service) = tonic_health::server::health_reporter();
     health_reporter

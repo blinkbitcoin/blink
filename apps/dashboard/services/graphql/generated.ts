@@ -226,31 +226,16 @@ export type AccountUpdateNotificationSettingsPayload = {
 
 export type ApiKey = {
   readonly __typename: 'ApiKey';
-  /** Annual spending limit in satoshis (rolling 365 days). Returns null if no limit is set. */
-  readonly annualLimitSats?: Maybe<Scalars['Int']['output']>;
   readonly createdAt: Scalars['Timestamp']['output'];
-  /** Daily spending limit in satoshis (rolling 24h window). Returns null if no limit is set. */
-  readonly dailyLimitSats?: Maybe<Scalars['Int']['output']>;
   readonly expired: Scalars['Boolean']['output'];
   readonly expiresAt?: Maybe<Scalars['Timestamp']['output']>;
   readonly id: Scalars['ID']['output'];
   readonly lastUsedAt?: Maybe<Scalars['Timestamp']['output']>;
-  /** Monthly spending limit in satoshis (rolling 30 days). Returns null if no limit is set. */
-  readonly monthlyLimitSats?: Maybe<Scalars['Int']['output']>;
+  readonly limits: ApiKeyLimits;
   readonly name: Scalars['String']['output'];
   readonly readOnly: Scalars['Boolean']['output'];
   readonly revoked: Scalars['Boolean']['output'];
   readonly scopes: ReadonlyArray<Scope>;
-  /** Amount spent in the last 7 days (rolling window) in satoshis */
-  readonly spentLast7DSats: Scalars['Int']['output'];
-  /** Amount spent in the last 24 hours (rolling window) in satoshis */
-  readonly spentLast24HSats: Scalars['Int']['output'];
-  /** Amount spent in the last 30 days (rolling window) in satoshis */
-  readonly spentLast30DSats: Scalars['Int']['output'];
-  /** Amount spent in the last 365 days (rolling window) in satoshis */
-  readonly spentLast365DSats: Scalars['Int']['output'];
-  /** Weekly spending limit in satoshis (rolling 7 days). Returns null if no limit is set. */
-  readonly weeklyLimitSats?: Maybe<Scalars['Int']['output']>;
 };
 
 export type ApiKeyCreateInput = {
@@ -263,6 +248,18 @@ export type ApiKeyCreatePayload = {
   readonly __typename: 'ApiKeyCreatePayload';
   readonly apiKey: ApiKey;
   readonly apiKeySecret: Scalars['String']['output'];
+};
+
+export type ApiKeyLimits = {
+  readonly __typename: 'ApiKeyLimits';
+  readonly annualLimitSats?: Maybe<Scalars['Int']['output']>;
+  readonly dailyLimitSats?: Maybe<Scalars['Int']['output']>;
+  readonly monthlyLimitSats?: Maybe<Scalars['Int']['output']>;
+  readonly spentLast7DSats: Scalars['Int']['output'];
+  readonly spentLast24HSats: Scalars['Int']['output'];
+  readonly spentLast30DSats: Scalars['Int']['output'];
+  readonly spentLast365DSats: Scalars['Int']['output'];
+  readonly weeklyLimitSats?: Maybe<Scalars['Int']['output']>;
 };
 
 export type ApiKeyRemoveLimitInput = {
@@ -2557,7 +2554,7 @@ export type ApiKeyCreateMutationVariables = Exact<{
 }>;
 
 
-export type ApiKeyCreateMutation = { readonly __typename: 'Mutation', readonly apiKeyCreate: { readonly __typename: 'ApiKeyCreatePayload', readonly apiKeySecret: string, readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly createdAt: number, readonly revoked: boolean, readonly expired: boolean, readonly lastUsedAt?: number | null, readonly expiresAt?: number | null, readonly scopes: ReadonlyArray<Scope>, readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly spentLast24HSats: number, readonly spentLast7DSats: number, readonly spentLast30DSats: number, readonly spentLast365DSats: number } } };
+export type ApiKeyCreateMutation = { readonly __typename: 'Mutation', readonly apiKeyCreate: { readonly __typename: 'ApiKeyCreatePayload', readonly apiKeySecret: string, readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly createdAt: number, readonly revoked: boolean, readonly expired: boolean, readonly lastUsedAt?: number | null, readonly expiresAt?: number | null, readonly scopes: ReadonlyArray<Scope>, readonly limits: { readonly __typename: 'ApiKeyLimits', readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly spentLast24HSats: number, readonly spentLast7DSats: number, readonly spentLast30DSats: number, readonly spentLast365DSats: number } } } };
 
 export type ApiKeyRevokeMutationVariables = Exact<{
   input: ApiKeyRevokeInput;
@@ -2571,56 +2568,56 @@ export type ApiKeySetDailyLimitMutationVariables = Exact<{
 }>;
 
 
-export type ApiKeySetDailyLimitMutation = { readonly __typename: 'Mutation', readonly apiKeySetDailyLimit: { readonly __typename: 'ApiKeySetLimitPayload', readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly spentLast24HSats: number, readonly spentLast7DSats: number, readonly spentLast30DSats: number, readonly spentLast365DSats: number } } };
+export type ApiKeySetDailyLimitMutation = { readonly __typename: 'Mutation', readonly apiKeySetDailyLimit: { readonly __typename: 'ApiKeySetLimitPayload', readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly limits: { readonly __typename: 'ApiKeyLimits', readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly spentLast24HSats: number, readonly spentLast7DSats: number, readonly spentLast30DSats: number, readonly spentLast365DSats: number } } } };
 
 export type ApiKeyRemoveDailyLimitMutationVariables = Exact<{
   input: ApiKeyRemoveLimitInput;
 }>;
 
 
-export type ApiKeyRemoveDailyLimitMutation = { readonly __typename: 'Mutation', readonly apiKeyRemoveDailyLimit: { readonly __typename: 'ApiKeySetLimitPayload', readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly spentLast24HSats: number, readonly spentLast7DSats: number, readonly spentLast30DSats: number, readonly spentLast365DSats: number } } };
+export type ApiKeyRemoveDailyLimitMutation = { readonly __typename: 'Mutation', readonly apiKeyRemoveDailyLimit: { readonly __typename: 'ApiKeySetLimitPayload', readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly limits: { readonly __typename: 'ApiKeyLimits', readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly spentLast24HSats: number, readonly spentLast7DSats: number, readonly spentLast30DSats: number, readonly spentLast365DSats: number } } } };
 
 export type ApiKeySetWeeklyLimitMutationVariables = Exact<{
   input: ApiKeySetWeeklyLimitInput;
 }>;
 
 
-export type ApiKeySetWeeklyLimitMutation = { readonly __typename: 'Mutation', readonly apiKeySetWeeklyLimit: { readonly __typename: 'ApiKeySetLimitPayload', readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly spentLast24HSats: number, readonly spentLast7DSats: number, readonly spentLast30DSats: number, readonly spentLast365DSats: number } } };
+export type ApiKeySetWeeklyLimitMutation = { readonly __typename: 'Mutation', readonly apiKeySetWeeklyLimit: { readonly __typename: 'ApiKeySetLimitPayload', readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly limits: { readonly __typename: 'ApiKeyLimits', readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly spentLast24HSats: number, readonly spentLast7DSats: number, readonly spentLast30DSats: number, readonly spentLast365DSats: number } } } };
 
 export type ApiKeyRemoveWeeklyLimitMutationVariables = Exact<{
   input: ApiKeyRemoveLimitInput;
 }>;
 
 
-export type ApiKeyRemoveWeeklyLimitMutation = { readonly __typename: 'Mutation', readonly apiKeyRemoveWeeklyLimit: { readonly __typename: 'ApiKeySetLimitPayload', readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly spentLast24HSats: number, readonly spentLast7DSats: number, readonly spentLast30DSats: number, readonly spentLast365DSats: number } } };
+export type ApiKeyRemoveWeeklyLimitMutation = { readonly __typename: 'Mutation', readonly apiKeyRemoveWeeklyLimit: { readonly __typename: 'ApiKeySetLimitPayload', readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly limits: { readonly __typename: 'ApiKeyLimits', readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly spentLast24HSats: number, readonly spentLast7DSats: number, readonly spentLast30DSats: number, readonly spentLast365DSats: number } } } };
 
 export type ApiKeySetMonthlyLimitMutationVariables = Exact<{
   input: ApiKeySetMonthlyLimitInput;
 }>;
 
 
-export type ApiKeySetMonthlyLimitMutation = { readonly __typename: 'Mutation', readonly apiKeySetMonthlyLimit: { readonly __typename: 'ApiKeySetLimitPayload', readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly spentLast24HSats: number, readonly spentLast7DSats: number, readonly spentLast30DSats: number, readonly spentLast365DSats: number } } };
+export type ApiKeySetMonthlyLimitMutation = { readonly __typename: 'Mutation', readonly apiKeySetMonthlyLimit: { readonly __typename: 'ApiKeySetLimitPayload', readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly limits: { readonly __typename: 'ApiKeyLimits', readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly spentLast24HSats: number, readonly spentLast7DSats: number, readonly spentLast30DSats: number, readonly spentLast365DSats: number } } } };
 
 export type ApiKeyRemoveMonthlyLimitMutationVariables = Exact<{
   input: ApiKeyRemoveLimitInput;
 }>;
 
 
-export type ApiKeyRemoveMonthlyLimitMutation = { readonly __typename: 'Mutation', readonly apiKeyRemoveMonthlyLimit: { readonly __typename: 'ApiKeySetLimitPayload', readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly spentLast24HSats: number, readonly spentLast7DSats: number, readonly spentLast30DSats: number, readonly spentLast365DSats: number } } };
+export type ApiKeyRemoveMonthlyLimitMutation = { readonly __typename: 'Mutation', readonly apiKeyRemoveMonthlyLimit: { readonly __typename: 'ApiKeySetLimitPayload', readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly limits: { readonly __typename: 'ApiKeyLimits', readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly spentLast24HSats: number, readonly spentLast7DSats: number, readonly spentLast30DSats: number, readonly spentLast365DSats: number } } } };
 
 export type ApiKeySetAnnualLimitMutationVariables = Exact<{
   input: ApiKeySetAnnualLimitInput;
 }>;
 
 
-export type ApiKeySetAnnualLimitMutation = { readonly __typename: 'Mutation', readonly apiKeySetAnnualLimit: { readonly __typename: 'ApiKeySetLimitPayload', readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly spentLast24HSats: number, readonly spentLast7DSats: number, readonly spentLast30DSats: number, readonly spentLast365DSats: number } } };
+export type ApiKeySetAnnualLimitMutation = { readonly __typename: 'Mutation', readonly apiKeySetAnnualLimit: { readonly __typename: 'ApiKeySetLimitPayload', readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly limits: { readonly __typename: 'ApiKeyLimits', readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly spentLast24HSats: number, readonly spentLast7DSats: number, readonly spentLast30DSats: number, readonly spentLast365DSats: number } } } };
 
 export type ApiKeyRemoveAnnualLimitMutationVariables = Exact<{
   input: ApiKeyRemoveLimitInput;
 }>;
 
 
-export type ApiKeyRemoveAnnualLimitMutation = { readonly __typename: 'Mutation', readonly apiKeyRemoveAnnualLimit: { readonly __typename: 'ApiKeySetLimitPayload', readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly spentLast24HSats: number, readonly spentLast7DSats: number, readonly spentLast30DSats: number, readonly spentLast365DSats: number } } };
+export type ApiKeyRemoveAnnualLimitMutation = { readonly __typename: 'Mutation', readonly apiKeyRemoveAnnualLimit: { readonly __typename: 'ApiKeySetLimitPayload', readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly limits: { readonly __typename: 'ApiKeyLimits', readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly spentLast24HSats: number, readonly spentLast7DSats: number, readonly spentLast30DSats: number, readonly spentLast365DSats: number } } } };
 
 export type CallbackEndpointAddMutationVariables = Exact<{
   input: CallbackEndpointAddInput;
@@ -2689,7 +2686,7 @@ export type UserTotpRegistrationValidateMutation = { readonly __typename: 'Mutat
 export type ApiKeysQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type ApiKeysQuery = { readonly __typename: 'Query', readonly me?: { readonly __typename: 'User', readonly apiKeys: ReadonlyArray<{ readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly createdAt: number, readonly revoked: boolean, readonly expired: boolean, readonly lastUsedAt?: number | null, readonly expiresAt?: number | null, readonly readOnly: boolean, readonly scopes: ReadonlyArray<Scope>, readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly spentLast24HSats: number, readonly spentLast7DSats: number, readonly spentLast30DSats: number, readonly spentLast365DSats: number }> } | null };
+export type ApiKeysQuery = { readonly __typename: 'Query', readonly me?: { readonly __typename: 'User', readonly apiKeys: ReadonlyArray<{ readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly createdAt: number, readonly revoked: boolean, readonly expired: boolean, readonly lastUsedAt?: number | null, readonly expiresAt?: number | null, readonly readOnly: boolean, readonly scopes: ReadonlyArray<Scope>, readonly limits: { readonly __typename: 'ApiKeyLimits', readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly spentLast24HSats: number, readonly spentLast7DSats: number, readonly spentLast30DSats: number, readonly spentLast365DSats: number } }> } | null };
 
 export type CallbackEndpointsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -2744,14 +2741,16 @@ export const ApiKeyCreateDocument = gql`
       lastUsedAt
       expiresAt
       scopes
-      dailyLimitSats
-      weeklyLimitSats
-      monthlyLimitSats
-      annualLimitSats
-      spentLast24HSats
-      spentLast7DSats
-      spentLast30DSats
-      spentLast365DSats
+      limits {
+        dailyLimitSats
+        weeklyLimitSats
+        monthlyLimitSats
+        annualLimitSats
+        spentLast24HSats
+        spentLast7DSats
+        spentLast30DSats
+        spentLast365DSats
+      }
     }
     apiKeySecret
   }
@@ -2831,14 +2830,16 @@ export const ApiKeySetDailyLimitDocument = gql`
     apiKey {
       id
       name
-      dailyLimitSats
-      weeklyLimitSats
-      monthlyLimitSats
-      annualLimitSats
-      spentLast24HSats
-      spentLast7DSats
-      spentLast30DSats
-      spentLast365DSats
+      limits {
+        dailyLimitSats
+        weeklyLimitSats
+        monthlyLimitSats
+        annualLimitSats
+        spentLast24HSats
+        spentLast7DSats
+        spentLast30DSats
+        spentLast365DSats
+      }
     }
   }
 }
@@ -2875,14 +2876,16 @@ export const ApiKeyRemoveDailyLimitDocument = gql`
     apiKey {
       id
       name
-      dailyLimitSats
-      weeklyLimitSats
-      monthlyLimitSats
-      annualLimitSats
-      spentLast24HSats
-      spentLast7DSats
-      spentLast30DSats
-      spentLast365DSats
+      limits {
+        dailyLimitSats
+        weeklyLimitSats
+        monthlyLimitSats
+        annualLimitSats
+        spentLast24HSats
+        spentLast7DSats
+        spentLast30DSats
+        spentLast365DSats
+      }
     }
   }
 }
@@ -2919,14 +2922,16 @@ export const ApiKeySetWeeklyLimitDocument = gql`
     apiKey {
       id
       name
-      dailyLimitSats
-      weeklyLimitSats
-      monthlyLimitSats
-      annualLimitSats
-      spentLast24HSats
-      spentLast7DSats
-      spentLast30DSats
-      spentLast365DSats
+      limits {
+        dailyLimitSats
+        weeklyLimitSats
+        monthlyLimitSats
+        annualLimitSats
+        spentLast24HSats
+        spentLast7DSats
+        spentLast30DSats
+        spentLast365DSats
+      }
     }
   }
 }
@@ -2963,14 +2968,16 @@ export const ApiKeyRemoveWeeklyLimitDocument = gql`
     apiKey {
       id
       name
-      dailyLimitSats
-      weeklyLimitSats
-      monthlyLimitSats
-      annualLimitSats
-      spentLast24HSats
-      spentLast7DSats
-      spentLast30DSats
-      spentLast365DSats
+      limits {
+        dailyLimitSats
+        weeklyLimitSats
+        monthlyLimitSats
+        annualLimitSats
+        spentLast24HSats
+        spentLast7DSats
+        spentLast30DSats
+        spentLast365DSats
+      }
     }
   }
 }
@@ -3007,14 +3014,16 @@ export const ApiKeySetMonthlyLimitDocument = gql`
     apiKey {
       id
       name
-      dailyLimitSats
-      weeklyLimitSats
-      monthlyLimitSats
-      annualLimitSats
-      spentLast24HSats
-      spentLast7DSats
-      spentLast30DSats
-      spentLast365DSats
+      limits {
+        dailyLimitSats
+        weeklyLimitSats
+        monthlyLimitSats
+        annualLimitSats
+        spentLast24HSats
+        spentLast7DSats
+        spentLast30DSats
+        spentLast365DSats
+      }
     }
   }
 }
@@ -3051,14 +3060,16 @@ export const ApiKeyRemoveMonthlyLimitDocument = gql`
     apiKey {
       id
       name
-      dailyLimitSats
-      weeklyLimitSats
-      monthlyLimitSats
-      annualLimitSats
-      spentLast24HSats
-      spentLast7DSats
-      spentLast30DSats
-      spentLast365DSats
+      limits {
+        dailyLimitSats
+        weeklyLimitSats
+        monthlyLimitSats
+        annualLimitSats
+        spentLast24HSats
+        spentLast7DSats
+        spentLast30DSats
+        spentLast365DSats
+      }
     }
   }
 }
@@ -3095,14 +3106,16 @@ export const ApiKeySetAnnualLimitDocument = gql`
     apiKey {
       id
       name
-      dailyLimitSats
-      weeklyLimitSats
-      monthlyLimitSats
-      annualLimitSats
-      spentLast24HSats
-      spentLast7DSats
-      spentLast30DSats
-      spentLast365DSats
+      limits {
+        dailyLimitSats
+        weeklyLimitSats
+        monthlyLimitSats
+        annualLimitSats
+        spentLast24HSats
+        spentLast7DSats
+        spentLast30DSats
+        spentLast365DSats
+      }
     }
   }
 }
@@ -3139,14 +3152,16 @@ export const ApiKeyRemoveAnnualLimitDocument = gql`
     apiKey {
       id
       name
-      dailyLimitSats
-      weeklyLimitSats
-      monthlyLimitSats
-      annualLimitSats
-      spentLast24HSats
-      spentLast7DSats
-      spentLast30DSats
-      spentLast365DSats
+      limits {
+        dailyLimitSats
+        weeklyLimitSats
+        monthlyLimitSats
+        annualLimitSats
+        spentLast24HSats
+        spentLast7DSats
+        spentLast30DSats
+        spentLast365DSats
+      }
     }
   }
 }
@@ -3560,14 +3575,16 @@ export const ApiKeysDocument = gql`
       expiresAt
       readOnly
       scopes
-      dailyLimitSats
-      weeklyLimitSats
-      monthlyLimitSats
-      annualLimitSats
-      spentLast24HSats
-      spentLast7DSats
-      spentLast30DSats
-      spentLast365DSats
+      limits {
+        dailyLimitSats
+        weeklyLimitSats
+        monthlyLimitSats
+        annualLimitSats
+        spentLast24HSats
+        spentLast7DSats
+        spentLast30DSats
+        spentLast365DSats
+      }
     }
   }
 }
@@ -4109,6 +4126,7 @@ export type ResolversTypes = {
   ApiKey: ResolverTypeWrapper<ApiKey>;
   ApiKeyCreateInput: ApiKeyCreateInput;
   ApiKeyCreatePayload: ResolverTypeWrapper<ApiKeyCreatePayload>;
+  ApiKeyLimits: ResolverTypeWrapper<ApiKeyLimits>;
   ApiKeyRemoveLimitInput: ApiKeyRemoveLimitInput;
   ApiKeyRevokeInput: ApiKeyRevokeInput;
   ApiKeyRevokePayload: ResolverTypeWrapper<ApiKeyRevokePayload>;
@@ -4354,6 +4372,7 @@ export type ResolversParentTypes = {
   ApiKey: ApiKey;
   ApiKeyCreateInput: ApiKeyCreateInput;
   ApiKeyCreatePayload: ApiKeyCreatePayload;
+  ApiKeyLimits: ApiKeyLimits;
   ApiKeyRemoveLimitInput: ApiKeyRemoveLimitInput;
   ApiKeyRevokeInput: ApiKeyRevokeInput;
   ApiKeyRevokePayload: ApiKeyRevokePayload;
@@ -4676,29 +4695,34 @@ export type AccountUpdateNotificationSettingsPayloadResolvers<ContextType = any,
 };
 
 export type ApiKeyResolvers<ContextType = any, ParentType extends ResolversParentTypes['ApiKey'] = ResolversParentTypes['ApiKey']> = {
-  annualLimitSats?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
   createdAt?: Resolver<ResolversTypes['Timestamp'], ParentType, ContextType>;
-  dailyLimitSats?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
   expired?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   expiresAt?: Resolver<Maybe<ResolversTypes['Timestamp']>, ParentType, ContextType>;
   id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
   lastUsedAt?: Resolver<Maybe<ResolversTypes['Timestamp']>, ParentType, ContextType>;
-  monthlyLimitSats?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  limits?: Resolver<ResolversTypes['ApiKeyLimits'], ParentType, ContextType>;
   name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   readOnly?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   revoked?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   scopes?: Resolver<ReadonlyArray<ResolversTypes['Scope']>, ParentType, ContextType>;
-  spentLast7DSats?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
-  spentLast24HSats?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
-  spentLast30DSats?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
-  spentLast365DSats?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
-  weeklyLimitSats?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
 export type ApiKeyCreatePayloadResolvers<ContextType = any, ParentType extends ResolversParentTypes['ApiKeyCreatePayload'] = ResolversParentTypes['ApiKeyCreatePayload']> = {
   apiKey?: Resolver<ResolversTypes['ApiKey'], ParentType, ContextType>;
   apiKeySecret?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
+export type ApiKeyLimitsResolvers<ContextType = any, ParentType extends ResolversParentTypes['ApiKeyLimits'] = ResolversParentTypes['ApiKeyLimits']> = {
+  annualLimitSats?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  dailyLimitSats?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  monthlyLimitSats?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  spentLast7DSats?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  spentLast24HSats?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  spentLast30DSats?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  spentLast365DSats?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  weeklyLimitSats?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
@@ -5739,6 +5763,7 @@ export type Resolvers<ContextType = any> = {
   AccountUpdateNotificationSettingsPayload?: AccountUpdateNotificationSettingsPayloadResolvers<ContextType>;
   ApiKey?: ApiKeyResolvers<ContextType>;
   ApiKeyCreatePayload?: ApiKeyCreatePayloadResolvers<ContextType>;
+  ApiKeyLimits?: ApiKeyLimitsResolvers<ContextType>;
   ApiKeyRevokePayload?: ApiKeyRevokePayloadResolvers<ContextType>;
   ApiKeySetLimitPayload?: ApiKeySetLimitPayloadResolvers<ContextType>;
   AuthToken?: GraphQLScalarType;

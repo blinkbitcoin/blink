@@ -37,14 +37,16 @@ gql`
         lastUsedAt
         expiresAt
         scopes
-        dailyLimitSats
-        weeklyLimitSats
-        monthlyLimitSats
-        annualLimitSats
-        spentLast24HSats
-        spentLast7DSats
-        spentLast30DSats
-        spentLast365DSats
+        limits {
+          dailyLimitSats
+          weeklyLimitSats
+          monthlyLimitSats
+          annualLimitSats
+          spentLast24HSats
+          spentLast7DSats
+          spentLast30DSats
+          spentLast365DSats
+        }
       }
       apiKeySecret
     }
@@ -70,14 +72,16 @@ gql`
       apiKey {
         id
         name
-        dailyLimitSats
-        weeklyLimitSats
-        monthlyLimitSats
-        annualLimitSats
-        spentLast24HSats
-        spentLast7DSats
-        spentLast30DSats
-        spentLast365DSats
+        limits {
+          dailyLimitSats
+          weeklyLimitSats
+          monthlyLimitSats
+          annualLimitSats
+          spentLast24HSats
+          spentLast7DSats
+          spentLast30DSats
+          spentLast365DSats
+        }
       }
     }
   }
@@ -87,14 +91,16 @@ gql`
       apiKey {
         id
         name
-        dailyLimitSats
-        weeklyLimitSats
-        monthlyLimitSats
-        annualLimitSats
-        spentLast24HSats
-        spentLast7DSats
-        spentLast30DSats
-        spentLast365DSats
+        limits {
+          dailyLimitSats
+          weeklyLimitSats
+          monthlyLimitSats
+          annualLimitSats
+          spentLast24HSats
+          spentLast7DSats
+          spentLast30DSats
+          spentLast365DSats
+        }
       }
     }
   }
@@ -104,14 +110,16 @@ gql`
       apiKey {
         id
         name
-        dailyLimitSats
-        weeklyLimitSats
-        monthlyLimitSats
-        annualLimitSats
-        spentLast24HSats
-        spentLast7DSats
-        spentLast30DSats
-        spentLast365DSats
+        limits {
+          dailyLimitSats
+          weeklyLimitSats
+          monthlyLimitSats
+          annualLimitSats
+          spentLast24HSats
+          spentLast7DSats
+          spentLast30DSats
+          spentLast365DSats
+        }
       }
     }
   }
@@ -121,14 +129,16 @@ gql`
       apiKey {
         id
         name
-        dailyLimitSats
-        weeklyLimitSats
-        monthlyLimitSats
-        annualLimitSats
-        spentLast24HSats
-        spentLast7DSats
-        spentLast30DSats
-        spentLast365DSats
+        limits {
+          dailyLimitSats
+          weeklyLimitSats
+          monthlyLimitSats
+          annualLimitSats
+          spentLast24HSats
+          spentLast7DSats
+          spentLast30DSats
+          spentLast365DSats
+        }
       }
     }
   }
@@ -138,14 +148,16 @@ gql`
       apiKey {
         id
         name
-        dailyLimitSats
-        weeklyLimitSats
-        monthlyLimitSats
-        annualLimitSats
-        spentLast24HSats
-        spentLast7DSats
-        spentLast30DSats
-        spentLast365DSats
+        limits {
+          dailyLimitSats
+          weeklyLimitSats
+          monthlyLimitSats
+          annualLimitSats
+          spentLast24HSats
+          spentLast7DSats
+          spentLast30DSats
+          spentLast365DSats
+        }
       }
     }
   }
@@ -155,14 +167,16 @@ gql`
       apiKey {
         id
         name
-        dailyLimitSats
-        weeklyLimitSats
-        monthlyLimitSats
-        annualLimitSats
-        spentLast24HSats
-        spentLast7DSats
-        spentLast30DSats
-        spentLast365DSats
+        limits {
+          dailyLimitSats
+          weeklyLimitSats
+          monthlyLimitSats
+          annualLimitSats
+          spentLast24HSats
+          spentLast7DSats
+          spentLast30DSats
+          spentLast365DSats
+        }
       }
     }
   }
@@ -172,14 +186,16 @@ gql`
       apiKey {
         id
         name
-        dailyLimitSats
-        weeklyLimitSats
-        monthlyLimitSats
-        annualLimitSats
-        spentLast24HSats
-        spentLast7DSats
-        spentLast30DSats
-        spentLast365DSats
+        limits {
+          dailyLimitSats
+          weeklyLimitSats
+          monthlyLimitSats
+          annualLimitSats
+          spentLast24HSats
+          spentLast7DSats
+          spentLast30DSats
+          spentLast365DSats
+        }
       }
     }
   }
@@ -189,14 +205,16 @@ gql`
       apiKey {
         id
         name
-        dailyLimitSats
-        weeklyLimitSats
-        monthlyLimitSats
-        annualLimitSats
-        spentLast24HSats
-        spentLast7DSats
-        spentLast30DSats
-        spentLast365DSats
+        limits {
+          dailyLimitSats
+          weeklyLimitSats
+          monthlyLimitSats
+          annualLimitSats
+          spentLast24HSats
+          spentLast7DSats
+          spentLast30DSats
+          spentLast365DSats
+        }
       }
     }
   }

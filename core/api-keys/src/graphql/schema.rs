@@ -1,7 +1,7 @@
 use async_graphql::*;
 use chrono::{DateTime, TimeZone, Utc};
 
-use crate::{app::ApiKeysApp, identity::IdentityApiKeyId, limits::Limits, scope::*};
+use crate::{app::ApiKeysApp, identity::IdentityApiKeyId, scope::*};
 
 pub struct AuthSubject {
     pub id: String,
@@ -53,6 +53,18 @@ impl Query {
 }
 
 #[derive(SimpleObject)]
+pub(super) struct ApiKeyLimits {
+    pub daily_limit_sats: Option<i64>,
+    pub weekly_limit_sats: Option<i64>,
+    pub monthly_limit_sats: Option<i64>,
+    pub annual_limit_sats: Option<i64>,
+    pub spent_last_24h_sats: i64,
+    pub spent_last_7d_sats: i64,
+    pub spent_last_30d_sats: i64,
+    pub spent_last_365d_sats: i64,
+}
+
+#[derive(SimpleObject)]
 #[graphql(complex)]
 pub(super) struct ApiKey {
     pub id: ID,
@@ -68,76 +80,21 @@ pub(super) struct ApiKey {
 
 #[ComplexObject]
 impl ApiKey {
-    async fn daily_limit_sats(&self, ctx: &Context<'_>) -> Result<Option<i64>> {
+    async fn limits(&self, ctx: &Context<'_>) -> Result<ApiKeyLimits> {
         let app = ctx.data_unchecked::<ApiKeysApp>();
-        let limits = Limits::new(app.pool());
         let api_key_id = self.id.parse::<IdentityApiKeyId>()?;
 
-        let summary = limits.get_spending_summary(api_key_id).await?;
-        Ok(summary.daily_limit_sats)
-    }
-
-    async fn weekly_limit_sats(&self, ctx: &Context<'_>) -> Result<Option<i64>> {
-        let app = ctx.data_unchecked::<ApiKeysApp>();
-        let limits = Limits::new(app.pool());
-        let api_key_id = self.id.parse::<IdentityApiKeyId>()?;
-
-        let summary = limits.get_spending_summary(api_key_id).await?;
-        Ok(summary.weekly_limit_sats)
-    }
-
-    async fn monthly_limit_sats(&self, ctx: &Context<'_>) -> Result<Option<i64>> {
-        let app = ctx.data_unchecked::<ApiKeysApp>();
-        let limits = Limits::new(app.pool());
-        let api_key_id = self.id.parse::<IdentityApiKeyId>()?;
-
-        let summary = limits.get_spending_summary(api_key_id).await?;
-        Ok(summary.monthly_limit_sats)
-    }
-
-    async fn annual_limit_sats(&self, ctx: &Context<'_>) -> Result<Option<i64>> {
-        let app = ctx.data_unchecked::<ApiKeysApp>();
-        let limits = Limits::new(app.pool());
-        let api_key_id = self.id.parse::<IdentityApiKeyId>()?;
-
-        let summary = limits.get_spending_summary(api_key_id).await?;
-        Ok(summary.annual_limit_sats)
-    }
-
-    async fn spent_last_24h_sats(&self, ctx: &Context<'_>) -> Result<i64> {
-        let app = ctx.data_unchecked::<ApiKeysApp>();
-        let limits = Limits::new(app.pool());
-        let api_key_id = self.id.parse::<IdentityApiKeyId>()?;
-
-        let summary = limits.get_spending_summary(api_key_id).await?;
-        Ok(summary.spent_last_24h_sats)
-    }
-
-    async fn spent_last_7d_sats(&self, ctx: &Context<'_>) -> Result<i64> {
-        let app = ctx.data_unchecked::<ApiKeysApp>();
-        let limits = Limits::new(app.pool());
-        let api_key_id = self.id.parse::<IdentityApiKeyId>()?;
-
-        let summary = limits.get_spending_summary(api_key_id).await?;
-        Ok(summary.spent_last_7d_sats)
-    }
-
-    async fn spent_last_30d_sats(&self, ctx: &Context<'_>) -> Result<i64> {
-        let app = ctx.data_unchecked::<ApiKeysApp>();
-        let limits = Limits::new(app.pool());
-        let api_key_id = self.id.parse::<IdentityApiKeyId>()?;
-
-        let summary = limits.get_spending_summary(api_key_id).await?;
-        Ok(summary.spent_last_30d_sats)
-    }
-
-    async fn spent_last_365d_sats(&self, ctx: &Context<'_>) -> Result<i64> {
-        let app = ctx.data_unchecked::<ApiKeysApp>();
-        let limits = Limits::new(app.pool());
-        let api_key_id = self.id.parse::<IdentityApiKeyId>()?;
-
-        let summary = limits.get_spending_summary(api_key_id).await?;
-        Ok(summary.spent_last_365d_sats)
+        let summary = app.get_spending_summary(api_key_id).await?;
+        Ok(ApiKeyLimits {
+            daily_limit_sats: summary.daily_limit_sats,
+            weekly_limit_sats: summary.weekly_limit_sats,
+            monthly_limit_sats: summary.monthly_limit_sats,
+            annual_limit_sats: summary.annual_limit_sats,
+            spent_last_24h_sats: summary.spent_last_24h_sats,
+            spent_last_7d_sats: summary.spent_last_7d_sats,
+            spent_last_30d_sats: summary.spent_last_30d_sats,
+            spent_last_365d_sats: summary.spent_last_365d_sats,
+        })
     }
 }
 
@@ -270,7 +227,6 @@ impl Mutation {
         }
 
         let api_key_id = input.id.parse::<IdentityApiKeyId>()?;
-        let limits = Limits::new(app.pool());
 
         let api_keys = app.list_api_keys_for_subject(&subject.id).await?;
         let api_key = api_keys
@@ -278,8 +234,7 @@ impl Mutation {
             .find(|k| k.id == api_key_id)
             .ok_or("API key not found")?;
 
-        limits
-            .set_daily_limit(api_key_id, input.daily_limit_sats)
+        app.set_daily_limit(api_key_id, input.daily_limit_sats)
             .await?;
 
         Ok(ApiKeySetLimitPayload {
@@ -299,7 +254,6 @@ impl Mutation {
         }
 
         let api_key_id = input.id.parse::<IdentityApiKeyId>()?;
-        let limits = Limits::new(app.pool());
 
         let api_keys = app.list_api_keys_for_subject(&subject.id).await?;
         let api_key = api_keys
@@ -307,8 +261,7 @@ impl Mutation {
             .find(|k| k.id == api_key_id)
             .ok_or("API key not found")?;
 
-        limits
-            .set_weekly_limit(api_key_id, input.weekly_limit_sats)
+        app.set_weekly_limit(api_key_id, input.weekly_limit_sats)
             .await?;
 
         Ok(ApiKeySetLimitPayload {
@@ -328,7 +281,6 @@ impl Mutation {
         }
 
         let api_key_id = input.id.parse::<IdentityApiKeyId>()?;
-        let limits = Limits::new(app.pool());
 
         let api_keys = app.list_api_keys_for_subject(&subject.id).await?;
         let api_key = api_keys
@@ -336,8 +288,7 @@ impl Mutation {
             .find(|k| k.id == api_key_id)
             .ok_or("API key not found")?;
 
-        limits
-            .set_monthly_limit(api_key_id, input.monthly_limit_sats)
+        app.set_monthly_limit(api_key_id, input.monthly_limit_sats)
             .await?;
 
         Ok(ApiKeySetLimitPayload {
@@ -357,7 +308,6 @@ impl Mutation {
         }
 
         let api_key_id = input.id.parse::<IdentityApiKeyId>()?;
-        let limits = Limits::new(app.pool());
 
         let api_keys = app.list_api_keys_for_subject(&subject.id).await?;
         let api_key = api_keys
@@ -365,8 +315,7 @@ impl Mutation {
             .find(|k| k.id == api_key_id)
             .ok_or("API key not found")?;
 
-        limits
-            .set_annual_limit(api_key_id, input.annual_limit_sats)
+        app.set_annual_limit(api_key_id, input.annual_limit_sats)
             .await?;
 
         Ok(ApiKeySetLimitPayload {
@@ -386,7 +335,6 @@ impl Mutation {
         }
 
         let api_key_id = input.id.parse::<IdentityApiKeyId>()?;
-        let limits = Limits::new(app.pool());
 
         let api_keys = app.list_api_keys_for_subject(&subject.id).await?;
         let api_key = api_keys
@@ -394,7 +342,7 @@ impl Mutation {
             .find(|k| k.id == api_key_id)
             .ok_or("API key not found")?;
 
-        limits.remove_daily_limit(api_key_id).await?;
+        app.remove_daily_limit(api_key_id).await?;
 
         Ok(ApiKeySetLimitPayload {
             api_key: ApiKey::from(api_key),
@@ -413,7 +361,6 @@ impl Mutation {
         }
 
         let api_key_id = input.id.parse::<IdentityApiKeyId>()?;
-        let limits = Limits::new(app.pool());
 
         let api_keys = app.list_api_keys_for_subject(&subject.id).await?;
         let api_key = api_keys
@@ -421,7 +368,7 @@ impl Mutation {
             .find(|k| k.id == api_key_id)
             .ok_or("API key not found")?;
 
-        limits.remove_weekly_limit(api_key_id).await?;
+        app.remove_weekly_limit(api_key_id).await?;
 
         Ok(ApiKeySetLimitPayload {
             api_key: ApiKey::from(api_key),
@@ -440,7 +387,6 @@ impl Mutation {
         }
 
         let api_key_id = input.id.parse::<IdentityApiKeyId>()?;
-        let limits = Limits::new(app.pool());
 
         let api_keys = app.list_api_keys_for_subject(&subject.id).await?;
         let api_key = api_keys
@@ -448,7 +394,7 @@ impl Mutation {
             .find(|k| k.id == api_key_id)
             .ok_or("API key not found")?;
 
-        limits.remove_monthly_limit(api_key_id).await?;
+        app.remove_monthly_limit(api_key_id).await?;
 
         Ok(ApiKeySetLimitPayload {
             api_key: ApiKey::from(api_key),
@@ -467,7 +413,6 @@ impl Mutation {
         }
 
         let api_key_id = input.id.parse::<IdentityApiKeyId>()?;
-        let limits = Limits::new(app.pool());
 
         let api_keys = app.list_api_keys_for_subject(&subject.id).await?;
         let api_key = api_keys
@@ -475,7 +420,7 @@ impl Mutation {
             .find(|k| k.id == api_key_id)
             .ok_or("API key not found")?;
 
-        limits.remove_annual_limit(api_key_id).await?;
+        app.remove_annual_limit(api_key_id).await?;
 
         Ok(ApiKeySetLimitPayload {
             api_key: ApiKey::from(api_key),

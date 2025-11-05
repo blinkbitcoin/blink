@@ -37,7 +37,6 @@ async fn run_cmd(config: Config) -> anyhow::Result<()> {
     tracing::init_tracer(config.tracing)?;
     let pool = db::init_pool(&config.db).await?;
     let app = crate::app::ApiKeysApp::new(pool.clone(), config.app);
-    let limits = std::sync::Arc::new(crate::limits::Limits::new(pool));
 
     let (send, mut receive) = tokio::sync::mpsc::channel(1);
     let mut handles = vec![];
@@ -55,9 +54,10 @@ async fn run_cmd(config: Config) -> anyhow::Result<()> {
 
     let grpc_send = send.clone();
     let grpc_config = config.grpc_server;
+    let grpc_app = std::sync::Arc::new(app);
     handles.push(tokio::spawn(async move {
         let _ = grpc_send.try_send(
-            crate::grpc::run_server(grpc_config, limits)
+            crate::grpc::run_server(grpc_config, grpc_app)
                 .await
                 .context("grpc server error"),
         );
