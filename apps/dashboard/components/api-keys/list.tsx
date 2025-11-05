@@ -79,7 +79,8 @@ const ApiKeysList: React.FC<ApiKeysListProps> = ({
                       {weeklyLimitSats && (
                         <div>
                           <Typography level="body-sm">
-                            <strong>Weekly:</strong> {weeklyLimitSats.toLocaleString()} sats
+                            <strong>Weekly:</strong> {weeklyLimitSats.toLocaleString()}{" "}
+                            sats
                           </Typography>
                           <Typography level="body-xs" color="neutral">
                             Spent: {spentLast7DSats.toLocaleString()} / Remaining:{" "}
@@ -102,7 +103,8 @@ const ApiKeysList: React.FC<ApiKeysListProps> = ({
                       {annualLimitSats && (
                         <div>
                           <Typography level="body-sm">
-                            <strong>Annual:</strong> {annualLimitSats.toLocaleString()} sats
+                            <strong>Annual:</strong> {annualLimitSats.toLocaleString()}{" "}
+                            sats
                           </Typography>
                           <Typography level="body-xs" color="neutral">
                             Spent: {spentLast365DSats.toLocaleString()} / Remaining:{" "}

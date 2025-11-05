@@ -3,11 +3,7 @@ mod jwks;
 
 use async_graphql::*;
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
-use axum::{
-    extract::State,
-    routing::get,
-    Extension, Json, Router,
-};
+use axum::{extract::State, routing::get, Extension, Json, Router};
 use axum_extra::headers::HeaderMap;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;

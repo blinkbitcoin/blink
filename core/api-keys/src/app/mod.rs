@@ -125,7 +125,10 @@ impl ApiKeysApp {
         api_key_id: IdentityApiKeyId,
         daily_limit_sats: i64,
     ) -> Result<(), ApplicationError> {
-        Ok(self.limits.set_daily_limit(api_key_id, daily_limit_sats).await?)
+        Ok(self
+            .limits
+            .set_daily_limit(api_key_id, daily_limit_sats)
+            .await?)
     }
 
     #[tracing::instrument(name = "app.set_weekly_limit", skip_all)]
@@ -134,7 +137,10 @@ impl ApiKeysApp {
         api_key_id: IdentityApiKeyId,
         weekly_limit_sats: i64,
     ) -> Result<(), ApplicationError> {
-        Ok(self.limits.set_weekly_limit(api_key_id, weekly_limit_sats).await?)
+        Ok(self
+            .limits
+            .set_weekly_limit(api_key_id, weekly_limit_sats)
+            .await?)
     }
 
     #[tracing::instrument(name = "app.set_monthly_limit", skip_all)]
@@ -143,7 +149,10 @@ impl ApiKeysApp {
         api_key_id: IdentityApiKeyId,
         monthly_limit_sats: i64,
     ) -> Result<(), ApplicationError> {
-        Ok(self.limits.set_monthly_limit(api_key_id, monthly_limit_sats).await?)
+        Ok(self
+            .limits
+            .set_monthly_limit(api_key_id, monthly_limit_sats)
+            .await?)
     }
 
     #[tracing::instrument(name = "app.set_annual_limit", skip_all)]
@@ -152,7 +161,10 @@ impl ApiKeysApp {
         api_key_id: IdentityApiKeyId,
         annual_limit_sats: i64,
     ) -> Result<(), ApplicationError> {
-        Ok(self.limits.set_annual_limit(api_key_id, annual_limit_sats).await?)
+        Ok(self
+            .limits
+            .set_annual_limit(api_key_id, annual_limit_sats)
+            .await?)
     }
 
     #[tracing::instrument(name = "app.remove_daily_limit", skip_all)]
