@@ -367,10 +367,12 @@ export const LndService = (): ILightningService | LightningServiceError => {
   const findRouteForInvoice = async ({
     invoice,
     amount,
+    outgoingChannel,
   }: {
     invoice: LnInvoice
     // FIXME: remove this optional property, use 'findRouteForNoAmountInvoice' with no-amount invoices instead
     amount?: BtcPaymentAmount
+    outgoingChannel?: ChanId
   }): Promise<{ pubkey: Pubkey; rawRoute: RawRoute } | LightningServiceError> => {
     let sats = toSats(0)
     if (amount) {
@@ -393,6 +395,7 @@ export const LndService = (): ILightningService | LightningServiceError => {
       decodedInvoice: invoice,
       maxFee: toSats(maxFeeAmount.amount),
       amount: sats,
+      outgoingChannel,
     })
     if (rawRoute instanceof Error) return rawRoute
     return {
@@ -405,10 +408,12 @@ export const LndService = (): ILightningService | LightningServiceError => {
     decodedInvoice,
     maxFee,
     amount,
+    outgoingChannel,
   }: {
     decodedInvoice: LnInvoice
     maxFee: Satoshis
     amount: Satoshis
+    outgoingChannel?: ChanId
   }): Promise<RawRoute | LightningServiceError> => {
     if (!(amount && amount > 0))
       return new LightningServiceError(
@@ -418,6 +423,7 @@ export const LndService = (): ILightningService | LightningServiceError => {
       decodedInvoice,
       maxFee,
       amount,
+      outgoingChannel,
     })
   }
 
@@ -425,10 +431,12 @@ export const LndService = (): ILightningService | LightningServiceError => {
     decodedInvoice,
     maxFee,
     amount,
+    outgoingChannel,
   }: {
     decodedInvoice: LnInvoice
     maxFee: Satoshis
     amount: Satoshis
+    outgoingChannel?: ChanId
   }): Promise<RawRoute | LightningServiceError> => {
     let cancelTimeout = () => {
       return
@@ -449,7 +457,7 @@ export const LndService = (): ILightningService | LightningServiceError => {
         mTokens = decodedInvoice.milliSatsAmount.toString()
       }
 
-      const probeForRouteArgs: ProbeForRouteArgs = {
+      const probeForRouteArgs = {
         lnd: defaultLnd,
         destination: decodedInvoice.destination,
         mtokens: mTokens,
@@ -465,7 +473,10 @@ export const LndService = (): ILightningService | LightningServiceError => {
         max_fee: maxFee,
         payment: decodedInvoice.paymentSecret || undefined,
         total_mtokens: decodedInvoice.paymentSecret ? mTokens : undefined,
-      }
+        // Use outgoing_channels (plural) instead of deprecated outgoing_channel (singular)
+        // TypeScript types not yet updated, but ln-service supports it
+        outgoing_channels: outgoingChannel ? [outgoingChannel] : undefined,
+      } as ProbeForRouteArgs
       const routePromise = lnService.probeForRoute(probeForRouteArgs)
       const [timeoutPromise, cancelTimeoutFn] = timeoutWithCancel(
         TIMEOUT_PAYMENT,
@@ -818,11 +829,13 @@ export const LndService = (): ILightningService | LightningServiceError => {
     decodedInvoice,
     btcPaymentAmount,
     maxFeeAmount,
+    outgoingChannel,
   }: {
     lnd: AuthenticatedLnd
     decodedInvoice: LnInvoice
     btcPaymentAmount: BtcPaymentAmount
     maxFeeAmount: BtcPaymentAmount | undefined
+    outgoingChannel?: ChanId
   }): Promise<PayInvoiceResult | LightningServiceError> => {
     const milliSatsAmount = btcPaymentAmount.amount * 1000n
     const maxFee = maxFeeAmount !== undefined ? Number(maxFeeAmount.amount) : undefined
@@ -840,7 +853,7 @@ export const LndService = (): ILightningService | LightningServiceError => {
       )
     }
 
-    const paymentDetailsArgs: PayViaPaymentDetailsArgs = {
+    const paymentDetailsArgs = {
       lnd,
       id: decodedInvoice.paymentHash,
       destination: decodedInvoice.destination,
@@ -856,7 +869,10 @@ export const LndService = (): ILightningService | LightningServiceError => {
           }))
         : undefined,
       routes,
-    }
+      // Use outgoing_channels (plural) instead of deprecated outgoing_channel (singular)
+      // TypeScript types not yet updated, but ln-service supports it
+      outgoing_channels: outgoingChannel ? [outgoingChannel] : undefined,
+    } as PayViaPaymentDetailsArgs
 
     let cancelTimeout = () => {
       return
@@ -893,10 +909,12 @@ export const LndService = (): ILightningService | LightningServiceError => {
     decodedInvoice,
     btcPaymentAmount,
     maxFeeAmount,
+    outgoingChannel,
   }: {
     decodedInvoice: LnInvoice
     btcPaymentAmount: BtcPaymentAmount
     maxFeeAmount: BtcPaymentAmount | undefined
+    outgoingChannel?: ChanId
   }): Promise<PayInvoiceResult | LightningServiceError> => {
     const lnds = listActiveLnd()
     for (const lnd of lnds) {
@@ -905,6 +923,7 @@ export const LndService = (): ILightningService | LightningServiceError => {
         decodedInvoice,
         btcPaymentAmount,
         maxFeeAmount,
+        outgoingChannel,
       })
       if (isConnectionError(result)) continue
       return result

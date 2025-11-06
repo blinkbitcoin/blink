@@ -197,19 +197,23 @@ interface ILightningService {
   findRouteForInvoice({
     invoice,
     amount,
+    outgoingChannel,
   }: {
     invoice: LnInvoice
     amount?: BtcPaymentAmount
+    outgoingChannel?: ChanId
   }): Promise<{ pubkey: Pubkey; rawRoute: RawRoute } | LightningServiceError>
 
   findRouteForNoAmountInvoice({
     decodedInvoice,
     maxFee,
     amount,
+    outgoingChannel,
   }: {
     decodedInvoice: LnInvoice
     maxFee: Satoshis
     amount: Satoshis
+    outgoingChannel?: ChanId
   }): Promise<RawRoute | LightningServiceError>
 
   registerInvoice(
@@ -282,10 +286,12 @@ interface ILightningService {
     decodedInvoice,
     btcPaymentAmount,
     maxFeeAmount,
+    outgoingChannel,
   }: {
     decodedInvoice: LnInvoice
     btcPaymentAmount: BtcPaymentAmount
     maxFeeAmount: BtcPaymentAmount | undefined
+    outgoingChannel?: ChanId
   }): Promise<PayInvoiceResult | LightningServiceError>
 }
 

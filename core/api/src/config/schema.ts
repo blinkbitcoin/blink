@@ -704,6 +704,24 @@ export const configSchema = {
         chanId: [],
       },
     },
+    preferredFirstHopConfig: {
+      type: "object",
+      properties: {
+        enabled: { type: "boolean" },
+        outgoingChannels: {
+          type: "array",
+          items: { type: "string" },
+          uniqueItems: true,
+        },
+        fallbackOnError: { type: "boolean" },
+      },
+      additionalProperties: false,
+      default: {
+        enabled: false,
+        outgoingChannels: [],
+        fallbackOnError: true,
+      },
+    },
     smsAuthUnsupportedCountries: {
       type: "array",
       items: { type: "string" },
@@ -758,6 +776,7 @@ export const configSchema = {
     "cronConfig",
     "captcha",
     "skipFeeProbeConfig",
+    "preferredFirstHopConfig",
     "smsAuthUnsupportedCountries",
     "whatsAppAuthUnsupportedCountries",
     "telegramAuthUnsupportedCountries",

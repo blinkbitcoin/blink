@@ -159,6 +159,11 @@ type YamlSchema = {
     mandatory: boolean
   }
   skipFeeProbeConfig: { pubkey: string[]; chanId: string[] }
+  preferredFirstHopConfig: {
+    enabled: boolean
+    outgoingChannels: string[]
+    fallbackOnError: boolean
+  }
   smsAuthUnsupportedCountries: string[]
   whatsAppAuthUnsupportedCountries: string[]
   telegramAuthUnsupportedCountries: string[]

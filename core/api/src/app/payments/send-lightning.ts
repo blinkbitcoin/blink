@@ -16,6 +16,7 @@ import {
   LnPaymentPendingError,
   PaymentSendStatus,
   TemporaryChannelFailureError,
+  shouldRetryWithoutFirstHop,
 } from "@/domain/bitcoin/lightning"
 import { AlreadyPaidError, CouldNotFindLightningPaymentFlowError } from "@/domain/errors"
 import { DisplayAmountsConverter } from "@/domain/fiat"
@@ -76,6 +77,7 @@ import {
 } from "@/app/wallets"
 
 import { ResourceExpiredLockServiceError } from "@/domain/lock"
+import { getPreferredFirstHopConfig } from "@/config"
 
 const dealer = DealerPriceService()
 const paymentFlowRepo = PaymentFlowStateRepository(defaultTimeToExpiryInSeconds)
@@ -820,6 +822,139 @@ const executePaymentViaLn = async ({
   }
 }
 
+/**
+ * Selects the preferred outgoing channel for a payment based on configuration.
+ * Returns the first configured channel if the feature is enabled, otherwise undefined.
+ */
+const getPreferredOutgoingChannel = (): ChanId | undefined => {
+  const config = getPreferredFirstHopConfig()
+  if (!config.enabled || config.outgoingChannels.length === 0) {
+    return undefined
+  }
+  // Use the first configured channel
+  // In the future, this could be enhanced with load balancing or channel selection logic
+  return config.outgoingChannels[0]
+}
+
+/**
+ * Executes a Lightning payment with optional first hop preference and fallback logic.
+ *
+ * If a preferred outgoing channel is configured:
+ * 1. First attempts payment via the preferred channel
+ * 2. If that fails with a retry-able error (e.g., insufficient liquidity, route not found),
+ *    retries without the channel constraint
+ * 3. If the error is non-retry-able (e.g., invoice already paid), returns the error immediately
+ *
+ * @param lndService - The LND service instance
+ * @param decodedInvoice - The decoded Lightning invoice
+ * @param paymentFlow - The payment flow with amounts and fees
+ * @param senderWalletDescriptor - The sender's wallet descriptor
+ * @param rawRoute - Optional pre-computed route
+ * @param outgoingNodePubkey - The outgoing node's public key
+ * @param walletPriceRatio - The wallet price ratio for fee calculations
+ * @returns Payment result or error
+ */
+const executePaymentWithFirstHopFallback = async ({
+  lndService,
+  decodedInvoice,
+  paymentFlow,
+  senderWalletDescriptor,
+  rawRoute,
+  outgoingNodePubkey,
+  walletPriceRatio,
+}: {
+  lndService: ILightningService
+  decodedInvoice: LnInvoice
+  paymentFlow: PaymentFlow<WalletCurrency, WalletCurrency>
+  senderWalletDescriptor: WalletDescriptor<WalletCurrency>
+  rawRoute: RawRoute | undefined
+  outgoingNodePubkey: Pubkey | undefined
+  walletPriceRatio: WalletPriceRatio
+}): Promise<PayInvoiceResult | LightningServiceError> => {
+  const config = getPreferredFirstHopConfig()
+  const preferredChannel = getPreferredOutgoingChannel()
+
+  // If we have a pre-computed route, use it directly (no fallback needed)
+  if (rawRoute) {
+    return lndService.payInvoiceViaRoutes({
+      paymentHash: decodedInvoice.paymentHash,
+      rawRoute,
+      pubkey: outgoingNodePubkey,
+    })
+  }
+
+  const maxFeeCheckArgs = {
+    maxFeeAmount: paymentFlow.btcProtocolAndBankFee,
+    btcPaymentAmount: paymentFlow.btcPaymentAmount,
+    usdPaymentAmount: paymentFlow.usdPaymentAmount,
+    priceRatio: walletPriceRatio,
+    senderWalletCurrency: senderWalletDescriptor.currency,
+    isFromNoAmountInvoice: decodedInvoice.amount === 0 || decodedInvoice.amount === null,
+  }
+
+  const maxFeeCheck = LnFees().verifyMaxFee(maxFeeCheckArgs)
+  if (maxFeeCheck instanceof Error) {
+    return maxFeeCheck
+  }
+
+  // Attempt 1: Try with preferred channel if configured
+  if (preferredChannel && config.fallbackOnError) {
+    addAttributesToCurrentSpan({
+      "payment.firstHop.preferredChannel": preferredChannel,
+      "payment.firstHop.fallbackEnabled": true,
+    })
+
+    const payResultWithFirstHop = await lndService.payInvoiceViaPaymentDetails({
+      ...maxFeeCheckArgs,
+      decodedInvoice,
+      outgoingChannel: preferredChannel,
+    })
+
+    // If payment succeeded or error is non-retry-able, return immediately
+    if (!(payResultWithFirstHop instanceof Error) || !shouldRetryWithoutFirstHop(payResultWithFirstHop)) {
+      if (!(payResultWithFirstHop instanceof Error)) {
+        addAttributesToCurrentSpan({
+          "payment.firstHop.result": "success_with_preferred_channel",
+        })
+      } else {
+        addAttributesToCurrentSpan({
+          "payment.firstHop.result": "failed_non_retryable",
+          "payment.firstHop.error": payResultWithFirstHop.name,
+        })
+      }
+      return payResultWithFirstHop
+    }
+
+    // Error is retry-able, log and fall back
+    addAttributesToCurrentSpan({
+      "payment.firstHop.result": "failed_retryable",
+      "payment.firstHop.error": payResultWithFirstHop.name,
+      "payment.firstHop.fallbackAttempted": true,
+    })
+    recordExceptionInCurrentSpan({
+      error: payResultWithFirstHop,
+      level: ErrorLevel.Warn,
+      attributes: {
+        message: "Preferred channel failed, retrying without channel constraint",
+      },
+    })
+  }
+
+  // Attempt 2: Try without channel constraint (or if no preferred channel configured)
+  const payResult = await lndService.payInvoiceViaPaymentDetails({
+    ...maxFeeCheckArgs,
+    decodedInvoice,
+  })
+
+  if (preferredChannel && config.fallbackOnError) {
+    addAttributesToCurrentSpan({
+      "payment.firstHop.fallbackResult": payResult instanceof Error ? "failed" : "success",
+    })
+  }
+
+  return payResult
+}
+
 const lockedPaymentViaLnSteps = async ({
   signal,
 
@@ -934,34 +1069,16 @@ const lockedPaymentViaLnSteps = async ({
   if (journal instanceof Error) return LnSendAttemptResult.err(journal)
   const { journalId } = journal
 
-  // Execute payment
-  let payResult: PayInvoiceResult | LightningServiceError
-  if (rawRoute) {
-    payResult = await lndService.payInvoiceViaRoutes({
-      paymentHash,
-      rawRoute,
-      pubkey: outgoingNodePubkey,
-    })
-  } else {
-    const maxFeeCheckArgs = {
-      maxFeeAmount: paymentFlow.btcProtocolAndBankFee,
-      btcPaymentAmount: paymentFlow.btcPaymentAmount,
-      usdPaymentAmount: paymentFlow.usdPaymentAmount,
-      priceRatio: walletPriceRatio,
-      senderWalletCurrency: senderWalletDescriptor.currency,
-      isFromNoAmountInvoice:
-        decodedInvoice.amount === 0 || decodedInvoice.amount === null,
-    }
-    const maxFeeCheck = LnFees().verifyMaxFee(maxFeeCheckArgs)
-
-    payResult =
-      maxFeeCheck instanceof Error
-        ? maxFeeCheck
-        : await lndService.payInvoiceViaPaymentDetails({
-            ...maxFeeCheckArgs,
-            decodedInvoice,
-          })
-  }
+  // Execute payment with first hop fallback logic
+  const payResult = await executePaymentWithFirstHopFallback({
+    lndService,
+    decodedInvoice,
+    paymentFlow,
+    senderWalletDescriptor,
+    rawRoute,
+    outgoingNodePubkey,
+    walletPriceRatio,
+  })
 
   if (!(payResult instanceof LnAlreadyPaidError)) {
     await LnPaymentsRepository().persistNew({
