@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto"
 
 import { createAccountWithPhoneIdentifier } from "@/app/accounts"
+import { createKratosIdentityByPhone } from "@/app/authentication"
 
 import { ConfigError, getAdminAccounts, getDefaultAccountsConfig } from "@/config"
 
@@ -50,14 +51,9 @@ export const bootstrap = async () => {
     const user = await UsersRepository().findByPhone(phone)
     let kratosUserId: UserId
     if (user instanceof CouldNotFindError) {
-      const randomKratosUserId = randomUserId()
-
-      const res = await UsersRepository().update({
-        id: randomKratosUserId,
-        phone,
-      })
-      kratosUserId = randomKratosUserId
-      if (res instanceof Error) return res
+      const kratosUserIdResult = await createKratosIdentityByPhone(phone)
+      if (kratosUserIdResult instanceof Error) return kratosUserIdResult
+      kratosUserId = kratosUserIdResult
     } else {
       if (user instanceof Error) return user
 
