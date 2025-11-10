@@ -144,6 +144,27 @@ impl ApiKeysService for ApiKeys {
 
         Ok(Response::new(RecordSpendingResponse {}))
     }
+
+    #[instrument(name = "api_keys.reverse_spending", skip_all, err)]
+    async fn reverse_spending(
+        &self,
+        request: Request<ReverseSpendingRequest>,
+    ) -> Result<Response<ReverseSpendingResponse>, Status> {
+        grpc::extract_tracing(&request);
+        let request = request.into_inner();
+        let ReverseSpendingRequest { transaction_id } = request;
+
+        if transaction_id.is_empty() {
+            return Err(Status::invalid_argument("Transaction ID is required"));
+        }
+
+        self.app
+            .reverse_spending(transaction_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(ReverseSpendingResponse {}))
+    }
 }
 
 pub(crate) async fn start(

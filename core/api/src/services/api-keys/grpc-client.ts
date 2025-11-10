@@ -11,6 +11,8 @@ import {
   GetSpendingSummaryResponse,
   RecordSpendingRequest,
   RecordSpendingResponse,
+  ReverseSpendingRequest,
+  ReverseSpendingResponse,
 } from "./proto/api_keys_pb"
 
 import { API_KEYS_HOST, API_KEYS_PORT } from "@/config"
@@ -41,3 +43,9 @@ export const recordSpending = promisify<
   Metadata,
   RecordSpendingResponse
 >(apiKeysClient.recordSpending.bind(apiKeysClient))
+
+export const reverseSpending = promisify<
+  ReverseSpendingRequest,
+  Metadata,
+  ReverseSpendingResponse
+>(apiKeysClient.reverseSpending.bind(apiKeysClient))

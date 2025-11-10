@@ -11,6 +11,7 @@ interface IApiKeysServiceService extends grpc.ServiceDefinition<grpc.UntypedServ
     checkSpendingLimit: IApiKeysServiceService_ICheckSpendingLimit;
     getSpendingSummary: IApiKeysServiceService_IGetSpendingSummary;
     recordSpending: IApiKeysServiceService_IRecordSpending;
+    reverseSpending: IApiKeysServiceService_IReverseSpending;
 }
 
 interface IApiKeysServiceService_ICheckSpendingLimit extends grpc.MethodDefinition<api_keys_pb.CheckSpendingLimitRequest, api_keys_pb.CheckSpendingLimitResponse> {
@@ -40,6 +41,15 @@ interface IApiKeysServiceService_IRecordSpending extends grpc.MethodDefinition<a
     responseSerialize: grpc.serialize<api_keys_pb.RecordSpendingResponse>;
     responseDeserialize: grpc.deserialize<api_keys_pb.RecordSpendingResponse>;
 }
+interface IApiKeysServiceService_IReverseSpending extends grpc.MethodDefinition<api_keys_pb.ReverseSpendingRequest, api_keys_pb.ReverseSpendingResponse> {
+    path: "/services.api_keys.v1.ApiKeysService/ReverseSpending";
+    requestStream: false;
+    responseStream: false;
+    requestSerialize: grpc.serialize<api_keys_pb.ReverseSpendingRequest>;
+    requestDeserialize: grpc.deserialize<api_keys_pb.ReverseSpendingRequest>;
+    responseSerialize: grpc.serialize<api_keys_pb.ReverseSpendingResponse>;
+    responseDeserialize: grpc.deserialize<api_keys_pb.ReverseSpendingResponse>;
+}
 
 export const ApiKeysServiceService: IApiKeysServiceService;
 
@@ -47,6 +57,7 @@ export interface IApiKeysServiceServer extends grpc.UntypedServiceImplementation
     checkSpendingLimit: grpc.handleUnaryCall<api_keys_pb.CheckSpendingLimitRequest, api_keys_pb.CheckSpendingLimitResponse>;
     getSpendingSummary: grpc.handleUnaryCall<api_keys_pb.GetSpendingSummaryRequest, api_keys_pb.GetSpendingSummaryResponse>;
     recordSpending: grpc.handleUnaryCall<api_keys_pb.RecordSpendingRequest, api_keys_pb.RecordSpendingResponse>;
+    reverseSpending: grpc.handleUnaryCall<api_keys_pb.ReverseSpendingRequest, api_keys_pb.ReverseSpendingResponse>;
 }
 
 export interface IApiKeysServiceClient {
@@ -59,6 +70,9 @@ export interface IApiKeysServiceClient {
     recordSpending(request: api_keys_pb.RecordSpendingRequest, callback: (error: grpc.ServiceError | null, response: api_keys_pb.RecordSpendingResponse) => void): grpc.ClientUnaryCall;
     recordSpending(request: api_keys_pb.RecordSpendingRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: api_keys_pb.RecordSpendingResponse) => void): grpc.ClientUnaryCall;
     recordSpending(request: api_keys_pb.RecordSpendingRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: api_keys_pb.RecordSpendingResponse) => void): grpc.ClientUnaryCall;
+    reverseSpending(request: api_keys_pb.ReverseSpendingRequest, callback: (error: grpc.ServiceError | null, response: api_keys_pb.ReverseSpendingResponse) => void): grpc.ClientUnaryCall;
+    reverseSpending(request: api_keys_pb.ReverseSpendingRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: api_keys_pb.ReverseSpendingResponse) => void): grpc.ClientUnaryCall;
+    reverseSpending(request: api_keys_pb.ReverseSpendingRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: api_keys_pb.ReverseSpendingResponse) => void): grpc.ClientUnaryCall;
 }
 
 export class ApiKeysServiceClient extends grpc.Client implements IApiKeysServiceClient {
@@ -72,4 +86,7 @@ export class ApiKeysServiceClient extends grpc.Client implements IApiKeysService
     public recordSpending(request: api_keys_pb.RecordSpendingRequest, callback: (error: grpc.ServiceError | null, response: api_keys_pb.RecordSpendingResponse) => void): grpc.ClientUnaryCall;
     public recordSpending(request: api_keys_pb.RecordSpendingRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: api_keys_pb.RecordSpendingResponse) => void): grpc.ClientUnaryCall;
     public recordSpending(request: api_keys_pb.RecordSpendingRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: api_keys_pb.RecordSpendingResponse) => void): grpc.ClientUnaryCall;
+    public reverseSpending(request: api_keys_pb.ReverseSpendingRequest, callback: (error: grpc.ServiceError | null, response: api_keys_pb.ReverseSpendingResponse) => void): grpc.ClientUnaryCall;
+    public reverseSpending(request: api_keys_pb.ReverseSpendingRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: api_keys_pb.ReverseSpendingResponse) => void): grpc.ClientUnaryCall;
+    public reverseSpending(request: api_keys_pb.ReverseSpendingRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: api_keys_pb.ReverseSpendingResponse) => void): grpc.ClientUnaryCall;
 }

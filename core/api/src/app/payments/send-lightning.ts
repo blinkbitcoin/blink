@@ -857,6 +857,15 @@ const executePaymentViaLn = async ({
       return paymentSendAttemptResult.error
 
     case PaymentSendAttemptResultType.Pending:
+      if (apiKeyId) {
+        const amountSats = Number(paymentFlow.btcPaymentAmount.amount)
+        const recordResult = await apiKeys.recordSpending({
+          apiKeyId,
+          amountSats,
+          transactionId: paymentSendAttemptResult.journalId,
+        })
+        if (recordResult instanceof Error) return recordResult
+      }
       return getPendingPaymentResponse({
         walletId: senderWalletId,
         paymentHash,
@@ -869,7 +878,6 @@ const executePaymentViaLn = async ({
       })
 
     default:
-      // Record API key spending after successful payment
       if (apiKeyId) {
         const amountSats = Number(paymentFlow.btcPaymentAmount.amount)
         const recordResult = await apiKeys.recordSpending({

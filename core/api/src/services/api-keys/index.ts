@@ -1,6 +1,10 @@
 import { grpcSpendingLimitsToSpendingLimits } from "./convert"
 
-import { CheckSpendingLimitRequest, RecordSpendingRequest } from "./proto/api_keys_pb"
+import {
+  CheckSpendingLimitRequest,
+  RecordSpendingRequest,
+  ReverseSpendingRequest,
+} from "./proto/api_keys_pb"
 
 import * as apiKeysGrpc from "./grpc-client"
 
@@ -66,8 +70,27 @@ export const ApiKeysService = (): IApiKeysService => {
     }
   }
 
+  const reverseSpending = async ({
+    transactionId,
+  }: {
+    transactionId: string
+  }): Promise<true | ApiKeysServiceError> => {
+    try {
+      const request = new ReverseSpendingRequest()
+      request.setTransactionId(transactionId)
+
+      await apiKeysGrpc.reverseSpending(request, apiKeysGrpc.apiKeysMetadata)
+
+      return true
+    } catch (err) {
+      baseLogger.error({ err, transactionId }, "Failed to reverse API key spending")
+      return handleCommonApiKeysErrors(err)
+    }
+  }
+
   return {
     getSpendingLimits,
     recordSpending,
+    reverseSpending,
   }
 }

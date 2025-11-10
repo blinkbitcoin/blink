@@ -70,6 +70,28 @@ function deserialize_services_api_keys_v1_RecordSpendingResponse(buffer_arg) {
   return api_keys_pb.RecordSpendingResponse.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
+function serialize_services_api_keys_v1_ReverseSpendingRequest(arg) {
+  if (!(arg instanceof api_keys_pb.ReverseSpendingRequest)) {
+    throw new Error('Expected argument of type services.api_keys.v1.ReverseSpendingRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_services_api_keys_v1_ReverseSpendingRequest(buffer_arg) {
+  return api_keys_pb.ReverseSpendingRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_services_api_keys_v1_ReverseSpendingResponse(arg) {
+  if (!(arg instanceof api_keys_pb.ReverseSpendingResponse)) {
+    throw new Error('Expected argument of type services.api_keys.v1.ReverseSpendingResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_services_api_keys_v1_ReverseSpendingResponse(buffer_arg) {
+  return api_keys_pb.ReverseSpendingResponse.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
 
 var ApiKeysServiceService = exports.ApiKeysServiceService = {
   checkSpendingLimit: {
@@ -104,6 +126,17 @@ var ApiKeysServiceService = exports.ApiKeysServiceService = {
     requestDeserialize: deserialize_services_api_keys_v1_RecordSpendingRequest,
     responseSerialize: serialize_services_api_keys_v1_RecordSpendingResponse,
     responseDeserialize: deserialize_services_api_keys_v1_RecordSpendingResponse,
+  },
+  reverseSpending: {
+    path: '/services.api_keys.v1.ApiKeysService/ReverseSpending',
+    requestStream: false,
+    responseStream: false,
+    requestType: api_keys_pb.ReverseSpendingRequest,
+    responseType: api_keys_pb.ReverseSpendingResponse,
+    requestSerialize: serialize_services_api_keys_v1_ReverseSpendingRequest,
+    requestDeserialize: deserialize_services_api_keys_v1_ReverseSpendingRequest,
+    responseSerialize: serialize_services_api_keys_v1_ReverseSpendingResponse,
+    responseDeserialize: deserialize_services_api_keys_v1_ReverseSpendingResponse,
   },
 };
 

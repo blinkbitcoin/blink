@@ -18,4 +18,6 @@ interface IApiKeysService {
     amountSats: number
     transactionId: string
   }): Promise<true | ApiKeysServiceError>
+
+  reverseSpending(args: { transactionId: string }): Promise<true | ApiKeysServiceError>
 }

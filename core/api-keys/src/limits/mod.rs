@@ -150,6 +150,28 @@ impl Limits {
         Ok(())
     }
 
+    #[tracing::instrument(name = "limits.reverse_spending", skip(self))]
+    pub async fn reverse_spending(
+        &self,
+        transaction_id: String,
+    ) -> Result<(), LimitError> {
+        let result = sqlx::query(
+            r#"
+            DELETE FROM api_key_transactions
+            WHERE transaction_id = $1
+            "#,
+        )
+        .bind(&transaction_id)
+        .execute(&self.pool)
+        .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(LimitError::TransactionNotFound(transaction_id));
+        }
+
+        Ok(())
+    }
+
     #[tracing::instrument(name = "limits.get_spending_summary", skip(self))]
     pub async fn get_spending_summary(
         &self,

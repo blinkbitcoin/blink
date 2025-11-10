@@ -6,6 +6,7 @@ service ApiKeysService {
   rpc CheckSpendingLimit (CheckSpendingLimitRequest) returns (CheckSpendingLimitResponse) {}
   rpc GetSpendingSummary (GetSpendingSummaryRequest) returns (GetSpendingSummaryResponse) {}
   rpc RecordSpending (RecordSpendingRequest) returns (RecordSpendingResponse) {}
+  rpc ReverseSpending (ReverseSpendingRequest) returns (ReverseSpendingResponse) {}
 }
 
 message CheckSpendingLimitRequest {
@@ -55,4 +56,11 @@ message RecordSpendingRequest {
 }
 
 message RecordSpendingResponse {
+}
+
+message ReverseSpendingRequest {
+  string transaction_id = 1;
+}
+
+message ReverseSpendingResponse {
 }

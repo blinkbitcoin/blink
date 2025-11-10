@@ -24,6 +24,7 @@ import {
 import { MissingPropsInTransactionForPaymentFlowError } from "@/domain/payments"
 import { setErrorCritical, WalletCurrency } from "@/domain/shared"
 
+import { ApiKeysService } from "@/services/api-keys"
 import { LedgerService, getNonEndUserWalletIds } from "@/services/ledger"
 import * as LedgerFacade from "@/services/ledger/facade"
 import { LndService } from "@/services/lnd"
@@ -344,6 +345,7 @@ const lockedPendingPaymentSteps = async ({
     // pendingPayment is a different version to latest payment from lnd
     satsAmount !== toSats(paymentFlow.btcPaymentAmount.amount)
   ) {
+    const apiKeys = ApiKeysService()
     paymentLogger.warn(
       { success: false, id: paymentHash, payment: pendingPayment },
       "payment has failed. reverting transaction",
@@ -358,7 +360,18 @@ const lockedPendingPaymentSteps = async ({
         paymentLogger.fatal({ success: false, result: lnPaymentLookup }, error)
         return setErrorCritical(voided)
       }
-
+      const reverseResult = await apiKeys.reverseSpending({
+        transactionId: journalId,
+      })
+      if (reverseResult instanceof Error) {
+        recordExceptionInCurrentSpan({
+          error: reverseResult,
+          attributes: {
+            "apiKeys.reverseSpending.failed": true,
+            "journalId": journalId,
+          },
+        })
+      }
       return finalizePaymentUpdate({
         result: voided,
         walletIds,
@@ -378,7 +391,18 @@ const lockedPendingPaymentSteps = async ({
       paymentLogger.fatal({ success: false, result: lnPaymentLookup }, error)
       return setErrorCritical(reimbursed)
     }
-
+    const reverseResult = await apiKeys.reverseSpending({
+      transactionId: journalId,
+    })
+    if (reverseResult instanceof Error) {
+      recordExceptionInCurrentSpan({
+        error: reverseResult,
+        attributes: {
+          "apiKeys.reverseSpending.failed": true,
+          "journalId": journalId,
+        },
+      })
+    }
     return finalizePaymentUpdate({
       result: reimbursed,
       walletIds,

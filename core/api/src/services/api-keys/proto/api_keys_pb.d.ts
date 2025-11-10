@@ -251,3 +251,40 @@ export namespace RecordSpendingResponse {
     export type AsObject = {
     }
 }
+
+export class ReverseSpendingRequest extends jspb.Message { 
+    getTransactionId(): string;
+    setTransactionId(value: string): ReverseSpendingRequest;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): ReverseSpendingRequest.AsObject;
+    static toObject(includeInstance: boolean, msg: ReverseSpendingRequest): ReverseSpendingRequest.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: ReverseSpendingRequest, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): ReverseSpendingRequest;
+    static deserializeBinaryFromReader(message: ReverseSpendingRequest, reader: jspb.BinaryReader): ReverseSpendingRequest;
+}
+
+export namespace ReverseSpendingRequest {
+    export type AsObject = {
+        transactionId: string,
+    }
+}
+
+export class ReverseSpendingResponse extends jspb.Message { 
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): ReverseSpendingResponse.AsObject;
+    static toObject(includeInstance: boolean, msg: ReverseSpendingResponse): ReverseSpendingResponse.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: ReverseSpendingResponse, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): ReverseSpendingResponse;
+    static deserializeBinaryFromReader(message: ReverseSpendingResponse, reader: jspb.BinaryReader): ReverseSpendingResponse;
+}
+
+export namespace ReverseSpendingResponse {
+    export type AsObject = {
+    }
+}
