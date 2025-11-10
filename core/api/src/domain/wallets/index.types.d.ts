@@ -38,7 +38,7 @@ type SettlementViaIntraledger = {
 
 type SettlementViaLn = {
   readonly type: "lightning"
-  readonly revealedPreImage: RevealedPreImage | undefined // is sometimes added by dataloader in resolver
+  readonly revealedPreImage: RevealedPreImage | undefined
 }
 
 type SettlementViaOnChainIncoming = {
@@ -208,11 +208,47 @@ type OnchainWithdrawalConfig = {
   feeRatioAsBasisPoints: bigint
 }
 
+type OnchainExpDecayConfig = {
+  exponentialDecayConfig: ExponentialDecayFeesConfig
+  payoutQueueConfig: PayoutQueueConfig[]
+}
+
 type OnChainWithdrawalFeeArgs = {
   minerFee: BtcPaymentAmount
   minBankFee: BtcPaymentAmount
   imbalance: BtcPaymentAmount
   amount: BtcPaymentAmount
+}
+
+type OnChainFeeExpDecayArgs = {
+  amount: BtcPaymentAmount
+  minerFee: BtcPaymentAmount
+  speed: PayoutSpeed
+  feeRate: number
+}
+
+type ExponentialDecayArgs = {
+  amount: number
+  minRate: number
+  maxRate: number
+  threshold: number
+  minAmount: number
+  exponentialFactor: number
+}
+
+type NormalizedFactorArgs = {
+  feeRate: number
+}
+
+type DynamicRateArgs = {
+  amount: number
+  speed: PayoutSpeed
+  feeRate: number
+}
+
+type BaseMultiplierArgs = {
+  speed: PayoutSpeed
+  feeRate: number
 }
 
 type WithdrawalFeePriceMethod =
@@ -224,6 +260,14 @@ type OnChainFeeCalculator = {
     bankFee: BtcPaymentAmount
   }
   intraLedgerFees(): PaymentAmountInAllCurrencies
+}
+
+type OnChainFeeExpDecayCalculator = {
+  expDecayFee(args: OnChainFeeExpDecayArgs): {
+    totalFee: BtcPaymentAmount
+    bankFee: BtcPaymentAmount
+  }
+  calculateBaseMultiplier: BaseMultiplierCalculator
 }
 
 type PaymentInputValidatorConfig = (
@@ -249,4 +293,26 @@ type PaymentInputValidator = {
   validatePaymentInput: <T extends undefined | string>(
     args: ValidatePaymentInputArgs<T>,
   ) => Promise<ValidatePaymentInputRet<T> | ValidationError | RepositoryError>
+}
+
+interface TransactionSpecification {
+  readonly inputCount: number
+  readonly outputCount: number
+}
+
+type InputCountCalculator = (amount: number) => number
+type TransactionSizeCalculator = (spec: TransactionSpecification) => number
+type DecayRateCalculator = (amount: number, params: FeeDecayCurveParameters) => number
+type CostToBankCalculator = (
+  amount: number,
+  speed: PayoutSpeed,
+  feeRate: number,
+) => number
+type DynamicRateCalculator = (args: DynamicRateArgs) => number
+type BaseMultiplierCalculator = (args: BaseMultiplierArgs) => number
+
+interface FeeDecayCurveParameters {
+  readonly minRate: number
+  readonly maxRate: number
+  readonly divisor: number
 }
