@@ -151,10 +151,7 @@ impl Limits {
     }
 
     #[tracing::instrument(name = "limits.reverse_spending", skip(self))]
-    pub async fn reverse_spending(
-        &self,
-        transaction_id: String,
-    ) -> Result<(), LimitError> {
+    pub async fn reverse_spending(&self, transaction_id: String) -> Result<(), LimitError> {
         let result = sqlx::query(
             r#"
             DELETE FROM api_key_transactions

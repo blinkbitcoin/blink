@@ -112,14 +112,8 @@ impl ApiKeysApp {
     }
 
     #[tracing::instrument(name = "app.reverse_spending", skip_all)]
-    pub async fn reverse_spending(
-        &self,
-        transaction_id: String,
-    ) -> Result<(), ApplicationError> {
-        Ok(self
-            .limits
-            .reverse_spending(transaction_id)
-            .await?)
+    pub async fn reverse_spending(&self, transaction_id: String) -> Result<(), ApplicationError> {
+        Ok(self.limits.reverse_spending(transaction_id).await?)
     }
 
     #[tracing::instrument(name = "app.get_spending_summary", skip_all)]
