@@ -136,6 +136,13 @@ is_contact() {
   local owner_token_name="$1"
   local other_token_or_handle="$2"
 
+<<<<<<< HEAD
+  local owner_account_id
+  owner_account_id=$(read_value "$owner_token_name.account_id")
+  [[ -n "$owner_account_id" ]] || return 1
+
+=======
+>>>>>>> upstream/main
   local contact_handle
 
   local cached_username
@@ -151,9 +158,22 @@ is_contact() {
 
   [[ -n "$contact_handle" ]] || return 1
 
+<<<<<<< HEAD
+  local mongo_query
+  mongo_query=$(echo "db.contacts.findOne({
+    accountId: \"$owner_account_id\",
+    handle: \"$contact_handle\"
+  });" | tr -d '[:space:]')
+
+  local result
+  result=$(mongo_cli "$mongo_query")
+
+  [[ "$result" != "null" && -n "$result" ]]
+=======
   exec_graphql "$owner_token_name" "contacts"
   local match
   match=$(graphql_output ".data.me.contacts[] | select(.username == \"$contact_handle\")")
 
   [[ -n "$match" ]]
+>>>>>>> upstream/main
 }

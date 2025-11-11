@@ -1,5 +1,5 @@
 import { checkedToUsername } from "@/domain/accounts"
-import { AccountsRepository } from "@/services/mongoose"
+import { AccountsRepository, UsernameRepository } from "@/services/mongoose"
 import { createRandomUserAndBtcWallet } from "test/helpers"
 
 const randomUsername = () => {
@@ -10,24 +10,31 @@ const randomUsername = () => {
 }
 
 const accounts = AccountsRepository()
+const usernames = UsernameRepository()
+
 describe("AccountsRepository", () => {
   it("returns valid account for username", async () => {
     const username = randomUsername()
 
     // Create user
     const newWalletDescriptor = await createRandomUserAndBtcWallet()
-    const newAccount = await AccountsRepository().findById(newWalletDescriptor.accountId)
-    if (newAccount instanceof Error) throw newAccount
 
     // Set username
-    newAccount.username = username
-    const res = await accounts.update(newAccount)
+    const res = await usernames.update({
+      accountId: newWalletDescriptor.accountId,
+      handle: username,
+      isDefault: true,
+    })
     expect(res).not.toBeInstanceOf(Error)
 
-    // Check that username was set
-    const account = await accounts.findByUsername(username)
+    // Find username record
+    const usernameRecord = await usernames.findByHandle(username)
+    if (usernameRecord instanceof Error) throw usernameRecord
+
+    // Find account using accountId from username
+    const account = await accounts.findById(usernameRecord.accountId)
     if (account instanceof Error) throw account
-    expect(account.id).toStrictEqual(newAccount.id)
+    expect(account.id).toStrictEqual(newWalletDescriptor.accountId)
   })
 
   it("returns valid account for other capitalization", async () => {
@@ -35,27 +42,32 @@ describe("AccountsRepository", () => {
 
     // Create user
     const newWalletDescriptor = await createRandomUserAndBtcWallet()
-    const newAccount = await AccountsRepository().findById(newWalletDescriptor.accountId)
-    if (newAccount instanceof Error) throw newAccount
 
     // Set username
-    newAccount.username = username
-    const res = await accounts.update(newAccount)
+    const res = await usernames.update({
+      accountId: newWalletDescriptor.accountId,
+      handle: username,
+      isDefault: true,
+    })
     expect(res).not.toBeInstanceOf(Error)
 
-    // Check that username query is case insensitive
-    const account = await accounts.findByUsername(
+    // Find username using uppercase
+    const usernameRecord = await usernames.findByHandle(
       username.toLocaleUpperCase() as Username,
     )
+    if (usernameRecord instanceof Error) throw usernameRecord
+
+    // Find account
+    const account = await accounts.findById(usernameRecord.accountId)
     if (account instanceof Error) throw account
-    expect(account.id).toStrictEqual(newAccount.id)
+    expect(account.id).toStrictEqual(newWalletDescriptor.accountId)
   })
 
   it("errors if username does not exist", async () => {
     const username = checkedToUsername("non_user")
     if (username instanceof Error) throw username
 
-    const account = await accounts.findByUsername(username)
-    expect(account).toBeInstanceOf(Error)
+    const result = await usernames.findByHandle(username)
+    expect(result).toBeInstanceOf(Error)
   })
 })

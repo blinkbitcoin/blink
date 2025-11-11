@@ -3620,15 +3620,24 @@ export type ResolversTypes = {
   CaptchaCreateChallengeResult: ResolverTypeWrapper<CaptchaCreateChallengeResult>;
   CaptchaRequestAuthCodeInput: CaptchaRequestAuthCodeInput;
   CentAmount: ResolverTypeWrapper<Scalars['CentAmount']['output']>;
+<<<<<<< HEAD
+  CentAmountPayload: ResolverTypeWrapper<CentAmountPayload>;
+  ConsumerAccount: ResolverTypeWrapper<ConsumerAccount>;
+=======
   CentAmountPayload: ResolverTypeWrapper<Omit<CentAmountPayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
   ConsumerAccount: ResolverTypeWrapper<Omit<ConsumerAccount, 'callbackEndpoints' | 'invoices' | 'limits' | 'pendingIncomingTransactions' | 'transactions' | 'walletById' | 'wallets'> & { callbackEndpoints: ReadonlyArray<ResolversTypes['CallbackEndpoint']>, invoices?: Maybe<ResolversTypes['InvoiceConnection']>, limits: ResolversTypes['AccountLimits'], pendingIncomingTransactions: ReadonlyArray<ResolversTypes['Transaction']>, transactions?: Maybe<ResolversTypes['TransactionConnection']>, walletById: ResolversTypes['Wallet'], wallets: ReadonlyArray<ResolversTypes['Wallet']> }>;
+>>>>>>> upstream/main
   Contact: ResolverTypeWrapper<Contact>;
   ContactAlias: ResolverTypeWrapper<Scalars['ContactAlias']['output']>;
   ContactCreateInput: ContactCreateInput;
   ContactDisplayName: ResolverTypeWrapper<Scalars['ContactDisplayName']['output']>;
   ContactHandle: ResolverTypeWrapper<Scalars['ContactHandle']['output']>;
   ContactId: ResolverTypeWrapper<Scalars['ContactId']['output']>;
+<<<<<<< HEAD
+  ContactPayload: ResolverTypeWrapper<ContactPayload>;
+=======
   ContactPayload: ResolverTypeWrapper<Omit<ContactPayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
+>>>>>>> upstream/main
   ContactType: ContactType;
   Coordinates: ResolverTypeWrapper<Coordinates>;
   Float: ResolverTypeWrapper<Scalars['Float']['output']>;
@@ -3861,15 +3870,24 @@ export type ResolversParentTypes = {
   CaptchaCreateChallengeResult: CaptchaCreateChallengeResult;
   CaptchaRequestAuthCodeInput: CaptchaRequestAuthCodeInput;
   CentAmount: Scalars['CentAmount']['output'];
+<<<<<<< HEAD
+  CentAmountPayload: CentAmountPayload;
+  ConsumerAccount: ConsumerAccount;
+=======
   CentAmountPayload: Omit<CentAmountPayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
   ConsumerAccount: Omit<ConsumerAccount, 'callbackEndpoints' | 'invoices' | 'limits' | 'pendingIncomingTransactions' | 'transactions' | 'walletById' | 'wallets'> & { callbackEndpoints: ReadonlyArray<ResolversParentTypes['CallbackEndpoint']>, invoices?: Maybe<ResolversParentTypes['InvoiceConnection']>, limits: ResolversParentTypes['AccountLimits'], pendingIncomingTransactions: ReadonlyArray<ResolversParentTypes['Transaction']>, transactions?: Maybe<ResolversParentTypes['TransactionConnection']>, walletById: ResolversParentTypes['Wallet'], wallets: ReadonlyArray<ResolversParentTypes['Wallet']> };
+>>>>>>> upstream/main
   Contact: Contact;
   ContactAlias: Scalars['ContactAlias']['output'];
   ContactCreateInput: ContactCreateInput;
   ContactDisplayName: Scalars['ContactDisplayName']['output'];
   ContactHandle: Scalars['ContactHandle']['output'];
   ContactId: Scalars['ContactId']['output'];
+<<<<<<< HEAD
+  ContactPayload: ContactPayload;
+=======
   ContactPayload: Omit<ContactPayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
+>>>>>>> upstream/main
   Coordinates: Coordinates;
   Float: Scalars['Float']['output'];
   Country: Country;

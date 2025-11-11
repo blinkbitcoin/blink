@@ -24,11 +24,32 @@ describe("Set username", () => {
   })
 
   it("fails to change username", async () => {
-    const { AccountsRepository: AccountsRepositoryOrig } =
-      jest.requireActual("@/services/mongoose")
+    const {
+      AccountsRepository: AccountsRepositoryOrig,
+      UsernameRepository: UsernameRepositoryOrig,
+    } = jest.requireActual("@/services/mongoose")
+
     jest.spyOn(MongooseImpl, "AccountsRepository").mockReturnValue({
       ...AccountsRepositoryOrig(),
-      findById: () => ({ username: "alice" }),
+      findById: () => ({
+        username: "alice",
+        defaultWalletId: "wallet-id",
+      }),
+    })
+
+    const originalUsernameRepo = UsernameRepositoryOrig()
+    jest.spyOn(MongooseImpl, "UsernameRepository").mockReturnValue({
+      ...originalUsernameRepo,
+      listByAccountId: async () => [
+        {
+          handle: "alice",
+          isDefault: true,
+          accountId: "account-id" as AccountId,
+          walletId: "wallet-id" as WalletId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ],
     })
 
     const res = await setUsername({ accountId: crypto.randomUUID(), username: "alice" })

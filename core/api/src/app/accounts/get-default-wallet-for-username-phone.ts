@@ -1,5 +1,6 @@
 import { getWalletFromAccount } from "./get-wallet-from-account"
 import { createInvitedAccountFromPhone } from "./create-account"
+import { getAccountForUsername } from "./get-account-for-username"
 
 import {
   CouldNotFindUserFromPhoneError,
@@ -34,7 +35,7 @@ const getWalletByUsername = async (
   username: Username,
   walletCurrency?: WalletCurrency,
 ): Promise<Wallet | ApplicationError> => {
-  const account = await AccountsRepository().findByUsername(username)
+  const account = await getAccountForUsername(username)
   if (account instanceof Error) return account
 
   return getWalletFromAccount(account, walletCurrency)

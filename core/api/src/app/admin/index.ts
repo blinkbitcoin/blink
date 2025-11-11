@@ -3,6 +3,7 @@ export * from "./update-user-email"
 export * from "./trigger-marketing-notification"
 export * from "./filtered-user-count"
 import { checkedToAccountId, checkedToUserId, checkedToUsername } from "@/domain/accounts"
+import { getAccountForUsername } from "@/app/accounts"
 import { IdentityRepository } from "@/services/kratos"
 import { AccountsRepository, UsersRepository } from "@/services/mongoose"
 
@@ -10,8 +11,7 @@ export const getAccountByUsername = async (username: string) => {
   const usernameValid = checkedToUsername(username)
   if (usernameValid instanceof Error) return usernameValid
 
-  const accounts = AccountsRepository()
-  return accounts.findByUsername(usernameValid)
+  return getAccountForUsername(usernameValid)
 }
 
 export const getAccountByUserPhone = async (phone: PhoneNumber) => {

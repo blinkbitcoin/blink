@@ -1,8 +1,8 @@
+import { Accounts } from "@/app"
 import { mapError } from "@/graphql/error-map"
 import { GT } from "@/graphql/index"
 import Username from "@/graphql/shared/types/scalar/username"
 import WalletId from "@/graphql/shared/types/scalar/wallet-id"
-import { AccountsRepository } from "@/services/mongoose"
 
 const AccountDefaultWalletIdQuery = GT.Field({
   deprecationReason: "will be migrated to AccountDefaultWalletId",
@@ -19,7 +19,7 @@ const AccountDefaultWalletIdQuery = GT.Field({
       throw username
     }
 
-    const account = await AccountsRepository().findByUsername(username)
+    const account = await Accounts.getAccountForUsername(username)
     if (account instanceof Error) {
       throw mapError(account)
     }

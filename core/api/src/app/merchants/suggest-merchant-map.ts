@@ -1,5 +1,6 @@
 import { checkedCoordinates, checkedMapTitle, checkedToUsername } from "@/domain/accounts"
-import { AccountsRepository, MerchantsRepository } from "@/services/mongoose"
+import { MerchantsRepository } from "@/services/mongoose"
+import { getAccountForUsername } from "@/app/accounts"
 
 export const suggestMerchantMap = async ({
   username,
@@ -21,11 +22,8 @@ export const suggestMerchantMap = async ({
   const titleChecked = checkedMapTitle(title)
   if (titleChecked instanceof Error) return titleChecked
 
-  const accountRepository = AccountsRepository()
-  const account = await accountRepository.findByUsername(usernameChecked)
-  if (account instanceof Error) {
-    return account
-  }
+  const account = await getAccountForUsername(usernameChecked)
+  if (account instanceof Error) return account
 
   return merchantsRepo.create({
     username: usernameChecked,

@@ -66,4 +66,7 @@ generates:
         ContactHandle: "string"
         ContactType: "string"
         ContactDisplayName: "string"
+<<<<<<< HEAD
+=======
         TelegramPassportNonce: "string"
+>>>>>>> upstream/main

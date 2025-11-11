@@ -3,11 +3,15 @@ import {
   checkedToHandle,
   checkedToDisplayName,
 } from "@/domain/contacts"
+<<<<<<< HEAD
+import { InvalidContactIdError, InvalidHandleError } from "@/domain/contacts/errors"
+=======
 import {
   InvalidContactIdError,
   InvalidDisplayNameError,
   InvalidHandleError,
 } from "@/domain/contacts/errors"
+>>>>>>> upstream/main
 
 describe("checkedToContactId", () => {
   it("returns contactId when valid UUID", () => {
@@ -68,11 +72,19 @@ describe("checkedToDisplayName", () => {
 
   it("fails when display name does not match pattern", () => {
     const result = checkedToDisplayName("1Invalid Name")
+<<<<<<< HEAD
+    expect(result).toBeInstanceOf(InvalidHandleError)
+=======
     expect(result).toBeInstanceOf(InvalidDisplayNameError)
+>>>>>>> upstream/main
   })
 
   it("fails when display name is too short", () => {
     const result = checkedToDisplayName("A")
+<<<<<<< HEAD
+    expect(result).toBeInstanceOf(InvalidHandleError)
+=======
     expect(result).toBeInstanceOf(InvalidDisplayNameError)
+>>>>>>> upstream/main
   })
 })

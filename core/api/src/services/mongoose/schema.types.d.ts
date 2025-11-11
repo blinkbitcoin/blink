@@ -224,3 +224,12 @@ interface ContactRecord {
   createdAt: Date
   updatedAt?: Date
 }
+
+interface UsernamesRecord {
+  accountId: string
+  walletId?: string
+  handle: string
+  isDefault: boolean
+  createdAt: Date
+  updatedAt: Date
+}

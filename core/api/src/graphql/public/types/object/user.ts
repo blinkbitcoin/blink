@@ -60,8 +60,13 @@ const GraphQLUser = GT.Object<User, GraphQLPublicContextAuth>({
     username: {
       type: Username,
       description: "Optional immutable user friendly identifier.",
-      resolve: async (source, args, { domainAccount }) => {
-        return domainAccount?.username
+      resolve: async (_source, _args, { domainAccount }) => {
+        if (!domainAccount) return null
+
+        const result = await Accounts.getDefaultUsernameByAccount(domainAccount.id)
+        if (result instanceof Error) throw mapError(result)
+
+        return result
       },
       deprecationReason: "will be moved to @Handle in Account and Wallet",
     },

@@ -2,15 +2,34 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
+<<<<<<< HEAD
+      commitTitle: 'fix(core): update username validation (#105)...'
+      sha: 9153e31a76cb564e204cf4b7d2d84a1d647dd7f8
+      tags:
+      - 0.21.49-1-g9153e31a7
+=======
       commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1350
         (#314)...'
       sha: d0615a9dc31560ed608bd78b0cf3f7b066fb1869
       tags:
       - 0.21.116-2-gd0615a9dc
+>>>>>>> upstream/main
     path: .
   path: dev
 - contents:
   - git:
+<<<<<<< HEAD
+      commitTitle: 'fix(core): update username validation (#105)...'
+      sha: 9153e31a76cb564e204cf4b7d2d84a1d647dd7f8
+      tags:
+      - 0.21.49-1-g9153e31a7
+    path: schemas
+  - git:
+      commitTitle: 'fix(core): update username validation (#105)...'
+      sha: 9153e31a76cb564e204cf4b7d2d84a1d647dd7f8
+      tags:
+      - 0.21.50
+=======
       commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1350
         (#314)...'
       sha: d0615a9dc31560ed608bd78b0cf3f7b066fb1869
@@ -23,6 +42,7 @@ directories:
       sha: d0615a9dc31560ed608bd78b0cf3f7b066fb1869
       tags:
       - 0.21.116-2-gd0615a9dc
+>>>>>>> upstream/main
     path: gql
   path: graphql
 kind: LockConfig

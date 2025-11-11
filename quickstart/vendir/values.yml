@@ -1,3 +1,7 @@
 #@data/values
 ---
+<<<<<<< HEAD
+galoy_git_ref: 9153e31a76cb564e204cf4b7d2d84a1d647dd7f8
+=======
 galoy_git_ref: d0615a9dc31560ed608bd78b0cf3f7b066fb1869
+>>>>>>> upstream/main

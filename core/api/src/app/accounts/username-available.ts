@@ -1,8 +1,8 @@
-import { CouldNotFindError } from "@/domain/errors"
+import { CouldNotFindUsernameError } from "@/domain/errors"
 import { checkedToUsername } from "@/domain/accounts"
 import { checkedToPhoneNumber } from "@/domain/users"
 
-import { AccountsRepository } from "@/services/mongoose"
+import { UsernameRepository } from "@/services/mongoose"
 
 export const usernameAvailable = async (
   username: Username,
@@ -18,10 +18,10 @@ export const usernameAvailable = async (
     return false
   }
 
-  const accountsRepo = AccountsRepository()
+  const usernamesRepo = UsernameRepository()
+  const result = await usernamesRepo.findByHandle(checkedUsername)
 
-  const account = await accountsRepo.findByUsername(checkedUsername)
-  if (account instanceof CouldNotFindError) return true
-  if (account instanceof Error) return account
+  if (result instanceof CouldNotFindUsernameError) return true
+  if (result instanceof Error) return result
   return false
 }

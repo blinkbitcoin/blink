@@ -74,6 +74,9 @@ export class CouldNotFindAccountFromPhoneError extends CouldNotFindError {}
 export class CouldNotFindTransactionsForAccountError extends CouldNotFindError {}
 export class CouldNotFindAccountFromKratosIdError extends CouldNotFindError {}
 
+export class CouldNotFindUsernameError extends CouldNotFindError {}
+export class CouldNotUpdateUsernameError extends CouldNotUpdateError {}
+
 export class QuizAlreadyPresentError extends DomainError {}
 
 export class NotImplementedError extends DomainError {}

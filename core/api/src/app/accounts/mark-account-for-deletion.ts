@@ -13,7 +13,11 @@ import { AccountHasPositiveBalanceError } from "@/domain/authentication/errors"
 
 import { IdentityRepository } from "@/services/kratos"
 import { addEventToCurrentSpan } from "@/services/tracing"
-import { AccountsRepository, UsersRepository } from "@/services/mongoose"
+import {
+  AccountsRepository,
+  UsersRepository,
+  UsernameRepository,
+} from "@/services/mongoose"
 
 export const markAccountForDeletion = async ({
   accountId,
@@ -84,8 +88,10 @@ export const markAccountForDeletion = async ({
     updatedByPrivilegedClientId,
   })
 
-  if (account.username) {
-    await deleteMerchantByUsername({ username: account.username })
+  const usernamesRepo = UsernameRepository()
+  const defaultUsername = await usernamesRepo.findDefaultByAccountId(account.id)
+  if (!(defaultUsername instanceof Error)) {
+    await deleteMerchantByUsername({ username: defaultUsername.handle })
   }
 
   const newAccount = await accountsRepo.update(account)

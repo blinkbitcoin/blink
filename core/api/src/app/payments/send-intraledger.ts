@@ -6,6 +6,7 @@ import {
   checkIntraledgerLimits,
   checkTradeIntraAccountLimits,
   createIntraledgerContact,
+  getDefaultUsernameByAccount,
 } from "@/app/accounts"
 import {
   btcFromUsdMidPriceFn,
@@ -63,12 +64,11 @@ const intraledgerPaymentSendWalletId = async ({
   const { senderWallet, recipientWallet, recipientAccount, recipientUser, senderUser } =
     validatedPaymentInputs
 
+  const recipientUsername = await getDefaultUsernameByAccount(recipientAccount.id)
+  if (recipientUsername instanceof Error) return recipientUsername
+
   const { currency: recipientWalletCurrency } = recipientWallet
-  const {
-    id: recipientAccountId,
-    username: recipientUsername,
-    kratosUserId: recipientUserId,
-  } = recipientAccount
+  const { id: recipientAccountId, kratosUserId: recipientUserId } = recipientAccount
 
   const paymentBuilder = LightningPaymentFlowBuilder({
     localNodeIds: [],
@@ -265,6 +265,12 @@ const executePaymentViaIntraledger = async <
     )
   }
 
+  const recipientUsername = await getDefaultUsernameByAccount(recipientAccount.id)
+  if (recipientUsername instanceof Error) return recipientUsername
+
+  const senderUsername = await getDefaultUsernameByAccount(senderAccount.id)
+  if (senderUsername instanceof Error) return senderUsername
+
   const recipientAsNotificationRecipient = {
     accountId: recipientAccount.id,
     walletId: recipientWalletDescriptor.id,
@@ -289,9 +295,9 @@ const executePaymentViaIntraledger = async <
 
       paymentFlow,
       senderDisplayCurrency: senderAccount.displayCurrency,
-      senderUsername: senderAccount.username,
+      senderUsername,
       recipientDisplayCurrency: recipientAccount.displayCurrency,
-      recipientUsername: recipientAccount.username,
+      recipientUsername,
 
       memo,
     }),
