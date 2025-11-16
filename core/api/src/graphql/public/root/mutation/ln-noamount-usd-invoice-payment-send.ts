@@ -52,7 +52,7 @@ const LnNoAmountUsdInvoicePaymentSendMutation = GT.Field<
   args: {
     input: { type: GT.NonNull(LnNoAmountUsdInvoicePaymentInput) },
   },
-  resolve: async (_, args, { domainAccount }) => {
+  resolve: async (_, args, { domainAccount, apiKeyId }) => {
     const { walletId, paymentRequest, amount, memo } = args.input
 
     if (walletId instanceof InputValidationError) {
@@ -74,6 +74,7 @@ const LnNoAmountUsdInvoicePaymentSendMutation = GT.Field<
       memo: memo ?? null,
       amount,
       senderAccount: domainAccount,
+      apiKeyId,
     })
 
     if (result instanceof Error) {

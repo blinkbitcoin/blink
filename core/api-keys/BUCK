@@ -53,6 +53,9 @@ galoy_rust_bin(
         "//third-party/rust:rand",
         "//third-party/rust:uuid",
         "//third-party/rust:serde_with",
+        "//third-party/rust:tonic",
+        "//third-party/rust:tonic-health",
+        "//third-party/rust:prost",
     ],
     extra_tests = ["//lib/tracing-rs:tracing"],
     srcs = glob([
@@ -61,6 +64,7 @@ galoy_rust_bin(
       "migrations/*",
       "api-keys.yml"
     ]),
+    protos = ["proto/api_keys.proto"],
     env = {
         "CARGO_MANIFEST_DIR": ".",
         "SQLX_OFFLINE": "true",
