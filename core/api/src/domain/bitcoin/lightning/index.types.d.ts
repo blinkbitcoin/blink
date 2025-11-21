@@ -287,6 +287,8 @@ interface ILightningService {
     btcPaymentAmount: BtcPaymentAmount
     maxFeeAmount: BtcPaymentAmount | undefined
   }): Promise<PayInvoiceResult | LightningServiceError>
+
+  getBlockInfo(): Promise<BlockInfo>
 }
 
 // from Alex Bosworth invoice library

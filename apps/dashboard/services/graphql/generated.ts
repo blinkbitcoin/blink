@@ -353,6 +353,12 @@ export type BtcWalletTransactionsByPaymentRequestArgs = {
   paymentRequest: Scalars['LnPaymentRequest']['input'];
 };
 
+export type BlockInfo = {
+  readonly __typename: 'BlockInfo';
+  readonly blockHash?: Maybe<Scalars['String']['output']>;
+  readonly blockHeight?: Maybe<Scalars['Int']['output']>;
+};
+
 export type BuildInformation = {
   readonly __typename: 'BuildInformation';
   readonly commitHash?: Maybe<Scalars['String']['output']>;
@@ -575,6 +581,8 @@ export type FeesInformation = {
 /** Provides global settings for the application which might have an impact for the user. */
 export type Globals = {
   readonly __typename: 'Globals';
+  /** Current block height and block hash */
+  readonly blockInfo?: Maybe<BlockInfo>;
   readonly buildInformation: BuildInformation;
   readonly feesInformation: FeesInformation;
   /** The domain name for lightning addresses accepted by this Galoy instance */
@@ -3611,6 +3619,7 @@ export type ResolversTypes = {
   AuthTokenPayload: ResolverTypeWrapper<Omit<AuthTokenPayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
   Authorization: ResolverTypeWrapper<Authorization>;
   BTCWallet: ResolverTypeWrapper<Omit<BtcWallet, 'invoiceByPaymentHash' | 'invoices' | 'pendingIncomingTransactions' | 'pendingIncomingTransactionsByAddress' | 'transactionById' | 'transactions' | 'transactionsByAddress' | 'transactionsByPaymentHash' | 'transactionsByPaymentRequest'> & { invoiceByPaymentHash: ResolversTypes['Invoice'], invoices?: Maybe<ResolversTypes['InvoiceConnection']>, pendingIncomingTransactions: ReadonlyArray<ResolversTypes['Transaction']>, pendingIncomingTransactionsByAddress: ReadonlyArray<ResolversTypes['Transaction']>, transactionById: ResolversTypes['Transaction'], transactions?: Maybe<ResolversTypes['TransactionConnection']>, transactionsByAddress?: Maybe<ResolversTypes['TransactionConnection']>, transactionsByPaymentHash: ReadonlyArray<ResolversTypes['Transaction']>, transactionsByPaymentRequest: ReadonlyArray<ResolversTypes['Transaction']> }>;
+  BlockInfo: ResolverTypeWrapper<BlockInfo>;
   BuildInformation: ResolverTypeWrapper<BuildInformation>;
   CallbackEndpoint: ResolverTypeWrapper<CallbackEndpoint>;
   CallbackEndpointAddInput: CallbackEndpointAddInput;
@@ -3852,6 +3861,7 @@ export type ResolversParentTypes = {
   AuthTokenPayload: Omit<AuthTokenPayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
   Authorization: Authorization;
   BTCWallet: Omit<BtcWallet, 'invoiceByPaymentHash' | 'invoices' | 'pendingIncomingTransactions' | 'pendingIncomingTransactionsByAddress' | 'transactionById' | 'transactions' | 'transactionsByAddress' | 'transactionsByPaymentHash' | 'transactionsByPaymentRequest'> & { invoiceByPaymentHash: ResolversParentTypes['Invoice'], invoices?: Maybe<ResolversParentTypes['InvoiceConnection']>, pendingIncomingTransactions: ReadonlyArray<ResolversParentTypes['Transaction']>, pendingIncomingTransactionsByAddress: ReadonlyArray<ResolversParentTypes['Transaction']>, transactionById: ResolversParentTypes['Transaction'], transactions?: Maybe<ResolversParentTypes['TransactionConnection']>, transactionsByAddress?: Maybe<ResolversParentTypes['TransactionConnection']>, transactionsByPaymentHash: ReadonlyArray<ResolversParentTypes['Transaction']>, transactionsByPaymentRequest: ReadonlyArray<ResolversParentTypes['Transaction']> };
+  BlockInfo: BlockInfo;
   BuildInformation: BuildInformation;
   CallbackEndpoint: CallbackEndpoint;
   CallbackEndpointAddInput: CallbackEndpointAddInput;
@@ -4221,6 +4231,12 @@ export type BtcWalletResolvers<ContextType = any, ParentType extends ResolversPa
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
+export type BlockInfoResolvers<ContextType = any, ParentType extends ResolversParentTypes['BlockInfo'] = ResolversParentTypes['BlockInfo']> = {
+  blockHash?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  blockHeight?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
 export type BuildInformationResolvers<ContextType = any, ParentType extends ResolversParentTypes['BuildInformation'] = ResolversParentTypes['BuildInformation']> = {
   commitHash?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   helmRevision?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
@@ -4399,6 +4415,7 @@ export type FeesInformationResolvers<ContextType = any, ParentType extends Resol
 };
 
 export type GlobalsResolvers<ContextType = any, ParentType extends ResolversParentTypes['Globals'] = ResolversParentTypes['Globals']> = {
+  blockInfo?: Resolver<Maybe<ResolversTypes['BlockInfo']>, ParentType, ContextType>;
   buildInformation?: Resolver<ResolversTypes['BuildInformation'], ParentType, ContextType>;
   feesInformation?: Resolver<ResolversTypes['FeesInformation'], ParentType, ContextType>;
   lightningAddressDomain?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -5216,6 +5233,7 @@ export type Resolvers<ContextType = any> = {
   AuthTokenPayload?: AuthTokenPayloadResolvers<ContextType>;
   Authorization?: AuthorizationResolvers<ContextType>;
   BTCWallet?: BtcWalletResolvers<ContextType>;
+  BlockInfo?: BlockInfoResolvers<ContextType>;
   BuildInformation?: BuildInformationResolvers<ContextType>;
   CallbackEndpoint?: CallbackEndpointResolvers<ContextType>;
   CallbackEndpointAddPayload?: CallbackEndpointAddPayloadResolvers<ContextType>;

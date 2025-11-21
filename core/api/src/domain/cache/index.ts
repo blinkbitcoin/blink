@@ -14,4 +14,5 @@ export const CacheKeys = {
   BlockHeight: "bitcoin:blockHeight",
   ClosedChannels: "lnd:closedChannels",
   TelegramPassportNonce: "auth:tg:passport",
+  BlockInfo: "bitcoin:blockHash",
 } as const
