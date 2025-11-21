@@ -297,3 +297,10 @@ type RoutesBolt11Library = {
   public_key: string
   fee_rate: number
 }[][]
+
+type BlockHeight = number & { readonly brand: unique symbol }
+type BlockHash = string & { readonly brand: unique symbol }
+type BlockInfo = {
+  blockHeight: BlockHeight
+  blockHash: BlockHash
+}

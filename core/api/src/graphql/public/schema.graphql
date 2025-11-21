@@ -476,6 +476,10 @@ type Globals {
   Which network (mainnet, testnet, regtest, signet) this instance is running on.
   """
   network: Network!
+  """
+  Current block height and block hash
+  """
+  blockInfo: BlockInfo
 
   """
   A list of public keys for the running lightning nodes.
@@ -485,6 +489,11 @@ type Globals {
 
   """A list of countries and their supported auth channels"""
   supportedCountries: [Country!]!
+}
+
+type BlockInfo {
+  blockHash: String
+  blockHeight: Int
 }
 
 type GraphQLApplicationError implements Error {
