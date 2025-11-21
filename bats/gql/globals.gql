@@ -2,5 +2,9 @@ query Globals {
   globals {
     network
     nodesIds
+    blockInfo {
+      blockHash
+      blockHeight
+    }
   }
 }

@@ -7,6 +7,13 @@ load "../../helpers/subscriber.bash"
   exec_graphql 'anon' 'globals'
   network="$(graphql_output '.data.globals.network')"
   [[ "${network}" = "regtest" ]] || exit 1
+
+  block_height="$(graphql_output '.data.globals.blockInfo.blockHeight')"
+  block_hash="$(graphql_output '.data.globals.blockInfo.blockHash')"
+  [[ -n "${block_height}" ]] || exit 1
+  [[ "${block_height}" != "null" ]] || exit 1
+  [[ -n "${block_hash}" ]] || exit 1
+  [[ "${block_hash}" != "null" ]] || exit 1
 }
 
 @test "public: can query realtime price" {
