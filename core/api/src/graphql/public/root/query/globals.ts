@@ -20,10 +20,15 @@ const GlobalsQuery = GT.Field({
   resolve: async () => {
     let nodesIds = await Lightning.listNodesPubkeys()
     if (nodesIds instanceof Error) nodesIds = []
-
+    let blockInfo: ApplicationError | BlockInfo | undefined =
+      await Lightning.getBlockInfo()
+    if (blockInfo instanceof Error) {
+      blockInfo = undefined
+    }
     return {
       nodesIds,
       network: NETWORK,
+      blockInfo,
       lightningAddressDomain: getLightningAddressDomain(),
       lightningAddressDomainAliases: getLightningAddressDomainAliases(),
       buildInformation: getGaloyBuildInformation(),

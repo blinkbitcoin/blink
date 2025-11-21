@@ -5,6 +5,7 @@ import Network from "../scalar/network"
 import Country from "./country"
 import FeesInformation from "./fees-information"
 import BuildInformation from "./build-information"
+import BlockInfo from "./block-info"
 
 import { GT } from "@/graphql/index"
 
@@ -21,6 +22,10 @@ const Globals = GT.Object({
     network: {
       type: GT.NonNull(Network),
       description: dedent`Which network (mainnet, testnet, regtest, signet) this instance is running on.`,
+    },
+    blockInfo: {
+      type: BlockInfo,
+      description: dedent`Current block height and block hash`,
     },
     buildInformation: { type: GT.NonNull(BuildInformation) },
     lightningAddressDomain: {

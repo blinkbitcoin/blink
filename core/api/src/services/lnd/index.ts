@@ -913,6 +913,26 @@ export const LndService = (): ILightningService | LightningServiceError => {
     return new OffChainServiceUnavailableError("no active lightning node (for offchain)")
   }
 
+  const getBlockInfo = async (): Promise<BlockInfo | LightningServiceError> => {
+    try {
+      return LocalCacheService().getOrSet({
+        key: CacheKeys.BlockInfo,
+        ttlSecs: SECS_PER_5_MINS,
+        getForCaching: async () => {
+          const { current_block_height, current_block_hash } = await getWalletInfo({
+            lnd: defaultLnd,
+          })
+          return {
+            blockHeight: current_block_height as BlockHeight,
+            blockHash: current_block_hash as BlockHash,
+          }
+        },
+      })
+    } catch (err) {
+      return handleCommonLightningServiceErrors(err)
+    }
+  }
+
   return wrapAsyncFunctionsToRunInSpan({
     namespace: "services.lnd.offchain",
     fns: {
@@ -948,6 +968,7 @@ export const LndService = (): ILightningService | LightningServiceError => {
       cancelInvoice,
       payInvoiceViaRoutes,
       payInvoiceViaPaymentDetails,
+      getBlockInfo,
     },
   })
 }
