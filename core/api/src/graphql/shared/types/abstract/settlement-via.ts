@@ -36,11 +36,6 @@ const SettlementViaIntraLedger = GT.Object({
           return null
         }
 
-        const isSender = source.parent.settlementAmount > 0
-        if (isSender) {
-          return null
-        }
-
         const preImage = await Transactions.getInvoicePreImageByHash({
           paymentHash: source.parent.initiationVia.paymentHash,
         })
