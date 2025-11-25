@@ -43,7 +43,7 @@ try {
 
 // TODO: fix errors
 // const ajv = new Ajv({ allErrors: true, strict: "log" })
-const ajv = new Ajv({ useDefaults: true })
+const ajv = new Ajv({ useDefaults: true, discriminator: true })
 
 const defaultConfig = {}
 const validate = ajv.compile<YamlSchema>(configSchema)
@@ -82,9 +82,6 @@ export const ONCHAIN_MIN_CONFIRMATIONS = getOnChainScanDepth(
 )
 
 export const ONCHAIN_SCAN_DEPTH = getOnChainScanDepth(yamlConfig.onChainWallet.scanDepth)
-export const ONCHAIN_SCAN_DEPTH_OUTGOING = getOnChainScanDepth(
-  yamlConfig.onChainWallet.scanDepthOutgoing,
-)
 export const ONCHAIN_SCAN_DEPTH_CHANNEL_UPDATE = getOnChainScanDepth(
   yamlConfig.onChainWallet.scanDepthChannelUpdate,
 )
@@ -345,3 +342,7 @@ export const getPhoneProviderConfig = () => ({
   verify: yamlConfig.phoneProvider.verify,
   transactional: yamlConfig.phoneProvider.transactional,
 })
+
+export const getFeeStrategies = (): FeeStrategy[] => {
+  return yamlConfig.feeStrategies
+}

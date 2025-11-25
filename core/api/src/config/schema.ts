@@ -74,6 +74,115 @@ const rateLimitConfigSchema = {
   additionalProperties: false,
 }
 
+const feeStrategySchema = {
+  type: "object",
+  required: ["name", "strategy", "params"],
+  discriminator: { propertyName: "strategy" },
+  oneOf: [
+    {
+      properties: {
+        additionalProperties: false,
+        name: { type: "string" },
+        strategy: { const: "flat" },
+        params: {
+          type: "object",
+          required: ["amount"],
+          additionalProperties: false,
+          properties: {
+            amount: { type: "integer", minimum: 0 },
+          },
+        },
+      },
+    },
+    {
+      properties: {
+        additionalProperties: false,
+        name: { type: "string" },
+        strategy: { const: "percentage" },
+        params: {
+          type: "object",
+          required: ["basisPoints"],
+          additionalProperties: false,
+          properties: {
+            basisPoints: { type: "integer", minimum: 0 },
+          },
+        },
+      },
+    },
+    {
+      properties: {
+        additionalProperties: false,
+        name: { type: "string" },
+        strategy: { const: "tieredFlat" },
+        params: {
+          type: "object",
+          required: ["tiers"],
+          additionalProperties: false,
+          properties: {
+            tiers: {
+              type: "array",
+              minItems: 1,
+              items: {
+                type: "object",
+                required: ["maxAmount", "amount"],
+                additionalProperties: false,
+                properties: {
+                  maxAmount: {
+                    anyOf: [{ type: "integer", minimum: 0 }, { type: "null" }],
+                  },
+                  amount: { type: "integer", minimum: 0 },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    {
+      properties: {
+        additionalProperties: false,
+        name: { type: "string" },
+        strategy: { const: "internal" },
+        params: {
+          type: "object",
+          required: ["roles", "accountIds"],
+          additionalProperties: false,
+          properties: {
+            roles: {
+              type: "array",
+              items: { type: "string" },
+              uniqueItems: true,
+            },
+            accountIds: {
+              type: "array",
+              items: { type: "string" },
+              uniqueItems: true,
+            },
+          },
+        },
+      },
+    },
+    {
+      properties: {
+        additionalProperties: false,
+        name: { type: "string" },
+        strategy: { const: "imbalance" },
+        params: {
+          type: "object",
+          required: ["threshold", "ratioAsBasisPoints", "daysLookback", "minFee"],
+          additionalProperties: false,
+          properties: {
+            threshold: { type: "integer", minimum: 0 },
+            ratioAsBasisPoints: { type: "integer", minimum: 0 },
+            daysLookback: { type: "integer", minimum: 1 },
+            minFee: { type: "integer", minimum: 0 },
+          },
+        },
+      },
+    },
+  ],
+}
+
 export const configSchema = {
   type: "object",
   properties: {
@@ -635,6 +744,65 @@ export const configSchema = {
         },
         deposit: { defaultMin: 3000, threshold: 1000000, ratioAsBasisPoints: 30 },
       },
+    },
+    feeStrategies: {
+      type: "array",
+      items: feeStrategySchema,
+      default: [
+        {
+          name: "zero_fee",
+          strategy: "flat",
+          params: { amount: 0 },
+        },
+        {
+          name: "flat_2000",
+          strategy: "flat",
+          params: { amount: 2000 },
+        },
+        {
+          name: "percentage_50bp",
+          strategy: "percentage",
+          params: { basisPoints: 50 },
+        },
+        {
+          name: "tiered_receive",
+          strategy: "tieredFlat",
+          params: {
+            tiers: [
+              { maxAmount: 1000000, amount: 2500 },
+              { maxAmount: null, amount: 5000 },
+            ],
+          },
+        },
+        {
+          name: "tiered_send",
+          strategy: "tieredFlat",
+          params: {
+            tiers: [
+              { maxAmount: 1000000, amount: 5000 },
+              { maxAmount: null, amount: 10000 },
+            ],
+          },
+        },
+        {
+          name: "internal_accounts",
+          strategy: "internal",
+          params: {
+            roles: ["bankowner", "dealer"],
+            accountIds: [],
+          },
+        },
+        {
+          name: "imbalance_withdrawal",
+          strategy: "imbalance",
+          params: {
+            threshold: 1000000,
+            ratioAsBasisPoints: 50,
+            daysLookback: 30,
+            minFee: 2000,
+          },
+        },
+      ],
     },
     onChainWallet: {
       type: "object",

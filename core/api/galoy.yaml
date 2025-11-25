@@ -176,6 +176,49 @@ fees:
     defaultMin: 3000
     threshold: 1000000
     ratioAsBasisPoints: 30
+feeStrategies:
+  - name: zero_fee
+    strategy: flat
+    params:
+      amount: 0
+  - name: flat_2000
+    strategy: flat
+    params:
+      amount: 2000
+  - name: percentage_50bp
+    strategy: percentage
+    params:
+      basisPoints: 50
+  - name: tiered_receive
+    strategy: tieredFlat
+    params:
+      tiers:
+        - maxAmount: 1000000
+          amount: 2500
+        - maxAmount: null
+          amount: 5000
+  - name: tiered_send
+    strategy: tieredFlat
+    params:
+      tiers:
+        - maxAmount: 1000000
+          amount: 5000
+        - maxAmount: null
+          amount: 10000
+  - name: internal_accounts
+    strategy: internal
+    params:
+      roles:
+        - bankowner
+        - dealer
+      accountIds: []
+  - name: imbalance_withdrawal
+    strategy: imbalance
+    params:
+      threshold: 1000000
+      ratioAsBasisPoints: 50
+      daysLookback: 30
+      minFee: 2000
 onChainWallet:
   dustThreshold: 5000
   minConfirmations: 2

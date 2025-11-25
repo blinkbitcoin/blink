@@ -8,7 +8,7 @@ import mergeWith from "lodash.mergewith"
 import { toCents } from "@/domain/fiat"
 import { configSchema, getAccountLimits, yamlConfig } from "@/config"
 
-const ajv = new Ajv()
+const ajv = new Ajv({ discriminator: true })
 
 /* eslint @typescript-eslint/ban-ts-comment: "off" */
 // @ts-ignore-next-line no-implicit-any error

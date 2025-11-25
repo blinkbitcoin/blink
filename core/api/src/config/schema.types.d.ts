@@ -31,6 +31,40 @@ type RebalanceConfig = {
   payoutQueueName: string
 }
 
+type FlatFeeStrategyParams = {
+  amount: number
+}
+
+type PercentageFeeStrategyParams = {
+  basisPoints: number
+}
+
+type TieredFlatFeeStrategyParams = {
+  tiers: Array<{
+    maxAmount: number | null
+    amount: number
+  }>
+}
+
+type InternalAccountFeeStrategyParams = {
+  roles: string[]
+  accountIds: string[]
+}
+
+type ImbalanceFeeStrategyParams = {
+  threshold: number
+  ratioAsBasisPoints: number
+  daysLookback: number
+  minFee: number
+}
+
+type FeeStrategy =
+  | { name: string; strategy: "flat"; params: FlatFeeStrategyParams }
+  | { name: string; strategy: "percentage"; params: PercentageFeeStrategyParams }
+  | { name: string; strategy: "tieredFlat"; params: TieredFlatFeeStrategyParams }
+  | { name: string; strategy: "internal"; params: InternalAccountFeeStrategyParams }
+  | { name: string; strategy: "imbalance"; params: ImbalanceFeeStrategyParams }
+
 type YamlSchema = {
   name: string
   lightningAddressDomain: string
@@ -143,6 +177,7 @@ type YamlSchema = {
       defaultMin: number
     }
   }
+  feeStrategies: FeeStrategy[]
   onChainWallet: {
     dustThreshold: number
     minConfirmations: number
