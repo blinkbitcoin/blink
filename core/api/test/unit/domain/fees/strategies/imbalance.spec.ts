@@ -1,215 +1,225 @@
 import { ImbalanceFeeStrategy } from "@/domain/fees/strategies/imbalance"
+import { WalletPriceRatio } from "@/domain/payments"
 import {
-  WalletCurrency,
-  ValidationError,
   paymentAmountFromNumber,
   BtcPaymentAmount,
+  WalletCurrency,
+  ValidationError,
 } from "@/domain/shared"
 
+const mockNetInVolumeAmountInboundNetworkFn = jest.fn()
+const mockNetInVolumeAmountOutboundNetworkFn = jest.fn()
+
+beforeEach(() => {
+  mockNetInVolumeAmountInboundNetworkFn.mockReset()
+  mockNetInVolumeAmountOutboundNetworkFn.mockReset()
+})
+
 describe("ImbalanceFeeStrategy", () => {
+  const config = {
+    threshold: 1_000_000,
+    ratioAsBasisPoints: 50, // 0.5%
+    daysLookback: 30 as Days,
+    minFee: 2000,
+  }
+
+  const paymentAmount = paymentAmountFromNumber({
+    amount: 500_000,
+    currency: WalletCurrency.Btc,
+  }) as BtcPaymentAmount
+
+  const priceRatio = WalletPriceRatio({
+    usd: { amount: 100_000n, currency: WalletCurrency.Usd },
+    btc: { amount: 100_000_000n, currency: WalletCurrency.Btc },
+  })
+  if (priceRatio instanceof Error) throw priceRatio
+
+  const wallet: Wallet = {
+    id: "wallet-id" as WalletId,
+    accountId: "account-id" as AccountId,
+    currency: WalletCurrency.Btc,
+    onChainAddressIdentifiers: [],
+    type: "checking",
+    onChainAddresses: () => [],
+  }
+
+  const createImbalanceFns = (
+    inboundSats: bigint,
+    outboundSats: bigint,
+  ): ImbalanceFns => {
+    mockNetInVolumeAmountInboundNetworkFn.mockResolvedValueOnce({
+      amount: inboundSats,
+      currency: WalletCurrency.Btc,
+    })
+    mockNetInVolumeAmountOutboundNetworkFn.mockResolvedValueOnce({
+      amount: outboundSats,
+      currency: WalletCurrency.Btc,
+    })
+
+    return {
+      netInVolumeAmountInboundNetworkFn: mockNetInVolumeAmountInboundNetworkFn,
+      netInVolumeAmountOutboundNetworkFn: mockNetInVolumeAmountOutboundNetworkFn,
+      priceRatio,
+    }
+  }
+
   describe("configuration validation", () => {
-    it("should return validation error for non-integer ratioAsBasisPoints", () => {
-      const config: ImbalanceFeeStrategyParams = {
-        threshold: 1000000,
-        ratioAsBasisPoints: 50.5,
-        daysLookback: 30,
-        minFee: 2000,
-      }
-      const strategy = ImbalanceFeeStrategy(config)
-
+    it("rejects non-integer ratioAsBasisPoints", () => {
+      const strategy = ImbalanceFeeStrategy({ ...config, ratioAsBasisPoints: 50.5 })
       expect(strategy).toBeInstanceOf(ValidationError)
     })
 
-    it("should return validation error for non-integer threshold", () => {
-      const config: ImbalanceFeeStrategyParams = {
-        threshold: 1000000.5,
-        ratioAsBasisPoints: 50,
-        daysLookback: 30,
-        minFee: 2000,
-      }
-      const strategy = ImbalanceFeeStrategy(config)
-
+    it("rejects non-integer threshold", () => {
+      const strategy = ImbalanceFeeStrategy({ ...config, threshold: 1_000_000.5 })
       expect(strategy).toBeInstanceOf(ValidationError)
     })
 
-    it("should return validation error for non-integer minFee", () => {
-      const config: ImbalanceFeeStrategyParams = {
-        threshold: 1000000,
-        ratioAsBasisPoints: 50,
-        daysLookback: 30,
-        minFee: 2000.5,
-      }
-      const strategy = ImbalanceFeeStrategy(config)
-
+    it("rejects non-integer minFee", () => {
+      const strategy = ImbalanceFeeStrategy({ ...config, minFee: 2000.5 })
       expect(strategy).toBeInstanceOf(ValidationError)
     })
   })
 
   describe("calculate", () => {
-    const config: ImbalanceFeeStrategyParams = {
-      threshold: 1000000,
-      ratioAsBasisPoints: 50,
-      daysLookback: 30,
-      minFee: 2000,
-    }
-
-    const mockPaymentAmount = paymentAmountFromNumber({
-      amount: 500000,
-      currency: WalletCurrency.Btc,
-    }) as BtcPaymentAmount
-
-    it("should return zero fee when imbalance is not provided", () => {
+    it("returns zero fee when no imbalanceFns provided", async () => {
       const strategy = ImbalanceFeeStrategy(config)
       if (strategy instanceof Error) throw strategy
 
-      const fee = strategy.calculate({
-        paymentAmount: mockPaymentAmount,
-      } as FeeCalculationArgs)
-
+      const fee = await strategy.calculate({
+        paymentAmount,
+        wallet,
+      } as unknown as FeeCalculationArgs)
       expect(fee).not.toBeInstanceOf(Error)
       if (fee instanceof Error) throw fee
-      expect(fee.amount).toEqual(0n)
-      expect(fee.currency).toEqual(WalletCurrency.Btc)
+      expect(fee.amount).toBe(0n)
     })
 
-    it("should return minFee when calculated fee is below minimum", () => {
+    it("returns error when volume fn fails", async () => {
       const strategy = ImbalanceFeeStrategy(config)
       if (strategy instanceof Error) throw strategy
 
-      const imbalance = paymentAmountFromNumber({
-        amount: 100000,
-        currency: WalletCurrency.Btc,
-      }) as BtcPaymentAmount
+      mockNetInVolumeAmountInboundNetworkFn.mockResolvedValueOnce(
+        new Error("network error"),
+      )
 
-      const fee = strategy.calculate({
-        paymentAmount: mockPaymentAmount,
-        imbalance,
-      } as FeeCalculationArgs)
+      const fee = await strategy.calculate({
+        accountId: "" as AccountId,
+        networkFee: {} as NetworkFee,
+        previousFee: {} as FeeDetails,
+        paymentAmount,
+        wallet,
+        imbalanceFns: createImbalanceFns(0n, 0n),
+      })
 
-      expect(fee).not.toBeInstanceOf(Error)
-      if (fee instanceof Error) throw fee
-      expect(fee.amount).toEqual(2000n)
-      expect(fee.currency).toEqual(WalletCurrency.Btc)
+      expect(fee).toBeInstanceOf(Error)
     })
 
-    it("should calculate fee based on imbalance above threshold", () => {
+    it("returns minFee when imbalance is below threshold", async () => {
       const strategy = ImbalanceFeeStrategy(config)
       if (strategy instanceof Error) throw strategy
 
-      const imbalance = paymentAmountFromNumber({
-        amount: 2000000,
-        currency: WalletCurrency.Btc,
-      }) as BtcPaymentAmount
-
-      const fee = strategy.calculate({
-        paymentAmount: mockPaymentAmount,
-        imbalance,
-      } as FeeCalculationArgs)
+      const fee = await strategy.calculate({
+        accountId: "" as AccountId,
+        networkFee: {} as NetworkFee,
+        previousFee: {} as FeeDetails,
+        paymentAmount,
+        wallet,
+        imbalanceFns: createImbalanceFns(900_000n, 0n),
+      })
 
       expect(fee).not.toBeInstanceOf(Error)
       if (fee instanceof Error) throw fee
-      expect(fee.amount).toEqual(2500n)
-      expect(fee.currency).toEqual(WalletCurrency.Btc)
+      expect(fee.amount).toBe(2000n)
     })
 
-    it("should return minFee when imbalance is below threshold", () => {
+    it("calculates fee correctly when imbalance exceeds threshold", async () => {
       const strategy = ImbalanceFeeStrategy(config)
       if (strategy instanceof Error) throw strategy
 
-      const imbalance = paymentAmountFromNumber({
-        amount: 500000,
-        currency: WalletCurrency.Btc,
-      }) as BtcPaymentAmount
-
-      const fee = strategy.calculate({
-        paymentAmount: mockPaymentAmount,
-        imbalance,
-      } as FeeCalculationArgs)
+      const fee = await strategy.calculate({
+        accountId: "" as AccountId,
+        networkFee: {} as NetworkFee,
+        previousFee: {} as FeeDetails,
+        paymentAmount,
+        wallet,
+        imbalanceFns: createImbalanceFns(2_000_000n, 0n),
+      })
 
       expect(fee).not.toBeInstanceOf(Error)
       if (fee instanceof Error) throw fee
-      expect(fee.amount).toEqual(2000n)
-      expect(fee.currency).toEqual(WalletCurrency.Btc)
+      expect(fee.amount).toBe(2500n)
     })
 
-    it("should handle negative imbalance", () => {
+    it("caps fee at paymentAmount", async () => {
       const strategy = ImbalanceFeeStrategy(config)
       if (strategy instanceof Error) throw strategy
 
-      const imbalance = paymentAmountFromNumber({
-        amount: -500000,
-        currency: WalletCurrency.Btc,
-      }) as BtcPaymentAmount
-
-      const fee = strategy.calculate({
-        paymentAmount: mockPaymentAmount,
-        imbalance,
-      } as FeeCalculationArgs)
+      const fee = await strategy.calculate({
+        accountId: "" as AccountId,
+        networkFee: {} as NetworkFee,
+        previousFee: {} as FeeDetails,
+        paymentAmount,
+        wallet,
+        imbalanceFns: createImbalanceFns(10_000_000n, 0n),
+      })
 
       expect(fee).not.toBeInstanceOf(Error)
       if (fee instanceof Error) throw fee
-      expect(fee.amount).toEqual(2000n)
-      expect(fee.currency).toEqual(WalletCurrency.Btc)
+      expect(fee.amount).toBe(2500n)
     })
 
-    it("should calculate fee correctly for large imbalance", () => {
+    it("returns minFee for negative imbalance", async () => {
       const strategy = ImbalanceFeeStrategy(config)
       if (strategy instanceof Error) throw strategy
 
-      const largeImbalance = paymentAmountFromNumber({
-        amount: 10000000,
-        currency: WalletCurrency.Btc,
-      }) as BtcPaymentAmount
-
-      const fee = strategy.calculate({
-        paymentAmount: mockPaymentAmount,
-        imbalance: largeImbalance,
-      } as FeeCalculationArgs)
+      const fee = await strategy.calculate({
+        accountId: "" as AccountId,
+        networkFee: {} as NetworkFee,
+        previousFee: {} as FeeDetails,
+        paymentAmount,
+        wallet,
+        imbalanceFns: createImbalanceFns(0n, 1_000_000n),
+      })
 
       expect(fee).not.toBeInstanceOf(Error)
       if (fee instanceof Error) throw fee
-      expect(fee.amount).toEqual(2500n)
-      expect(fee.currency).toEqual(WalletCurrency.Btc)
+      expect(fee.amount).toBe(2000n)
     })
 
-    it("should handle zero imbalance", () => {
+    it("handles zero imbalance", async () => {
       const strategy = ImbalanceFeeStrategy(config)
       if (strategy instanceof Error) throw strategy
 
-      const imbalance = paymentAmountFromNumber({
-        amount: 0,
-        currency: WalletCurrency.Btc,
-      }) as BtcPaymentAmount
-
-      const fee = strategy.calculate({
-        paymentAmount: mockPaymentAmount,
-        imbalance,
-      } as FeeCalculationArgs)
+      const fee = await strategy.calculate({
+        accountId: "" as AccountId,
+        networkFee: {} as NetworkFee,
+        previousFee: {} as FeeDetails,
+        paymentAmount,
+        wallet,
+        imbalanceFns: createImbalanceFns(500_000n, 500_000n),
+      })
 
       expect(fee).not.toBeInstanceOf(Error)
       if (fee instanceof Error) throw fee
-      expect(fee.amount).toEqual(2000n)
-      expect(fee.currency).toEqual(WalletCurrency.Btc)
+      expect(fee.amount).toBe(2000n)
     })
 
-    it("should calculate correct fee for imbalance exactly at threshold", () => {
+    it("applies minFee when calculated fee is lower", async () => {
       const strategy = ImbalanceFeeStrategy(config)
       if (strategy instanceof Error) throw strategy
 
-      const imbalance = paymentAmountFromNumber({
-        amount: 1000000,
-        currency: WalletCurrency.Btc,
-      }) as BtcPaymentAmount
-
-      const fee = strategy.calculate({
-        paymentAmount: mockPaymentAmount,
-        imbalance,
-      } as FeeCalculationArgs)
+      const fee = await strategy.calculate({
+        accountId: "" as AccountId,
+        networkFee: {} as NetworkFee,
+        previousFee: {} as FeeDetails,
+        paymentAmount,
+        wallet,
+        imbalanceFns: createImbalanceFns(1_100_000n, 0n),
+      })
 
       expect(fee).not.toBeInstanceOf(Error)
       if (fee instanceof Error) throw fee
-      expect(fee.amount).toEqual(2500n)
-      expect(fee.currency).toEqual(WalletCurrency.Btc)
+      expect(fee.amount).toBe(2500n)
     })
   })
 })

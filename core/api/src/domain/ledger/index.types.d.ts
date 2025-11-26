@@ -364,19 +364,6 @@ type ActivityChecker = {
   aboveThreshold: (wallets: Wallet[]) => Promise<boolean | LedgerServiceError>
 }
 
-type ImbalanceCalculatorConfig = {
-  netInVolumeAmountLightningFn: NewGetVolumeAmountSinceFn
-  netInVolumeAmountOnChainFn: NewGetVolumeAmountSinceFn
-  sinceDaysAgo: Days
-  method: WithdrawalFeePriceMethod
-}
-
-type ImbalanceCalculator = {
-  getSwapOutImbalanceAmount: <T extends WalletCurrency>(
-    wallet: WalletDescriptor<T>,
-  ) => Promise<PaymentAmount<T> | LedgerServiceError | ValidationError>
-}
-
 type LnPaymentState =
   (typeof import("./ln-payment-state").LnPaymentState)[keyof typeof import("./ln-payment-state").LnPaymentState]
 

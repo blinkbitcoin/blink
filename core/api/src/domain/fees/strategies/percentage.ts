@@ -5,9 +5,9 @@ const calc = AmountCalculator()
 export const PercentageFeeStrategy = (
   config: PercentageFeeStrategyParams,
 ): IFeeStrategy => {
-  const calculate = ({
+  const calculate = async ({
     paymentAmount,
-  }: FeeCalculationArgs): BtcPaymentAmount | ValidationError => {
+  }: FeeCalculationArgs): Promise<BtcPaymentAmount | ValidationError> => {
     return calc.mulBasisPoints(paymentAmount, BigInt(config.basisPoints))
   }
 

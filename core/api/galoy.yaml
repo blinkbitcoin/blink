@@ -1,7 +1,3 @@
-lightningAddressDomain: pay.domain.com
-lightningAddressDomainAliases:
-  - pay1.domain.com
-  - pay2.domain.com
 locale: en
 displayCurrency:
   code: USD
@@ -26,35 +22,6 @@ quizzes:
   denyIPCountries: []
   allowASNs: []
   denyASNs: []
-bria:
-  receiveWalletName: dev-wallet
-  withdrawalWalletName: dev-wallet
-  coldWalletName: cold
-  payoutQueues:
-    - speed: fast
-      queueName: dev-queue
-      displayName: Priority
-      description: Estimated broadcast ~10 minutes
-    - speed: medium
-      queueName: dev-medium-queue
-      displayName: Standard
-      description: Estimated broadcast ~1 hour
-    - speed: slow
-      queueName: dev-slow-queue
-      displayName: Flexible
-      description: Estimated broadcast ~24 hours
-  rebalances:
-    hotToCold:
-      threshold: 200000000
-      minRebalanceSize: 10000000
-      minBalance: 1000000
-      payoutQueueName: dev-queue
-    receiveToWithdrawal:
-      threshold: 25000000
-      minRebalanceSize: 25000000
-      minBalance: 100000
-      payoutQueueName: dev-queue
-lndScbBackupBucketName: lnd-static-channel-backups
 admin_accounts:
   - role: dealer
     phone: "+16505554327"
@@ -161,21 +128,6 @@ ipRecording:
   enabled: false
   proxyChecking:
     enabled: false
-fees:
-  withdraw:
-    method: flat
-    defaultMin: 2000
-    ratioAsBasisPoints: 50
-    threshold: 1000000
-    daysLookback: 30
-  deposit:
-    defaultMin: 3000
-    threshold: 1000000
-    ratioAsBasisPoints: 30
-  merchantDeposit:
-    defaultMin: 3000
-    threshold: 1000000
-    ratioAsBasisPoints: 30
 feeStrategies:
   - name: zero_fee
     strategy: flat
@@ -219,21 +171,79 @@ feeStrategies:
       ratioAsBasisPoints: 50
       daysLookback: 30
       minFee: 2000
-onChainWallet:
-  dustThreshold: 5000
-  minConfirmations: 2
-  scanDepth: 360
-  scanDepthOutgoing: 2
-  scanDepthChannelUpdate: 8
+paymentNetworks:
+  onchain:
+    dustThreshold: 5000
+    receive:
+      walletName: dev-wallet
+      feeStrategies:
+        - tiered_receive
+      rebalance:
+        threshold: 25000000
+        minRebalanceSize: 25000000
+        minBalance: 100000
+        payoutQueueName: dev-queue
+        destinationWalletName: dev-wallet
+      legacy:
+        minConfirmations: 2
+        scanDepth: 360
+    send:
+      walletName: dev-wallet
+      payoutSpeeds:
+        fast:
+          queueName: dev-queue
+          displayName: Priority
+          description: Estimated broadcast ~10 minutes
+          feeStrategies:
+            - tiered_send
+        medium:
+          queueName: dev-medium-queue
+          displayName: Standard
+          description: Estimated broadcast ~1 hour
+          feeStrategies:
+            - tiered_send
+        slow:
+          queueName: dev-slow-queue
+          displayName: Flexible
+          description: Estimated broadcast ~24 hours
+          feeStrategies:
+            - tiered_send
+      rebalance:
+        threshold: 200000000
+        minRebalanceSize: 10000000
+        minBalance: 1000000
+        payoutQueueName: dev-queue
+        destinationWalletName: cold
+  lightning:
+    channels:
+      scanDepthChannelUpdate: 8
+      backupBucketName: lnd-static-channel-backups
+    receive:
+      feeStrategies:
+        - zero_fee
+      addressDomain: pay.domain.com
+      addressDomainAliases:
+        - pay1.domain.com
+        - pay2.domain.com
+    send:
+      feeStrategies:
+        - zero_fee
+      skipFeeProbe:
+        pubkeys: []
+        chanIds: []
+  intraledger:
+    receive:
+      feeStrategies:
+        - zero_fee
+    send:
+      feeStrategies:
+        - zero_fee
 userActivenessMonthlyVolumeThreshold: 100
 cronConfig:
   rebalanceEnabled: true
   removeInactiveMerchantsEnabled: true
 captcha:
   mandatory: false
-skipFeeProbeConfig:
-  pubkey: []
-  chanId: []
 smsAuthUnsupportedCountries: []
 whatsAppAuthUnsupportedCountries: []
 telegramAuthUnsupportedCountries: []

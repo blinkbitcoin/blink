@@ -13,7 +13,7 @@ describe("TieredFeeStrategy", () => {
   }) as BtcPaymentAmount
 
   describe("constructor validation", () => {
-    it("should return an error if there are multiple null maxAmount tiers", () => {
+    it("should return an error if there are multiple null maxAmount tiers", async () => {
       const config: TieredFlatFeeStrategyParams = {
         tiers: [
           { maxAmount: 100000, amount: 200 },
@@ -25,7 +25,7 @@ describe("TieredFeeStrategy", () => {
       expect(strategy).toBeInstanceOf(ValidationError)
     })
 
-    it("should correctly sort tiers if not already sorted", () => {
+    it("should correctly sort tiers if not already sorted", async () => {
       const config: TieredFlatFeeStrategyParams = {
         tiers: [
           { maxAmount: 200000, amount: 500 },
@@ -39,7 +39,7 @@ describe("TieredFeeStrategy", () => {
   })
 
   describe("calculate", () => {
-    it("should return the correct fee for a payment amount in the first tier", () => {
+    it("should return the correct fee for a payment amount in the first tier", async () => {
       const config: TieredFlatFeeStrategyParams = {
         tiers: [
           { maxAmount: 50000, amount: 100 },
@@ -54,12 +54,12 @@ describe("TieredFeeStrategy", () => {
         amount: 30000,
         currency: WalletCurrency.Btc,
       }) as BtcPaymentAmount
-      const fee = strategy.calculate({ paymentAmount } as FeeCalculationArgs)
+      const fee = await strategy.calculate({ paymentAmount } as FeeCalculationArgs)
       expect(fee).not.toBeInstanceOf(Error)
       expect(fee).toEqual({ amount: 100n, currency: WalletCurrency.Btc })
     })
 
-    it("should return the correct fee for a payment amount in an intermediate tier", () => {
+    it("should return the correct fee for a payment amount in an intermediate tier", async () => {
       const config: TieredFlatFeeStrategyParams = {
         tiers: [
           { maxAmount: 50000, amount: 100 },
@@ -74,12 +74,12 @@ describe("TieredFeeStrategy", () => {
         amount: 80000,
         currency: WalletCurrency.Btc,
       }) as BtcPaymentAmount
-      const fee = strategy.calculate({ paymentAmount } as FeeCalculationArgs)
+      const fee = await strategy.calculate({ paymentAmount } as FeeCalculationArgs)
       expect(fee).not.toBeInstanceOf(Error)
       expect(fee).toEqual({ amount: 200n, currency: WalletCurrency.Btc })
     })
 
-    it("should return the correct fee for a payment amount exceeding all fixed tiers (null maxAmount)", () => {
+    it("should return the correct fee for a payment amount exceeding all fixed tiers (null maxAmount)", async () => {
       const config: TieredFlatFeeStrategyParams = {
         tiers: [
           { maxAmount: 50000, amount: 100 },
@@ -94,12 +94,12 @@ describe("TieredFeeStrategy", () => {
         amount: 150000,
         currency: WalletCurrency.Btc,
       }) as BtcPaymentAmount
-      const fee = strategy.calculate({ paymentAmount } as FeeCalculationArgs)
+      const fee = await strategy.calculate({ paymentAmount } as FeeCalculationArgs)
       expect(fee).not.toBeInstanceOf(Error)
       expect(fee).toEqual({ amount: 500n, currency: WalletCurrency.Btc })
     })
 
-    it("should handle exact tier boundary amounts", () => {
+    it("should handle exact tier boundary amounts", async () => {
       const config: TieredFlatFeeStrategyParams = {
         tiers: [
           { maxAmount: 50000, amount: 100 },
@@ -114,26 +114,26 @@ describe("TieredFeeStrategy", () => {
         amount: 50000,
         currency: WalletCurrency.Btc,
       }) as BtcPaymentAmount
-      const fee = strategy.calculate({ paymentAmount } as FeeCalculationArgs)
+      const fee = await strategy.calculate({ paymentAmount } as FeeCalculationArgs)
       expect(fee).not.toBeInstanceOf(Error)
       expect(fee).toEqual({ amount: 100n, currency: WalletCurrency.Btc })
     })
 
-    it("should return zero fee if no tiers are defined (though schema should prevent this)", () => {
+    it("should return zero fee if no tiers are defined", async () => {
       const config: TieredFlatFeeStrategyParams = {
         tiers: [],
       }
       const strategy = TieredFeeStrategy(config)
       expect(strategy).not.toBeInstanceOf(Error)
       if (strategy instanceof Error) throw strategy
-      const fee = strategy.calculate({
+      const fee = await strategy.calculate({
         paymentAmount: basePaymentAmount,
       } as FeeCalculationArgs)
       expect(fee).not.toBeInstanceOf(Error)
       expect(fee).toEqual({ amount: 0n, currency: WalletCurrency.Btc })
     })
 
-    it("should return a validation error for a non-integer amount in tier config", () => {
+    it("should return a validation error for a non-integer amount in tier config", async () => {
       const config: TieredFlatFeeStrategyParams = {
         tiers: [
           { maxAmount: 100000, amount: 200.5 },
@@ -143,13 +143,13 @@ describe("TieredFeeStrategy", () => {
       const strategy = TieredFeeStrategy(config)
       if (strategy instanceof Error) throw strategy
 
-      const fee = strategy.calculate({
+      const fee = await strategy.calculate({
         paymentAmount: basePaymentAmount,
       } as FeeCalculationArgs)
       expect(fee).toBeInstanceOf(ValidationError)
     })
 
-    it("should handle a negative amount from tier config", () => {
+    it("should handle a negative amount from tier config", async () => {
       const config: TieredFlatFeeStrategyParams = {
         tiers: [
           { maxAmount: 100000, amount: -200 },
@@ -159,7 +159,7 @@ describe("TieredFeeStrategy", () => {
       const strategy = TieredFeeStrategy(config)
       if (strategy instanceof Error) throw strategy
 
-      const fee = strategy.calculate({
+      const fee = await strategy.calculate({
         paymentAmount: basePaymentAmount,
       } as FeeCalculationArgs)
       expect(fee).not.toBeInstanceOf(Error)

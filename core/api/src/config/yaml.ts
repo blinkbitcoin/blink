@@ -13,14 +13,9 @@ import { ConfigError } from "./error"
 
 import { baseLogger } from "@/services/logger"
 import { checkedToScanDepth } from "@/domain/bitcoin/onchain"
-import { toSats } from "@/domain/bitcoin"
 import { toCents } from "@/domain/fiat"
 
-import { WithdrawalFeePriceMethod } from "@/domain/wallets"
-
-import { toDays, toSeconds } from "@/domain/primitives"
-
-import { WalletCurrency } from "@/domain/shared"
+import { toSeconds } from "@/domain/primitives"
 
 import { AccountLevel } from "@/domain/accounts"
 
@@ -78,35 +73,77 @@ const getOnChainScanDepth = (val: number): ScanDepth => {
 }
 
 export const ONCHAIN_MIN_CONFIRMATIONS = getOnChainScanDepth(
-  yamlConfig.onChainWallet.minConfirmations,
+  yamlConfig.paymentNetworks.onchain.receive.legacy.minConfirmations,
 )
 
-export const ONCHAIN_SCAN_DEPTH = getOnChainScanDepth(yamlConfig.onChainWallet.scanDepth)
+export const ONCHAIN_SCAN_DEPTH = getOnChainScanDepth(
+  yamlConfig.paymentNetworks.onchain.receive.legacy.scanDepth,
+)
+
 export const ONCHAIN_SCAN_DEPTH_CHANNEL_UPDATE = getOnChainScanDepth(
-  yamlConfig.onChainWallet.scanDepthChannelUpdate,
+  yamlConfig.paymentNetworks.lightning.channels.scanDepthChannelUpdate,
 )
 
 export const USER_ACTIVENESS_MONTHLY_VOLUME_THRESHOLD = toCents(
   yamlConfig.userActivenessMonthlyVolumeThreshold,
 )
 
-export const getBriaPartialConfigFromYaml = () => ({
-  receiveWalletName: yamlConfig.bria.receiveWalletName,
-  withdrawalWalletName: yamlConfig.bria.withdrawalWalletName,
-  coldWalletName: yamlConfig.bria.coldWalletName,
-  payoutQueues: yamlConfig.bria.payoutQueues,
-  rebalances: yamlConfig.bria.rebalances,
-})
+export const getBriaPartialConfigFromYaml = () => {
+  const { onchain } = yamlConfig.paymentNetworks
+  return {
+    receiveWalletName: onchain.receive.walletName,
+    withdrawalWalletName: onchain.send.walletName,
+    coldWalletName: onchain.send.rebalance.destinationWalletName,
+    payoutQueues: [
+      {
+        speed: "fast" as const,
+        queueName: onchain.send.payoutSpeeds.fast.queueName,
+        displayName: onchain.send.payoutSpeeds.fast.displayName,
+        description: onchain.send.payoutSpeeds.fast.description,
+      },
+      {
+        speed: "medium" as const,
+        queueName: onchain.send.payoutSpeeds.medium.queueName,
+        displayName: onchain.send.payoutSpeeds.medium.displayName,
+        description: onchain.send.payoutSpeeds.medium.description,
+      },
+      {
+        speed: "slow" as const,
+        queueName: onchain.send.payoutSpeeds.slow.queueName,
+        displayName: onchain.send.payoutSpeeds.slow.displayName,
+        description: onchain.send.payoutSpeeds.slow.description,
+      },
+    ],
+    rebalances: {
+      hotToCold: {
+        threshold: onchain.send.rebalance.threshold as Satoshis,
+        minRebalanceSize: onchain.send.rebalance.minRebalanceSize as Satoshis,
+        minBalance: onchain.send.rebalance.minBalance as Satoshis,
+        payoutQueueName: onchain.send.rebalance.payoutQueueName,
+      },
+      receiveToWithdrawal: {
+        threshold: onchain.receive.rebalance.threshold as Satoshis,
+        minRebalanceSize: onchain.receive.rebalance.minRebalanceSize as Satoshis,
+        minBalance: onchain.receive.rebalance.minBalance as Satoshis,
+        payoutQueueName: onchain.receive.rebalance.payoutQueueName,
+      },
+    },
+  }
+}
 
-export const getLightningAddressDomain = (): string => yamlConfig.lightningAddressDomain
+export const getLightningAddressDomain = (): string =>
+  yamlConfig.paymentNetworks.lightning.receive.addressDomain
+
 export const getLightningAddressDomainAliases = (): string[] =>
-  yamlConfig.lightningAddressDomainAliases
+  yamlConfig.paymentNetworks.lightning.receive.addressDomainAliases
+
 export const getLocale = (): UserLanguage => yamlConfig.locale as UserLanguage
 
 export const getValuesToSkipProbe = (): SkipFeeProbeConfig => {
+  const skipProbe = yamlConfig.paymentNetworks.lightning.send.skipFeeProbe
   return {
-    pubkey: (yamlConfig.skipFeeProbeConfig.pubkey || []) as Pubkey[],
-    chanId: (yamlConfig.skipFeeProbeConfig.chanId || []) as ChanId[],
+    pubkey: (skipProbe.pubkeys || []) as Pubkey[],
+    chanId: (skipProbe.chanIds || []) as ChanId[],
   }
 }
 
@@ -119,47 +156,6 @@ export const getDisplayCurrencyConfig = (): {
 })
 
 export const getDealerConfig = () => yamlConfig.dealer
-
-export const getFeesConfig = (feesConfig = yamlConfig.fees): FeesConfig => {
-  const method = feesConfig.withdraw.method as WithdrawalFeePriceMethod
-  const depositRatioAsBasisPoints = BigInt(
-    feesConfig.deposit.ratioAsBasisPoints,
-  ) as DepositFeeRatioAsBasisPoints
-  const withdrawRatioAsBasisPoints =
-    method === WithdrawalFeePriceMethod.flat
-      ? 0n
-      : BigInt(feesConfig.withdraw.ratioAsBasisPoints)
-
-  const merchantDepositRatioAsBasisPoints = BigInt(
-    feesConfig.merchantDeposit.ratioAsBasisPoints,
-  ) as DepositFeeRatioAsBasisPoints
-
-  return {
-    depositDefaultMin: {
-      amount: BigInt(feesConfig.deposit.defaultMin),
-      currency: WalletCurrency.Btc,
-    },
-    depositThreshold: {
-      amount: BigInt(feesConfig.deposit.threshold),
-      currency: WalletCurrency.Btc,
-    },
-    depositRatioAsBasisPoints,
-    merchantDepositDefaultMin: {
-      amount: BigInt(feesConfig.merchantDeposit.defaultMin),
-      currency: WalletCurrency.Btc,
-    },
-    merchantDepositThreshold: {
-      amount: BigInt(feesConfig.merchantDeposit.threshold),
-      currency: WalletCurrency.Btc,
-    },
-    merchantDepositRatioAsBasisPoints,
-    withdrawMethod: method,
-    withdrawRatioAsBasisPoints,
-    withdrawThreshold: toSats(feesConfig.withdraw.threshold),
-    withdrawDaysLookback: toDays(feesConfig.withdraw.daysLookback),
-    withdrawDefaultMin: toSats(feesConfig.withdraw.defaultMin),
-  }
-}
 
 export const getAccountLimits = ({
   level,
@@ -227,7 +223,7 @@ export const getAddQuizPerPhoneLimits = () =>
   getRateLimits(yamlConfig.rateLimits.addQuizPerPhone)
 
 export const getOnChainWalletConfig = () => ({
-  dustThreshold: yamlConfig.onChainWallet.dustThreshold,
+  dustThreshold: yamlConfig.paymentNetworks.onchain.dustThreshold,
 })
 
 export const getBuildVersions = (): {
@@ -251,7 +247,8 @@ export const getIpConfig = (config = yamlConfig): IpConfig => ({
   proxyCheckingEnabled: config.ipRecording.proxyChecking.enabled,
 })
 
-export const LND_SCB_BACKUP_BUCKET_NAME = yamlConfig.lndScbBackupBucketName
+export const LND_SCB_BACKUP_BUCKET_NAME =
+  yamlConfig.paymentNetworks.lightning.channels.backupBucketName
 
 export const getAdminAccounts = (config = yamlConfig): AdminAccount[] =>
   config.admin_accounts.map((account) => ({
@@ -345,4 +342,110 @@ export const getPhoneProviderConfig = () => ({
 
 export const getFeeStrategies = (): FeeStrategy[] => {
   return yamlConfig.feeStrategies
+}
+
+const resolveFeeStrategies = (strategyNames: string[]): FeeStrategy[] => {
+  return strategyNames
+    .map((name) => yamlConfig.feeStrategies.find((s) => s.name === name))
+    .filter((s): s is FeeStrategy => s !== undefined)
+}
+
+export const getOnchainNetworkConfig = (): OnchainNetworkConfig => {
+  const onchain = yamlConfig.paymentNetworks.onchain
+
+  return {
+    dustThreshold: onchain.dustThreshold as Satoshis,
+    receive: {
+      walletName: onchain.receive.walletName,
+      feeStrategies: resolveFeeStrategies(onchain.receive.feeStrategies),
+      rebalance: {
+        threshold: onchain.receive.rebalance.threshold as Satoshis,
+        minRebalanceSize: onchain.receive.rebalance.minRebalanceSize as Satoshis,
+        minBalance: onchain.receive.rebalance.minBalance as Satoshis,
+        payoutQueueName: onchain.receive.rebalance.payoutQueueName,
+        destinationWalletName: onchain.receive.rebalance.destinationWalletName,
+      },
+      legacy: {
+        minConfirmations: getOnChainScanDepth(onchain.receive.legacy.minConfirmations),
+        scanDepth: getOnChainScanDepth(onchain.receive.legacy.scanDepth),
+      },
+    },
+    send: {
+      walletName: onchain.send.walletName,
+      payoutSpeeds: {
+        fast: {
+          speed: "fast" as const,
+          queueName: onchain.send.payoutSpeeds.fast.queueName,
+          displayName: onchain.send.payoutSpeeds.fast.displayName,
+          description: onchain.send.payoutSpeeds.fast.description,
+          feeStrategies: resolveFeeStrategies(
+            onchain.send.payoutSpeeds.fast.feeStrategies,
+          ),
+        },
+        medium: {
+          speed: "medium" as const,
+          queueName: onchain.send.payoutSpeeds.medium.queueName,
+          displayName: onchain.send.payoutSpeeds.medium.displayName,
+          description: onchain.send.payoutSpeeds.medium.description,
+          feeStrategies: resolveFeeStrategies(
+            onchain.send.payoutSpeeds.medium.feeStrategies,
+          ),
+        },
+        slow: {
+          speed: "slow" as const,
+          queueName: onchain.send.payoutSpeeds.slow.queueName,
+          displayName: onchain.send.payoutSpeeds.slow.displayName,
+          description: onchain.send.payoutSpeeds.slow.description,
+          feeStrategies: resolveFeeStrategies(
+            onchain.send.payoutSpeeds.slow.feeStrategies,
+          ),
+        },
+      },
+      rebalance: {
+        threshold: onchain.send.rebalance.threshold as Satoshis,
+        minRebalanceSize: onchain.send.rebalance.minRebalanceSize as Satoshis,
+        minBalance: onchain.send.rebalance.minBalance as Satoshis,
+        payoutQueueName: onchain.send.rebalance.payoutQueueName,
+        destinationWalletName: onchain.send.rebalance.destinationWalletName,
+      },
+    },
+  }
+}
+
+export const getLightningNetworkConfig = (): LightningNetworkConfig => {
+  const lightning = yamlConfig.paymentNetworks.lightning
+
+  return {
+    channels: {
+      scanDepthChannelUpdate: getOnChainScanDepth(
+        lightning.channels.scanDepthChannelUpdate,
+      ),
+      backupBucketName: lightning.channels.backupBucketName,
+    },
+    receive: {
+      feeStrategies: resolveFeeStrategies(lightning.receive.feeStrategies),
+      addressDomain: lightning.receive.addressDomain,
+      addressDomainAliases: lightning.receive.addressDomainAliases,
+    },
+    send: {
+      feeStrategies: resolveFeeStrategies(lightning.send.feeStrategies),
+      skipFeeProbe: {
+        pubkeys: (lightning.send.skipFeeProbe.pubkeys || []) as Pubkey[],
+        chanIds: (lightning.send.skipFeeProbe.chanIds || []) as ChanId[],
+      },
+    },
+  }
+}
+
+export const getIntraledgerNetworkConfig = (): IntraledgerNetworkConfig => {
+  const intraledger = yamlConfig.paymentNetworks.intraledger
+
+  return {
+    receive: {
+      feeStrategies: resolveFeeStrategies(intraledger.receive.feeStrategies),
+    },
+    send: {
+      feeStrategies: resolveFeeStrategies(intraledger.send.feeStrategies),
+    },
+  }
 }

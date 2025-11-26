@@ -11,15 +11,16 @@ const calc = AmountCalculator()
 export const InternalAccountFeeStrategy = (
   config: InternalAccountFeeStrategyParams,
 ): IFeeStrategy => {
-  const calculate = ({
-    account,
+  const calculate = async ({
+    accountId,
+    accountRole,
     previousFee,
-  }: FeeCalculationArgs): BtcPaymentAmount | ValidationError => {
-    const isExemptAccountId = config.accountIds.includes(account.id)
-    const isExemptRole = account.role && config.roles.includes(account.role)
+  }: FeeCalculationArgs): Promise<BtcPaymentAmount | ValidationError> => {
+    const isExemptAccountId = config.accountIds.includes(accountId)
+    const isExemptRole = accountRole && config.roles.includes(accountRole)
 
     if (isExemptAccountId || isExemptRole) {
-      return calc.mul(previousFee, -1n)
+      return calc.mul(previousFee.bankFee, -1n)
     }
 
     const zeroFee = paymentAmountFromNumber({ amount: 0, currency: WalletCurrency.Btc })

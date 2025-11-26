@@ -1,14 +1,10 @@
-import { getOnChainDepositFeeConfiguration } from "./get-on-chain-deposit-fee-config"
-
 import { getOnChainWalletConfig } from "@/config"
 
+import { isValidatedMerchant } from "@/app/accounts"
 import { getCurrentPriceAsDisplayPriceRatio, usdFromBtcMidPriceFn } from "@/app/prices"
 
-import {
-  DepositFeeCalculator,
-  PaymentInitiationMethod,
-  SettlementMethod,
-} from "@/domain/wallets"
+import { DepositFeeCalculator } from "@/domain/fees"
+import { PaymentInitiationMethod, SettlementMethod } from "@/domain/wallets"
 import { WalletAddressReceiver } from "@/domain/wallet-on-chain/wallet-address-receiver"
 import { DuplicateKeyForPersistError, LessThanDustThresholdError } from "@/domain/errors"
 
@@ -49,11 +45,15 @@ export const addPendingTransaction = async ({
   const account = await AccountsRepository().findById(wallet.accountId)
   if (account instanceof Error) return account
 
-  const fees = await getOnChainDepositFeeConfiguration({ account })
+  const accountIsValidatedMerchant = await isValidatedMerchant({ account })
+  if (accountIsValidatedMerchant instanceof Error) return accountIsValidatedMerchant
 
-  const satsFee = DepositFeeCalculator().onChainDepositFee({
-    amount: satoshis,
-    ...fees,
+  const satsFee = await DepositFeeCalculator().onChainFee({
+    paymentAmount: satoshis,
+    accountId: account.id,
+    accountRole: account.role,
+    wallet,
+    isValidatedMerchant: accountIsValidatedMerchant,
   })
   if (satsFee instanceof Error) return satsFee
 
@@ -83,7 +83,7 @@ export const addPendingTransaction = async ({
         recipientWalletDescriptor: wallet,
       },
       receivedBtc: satoshis,
-      satsFee,
+      satsFee: satsFee.totalFee,
       usdFromBtc: dealer.getCentsFromSatsForImmediateBuy,
       usdFromBtcMidPrice: usdFromBtcMidPriceFn,
     })

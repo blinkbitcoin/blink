@@ -5,11 +5,17 @@ import { InternalAccountFeeStrategy } from "./strategies/internal"
 import { ImbalanceFeeStrategy } from "./strategies/imbalance"
 
 import {
-  BtcPaymentAmount,
+  getOnchainNetworkConfig,
+  getLightningNetworkConfig,
+  getIntraledgerNetworkConfig,
+} from "@/config"
+
+import {
   AmountCalculator,
   paymentAmountFromNumber,
   ValidationError,
   WalletCurrency,
+  ZERO_SATS,
 } from "@/domain/shared"
 
 const calc = AmountCalculator()
@@ -22,32 +28,201 @@ const FEE_STRATEGIES = {
   imbalance: ImbalanceFeeStrategy,
 } as const
 
-export const calculateCompositeFee = ({
-  account,
+export const calculateCompositeFee = async ({
+  accountId,
+  accountRole,
   wallet,
   paymentAmount,
   networkFee,
   strategies,
-}: CalculateCompositeFeeArgs): BtcPaymentAmount | ValidationError => {
+  imbalanceFns,
+  isValidatedMerchant,
+}: CalculateCompositeFeeArgs): Promise<FeeDetails | ValidationError> => {
   const zeroFee = paymentAmountFromNumber({ amount: 0, currency: WalletCurrency.Btc })
   if (zeroFee instanceof Error) return zeroFee
 
-  let totalFee = networkFee.amount
-  const baseArgs = { paymentAmount, networkFee, account, wallet }
+  let feeDetails: FeeDetails = {
+    bankFee: zeroFee,
+    minerFee: networkFee.amount,
+    totalFee: networkFee.amount,
+  }
+
+  const baseArgs = {
+    paymentAmount,
+    networkFee,
+    accountId,
+    accountRole,
+    wallet,
+    imbalanceFns,
+    isValidatedMerchant,
+  }
 
   for (const { strategy: type, params } of strategies) {
     const factory = FEE_STRATEGIES[type as keyof typeof FEE_STRATEGIES]
 
     const strategy: IFeeStrategy | ValidationError = factory
       ? (factory as (p: typeof params) => IFeeStrategy | ValidationError)(params)
-      : { calculate: () => zeroFee }
+      : { calculate: async () => zeroFee }
     if (strategy instanceof Error) return strategy
 
-    const currentFee = strategy.calculate({ ...baseArgs, previousFee: totalFee })
-    if (currentFee instanceof Error) return currentFee
+    const fee = await strategy.calculate({ ...baseArgs, previousFee: feeDetails })
+    if (fee instanceof Error) return fee
 
-    totalFee = calc.add(totalFee, currentFee)
+    const bankFee = calc.add(feeDetails.bankFee, fee)
+    feeDetails = {
+      minerFee: networkFee.amount,
+      bankFee,
+      totalFee: calc.add(bankFee, networkFee.amount),
+    }
+  }
+  const bankFee = calc.max(feeDetails.bankFee, zeroFee)
+  const totalFee = calc.add(bankFee, networkFee.amount)
+  return {
+    minerFee: networkFee.amount,
+    bankFee,
+    totalFee: calc.max(totalFee, zeroFee),
+  }
+}
+
+export const DepositFeeCalculator = (): DepositFeeCalculator => {
+  const onChainFee = async ({
+    paymentAmount,
+    accountId,
+    accountRole,
+    wallet,
+    isValidatedMerchant,
+  }: OnChainDepositFeeArgs): Promise<FeeDetails | ValidationError> => {
+    const { receive: onchainReceiveConfig } = getOnchainNetworkConfig()
+    const strategies = onchainReceiveConfig.feeStrategies
+    return calculateCompositeFee({
+      accountId,
+      accountRole,
+      wallet,
+      paymentAmount,
+      networkFee: { amount: ZERO_SATS },
+      strategies,
+      isValidatedMerchant,
+    })
   }
 
-  return calc.max(calc.max(totalFee, networkFee.amount), zeroFee)
+  const lightningFee = async ({
+    paymentAmount,
+    accountId,
+    accountRole,
+    wallet,
+    isValidatedMerchant,
+  }: LightningDepositFeeArgs): Promise<FeeDetails | ValidationError> => {
+    const { receive: lightningReceiveConfig } = getLightningNetworkConfig()
+    const strategies = lightningReceiveConfig.feeStrategies
+    return calculateCompositeFee({
+      accountId,
+      accountRole,
+      wallet,
+      paymentAmount,
+      networkFee: { amount: ZERO_SATS },
+      strategies,
+      isValidatedMerchant,
+    })
+  }
+
+  const intraledgerFee = async ({
+    paymentAmount,
+    accountId,
+    accountRole,
+    wallet,
+    isValidatedMerchant,
+  }: IntraledgerDepositFeeArgs): Promise<FeeDetails | ValidationError> => {
+    const { receive: intraledgerReceiveConfig } = getIntraledgerNetworkConfig()
+    const strategies = intraledgerReceiveConfig.feeStrategies
+    return calculateCompositeFee({
+      accountId,
+      accountRole,
+      wallet,
+      paymentAmount,
+      networkFee: { amount: ZERO_SATS },
+      strategies,
+      isValidatedMerchant,
+    })
+  }
+
+  return {
+    onChainFee,
+    lightningFee,
+    intraledgerFee,
+  }
+}
+
+export const WithdrawalFeeCalculator = (): WithdrawalFeeCalculator => {
+  const onChainFee = async ({
+    paymentAmount,
+    accountId,
+    accountRole,
+    wallet,
+    networkFee,
+    speed,
+    imbalanceFns,
+  }: OnChainWithdrawalFeeArgs): Promise<WithdrawalFeeResult | ValidationError> => {
+    const { send: onchainSendConfig } = getOnchainNetworkConfig()
+    const strategies = onchainSendConfig.payoutSpeeds[speed].feeStrategies
+    return calculateCompositeFee({
+      accountId,
+      accountRole,
+      wallet,
+      paymentAmount,
+      networkFee,
+      strategies,
+      imbalanceFns,
+      isValidatedMerchant: false,
+    })
+  }
+
+  const lightningFee = async ({
+    paymentAmount,
+    accountId,
+    accountRole,
+    wallet,
+    networkFee,
+    imbalanceFns,
+  }: LightningWithdrawalFeeArgs): Promise<WithdrawalFeeResult | ValidationError> => {
+    const { send: lightningSendConfig } = getLightningNetworkConfig()
+    const strategies = lightningSendConfig.feeStrategies
+    return calculateCompositeFee({
+      accountId,
+      accountRole,
+      wallet,
+      paymentAmount,
+      networkFee,
+      strategies,
+      imbalanceFns,
+      isValidatedMerchant: false,
+    })
+  }
+
+  const intraledgerFee = async ({
+    paymentAmount,
+    accountId,
+    accountRole,
+    wallet,
+    networkFee,
+    imbalanceFns,
+  }: IntraledgerWithdrawalFeeArgs): Promise<WithdrawalFeeResult | ValidationError> => {
+    const { send: intraledgerSendConfig } = getIntraledgerNetworkConfig()
+    const strategies = intraledgerSendConfig.feeStrategies
+    return calculateCompositeFee({
+      accountId,
+      accountRole,
+      wallet,
+      paymentAmount,
+      networkFee,
+      strategies,
+      imbalanceFns,
+      isValidatedMerchant: false,
+    })
+  }
+
+  return {
+    onChainFee,
+    lightningFee,
+    intraledgerFee,
+  }
 }

@@ -9,15 +9,12 @@ import {
 export const TieredFeeStrategy = (
   config: TieredFlatFeeStrategyParams,
 ): IFeeStrategy | ValidationError => {
-  // Defensive copy and sort the tiers
   const sortedTiers = [...config.tiers].sort((a, b) => {
-    // Treat null as infinity for sorting purposes
     const maxA = a.maxAmount === null ? Infinity : a.maxAmount
     const maxB = b.maxAmount === null ? Infinity : b.maxAmount
     return maxA - maxB
   })
 
-  // New defensive check: Only one tier can have 'maxAmount: null'
   const nullTiersCount = sortedTiers.filter((tier) => tier.maxAmount === null).length
   if (nullTiersCount > 1) {
     return new ValidationError(
@@ -25,11 +22,10 @@ export const TieredFeeStrategy = (
     )
   }
 
-  const calculate = ({
+  const calculate = async ({
     paymentAmount,
-  }: FeeCalculationArgs): BtcPaymentAmount | ValidationError => {
+  }: FeeCalculationArgs): Promise<BtcPaymentAmount | ValidationError> => {
     for (const tier of sortedTiers) {
-      // Use the sorted tiers
       if (tier.maxAmount === null || paymentAmount.amount <= BigInt(tier.maxAmount)) {
         const amount = paymentAmountFromNumber({
           amount: tier.amount,
@@ -43,7 +39,6 @@ export const TieredFeeStrategy = (
       }
     }
 
-    // Fallback if no tier matches (should ideally not happen with a catch-all tier with maxAmount: null)
     const zeroAmount = paymentAmountFromNumber({
       amount: 0,
       currency: WalletCurrency.Btc,

@@ -15,11 +15,11 @@ describe("PercentageFeeStrategy", () => {
       currency: WalletCurrency.Btc,
     }) as BtcPaymentAmount
 
-    it("should calculate the correct percentage fee", () => {
-      const config: PercentageFeeStrategyParams = { basisPoints: 50 } // 0.5%
+    it("should calculate the correct percentage fee", async () => {
+      const config: PercentageFeeStrategyParams = { basisPoints: 50 }
       const strategy = PercentageFeeStrategy(config)
 
-      const fee = strategy.calculate({
+      const fee = await strategy.calculate({
         paymentAmount: mockPaymentAmount,
       } as FeeCalculationArgs)
 
@@ -29,11 +29,11 @@ describe("PercentageFeeStrategy", () => {
       expect(fee).toEqual({ amount: 50n, currency: WalletCurrency.Btc })
     })
 
-    it("should return zero for zero basis points", () => {
+    it("should return zero for zero basis points", async () => {
       const config: PercentageFeeStrategyParams = { basisPoints: 0 }
       const strategy = PercentageFeeStrategy(config)
 
-      const fee = strategy.calculate({
+      const fee = await strategy.calculate({
         paymentAmount: mockPaymentAmount,
       } as FeeCalculationArgs)
 
@@ -41,11 +41,11 @@ describe("PercentageFeeStrategy", () => {
       expect(fee).toEqual({ amount: 0n, currency: WalletCurrency.Btc })
     })
 
-    it("should return a negative fee for negative basis points", () => {
+    it("should return a negative fee for negative basis points", async () => {
       const config: PercentageFeeStrategyParams = { basisPoints: -10 }
       const strategy = PercentageFeeStrategy(config)
 
-      const fee = strategy.calculate({
+      const fee = await strategy.calculate({
         paymentAmount: mockPaymentAmount,
       } as FeeCalculationArgs)
 
@@ -53,11 +53,11 @@ describe("PercentageFeeStrategy", () => {
       expect(fee).toEqual({ amount: -10n, currency: WalletCurrency.Btc })
     })
 
-    it("should handle large basis points (over 100%)", () => {
-      const config: PercentageFeeStrategyParams = { basisPoints: 20000 } // 200%
+    it("should handle large basis points (over 100%)", async () => {
+      const config: PercentageFeeStrategyParams = { basisPoints: 20000 }
       const strategy = PercentageFeeStrategy(config)
 
-      const fee = strategy.calculate({
+      const fee = await strategy.calculate({
         paymentAmount: mockPaymentAmount,
       } as FeeCalculationArgs)
 

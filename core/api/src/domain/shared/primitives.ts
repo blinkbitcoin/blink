@@ -8,3 +8,9 @@ export const ExchangeCurrencyUnit = {
   Usd: "USDCENT",
   Btc: "BTCSAT",
 } as const
+
+export const PaymentNetwork = {
+  IntraLedger: "intraledger",
+  OnChain: "onchain",
+  Lightning: "lightning",
+} as const

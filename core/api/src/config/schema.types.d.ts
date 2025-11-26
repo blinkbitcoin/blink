@@ -17,20 +17,6 @@ type AccountLimitsConfig = {
   }
 }
 
-type PayoutQueueConfig = {
-  speed: PayoutSpeed
-  queueName: string
-  displayName: string
-  description: string
-}
-
-type RebalanceConfig = {
-  threshold: Satoshis
-  minRebalanceSize: Satoshis
-  minBalance: Satoshis
-  payoutQueueName: string
-}
-
 type FlatFeeStrategyParams = {
   amount: number
 }
@@ -54,7 +40,7 @@ type InternalAccountFeeStrategyParams = {
 type ImbalanceFeeStrategyParams = {
   threshold: number
   ratioAsBasisPoints: number
-  daysLookback: number
+  daysLookback: Days
   minFee: number
 }
 
@@ -65,10 +51,93 @@ type FeeStrategy =
   | { name: string; strategy: "internal"; params: InternalAccountFeeStrategyParams }
   | { name: string; strategy: "imbalance"; params: ImbalanceFeeStrategyParams }
 
+type PayoutSpeedInput = {
+  queueName: string
+  displayName: string
+  description: string
+  feeStrategies: string[]
+}
+
+type PaymentNetworkRebalanceInput = {
+  threshold: number
+  minRebalanceSize: number
+  minBalance: number
+  payoutQueueName: string
+  destinationWalletName: string
+}
+
+type OnchainLegacyInput = {
+  minConfirmations: number
+  scanDepth: number
+}
+
+type OnchainReceiveInput = {
+  walletName: string
+  feeStrategies: string[]
+  rebalance: PaymentNetworkRebalanceInput
+  legacy: OnchainLegacyInput
+}
+
+type OnchainSendInput = {
+  walletName: string
+  payoutSpeeds: {
+    fast: PayoutSpeedInput
+    medium: PayoutSpeedInput
+    slow: PayoutSpeedInput
+  }
+  rebalance: PaymentNetworkRebalanceInput
+}
+
+type OnchainNetworkInput = {
+  dustThreshold: number
+  receive: OnchainReceiveInput
+  send: OnchainSendInput
+}
+
+type LightningChannelsInput = {
+  scanDepthChannelUpdate: number
+  backupBucketName: string
+}
+
+type LightningReceiveInput = {
+  feeStrategies: string[]
+  addressDomain: string
+  addressDomainAliases: string[]
+}
+
+type SkipFeeProbeInput = {
+  pubkeys: string[]
+  chanIds: string[]
+}
+
+type LightningSendInput = {
+  feeStrategies: string[]
+  skipFeeProbe: SkipFeeProbeInput
+}
+
+type LightningNetworkInput = {
+  channels: LightningChannelsInput
+  receive: LightningReceiveInput
+  send: LightningSendInput
+}
+
+type IntraledgerDirectionInput = {
+  feeStrategies: string[]
+}
+
+type IntraledgerNetworkInput = {
+  receive: IntraledgerDirectionInput
+  send: IntraledgerDirectionInput
+}
+
+type PaymentNetworksInput = {
+  onchain: OnchainNetworkInput
+  lightning: LightningNetworkInput
+  intraledger: IntraledgerNetworkInput
+}
+
 type YamlSchema = {
   name: string
-  lightningAddressDomain: string
-  lightningAddressDomainAliases: string[]
   locale: string
   displayCurrency: {
     symbol: string
@@ -94,17 +163,6 @@ type YamlSchema = {
     denyASNs: string[]
     allowASNs: string[]
   }
-  bria: {
-    receiveWalletName: string
-    withdrawalWalletName: string
-    payoutQueues: PayoutQueueConfig[]
-    coldWalletName: string
-    rebalances: {
-      hotToCold: RebalanceConfig
-      receiveToWithdrawal: RebalanceConfig
-    }
-  }
-  lndScbBackupBucketName: string
   admin_accounts: {
     role: string
     phone: string
@@ -158,33 +216,8 @@ type YamlSchema = {
       enabled: boolean
     }
   }
-  fees: {
-    deposit: {
-      defaultMin: number
-      threshold: number
-      ratioAsBasisPoints: number
-    }
-    merchantDeposit: {
-      defaultMin: number
-      threshold: number
-      ratioAsBasisPoints: number
-    }
-    withdraw: {
-      method: string
-      ratioAsBasisPoints: number
-      threshold: number
-      daysLookback: number
-      defaultMin: number
-    }
-  }
   feeStrategies: FeeStrategy[]
-  onChainWallet: {
-    dustThreshold: number
-    minConfirmations: number
-    scanDepth: number
-    scanDepthOutgoing: number
-    scanDepthChannelUpdate: number
-  }
+  paymentNetworks: PaymentNetworksInput
   userActivenessMonthlyVolumeThreshold: number
   cronConfig: {
     rebalanceEnabled: boolean
@@ -193,7 +226,6 @@ type YamlSchema = {
   captcha: {
     mandatory: boolean
   }
-  skipFeeProbeConfig: { pubkey: string[]; chanId: string[] }
   smsAuthUnsupportedCountries: string[]
   whatsAppAuthUnsupportedCountries: string[]
   telegramAuthUnsupportedCountries: string[]

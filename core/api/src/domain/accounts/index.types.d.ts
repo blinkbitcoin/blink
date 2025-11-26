@@ -154,17 +154,3 @@ type TestAccountsChecker = (testAccounts: TestAccount[]) => {
     phone: PhoneNumber
   }) => boolean
 }
-
-type FeesConfig = {
-  depositRatioAsBasisPoints: DepositFeeRatioAsBasisPoints
-  depositThreshold: BtcPaymentAmount
-  depositDefaultMin: BtcPaymentAmount
-  merchantDepositRatioAsBasisPoints: DepositFeeRatioAsBasisPoints
-  merchantDepositThreshold: BtcPaymentAmount
-  merchantDepositDefaultMin: BtcPaymentAmount
-  withdrawMethod: WithdrawalFeePriceMethod
-  withdrawRatioAsBasisPoints: bigint
-  withdrawThreshold: Satoshis
-  withdrawDaysLookback: Days
-  withdrawDefaultMin: Satoshis
-}

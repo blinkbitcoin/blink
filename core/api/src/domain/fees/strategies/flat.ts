@@ -7,7 +7,7 @@ import {
 } from "@/domain/shared"
 
 export const FlatFeeStrategy = (config: FlatFeeStrategyParams): IFeeStrategy => {
-  const calculate = (): BtcPaymentAmount | ValidationError => {
+  const calculate = async (): Promise<BtcPaymentAmount | ValidationError> => {
     const amount = paymentAmountFromNumber({
       amount: config.amount,
       currency: WalletCurrency.Btc,
