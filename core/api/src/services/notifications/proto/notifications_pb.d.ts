@@ -1096,6 +1096,10 @@ export enum DeepLinkScreen {
     SETTINGSTXLIMITS = 18,
     SETTINGSNOTIFICATIONS = 19,
     SETTINGSEMAIL = 20,
+    WELCOMECARD = 21,
+    LOADINGCARD = 22,
+    VISACARD = 23,
+    CREDITCARDLIMIT = 24,
 }
 
 export enum DeepLinkAction {
