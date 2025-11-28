@@ -6,9 +6,14 @@ import * as yaml from "js-yaml"
 import mergeWith from "lodash.mergewith"
 
 import { toCents } from "@/domain/fiat"
-import { configSchema, getAccountLimits, yamlConfig } from "@/config"
+import {
+  configSchema,
+  getAccountLimits,
+  yamlConfig,
+  getOnchainNetworkConfig,
+} from "@/config"
 
-const ajv = new Ajv()
+const ajv = new Ajv({ discriminator: true })
 
 /* eslint @typescript-eslint/ban-ts-comment: "off" */
 // @ts-ignore-next-line no-implicit-any error
@@ -148,6 +153,34 @@ describe("config.ts", () => {
       expect(userLimits.tradeIntraAccountLimit).toEqual(100_000_000)
       expect(userLimits.intraLedgerLimit).toEqual(100_000_000)
       expect(userLimits.withdrawalLimit).toEqual(100_000_000)
+    })
+  })
+
+  describe("fee strategy resolution", () => {
+    it("resolves fee strategies by name in payment networks", () => {
+      const onchainConfig = getOnchainNetworkConfig()
+
+      expect(onchainConfig.receive.feeStrategies).toBeDefined()
+      expect(Array.isArray(onchainConfig.receive.feeStrategies)).toBe(true)
+      expect(onchainConfig.receive.feeStrategies.length).toBeGreaterThan(0)
+
+      const firstStrategy = onchainConfig.receive.feeStrategies[0]
+      expect(firstStrategy).toHaveProperty("name")
+      expect(firstStrategy).toHaveProperty("strategy")
+      expect(firstStrategy).toHaveProperty("params")
+    })
+
+    it("filters out invalid fee strategy names", () => {
+      const clonedConfig = JSON.parse(JSON.stringify(yamlConfig))
+      clonedConfig.paymentNetworks.onchain.receive.feeStrategies = [
+        "zero_fee",
+        "nonexistent_strategy",
+        "flat_2000",
+      ]
+
+      // @ts-ignore-next-line no-implicit-any error
+      const valid = validate(clonedConfig)
+      expect(valid).toBeTruthy()
     })
   })
 })

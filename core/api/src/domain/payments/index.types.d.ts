@@ -326,9 +326,10 @@ type OPFBWithAmount<S extends WalletCurrency, R extends WalletCurrency> = {
 }
 
 type OPFBWithConversion<S extends WalletCurrency, R extends WalletCurrency> = {
-  withMinerFee(
-    minerFee: BtcPaymentAmount,
-  ): Promise<OnChainPaymentFlow<S, R> | ValidationError | DealerPriceServiceError>
+  withMinerFee(args: {
+    networkFee: NetworkFee
+    speed: PayoutSpeed
+  }): Promise<OnChainPaymentFlow<S, R> | ValidationError | DealerPriceServiceError>
   withoutMinerFee(): Promise<
     OnChainPaymentFlow<S, R> | ValidationError | DealerPriceServiceError
   >
@@ -381,6 +382,7 @@ type OPFBWithSenderWalletAndAccountState<S extends WalletCurrency> =
     senderWalletId: WalletId
     senderWalletCurrency: S
     senderAccountId: AccountId
+    senderAccountRole: string | undefined
     senderWithdrawFee: Satoshis | undefined
   }
 

@@ -191,41 +191,6 @@ interface IWalletsRepository {
   listByAddresses(addresses: OnChainAddress[]): Promise<Wallet[] | RepositoryError>
 }
 
-type OnChainDepositFeeArgs = {
-  amount: BtcPaymentAmount
-  minBankFee: BtcPaymentAmount
-  minBankFeeThreshold: BtcPaymentAmount
-  ratio: DepositFeeRatioAsBasisPoints
-}
-
-type DepositFeeCalculator = {
-  onChainDepositFee(args: OnChainDepositFeeArgs): BtcPaymentAmount | ValidationError
-  lnDepositFee(): BtcPaymentAmount
-}
-
-type OnchainWithdrawalConfig = {
-  thresholdImbalance: BtcPaymentAmount
-  feeRatioAsBasisPoints: bigint
-}
-
-type OnChainWithdrawalFeeArgs = {
-  minerFee: BtcPaymentAmount
-  minBankFee: BtcPaymentAmount
-  imbalance: BtcPaymentAmount
-  amount: BtcPaymentAmount
-}
-
-type WithdrawalFeePriceMethod =
-  (typeof import("./index").WithdrawalFeePriceMethod)[keyof typeof import("./index").WithdrawalFeePriceMethod]
-
-type OnChainFeeCalculator = {
-  withdrawalFee(args: OnChainWithdrawalFeeArgs): {
-    totalFee: BtcPaymentAmount
-    bankFee: BtcPaymentAmount
-  }
-  intraLedgerFees(): PaymentAmountInAllCurrencies
-}
-
 type PaymentInputValidatorConfig = (
   walletId: WalletId,
 ) => Promise<Wallet | RepositoryError>

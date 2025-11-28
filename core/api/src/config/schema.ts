@@ -74,16 +74,382 @@ const rateLimitConfigSchema = {
   additionalProperties: false,
 }
 
-export const configSchema = {
+const feeStrategySchema = {
+  type: "object",
+  required: ["name", "strategy", "params"],
+  discriminator: { propertyName: "strategy" },
+  oneOf: [
+    {
+      properties: {
+        additionalProperties: false,
+        name: { type: "string" },
+        strategy: { const: "flat" },
+        params: {
+          type: "object",
+          required: ["amount"],
+          additionalProperties: false,
+          properties: {
+            amount: { type: "integer", minimum: 0 },
+          },
+        },
+      },
+    },
+    {
+      properties: {
+        additionalProperties: false,
+        name: { type: "string" },
+        strategy: { const: "percentage" },
+        params: {
+          type: "object",
+          required: ["basisPoints"],
+          additionalProperties: false,
+          properties: {
+            basisPoints: { type: "integer", minimum: 0 },
+          },
+        },
+      },
+    },
+    {
+      properties: {
+        additionalProperties: false,
+        name: { type: "string" },
+        strategy: { const: "tieredFlat" },
+        params: {
+          type: "object",
+          required: ["tiers"],
+          additionalProperties: false,
+          properties: {
+            tiers: {
+              type: "array",
+              minItems: 1,
+              items: {
+                type: "object",
+                required: ["maxAmount", "amount"],
+                additionalProperties: false,
+                properties: {
+                  maxAmount: {
+                    anyOf: [{ type: "integer", minimum: 0 }, { type: "null" }],
+                  },
+                  amount: { type: "integer", minimum: 0 },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    {
+      properties: {
+        additionalProperties: false,
+        name: { type: "string" },
+        strategy: { const: "exemptAccount" },
+        params: {
+          type: "object",
+          required: ["roles", "accountIds"],
+          additionalProperties: false,
+          properties: {
+            roles: {
+              type: "array",
+              items: { type: "string" },
+              uniqueItems: true,
+            },
+            accountIds: {
+              type: "array",
+              items: { type: "string" },
+              uniqueItems: true,
+            },
+            exemptValidatedMerchants: { type: "boolean", default: false },
+          },
+        },
+      },
+    },
+    {
+      properties: {
+        additionalProperties: false,
+        name: { type: "string" },
+        strategy: { const: "imbalance" },
+        params: {
+          type: "object",
+          required: ["threshold", "ratioAsBasisPoints", "daysLookback", "minFee"],
+          additionalProperties: false,
+          properties: {
+            threshold: { type: "integer", minimum: 0 },
+            ratioAsBasisPoints: { type: "integer", minimum: 0 },
+            daysLookback: { type: "integer", minimum: 1 },
+            minFee: { type: "integer", minimum: 0 },
+          },
+        },
+      },
+    },
+  ],
+}
+
+const payoutSpeedConfigSchema = {
   type: "object",
   properties: {
-    lightningAddressDomain: { type: "string", default: "pay.domain.com" },
-    lightningAddressDomainAliases: {
+    queueName: { type: "string" },
+    displayName: { type: "string" },
+    description: { type: "string" },
+    feeStrategies: {
       type: "array",
       items: { type: "string" },
       uniqueItems: true,
-      default: ["pay1.domain.com", "pay2.domain.com"],
     },
+  },
+  required: ["queueName", "displayName", "description", "feeStrategies"],
+  additionalProperties: false,
+} as const
+
+const rebalanceConfigSchema = {
+  type: "object",
+  properties: {
+    threshold: { type: "integer" },
+    minRebalanceSize: { type: "integer" },
+    minBalance: { type: "integer" },
+    payoutQueueName: { type: "string" },
+    destinationWalletName: { type: "string" },
+  },
+  required: [
+    "threshold",
+    "minRebalanceSize",
+    "minBalance",
+    "payoutQueueName",
+    "destinationWalletName",
+  ],
+  additionalProperties: false,
+} as const
+
+const paymentNetworksSchema = {
+  type: "object",
+  properties: {
+    onchain: {
+      type: "object",
+      properties: {
+        dustThreshold: { type: "integer" },
+        receive: {
+          type: "object",
+          properties: {
+            walletName: { type: "string" },
+            feeStrategies: {
+              type: "array",
+              items: { type: "string" },
+              uniqueItems: true,
+            },
+            rebalance: rebalanceConfigSchema,
+            legacy: {
+              type: "object",
+              properties: {
+                minConfirmations: { type: "integer" },
+                scanDepth: { type: "integer" },
+              },
+              required: ["minConfirmations", "scanDepth"],
+              additionalProperties: false,
+            },
+          },
+          required: ["walletName", "feeStrategies", "rebalance", "legacy"],
+          additionalProperties: false,
+        },
+        send: {
+          type: "object",
+          properties: {
+            walletName: { type: "string" },
+            payoutSpeeds: {
+              type: "object",
+              properties: {
+                fast: payoutSpeedConfigSchema,
+                medium: payoutSpeedConfigSchema,
+                slow: payoutSpeedConfigSchema,
+              },
+              required: ["fast", "medium", "slow"],
+              additionalProperties: false,
+            },
+            rebalance: rebalanceConfigSchema,
+          },
+          required: ["walletName", "payoutSpeeds", "rebalance"],
+          additionalProperties: false,
+        },
+      },
+      required: ["dustThreshold", "receive", "send"],
+      additionalProperties: false,
+    },
+    lightning: {
+      type: "object",
+      properties: {
+        channels: {
+          type: "object",
+          properties: {
+            scanDepthChannelUpdate: { type: "integer" },
+            backupBucketName: { type: "string" },
+          },
+          required: ["scanDepthChannelUpdate", "backupBucketName"],
+          additionalProperties: false,
+        },
+        receive: {
+          type: "object",
+          properties: {
+            feeStrategies: {
+              type: "array",
+              items: { type: "string" },
+              uniqueItems: true,
+            },
+            addressDomain: { type: "string" },
+            addressDomainAliases: {
+              type: "array",
+              items: { type: "string" },
+              uniqueItems: true,
+            },
+          },
+          required: ["feeStrategies", "addressDomain", "addressDomainAliases"],
+          additionalProperties: false,
+        },
+        send: {
+          type: "object",
+          properties: {
+            feeStrategies: {
+              type: "array",
+              items: { type: "string" },
+              uniqueItems: true,
+            },
+            skipFeeProbe: {
+              type: "object",
+              properties: {
+                pubkeys: {
+                  type: "array",
+                  items: { type: "string", maxLength: 66, minLength: 66 },
+                  uniqueItems: true,
+                },
+                chanIds: {
+                  type: "array",
+                  items: { type: "string" },
+                  uniqueItems: true,
+                },
+              },
+              required: ["pubkeys", "chanIds"],
+              additionalProperties: false,
+            },
+          },
+          required: ["feeStrategies", "skipFeeProbe"],
+          additionalProperties: false,
+        },
+      },
+      required: ["channels", "receive", "send"],
+      additionalProperties: false,
+    },
+    intraledger: {
+      type: "object",
+      properties: {
+        receive: {
+          type: "object",
+          properties: {
+            feeStrategies: {
+              type: "array",
+              items: { type: "string" },
+              uniqueItems: true,
+            },
+          },
+          required: ["feeStrategies"],
+          additionalProperties: false,
+        },
+        send: {
+          type: "object",
+          properties: {
+            feeStrategies: {
+              type: "array",
+              items: { type: "string" },
+              uniqueItems: true,
+            },
+          },
+          required: ["feeStrategies"],
+          additionalProperties: false,
+        },
+      },
+      required: ["receive", "send"],
+      additionalProperties: false,
+    },
+  },
+  required: ["onchain", "lightning", "intraledger"],
+  additionalProperties: false,
+  default: {
+    onchain: {
+      dustThreshold: 5000,
+      receive: {
+        walletName: "dev-wallet",
+        feeStrategies: ["tiered_receive", "internal_receive"],
+        rebalance: {
+          threshold: 25000000,
+          minRebalanceSize: 25000000,
+          minBalance: 100000,
+          payoutQueueName: "dev-queue",
+          destinationWalletName: "dev-wallet",
+        },
+        legacy: {
+          minConfirmations: 2,
+          scanDepth: 360,
+        },
+      },
+      send: {
+        walletName: "dev-wallet",
+        payoutSpeeds: {
+          fast: {
+            queueName: "dev-queue",
+            displayName: "Priority",
+            description: "Estimated broadcast ~10 minutes",
+            feeStrategies: ["tiered_send", "imbalance_withdrawal", "internal_send"],
+          },
+          medium: {
+            queueName: "dev-medium-queue",
+            displayName: "Standard",
+            description: "Estimated broadcast ~1 hour",
+            feeStrategies: ["tiered_send", "imbalance_withdrawal", "internal_send"],
+          },
+          slow: {
+            queueName: "dev-slow-queue",
+            displayName: "Flexible",
+            description: "Estimated broadcast ~24 hours",
+            feeStrategies: ["tiered_send", "imbalance_withdrawal", "internal_send"],
+          },
+        },
+        rebalance: {
+          threshold: 200000000,
+          minRebalanceSize: 10000000,
+          minBalance: 1000000,
+          payoutQueueName: "dev-queue",
+          destinationWalletName: "cold",
+        },
+      },
+    },
+    lightning: {
+      channels: {
+        scanDepthChannelUpdate: 8,
+        backupBucketName: "lnd-static-channel-backups",
+      },
+      receive: {
+        feeStrategies: ["zero_fee"],
+        addressDomain: "pay.domain.com",
+        addressDomainAliases: ["pay1.domain.com", "pay2.domain.com"],
+      },
+      send: {
+        feeStrategies: ["zero_fee"],
+        skipFeeProbe: {
+          pubkeys: [],
+          chanIds: [],
+        },
+      },
+    },
+    intraledger: {
+      receive: {
+        feeStrategies: ["zero_fee"],
+      },
+      send: {
+        feeStrategies: ["zero_fee"],
+      },
+    },
+  },
+} as const
+
+export const configSchema = {
+  type: "object",
+  properties: {
     locale: { type: "string", enum: ["en", "es"], default: "en" },
     displayCurrency: displayCurrencyConfigSchema,
     funder: { type: "string", default: "FunderWallet" },
@@ -163,117 +529,6 @@ export const configSchema = {
         denyASNs: [],
       },
     },
-    bria: {
-      type: "object",
-      properties: {
-        receiveWalletName: { type: "string" },
-        withdrawalWalletName: { type: "string" },
-        coldWalletName: { type: "string" },
-        payoutQueues: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              speed: {
-                type: "string",
-                enum: ["fast", "medium", "slow"],
-              },
-              queueName: { type: "string" },
-              displayName: { type: "string" },
-              description: { type: "string" },
-            },
-            required: ["speed", "queueName", "displayName", "description"],
-            additionalProperties: false,
-          },
-          default: [
-            {
-              speed: "fast",
-              queueName: "dev-queue",
-              displayName: "Priority",
-              description: "Estimated broadcast ~10 minutes",
-            },
-            {
-              speed: "medium",
-              queueName: "dev-medium-queue",
-              displayName: "Standard",
-              description: "Estimated broadcast ~1 hour",
-            },
-            {
-              speed: "slow",
-              queueName: "dev-slow-queue",
-              displayName: "Flexible",
-              description: "Estimated broadcast ~24 hours",
-            },
-          ],
-        },
-        rebalances: {
-          type: "object",
-          properties: {
-            hotToCold: {
-              type: "object",
-              properties: {
-                threshold: { type: "integer" },
-                minRebalanceSize: { type: "integer" },
-                minBalance: { type: "integer" },
-                payoutQueueName: { type: "string" },
-              },
-              required: [
-                "threshold",
-                "minRebalanceSize",
-                "minBalance",
-                "payoutQueueName",
-              ],
-              additionalProperties: false,
-            },
-            receiveToWithdrawal: {
-              type: "object",
-              properties: {
-                threshold: { type: "integer" },
-                minRebalanceSize: { type: "integer" },
-                minBalance: { type: "integer" },
-                payoutQueueName: { type: "string" },
-              },
-              required: [
-                "threshold",
-                "minRebalanceSize",
-                "minBalance",
-                "payoutQueueName",
-              ],
-              additionalProperties: false,
-            },
-          },
-          required: ["hotToCold", "receiveToWithdrawal"],
-          default: {
-            hotToCold: {
-              threshold: 200000000,
-              minRebalanceSize: 10000000,
-              minBalance: 1000000,
-              payoutQueueName: "dev-queue",
-            },
-            receiveToWithdrawal: {
-              threshold: 25000000,
-              minRebalanceSize: 25000000,
-              minBalance: 100000,
-              payoutQueueName: "dev-queue",
-            },
-          },
-        },
-      },
-      required: [
-        "receiveWalletName",
-        "withdrawalWalletName",
-        "coldWalletName",
-        "payoutQueues",
-        "rebalances",
-      ],
-      additionalProperties: false,
-      default: {
-        receiveWalletName: "dev-wallet",
-        withdrawalWalletName: "dev-wallet",
-        coldWalletName: "cold",
-      },
-    },
-    lndScbBackupBucketName: { type: "string", default: "lnd-static-channel-backups" },
     admin_accounts: {
       type: "array",
       items: {
@@ -569,98 +824,76 @@ export const configSchema = {
         },
       },
     },
-    fees: {
-      type: "object",
-      properties: {
-        deposit: {
-          type: "object",
-          properties: {
-            defaultMin: { type: "integer" },
-            threshold: { type: "integer" },
-            ratioAsBasisPoints: { type: "integer" },
-          },
-          required: ["defaultMin", "threshold", "ratioAsBasisPoints"],
-          additionalProperties: false,
-          default: { defaultMin: 3000, threshold: 1000000, ratioAsBasisPoints: 30 },
+    feeStrategies: {
+      type: "array",
+      items: feeStrategySchema,
+      default: [
+        {
+          name: "zero_fee",
+          strategy: "flat",
+          params: { amount: 0 },
         },
-        merchantDeposit: {
-          type: "object",
-          properties: {
-            defaultMin: { type: "integer" },
-            threshold: { type: "integer" },
-            ratioAsBasisPoints: { type: "integer" },
-          },
-          required: ["defaultMin", "threshold", "ratioAsBasisPoints"],
-          additionalProperties: false,
-          default: { defaultMin: 3000, threshold: 1000000, ratioAsBasisPoints: 30 },
+        {
+          name: "flat_2500",
+          strategy: "flat",
+          params: { amount: 2500 },
         },
-        withdraw: {
-          type: "object",
-          properties: {
-            method: {
-              type: "string",
-              enum: ["flat", "proportionalOnImbalance"],
-            },
-            ratioAsBasisPoints: { type: "integer" },
-            threshold: { type: "integer" },
-            daysLookback: { type: "integer" },
-            defaultMin: { type: "integer" },
+        {
+          name: "percentage_50bp",
+          strategy: "percentage",
+          params: { basisPoints: 50 },
+        },
+        {
+          name: "tiered_receive",
+          strategy: "tieredFlat",
+          params: {
+            tiers: [
+              { maxAmount: 1000000, amount: 2500 },
+              { maxAmount: null, amount: 0 },
+            ],
           },
-          required: [
-            "method",
-            "ratioAsBasisPoints",
-            "threshold",
-            "daysLookback",
-            "defaultMin",
-          ],
-          additionalProperties: false,
-          default: {
-            method: "flat",
-            defaultMin: 2000,
-            ratioAsBasisPoints: 50,
-            threshold: 1000000,
+        },
+        {
+          name: "tiered_send",
+          strategy: "tieredFlat",
+          params: {
+            tiers: [
+              { maxAmount: 1000000, amount: 5000 },
+              { maxAmount: null, amount: 10000 },
+            ],
+          },
+        },
+        {
+          name: "internal_receive",
+          strategy: "exemptAccount",
+          params: {
+            roles: ["bankowner", "dealer"],
+            accountIds: [],
+            exemptValidatedMerchants: true,
+          },
+        },
+        {
+          name: "internal_send",
+          strategy: "exemptAccount",
+          params: {
+            roles: ["bankowner", "dealer"],
+            accountIds: [],
+            exemptValidatedMerchants: false,
+          },
+        },
+        {
+          name: "imbalance_withdrawal",
+          strategy: "imbalance",
+          params: {
+            threshold: 10000000,
+            ratioAsBasisPoints: 20,
             daysLookback: 30,
+            minFee: 0,
           },
         },
-      },
-      required: ["withdraw", "deposit"],
-      additionalProperties: false,
-      default: {
-        withdraw: {
-          method: "flat",
-          defaultMin: 2000,
-          ratioAsBasisPoints: 50,
-          threshold: 1000000,
-          daysLookback: 30,
-        },
-        deposit: { defaultMin: 3000, threshold: 1000000, ratioAsBasisPoints: 30 },
-      },
-    },
-    onChainWallet: {
-      type: "object",
-      properties: {
-        dustThreshold: { type: "integer" },
-        minConfirmations: { type: "integer" },
-        scanDepth: { type: "integer" }, // TODO: improve naming
-        scanDepthOutgoing: { type: "integer" },
-        scanDepthChannelUpdate: { type: "integer" },
-      },
-      required: [
-        "dustThreshold",
-        "minConfirmations",
-        "scanDepth",
-        "scanDepthOutgoing",
-        "scanDepthChannelUpdate",
       ],
-      additionalProperties: false,
-      default: {
-        dustThreshold: 5000,
-        minConfirmations: 2,
-        scanDepth: 360,
-        scanDepthOutgoing: 2,
-        scanDepthChannelUpdate: 8,
-      },
     },
+    paymentNetworks: paymentNetworksSchema,
     userActivenessMonthlyVolumeThreshold: { type: "integer", default: 100 },
     cronConfig: {
       type: "object",
@@ -683,26 +916,6 @@ export const configSchema = {
       required: ["mandatory"],
       additionalProperties: false,
       default: { mandatory: false },
-    },
-    skipFeeProbeConfig: {
-      type: "object",
-      properties: {
-        pubkey: {
-          type: "array",
-          items: { type: "string", maxLength: 66, minLength: 66 },
-          uniqueItems: true,
-        },
-        chanId: {
-          type: "array",
-          items: { type: "string" },
-          uniqueItems: true,
-        },
-      },
-      additionalProperties: false,
-      default: {
-        pubkey: [],
-        chanId: [],
-      },
     },
     smsAuthUnsupportedCountries: {
       type: "array",
@@ -734,8 +947,6 @@ export const configSchema = {
     },
   },
   required: [
-    "lightningAddressDomain",
-    "lightningAddressDomainAliases",
     "locale",
     "displayCurrency",
     "funder",
@@ -743,8 +954,6 @@ export const configSchema = {
     "ratioPrecision",
     "buildVersion",
     "quizzes",
-    "bria",
-    "lndScbBackupBucketName",
     "admin_accounts",
     "test_accounts",
     "rateLimits",
@@ -752,12 +961,10 @@ export const configSchema = {
     "accountLimits",
     "spamLimits",
     "ipRecording",
-    "fees",
-    "onChainWallet",
+    "paymentNetworks",
     "userActivenessMonthlyVolumeThreshold",
     "cronConfig",
     "captcha",
-    "skipFeeProbeConfig",
     "smsAuthUnsupportedCountries",
     "whatsAppAuthUnsupportedCountries",
     "telegramAuthUnsupportedCountries",

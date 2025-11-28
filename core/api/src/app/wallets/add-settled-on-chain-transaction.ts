@@ -6,13 +6,12 @@ import { createOnChainAddress } from "./create-on-chain-address"
 
 import { getTransactionForWalletByJournalId } from "./get-transaction-by-journal-id"
 
-import { getOnChainDepositFeeConfiguration } from "./get-on-chain-deposit-fee-config"
-
 import { getOnChainWalletConfig } from "@/config"
 
+import { isValidatedMerchant } from "@/app/accounts"
 import { getCurrentPriceAsDisplayPriceRatio, usdFromBtcMidPriceFn } from "@/app/prices"
 
-import { DepositFeeCalculator } from "@/domain/wallets"
+import { DepositFeeCalculator } from "@/domain/fees"
 import { DisplayAmountsConverter } from "@/domain/fiat"
 import { CouldNotFindError, LessThanDustThresholdError } from "@/domain/errors"
 import { WalletAddressReceiver } from "@/domain/wallet-on-chain/wallet-address-receiver"
@@ -83,11 +82,15 @@ const addSettledTransactionBeforeFinally = async ({
     if (account instanceof Error) return account
     const { displayCurrency } = account
 
-    const fees = await getOnChainDepositFeeConfiguration({ account })
+    const accountIsValidatedMerchant = await isValidatedMerchant({ account })
+    if (accountIsValidatedMerchant instanceof Error) return accountIsValidatedMerchant
 
-    const fee = DepositFeeCalculator().onChainDepositFee({
-      amount,
-      ...fees,
+    const fee = await DepositFeeCalculator().onChainFee({
+      paymentAmount: amount,
+      accountId: account.id,
+      accountRole: account.role,
+      wallet,
+      isValidatedMerchant: accountIsValidatedMerchant,
     })
     if (fee instanceof Error) return fee
 
@@ -97,7 +100,7 @@ const addSettledTransactionBeforeFinally = async ({
         recipientWalletDescriptor: wallet,
       },
       receivedBtc: amount,
-      satsFee: fee,
+      satsFee: fee.totalFee,
       usdFromBtc: dealer.getCentsFromSatsForImmediateBuy,
       usdFromBtcMidPrice: usdFromBtcMidPriceFn,
     })

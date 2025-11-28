@@ -9,28 +9,18 @@ import { WalletPriceRatio } from "./price-ratio"
 
 import { OnChainPaymentFlow } from "./payment-flow"
 
-import { getFeesConfig } from "@/config"
 import {
   AmountCalculator,
   ONE_CENT,
-  paymentAmountFromNumber,
   ValidationError,
   WalletCurrency,
-  ZERO_BANK_FEE,
+  ZERO_SATS,
 } from "@/domain/shared"
 import { LessThanDustThresholdError, SelfPaymentError } from "@/domain/errors"
-import { OnChainFees, PaymentInitiationMethod, SettlementMethod } from "@/domain/wallets"
-import { ImbalanceCalculator } from "@/domain/ledger/imbalance-calculator"
+import { PaymentInitiationMethod, SettlementMethod } from "@/domain/wallets"
+import { WithdrawalFeeCalculator } from "@/domain/fees"
 
 const calc = AmountCalculator()
-const feeConfig = getFeesConfig()
-const onChainFees = OnChainFees({
-  feeRatioAsBasisPoints: feeConfig.withdrawRatioAsBasisPoints,
-  thresholdImbalance: {
-    amount: BigInt(feeConfig.withdrawThreshold),
-    currency: WalletCurrency.Btc,
-  },
-})
 
 export const OnChainPaymentFlowBuilder = <S extends WalletCurrency>(
   config: OnChainPaymentFlowBuilderConfig,
@@ -64,12 +54,13 @@ const OPFBWithAddress = <S extends WalletCurrency>(
       currency: senderWalletCurrency,
       accountId: senderAccountId,
     } = wallet
-    const { withdrawFee: senderWithdrawFee } = account
+    const { withdrawFee: senderWithdrawFee, role: senderAccountRole } = account
     return OPFBWithSenderWalletAndAccount({
       ...state,
       senderWalletId,
       senderWalletCurrency,
       senderAccountId,
+      senderAccountRole,
       senderWithdrawFee,
     })
   }
@@ -418,20 +409,48 @@ const OPFBWithConversion = <S extends WalletCurrency, R extends WalletCurrency>(
     const usdPaymentAmount = state.usdProposedAmount
     const btcPaymentAmount = state.btcProposedAmount
 
+    const priceRatio = WalletPriceRatio({
+      usd: state.usdProposedAmount,
+      btc: state.btcProposedAmount,
+    })
+    if (priceRatio instanceof Error) return priceRatio
+
+    const feeAmounts = await WithdrawalFeeCalculator().intraledgerFee({
+      paymentAmount: state.btcProposedAmount,
+      networkFee: { amount: ZERO_SATS },
+      accountId: state.senderAccountId,
+      accountRole: state.senderAccountRole,
+      wallet: {
+        id: state.senderWalletId,
+        currency: state.senderWalletCurrency,
+        accountId: state.senderAccountId,
+      },
+    })
+    if (feeAmounts instanceof Error) return feeAmounts
+
+    const btcProtocolAndBankFee = feeAmounts.totalFee
+    const usdProtocolAndBankFee = priceRatio.convertFromBtcToCeil(feeAmounts.totalFee)
+    const btcBankFee = feeAmounts.bankFee
+    const usdBankFee = priceRatio.convertFromBtcToCeil(feeAmounts.bankFee)
     return OnChainPaymentFlow({
       ...state,
-      btcProtocolAndBankFee: onChainFees.intraLedgerFees().btc,
-      usdProtocolAndBankFee: onChainFees.intraLedgerFees().usd,
-      ...ZERO_BANK_FEE,
+      btcProtocolAndBankFee,
+      usdProtocolAndBankFee,
+      btcBankFee,
+      usdBankFee,
       btcPaymentAmount,
       usdPaymentAmount,
       paymentSentAndPending: false,
     })
   }
 
-  const withMinerFee = async (
-    minerFee: BtcPaymentAmount,
-  ): Promise<OnChainPaymentFlow<S, R> | ValidationError | DealerPriceServiceError> => {
+  const withMinerFee = async ({
+    networkFee,
+    speed,
+  }: {
+    networkFee: NetworkFee
+    speed: PayoutSpeed
+  }): Promise<OnChainPaymentFlow<S, R> | ValidationError | DealerPriceServiceError> => {
     const state = await stateFromPromise(statePromise)
     if (state instanceof Error) return state
 
@@ -441,36 +460,24 @@ const OPFBWithConversion = <S extends WalletCurrency, R extends WalletCurrency>(
     })
     if (priceRatio instanceof Error) return priceRatio
 
-    const minBankFee = paymentAmountFromNumber({
-      amount: state.senderWithdrawFee || feeConfig.withdrawDefaultMin,
-      currency: WalletCurrency.Btc,
-    })
-    if (minBankFee instanceof Error) return minBankFee
-
-    const imbalanceCalculator = ImbalanceCalculator({
-      method: feeConfig.withdrawMethod,
-      netInVolumeAmountLightningFn: state.netInVolumeAmountLightningFn,
-      netInVolumeAmountOnChainFn: state.netInVolumeAmountOnChainFn,
-      sinceDaysAgo: feeConfig.withdrawDaysLookback,
-    })
-    const imbalanceForWallet = await imbalanceCalculator.getSwapOutImbalanceAmount<S>({
-      id: state.senderWalletId,
-      currency: state.senderWalletCurrency,
+    const feeAmounts = await WithdrawalFeeCalculator().onChainFee({
+      paymentAmount: state.btcProposedAmount,
+      networkFee,
+      speed,
       accountId: state.senderAccountId,
+      accountRole: state.senderAccountRole,
+      wallet: {
+        id: state.senderWalletId,
+        currency: state.senderWalletCurrency,
+        accountId: state.senderAccountId,
+      },
+      imbalanceFns: {
+        netInVolumeAmountInboundNetworkFn: state.netInVolumeAmountLightningFn,
+        netInVolumeAmountOutboundNetworkFn: state.netInVolumeAmountOnChainFn,
+        priceRatio,
+      },
     })
-    if (imbalanceForWallet instanceof Error) return imbalanceForWallet
-
-    const imbalance =
-      imbalanceForWallet.currency === WalletCurrency.Btc
-        ? (imbalanceForWallet as BtcPaymentAmount)
-        : priceRatio.convertFromUsd(imbalanceForWallet as UsdPaymentAmount)
-
-    const feeAmounts = onChainFees.withdrawalFee({
-      minerFee,
-      amount: state.btcProposedAmount,
-      minBankFee,
-      imbalance,
-    })
+    if (feeAmounts instanceof Error) return feeAmounts
 
     // Calculate amounts & fees
     const btcProtocolAndBankFee = feeAmounts.totalFee
@@ -505,7 +512,7 @@ const OPFBWithConversion = <S extends WalletCurrency, R extends WalletCurrency>(
       usdBankFee: priceRatio.convertFromBtcToCeil(feeAmounts.bankFee),
       btcPaymentAmount: validatedBtcPaymentAmount,
       usdPaymentAmount,
-      btcMinerFee: minerFee,
+      btcMinerFee: feeAmounts.minerFee,
       paymentSentAndPending: false,
     })
   }
