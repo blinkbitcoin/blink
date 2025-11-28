@@ -1,7 +1,7 @@
 import { FlatFeeStrategy } from "./strategies/flat"
 import { PercentageFeeStrategy } from "./strategies/percentage"
 import { TieredFeeStrategy } from "./strategies/tiered"
-import { InternalAccountFeeStrategy } from "./strategies/internal"
+import { ExemptAccountFeeStrategy } from "./strategies/exempt-account"
 import { ImbalanceFeeStrategy } from "./strategies/imbalance"
 
 import {
@@ -24,7 +24,7 @@ const FEE_STRATEGIES = {
   flat: FlatFeeStrategy,
   percentage: PercentageFeeStrategy,
   tieredFlat: TieredFeeStrategy,
-  internal: InternalAccountFeeStrategy,
+  exemptAccount: ExemptAccountFeeStrategy,
   imbalance: ImbalanceFeeStrategy,
 } as const
 
@@ -60,7 +60,7 @@ export const calculateCompositeFee = async ({
   for (const { strategy: type, params } of strategies) {
     const factory = FEE_STRATEGIES[type as keyof typeof FEE_STRATEGIES]
 
-    const strategy: IFeeStrategy | ValidationError = factory
+    const strategy = factory
       ? (factory as (p: typeof params) => IFeeStrategy | ValidationError)(params)
       : { calculate: async () => zeroFee }
     if (strategy instanceof Error) return strategy

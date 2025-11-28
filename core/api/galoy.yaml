@@ -133,10 +133,10 @@ feeStrategies:
     strategy: flat
     params:
       amount: 0
-  - name: flat_2000
+  - name: flat_2500
     strategy: flat
     params:
-      amount: 2000
+      amount: 2500
   - name: percentage_50bp
     strategy: percentage
     params:
@@ -148,7 +148,7 @@ feeStrategies:
         - maxAmount: 1000000
           amount: 2500
         - maxAmount: null
-          amount: 5000
+          amount: 0
   - name: tiered_send
     strategy: tieredFlat
     params:
@@ -157,20 +157,29 @@ feeStrategies:
           amount: 5000
         - maxAmount: null
           amount: 10000
-  - name: internal_accounts
-    strategy: internal
+  - name: internal_receive
+    strategy: exemptAccount
     params:
       roles:
         - bankowner
         - dealer
       accountIds: []
+      exemptValidatedMerchants: true
+  - name: internal_send
+    strategy: exemptAccount
+    params:
+      roles:
+        - bankowner
+        - dealer
+      accountIds: []
+      exemptValidatedMerchants: false
   - name: imbalance_withdrawal
     strategy: imbalance
     params:
-      threshold: 1000000
-      ratioAsBasisPoints: 50
+      threshold: 10000000
+      ratioAsBasisPoints: 20
       daysLookback: 30
-      minFee: 2000
+      minFee: 0
 paymentNetworks:
   onchain:
     dustThreshold: 5000
@@ -178,6 +187,7 @@ paymentNetworks:
       walletName: dev-wallet
       feeStrategies:
         - tiered_receive
+        - internal_receive
       rebalance:
         threshold: 25000000
         minRebalanceSize: 25000000
@@ -196,18 +206,24 @@ paymentNetworks:
           description: Estimated broadcast ~10 minutes
           feeStrategies:
             - tiered_send
+            - imbalance_withdrawal
+            - internal_send
         medium:
           queueName: dev-medium-queue
           displayName: Standard
           description: Estimated broadcast ~1 hour
           feeStrategies:
             - tiered_send
+            - imbalance_withdrawal
+            - internal_send
         slow:
           queueName: dev-slow-queue
           displayName: Flexible
           description: Estimated broadcast ~24 hours
           feeStrategies:
             - tiered_send
+            - imbalance_withdrawal
+            - internal_send
       rebalance:
         threshold: 200000000
         minRebalanceSize: 10000000

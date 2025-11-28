@@ -345,9 +345,13 @@ export const getFeeStrategies = (): FeeStrategy[] => {
 }
 
 const resolveFeeStrategies = (strategyNames: string[]): FeeStrategy[] => {
-  return strategyNames
-    .map((name) => yamlConfig.feeStrategies.find((s) => s.name === name))
-    .filter((s): s is FeeStrategy => s !== undefined)
+  return strategyNames.map((name) => {
+    const strategy = yamlConfig.feeStrategies.find((s) => s.name === name)
+    if (!strategy) {
+      throw new Error(`Fee strategy "${name}" not found in feeStrategies configuration`)
+    }
+    return strategy
+  })
 }
 
 export const getOnchainNetworkConfig = (): OnchainNetworkConfig => {

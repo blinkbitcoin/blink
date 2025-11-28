@@ -278,7 +278,7 @@ describe("calculateCompositeFee", () => {
       { name: "Flat", strategy: "flat", params: { amount: 100 } },
       {
         name: "Internal Discount",
-        strategy: "internal",
+        strategy: "exemptAccount",
         params: { roles: ["dealer"], accountIds: ["internalId" as AccountId] },
       },
     ]

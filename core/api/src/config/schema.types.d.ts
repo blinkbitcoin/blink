@@ -32,9 +32,10 @@ type TieredFlatFeeStrategyParams = {
   }>
 }
 
-type InternalAccountFeeStrategyParams = {
+type ExemptAccountFeeStrategyParams = {
   roles: string[]
   accountIds: string[]
+  exemptValidatedMerchants: boolean
 }
 
 type ImbalanceFeeStrategyParams = {
@@ -48,7 +49,7 @@ type FeeStrategy =
   | { name: string; strategy: "flat"; params: FlatFeeStrategyParams }
   | { name: string; strategy: "percentage"; params: PercentageFeeStrategyParams }
   | { name: string; strategy: "tieredFlat"; params: TieredFlatFeeStrategyParams }
-  | { name: string; strategy: "internal"; params: InternalAccountFeeStrategyParams }
+  | { name: string; strategy: "exemptAccount"; params: ExemptAccountFeeStrategyParams }
   | { name: string; strategy: "imbalance"; params: ImbalanceFeeStrategyParams }
 
 type PayoutSpeedInput = {

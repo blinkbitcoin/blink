@@ -142,7 +142,7 @@ const feeStrategySchema = {
       properties: {
         additionalProperties: false,
         name: { type: "string" },
-        strategy: { const: "internal" },
+        strategy: { const: "exemptAccount" },
         params: {
           type: "object",
           required: ["roles", "accountIds"],
@@ -158,6 +158,7 @@ const feeStrategySchema = {
               items: { type: "string" },
               uniqueItems: true,
             },
+            exemptValidatedMerchants: { type: "boolean", default: false },
           },
         },
       },
@@ -373,7 +374,7 @@ const paymentNetworksSchema = {
       dustThreshold: 5000,
       receive: {
         walletName: "dev-wallet",
-        feeStrategies: ["tiered_receive"],
+        feeStrategies: ["tiered_receive", "internal_receive"],
         rebalance: {
           threshold: 25000000,
           minRebalanceSize: 25000000,
@@ -393,19 +394,19 @@ const paymentNetworksSchema = {
             queueName: "dev-queue",
             displayName: "Priority",
             description: "Estimated broadcast ~10 minutes",
-            feeStrategies: ["tiered_send"],
+            feeStrategies: ["tiered_send", "imbalance_withdrawal", "internal_send"],
           },
           medium: {
             queueName: "dev-medium-queue",
             displayName: "Standard",
             description: "Estimated broadcast ~1 hour",
-            feeStrategies: ["tiered_send"],
+            feeStrategies: ["tiered_send", "imbalance_withdrawal", "internal_send"],
           },
           slow: {
             queueName: "dev-slow-queue",
             displayName: "Flexible",
             description: "Estimated broadcast ~24 hours",
-            feeStrategies: ["tiered_send"],
+            feeStrategies: ["tiered_send", "imbalance_withdrawal", "internal_send"],
           },
         },
         rebalance: {
@@ -833,9 +834,9 @@ export const configSchema = {
           params: { amount: 0 },
         },
         {
-          name: "flat_2000",
+          name: "flat_2500",
           strategy: "flat",
-          params: { amount: 2000 },
+          params: { amount: 2500 },
         },
         {
           name: "percentage_50bp",
@@ -848,7 +849,7 @@ export const configSchema = {
           params: {
             tiers: [
               { maxAmount: 1000000, amount: 2500 },
-              { maxAmount: null, amount: 5000 },
+              { maxAmount: null, amount: 0 },
             ],
           },
         },
@@ -863,21 +864,31 @@ export const configSchema = {
           },
         },
         {
-          name: "internal_accounts",
-          strategy: "internal",
+          name: "internal_receive",
+          strategy: "exemptAccount",
           params: {
             roles: ["bankowner", "dealer"],
             accountIds: [],
+            exemptValidatedMerchants: true,
+          },
+        },
+        {
+          name: "internal_send",
+          strategy: "exemptAccount",
+          params: {
+            roles: ["bankowner", "dealer"],
+            accountIds: [],
+            exemptValidatedMerchants: false,
           },
         },
         {
           name: "imbalance_withdrawal",
           strategy: "imbalance",
           params: {
-            threshold: 1000000,
-            ratioAsBasisPoints: 50,
+            threshold: 10000000,
+            ratioAsBasisPoints: 20,
             daysLookback: 30,
-            minFee: 2000,
+            minFee: 0,
           },
         },
       ],

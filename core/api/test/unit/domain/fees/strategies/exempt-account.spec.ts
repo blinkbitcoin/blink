@@ -1,4 +1,4 @@
-import { InternalAccountFeeStrategy } from "@/domain/fees/strategies/internal"
+import { ExemptAccountFeeStrategy } from "@/domain/fees/strategies/exempt-account"
 import {
   AmountCalculator,
   BtcPaymentAmount,
@@ -8,12 +8,13 @@ import {
 
 const calc = AmountCalculator()
 
-describe("InternalAccountFeeStrategy", () => {
+describe("ExemptAccountFeeStrategy", () => {
   const config = {
     roles: ["dealer", "bankowner"],
     accountIds: ["accountId1" as AccountId],
+    exemptValidatedMerchants: true,
   }
-  const strategy = InternalAccountFeeStrategy(config)
+  const strategy = ExemptAccountFeeStrategy(config)
 
   const previousFee = {
     bankFee: paymentAmountFromNumber({
@@ -52,11 +53,48 @@ describe("InternalAccountFeeStrategy", () => {
     expect(fee).toStrictEqual(calc.mul(previousFee.bankFee, -1n))
   })
 
+  it("should apply a discount for a validated merchant", async () => {
+    const fee = await strategy.calculate({
+      accountId: "accountId3" as AccountId,
+      accountRole: "user",
+      previousFee,
+      isValidatedMerchant: true,
+    } as FeeCalculationArgs)
+
+    expect(fee).not.toBeInstanceOf(Error)
+    expect(fee).toStrictEqual(calc.mul(previousFee.bankFee, -1n))
+  })
+
   it("should not apply a discount for a non-matching account", async () => {
     const fee = await strategy.calculate({
       accountId: "accountId3" as AccountId,
       accountRole: "user",
       previousFee,
+      isValidatedMerchant: false,
+    } as FeeCalculationArgs)
+
+    expect(fee).not.toBeInstanceOf(Error)
+    expect(fee).toStrictEqual(
+      paymentAmountFromNumber({
+        amount: 0,
+        currency: WalletCurrency.Btc,
+      }) as BtcPaymentAmount,
+    )
+  })
+
+  it("should not apply a discount for a validated merchant when exemptValidatedMerchants is false", async () => {
+    const configNoMerchant = {
+      roles: ["dealer", "bankowner"],
+      accountIds: ["accountId1" as AccountId],
+      exemptValidatedMerchants: false,
+    }
+    const strategyNoMerchant = ExemptAccountFeeStrategy(configNoMerchant)
+
+    const fee = await strategyNoMerchant.calculate({
+      accountId: "accountId3" as AccountId,
+      accountRole: "user",
+      previousFee,
+      isValidatedMerchant: true,
     } as FeeCalculationArgs)
 
     expect(fee).not.toBeInstanceOf(Error)

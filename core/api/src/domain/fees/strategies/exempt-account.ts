@@ -8,18 +8,20 @@ import {
 
 const calc = AmountCalculator()
 
-export const InternalAccountFeeStrategy = (
-  config: InternalAccountFeeStrategyParams,
+export const ExemptAccountFeeStrategy = (
+  config: ExemptAccountFeeStrategyParams,
 ): IFeeStrategy => {
   const calculate = async ({
     accountId,
     accountRole,
     previousFee,
+    isValidatedMerchant,
   }: FeeCalculationArgs): Promise<BtcPaymentAmount | ValidationError> => {
     const isExemptAccountId = config.accountIds.includes(accountId)
     const isExemptRole = accountRole && config.roles.includes(accountRole)
+    const isExemptMerchant = config.exemptValidatedMerchants && isValidatedMerchant
 
-    if (isExemptAccountId || isExemptRole) {
+    if (isExemptAccountId || isExemptRole || isExemptMerchant) {
       return calc.mul(previousFee.bankFee, -1n)
     }
 
