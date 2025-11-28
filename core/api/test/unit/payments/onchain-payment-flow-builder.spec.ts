@@ -21,8 +21,6 @@ import { toSats } from "@/domain/bitcoin"
 import { PayoutSpeed } from "@/domain/bitcoin/onchain"
 import { WithdrawalFeeCalculator } from "@/domain/fees"
 
-import * as LedgerFacade from "@/services/ledger/facade"
-
 const { dustThreshold } = getOnChainWalletConfig()
 
 interface ConversionBtc {
@@ -295,10 +293,8 @@ describe("OnChainPaymentFlowBuilder", () => {
                   accountRole: "user",
                   wallet: senderBtcWalletDescriptor,
                   imbalanceFns: {
-                    netInVolumeAmountInboundNetworkFn:
-                      LedgerFacade.netInLightningTxBaseVolumeAmountSince,
-                    netInVolumeAmountOutboundNetworkFn:
-                      LedgerFacade.netInOnChainTxBaseVolumeAmountSince,
+                    netInVolumeAmountInboundNetworkFn: netInVolumeAmountLightningFn,
+                    netInVolumeAmountOutboundNetworkFn: netInVolumeAmountOnChainFn,
                     priceRatio,
                   },
                 })
@@ -812,10 +808,8 @@ describe("OnChainPaymentFlowBuilder", () => {
                         accountId: payment.senderAccountId,
                       },
                       imbalanceFns: {
-                        netInVolumeAmountInboundNetworkFn:
-                          LedgerFacade.netInLightningTxBaseVolumeAmountSince,
-                        netInVolumeAmountOutboundNetworkFn:
-                          LedgerFacade.netInOnChainTxBaseVolumeAmountSince,
+                        netInVolumeAmountInboundNetworkFn: netInVolumeAmountLightningFn,
+                        netInVolumeAmountOutboundNetworkFn: netInVolumeAmountOnChainFn,
                         priceRatio,
                       },
                     })
