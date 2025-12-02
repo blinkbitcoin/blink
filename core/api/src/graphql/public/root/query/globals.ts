@@ -1,9 +1,9 @@
 import {
   NETWORK,
-  getFeesConfig,
   getGaloyBuildInformation,
   getLightningAddressDomain,
   getLightningAddressDomainAliases,
+  getOnchainNetworkConfig,
 } from "@/config"
 
 import { Lightning } from "@/app"
@@ -13,7 +13,7 @@ import { getSupportedCountries } from "@/app/authentication/get-supported-countr
 import { GT } from "@/graphql/index"
 import Globals from "@/graphql/public/types/object/globals"
 
-const feesConfig = getFeesConfig()
+const onchainConfig = getOnchainNetworkConfig()
 
 const GlobalsQuery = GT.Field({
   type: Globals,
@@ -25,6 +25,22 @@ const GlobalsQuery = GT.Field({
     if (blockInfo instanceof Error) {
       blockInfo = undefined
     }
+
+    let minBankFee = "0"
+    let minBankFeeThreshold = "0"
+    const ratio = "0"
+
+    const tieredFlatStrategy = onchainConfig.receive.feeStrategies.find(
+      (s) => s.strategy === "tieredFlat",
+    )
+    if (tieredFlatStrategy) {
+      const firstTier = tieredFlatStrategy.params.tiers[0]
+      if (firstTier) {
+        minBankFee = `${firstTier.amount}`
+        minBankFeeThreshold = `${firstTier.maxAmount}`
+      }
+    }
+
     return {
       nodesIds,
       network: NETWORK,
@@ -35,9 +51,9 @@ const GlobalsQuery = GT.Field({
       supportedCountries: getSupportedCountries(),
       feesInformation: {
         deposit: {
-          minBankFee: `${feesConfig.depositDefaultMin.amount}`,
-          minBankFeeThreshold: `${feesConfig.depositThreshold.amount}`,
-          ratio: `${feesConfig.depositRatioAsBasisPoints}`,
+          minBankFee,
+          minBankFeeThreshold,
+          ratio,
         },
       },
     }

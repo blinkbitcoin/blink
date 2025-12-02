@@ -171,7 +171,7 @@ export const getMinerFeeAndPaymentFlow = async <
   })
   if (minerFee instanceof Error) return minerFee
 
-  return builder.withMinerFee(minerFee)
+  return builder.withMinerFee({ networkFee: { amount: minerFee }, speed })
 }
 
 export const getOnChainFeeForBtcWallet = async <S extends WalletCurrency>(

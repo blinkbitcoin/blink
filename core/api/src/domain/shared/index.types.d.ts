@@ -9,6 +9,9 @@ type WalletCurrency =
 type ExchangeCurrencyUnit =
   (typeof import("./primitives").ExchangeCurrencyUnit)[keyof typeof import("./primitives").ExchangeCurrencyUnit]
 
+type PaymentNetwork =
+  (typeof import("./primitives").PaymentNetwork)[keyof typeof import("./primitives").PaymentNetwork]
+
 type DisplayCurrencyMajorAmount = string & {
   readonly brand?: unique symbol
 }
