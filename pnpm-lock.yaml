@@ -1104,8 +1104,8 @@ importers:
         specifier: ^0.7.15
         version: 0.7.15
       '@ip1sms/disposable-phone-numbers':
-        specifier: ^2.1.1375
-        version: 2.1.1375
+        specifier: ^2.1.1376
+        version: 2.1.1376
       '@merqva/telegram-passport':
         specifier: ^1.0.2
         version: 1.0.2
@@ -7238,8 +7238,8 @@ packages:
     resolution: {integrity: sha512-Sx1pU8EM64o2BrqNpEO1CNLtKQwyhuXuqyfH7oGKCk+1a33d2r5saW8zNwm3j6BTExtjrv2BxTgzzkMwts6vGg==}
     dev: false
 
-  /@ip1sms/disposable-phone-numbers@2.1.1375:
-    resolution: {integrity: sha512-qWXM1NqoM5BOdkOpVDGrsL4fdvHYYtxGkeBb6i1IdyPEz7XOqBlmlGd22VWft10DcQ9DGr8M3+i41ehFMKT23g==}
+  /@ip1sms/disposable-phone-numbers@2.1.1376:
+    resolution: {integrity: sha512-kMQDdorL8q4wao0KyJJW9QwYYsMY6Kn0qk/M/IJOk6uUxXyRiw1j8JXXBYnED9nBT1GSSRfLM8+O9XgbDrwASw==}
     dev: false
 
   /@isaacs/cliui@8.0.2:
@@ -16475,7 +16475,7 @@ packages:
     dependencies:
       baseline-browser-mapping: 2.8.32
       caniuse-lite: 1.0.30001757
-      electron-to-chromium: 1.5.262
+      electron-to-chromium: 1.5.263
       node-releases: 2.0.27
       update-browserslist-db: 1.1.4(browserslist@4.28.0)
     dev: true
@@ -18531,8 +18531,8 @@ packages:
   /electron-to-chromium@1.5.178:
     resolution: {integrity: sha512-wObbz/ar3Bc6e4X5vf0iO8xTN8YAjN/tgiAOJLr7yjYFtP9wAjq8Mb5h0yn6kResir+VYx2DXBj9NNobs0ETSA==}
 
-  /electron-to-chromium@1.5.262:
-    resolution: {integrity: sha512-NlAsMteRHek05jRUxUR0a5jpjYq9ykk6+kO0yRaMi5moe7u0fVIOeQ3Y30A8dIiWFBNUoQGi1ljb1i5VtS9WQQ==}
+  /electron-to-chromium@1.5.263:
+    resolution: {integrity: sha512-DrqJ11Knd+lo+dv+lltvfMDLU27g14LMdH2b0O3Pio4uk0x+z7OR+JrmyacTPN2M8w3BrZ7/RTwG3R9B7irPlg==}
     dev: true
 
   /elliptic@6.6.1:
