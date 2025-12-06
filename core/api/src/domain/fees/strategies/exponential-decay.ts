@@ -66,7 +66,10 @@ const calculateDynamicFeeRate = ({
   return decay + normalizedFactor * (targetRate - decay)
 }
 
-const calculateBaseMultiplier = ({ feeRate, params }: BaseMultiplierArgs): number => {
+export const calculateBaseMultiplier = ({
+  feeRate,
+  params,
+}: BaseMultiplierArgs): number => {
   const { offset, factor } = params
   if (feeRate === 0) return offset
   return factor / feeRate + offset
