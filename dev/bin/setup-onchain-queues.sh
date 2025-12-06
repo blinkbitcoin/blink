@@ -32,7 +32,8 @@ create_queue() {
 main() {
   echo "Checking payout queues configuration..."
 
-  local current_queues=$(fetch_current_queues)
+  local current_queues
+  current_queues=$(fetch_current_queues)
 
   for name in "${!QUEUE_CONFIGS[@]}"; do
     read -r interval priority <<< "${QUEUE_CONFIGS[$name]}"
