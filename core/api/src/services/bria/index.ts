@@ -439,40 +439,30 @@ export const OnChainService = (): IOnChainService => {
     address,
     amount,
     speed,
-  }: EstimatePayoutFeeArgs): Promise<BtcPaymentAmount | OnChainServiceError> => {
-    const estimate = async ({
-      speed,
-      address,
-      amount,
-    }: {
-      speed: PayoutSpeed
-      address: OnChainAddress
-      amount: BtcPaymentAmount
-    }): Promise<BtcPaymentAmount | BriaEventError> => {
-      try {
-        const queueName = queueNameForSpeed(speed)
-        if (queueName instanceof Error) return queueName
+  }: EstimatePayoutFeeArgs): Promise<NetworkFee | OnChainServiceError> => {
+    try {
+      const queueName = queueNameForSpeed(speed)
+      if (queueName instanceof Error) return queueName
 
-        const request = new EstimatePayoutFeeRequest()
-        request.setWalletName(briaConfig.withdrawalWalletName)
-        request.setPayoutQueueName(queueName)
-        request.setOnchainAddress(address)
-        request.setSatoshis(Number(amount.amount))
+      const request = new EstimatePayoutFeeRequest()
+      request.setWalletName(briaConfig.withdrawalWalletName)
+      request.setPayoutQueueName(queueName)
+      request.setOnchainAddress(address)
+      request.setSatoshis(Number(amount.amount))
 
-        const response = await estimatePayoutFee(request, metadata)
-        return paymentAmountFromNumber({
-          amount: response.getSatoshis(),
-          currency: WalletCurrency.Btc,
-        })
-      } catch (error) {
-        return new UnknownOnChainServiceError(error)
+      const response = await estimatePayoutFee(request, metadata)
+      const feeAmount = paymentAmountFromNumber({
+        amount: response.getSatoshis(),
+        currency: WalletCurrency.Btc,
+      })
+      if (feeAmount instanceof Error) throw feeAmount
+      return {
+        amount: feeAmount,
+        feeRate: response.getFeeRate(),
       }
+    } catch (error) {
+      return new UnknownOnChainServiceError(error)
     }
-
-    const payoutId = await estimate({ address, amount, speed })
-    if (payoutId instanceof Error) return payoutId
-
-    return payoutId
   }
 
   return wrapAsyncFunctionsToRunInSpan({

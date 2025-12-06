@@ -18,6 +18,8 @@ import {
   ZERO_SATS,
 } from "@/domain/shared"
 
+const ZERO_NETWORK_FEE = { amount: ZERO_SATS, feeRate: 0 }
+
 const calc = AmountCalculator()
 
 const FEE_STRATEGIES = {
@@ -99,7 +101,7 @@ export const DepositFeeCalculator = (): DepositFeeCalculator => {
       accountRole,
       wallet,
       paymentAmount,
-      networkFee: { amount: ZERO_SATS },
+      networkFee: ZERO_NETWORK_FEE,
       strategies,
       isValidatedMerchant,
     })
@@ -119,7 +121,7 @@ export const DepositFeeCalculator = (): DepositFeeCalculator => {
       accountRole,
       wallet,
       paymentAmount,
-      networkFee: { amount: ZERO_SATS },
+      networkFee: ZERO_NETWORK_FEE,
       strategies,
       isValidatedMerchant,
     })
@@ -139,7 +141,7 @@ export const DepositFeeCalculator = (): DepositFeeCalculator => {
       accountRole,
       wallet,
       paymentAmount,
-      networkFee: { amount: ZERO_SATS },
+      networkFee: ZERO_NETWORK_FEE,
       strategies,
       isValidatedMerchant,
     })
@@ -203,7 +205,6 @@ export const WithdrawalFeeCalculator = (): WithdrawalFeeCalculator => {
     accountId,
     accountRole,
     wallet,
-    networkFee,
     imbalanceFns,
   }: IntraledgerWithdrawalFeeArgs): Promise<WithdrawalFeeResult | ValidationError> => {
     const { send: intraledgerSendConfig } = getIntraledgerNetworkConfig()
@@ -213,7 +214,7 @@ export const WithdrawalFeeCalculator = (): WithdrawalFeeCalculator => {
       accountRole,
       wallet,
       paymentAmount,
-      networkFee,
+      networkFee: ZERO_NETWORK_FEE,
       strategies,
       imbalanceFns,
       isValidatedMerchant: false,

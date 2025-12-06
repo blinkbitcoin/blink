@@ -266,7 +266,7 @@ describe("OnChainPaymentFlowBuilder", () => {
                 const payment = await withAmountBuilder
                   .withConversion(withConversionArgs)
                   .withMinerFee({
-                    networkFee: { amount: minerFee },
+                    networkFee: { amount: minerFee, feeRate: 1 },
                     speed: PayoutSpeed.Fast,
                   })
                 if (payment instanceof Error) throw payment
@@ -287,7 +287,7 @@ describe("OnChainPaymentFlowBuilder", () => {
 
                 const withdrawalFees = await WithdrawalFeeCalculator().onChainFee({
                   paymentAmount: btcPaymentAmount,
-                  networkFee: { amount: minerFee },
+                  networkFee: { amount: minerFee, feeRate: 1 },
                   speed: PayoutSpeed.Fast,
                   accountId: payment.senderAccountId,
                   accountRole: "user",
@@ -328,7 +328,7 @@ describe("OnChainPaymentFlowBuilder", () => {
                   .withAmount({ amount: BigInt(51), currency: amountCurrency })
                   .withConversion(withConversionArgs)
                   .withMinerFee({
-                    networkFee: { amount: minerFee },
+                    networkFee: { amount: minerFee, feeRate: 1 },
                     speed: PayoutSpeed.Fast,
                   })
                 expect(paymentLowest).toBeInstanceOf(LessThanDustThresholdError)
@@ -338,7 +338,7 @@ describe("OnChainPaymentFlowBuilder", () => {
                   .withAmount({ amount: BigInt(dustAmount), currency: amountCurrency })
                   .withConversion(withConversionArgs)
                   .withMinerFee({
-                    networkFee: { amount: minerFee },
+                    networkFee: { amount: minerFee, feeRate: 1 },
                     speed: PayoutSpeed.Fast,
                   })
                 expect(paymentBelow).toBeInstanceOf(LessThanDustThresholdError)
@@ -351,7 +351,7 @@ describe("OnChainPaymentFlowBuilder", () => {
                   })
                   .withConversion(withConversionArgs)
                   .withMinerFee({
-                    networkFee: { amount: minerFee },
+                    networkFee: { amount: minerFee, feeRate: 1 },
                     speed: PayoutSpeed.Fast,
                   })
                 expect(paymentAbove).not.toBeInstanceOf(Error)
@@ -765,7 +765,7 @@ describe("OnChainPaymentFlowBuilder", () => {
                     const payment = await withAmountBuilder
                       .withConversion(withConversionArgs)
                       .withMinerFee({
-                        networkFee: { amount: minerFee },
+                        networkFee: { amount: minerFee, feeRate: 1 },
                         speed: PayoutSpeed.Fast,
                       })
                     if (payment instanceof Error) throw payment
@@ -798,7 +798,7 @@ describe("OnChainPaymentFlowBuilder", () => {
 
                     const withdrawalFees = await WithdrawalFeeCalculator().onChainFee({
                       paymentAmount: btcPaymentAmount,
-                      networkFee: { amount: minerFee },
+                      networkFee: { amount: minerFee, feeRate: 1 },
                       speed: PayoutSpeed.Fast,
                       accountId: payment.senderAccountId,
                       accountRole: "user",
@@ -853,7 +853,7 @@ describe("OnChainPaymentFlowBuilder", () => {
                       .withAmount({ amount: BigInt(1), currency: amountCurrency })
                       .withConversion(withConversionArgs)
                       .withMinerFee({
-                        networkFee: { amount: minerFee },
+                        networkFee: { amount: minerFee, feeRate: 1 },
                         speed: PayoutSpeed.Fast,
                       })
                     expect(paymentLowest).toBeInstanceOf(LessThanDustThresholdError)
@@ -866,7 +866,7 @@ describe("OnChainPaymentFlowBuilder", () => {
                       })
                       .withConversion(withConversionArgs)
                       .withMinerFee({
-                        networkFee: { amount: minerFee },
+                        networkFee: { amount: minerFee, feeRate: 1 },
                         speed: PayoutSpeed.Fast,
                       })
                     expect(paymentBelow).toBeInstanceOf(LessThanDustThresholdError)
@@ -883,7 +883,7 @@ describe("OnChainPaymentFlowBuilder", () => {
                       })
                       .withConversion(withConversionArgs)
                       .withMinerFee({
-                        networkFee: { amount: minerFee },
+                        networkFee: { amount: minerFee, feeRate: 1 },
                         speed: PayoutSpeed.Fast,
                       })
                     expect(paymentAbove).not.toBeInstanceOf(Error)
@@ -1199,7 +1199,7 @@ describe("OnChainPaymentFlowBuilder", () => {
           .withAmount({ amount: BigInt(0), currency: amountCurrency })
           .withConversion(withConversionArgs)
           .withMinerFee({
-            networkFee: { amount: minerFee },
+            networkFee: { amount: minerFee, feeRate: 1 },
             speed: PayoutSpeed.Fast,
           })
 
