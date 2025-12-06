@@ -393,9 +393,11 @@ describe("Bria Event Handlers", () => {
     const addOnChainPaymentLedgerTxns = async ({
       estimatedFee,
       actualFee,
+      btcBankFee = { amount: 2_000n, currency: WalletCurrency.Btc },
     }: {
       estimatedFee: BtcPaymentAmount
       actualFee: BtcPaymentAmount
+      btcBankFee?: BtcPaymentAmount
     }): Promise<PayoutBroadcast> => {
       const payoutId = crypto.randomUUID() as PayoutId
 
@@ -417,7 +419,6 @@ describe("Bria Event Handlers", () => {
       if (displayPriceRatio instanceof Error) throw displayPriceRatio
 
       const btcMinerFee = estimatedFee
-      const btcBankFee = { amount: 2_000n, currency: WalletCurrency.Btc }
       const usdBankFee = priceRatio.convertFromBtc(btcBankFee)
       const btcProtocolAndBankFee = calc.add(btcMinerFee, btcBankFee)
       const usdProtocolAndBankFee = priceRatio.convertFromBtc(btcProtocolAndBankFee)
@@ -768,6 +769,37 @@ describe("Bria Event Handlers", () => {
 
       expect(hashesBefore[0]).not.toEqual(hashesAfterRetry[0])
       expect(hashesAfter[0]).toEqual(hashesAfterRetry[0])
+
+      // Cleanup to clear tests accounting
+      await Transaction.deleteMany({ payout_id: payoutId })
+    })
+
+    it("handles a broadcast event with zero bank fee", async () => {
+      const btcFeeDifference = ZERO_SATS
+      const actualFee = calc.add(estimatedFee, btcFeeDifference)
+
+      const broadcastPayload = await addOnChainPaymentLedgerTxns({
+        estimatedFee,
+        actualFee,
+        btcBankFee: ZERO_SATS,
+      })
+      const { proportionalFee, id: payoutId, txId, vout } = broadcastPayload
+
+      const result = await registerBroadcastedPayout({
+        payoutId,
+        proportionalFee,
+        txId,
+        vout,
+      })
+      expect(result).not.toBeInstanceOf(Error)
+
+      const txnsAfter = await LedgerFacade.getTransactionsByPayoutId(payoutId)
+      if (txnsAfter instanceof Error) throw txnsAfter
+      expect(txnsAfter.length).toEqual(1)
+
+      const hashesAfter = txnsAfter.map((txn) => txn.txHash)
+      const hashesAfterSet = new Set(hashesAfter)
+      expect(hashesAfterSet.size).toEqual(1)
 
       // Cleanup to clear tests accounting
       await Transaction.deleteMany({ payout_id: payoutId })

@@ -175,7 +175,7 @@ export const setOnChainTxIdByPayoutId = async ({
     (txn) => txn.walletId === bankOwnerWalletId && !isOnChainFeeReconciliationTxn(txn),
   )
   if (bankOwnerTxns.length !== 1) {
-    // If the sender is excluded from paying bank fees, then the protocol fee will be equal to the transaction fee.
+    // If the sender is exempt from bank fees, satsFee represents only the protocol fee (network fee)
     if (txns.length > 0) {
       const estimatedProtocolFee = paymentAmountFromNumber({
         amount: txns[0].satsFee || 0,
