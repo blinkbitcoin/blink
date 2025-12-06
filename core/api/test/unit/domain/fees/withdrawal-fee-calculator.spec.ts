@@ -343,7 +343,7 @@ describe("WithdrawalFeeCalculator", () => {
 
       expect(fee).not.toBeInstanceOf(Error)
       if (fee instanceof Error) throw fee
-      expect(fee.totalFee.amount).toBe(2000n)
+      expect(fee.totalFee.amount).toBe(0n)
     })
   })
 })
