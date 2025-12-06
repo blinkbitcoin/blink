@@ -23,13 +23,11 @@ import {
 import { isValidObjectId, toObjectId } from "@/services/mongoose/utils"
 import {
   BtcPaymentAmount,
-  ErrorLevel,
   WalletCurrency,
   ZERO_CENTS,
   ZERO_SATS,
   paymentAmountFromNumber,
 } from "@/domain/shared"
-import { recordExceptionInCurrentSpan } from "@/services/tracing"
 
 export const getTransactionsByPayoutId = async (
   payoutId: PayoutId,

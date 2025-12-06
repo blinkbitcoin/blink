@@ -45,12 +45,31 @@ type ImbalanceFeeStrategyParams = {
   minFee: number
 }
 
+type ExponentialDecayFeeStrategyParams = {
+  threshold: number
+  minAmount: number
+  exponentialFactor: number
+  minNetworkFee: number
+  maxNetworkFee: number
+  minRate: number
+  maxRate: number
+  divisor: number
+  targetRate: number
+  offset: number
+  factor: number
+}
+
 type FeeStrategy =
   | { name: string; strategy: "flat"; params: FlatFeeStrategyParams }
   | { name: string; strategy: "percentage"; params: PercentageFeeStrategyParams }
   | { name: string; strategy: "tieredFlat"; params: TieredFlatFeeStrategyParams }
   | { name: string; strategy: "exemptAccount"; params: ExemptAccountFeeStrategyParams }
   | { name: string; strategy: "imbalance"; params: ImbalanceFeeStrategyParams }
+  | {
+      name: string
+      strategy: "exponentialDecay"
+      params: ExponentialDecayFeeStrategyParams
+    }
 
 type PayoutSpeedInput = {
   queueName: string

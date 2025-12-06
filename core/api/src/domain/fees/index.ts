@@ -3,6 +3,7 @@ import { PercentageFeeStrategy } from "./strategies/percentage"
 import { TieredFeeStrategy } from "./strategies/tiered"
 import { ExemptAccountFeeStrategy } from "./strategies/exempt-account"
 import { ImbalanceFeeStrategy } from "./strategies/imbalance"
+import { ExponentialDecayStrategy } from "./strategies/exponential-decay"
 
 import {
   getOnchainNetworkConfig,
@@ -28,6 +29,7 @@ const FEE_STRATEGIES = {
   tieredFlat: TieredFeeStrategy,
   exemptAccount: ExemptAccountFeeStrategy,
   imbalance: ImbalanceFeeStrategy,
+  exponentialDecay: ExponentialDecayStrategy,
 } as const
 
 export const calculateCompositeFee = async ({
