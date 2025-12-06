@@ -184,7 +184,7 @@ export const setOnChainTxIdByPayoutId = async ({
       if (estimatedProtocolFee instanceof Error) return estimatedProtocolFee
       return { estimatedProtocolFee }
     }
-    return { estimatedProtocolFee: BtcPaymentAmount(0n) }
+    return { estimatedProtocolFee: ZERO_SATS }
   }
 
   const bankOwnerTxn = bankOwnerTxns[0]
