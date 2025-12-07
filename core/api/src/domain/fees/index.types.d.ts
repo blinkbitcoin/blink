@@ -1,6 +1,6 @@
 type NetworkFee = {
   amount: BtcPaymentAmount
-  feeRate?: number
+  feeRate: number
 }
 
 type ImbalanceFns = {
@@ -51,7 +51,7 @@ type OnChainWithdrawalFeeArgs = Omit<FeeCalculationArgs, "previousFee"> & {
   speed: PayoutSpeed
 }
 type LightningWithdrawalFeeArgs = Omit<FeeCalculationArgs, "previousFee">
-type IntraledgerWithdrawalFeeArgs = Omit<FeeCalculationArgs, "previousFee">
+type IntraledgerWithdrawalFeeArgs = Omit<FeeCalculationArgs, "previousFee" | "networkFee">
 
 type FeeDetails = {
   totalFee: BtcPaymentAmount

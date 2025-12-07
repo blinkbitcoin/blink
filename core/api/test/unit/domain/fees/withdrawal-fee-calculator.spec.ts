@@ -69,7 +69,7 @@ describe("WithdrawalFeeCalculator", () => {
         paymentAmount: btcPaymentAmount,
         accountId,
         wallet,
-        networkFee: { amount: networkFee },
+        networkFee: { amount: networkFee, feeRate: 1 },
         speed: "fast",
       })
 
@@ -153,7 +153,7 @@ describe("WithdrawalFeeCalculator", () => {
           paymentAmount: amount,
           accountId,
           wallet,
-          networkFee: { amount: networkFee },
+          networkFee: { amount: networkFee, feeRate: 1 },
           speed: "fast",
           imbalanceFns: createImbalanceFns(0n, 0n),
         })
@@ -173,7 +173,7 @@ describe("WithdrawalFeeCalculator", () => {
           paymentAmount: amount,
           accountId,
           wallet,
-          networkFee: { amount: networkFee },
+          networkFee: { amount: networkFee, feeRate: 1 },
           speed: "fast",
           imbalanceFns: createImbalanceFns(0n, 2_000_000n),
         })
@@ -194,7 +194,7 @@ describe("WithdrawalFeeCalculator", () => {
           paymentAmount: amount,
           accountId,
           wallet,
-          networkFee: { amount: networkFee },
+          networkFee: { amount: networkFee, feeRate: 1 },
           speed: "fast",
           imbalanceFns: createImbalanceFns(500_000n, 0n),
         })
@@ -215,7 +215,7 @@ describe("WithdrawalFeeCalculator", () => {
           paymentAmount: amount,
           accountId,
           wallet,
-          networkFee: { amount: networkFee },
+          networkFee: { amount: networkFee, feeRate: 1 },
           speed: "fast",
           imbalanceFns: createImbalanceFns(0n, 2_000_000n),
         })
@@ -241,7 +241,7 @@ describe("WithdrawalFeeCalculator", () => {
           paymentAmount: amount,
           accountId,
           wallet,
-          networkFee: { amount: networkFee },
+          networkFee: { amount: networkFee, feeRate: 1 },
           speed: "fast",
           imbalanceFns: createImbalanceFns(500_000n, 0n),
         })
@@ -264,7 +264,7 @@ describe("WithdrawalFeeCalculator", () => {
           paymentAmount: amount,
           accountId,
           wallet,
-          networkFee: { amount: networkFee },
+          networkFee: { amount: networkFee, feeRate: 1 },
           speed: "fast",
           imbalanceFns: createImbalanceFns(2_000_000n, 0n),
         })
@@ -286,7 +286,7 @@ describe("WithdrawalFeeCalculator", () => {
           paymentAmount: amount,
           accountId,
           wallet,
-          networkFee: { amount: networkFee },
+          networkFee: { amount: networkFee, feeRate: 1 },
           speed: "fast",
           imbalanceFns: createImbalanceFns(2_000_000n, 0n),
         })
@@ -315,7 +315,7 @@ describe("WithdrawalFeeCalculator", () => {
         paymentAmount: btcPaymentAmount,
         accountId,
         wallet,
-        networkFee: { amount: networkFee },
+        networkFee: { amount: networkFee, feeRate: 1 },
       })
 
       expect(fee).not.toBeInstanceOf(Error)
@@ -339,12 +339,11 @@ describe("WithdrawalFeeCalculator", () => {
         paymentAmount: btcPaymentAmount,
         accountId,
         wallet,
-        networkFee: { amount: networkFee },
       })
 
       expect(fee).not.toBeInstanceOf(Error)
       if (fee instanceof Error) throw fee
-      expect(fee.totalFee.amount).toBe(2000n)
+      expect(fee.totalFee.amount).toBe(0n)
     })
   })
 })

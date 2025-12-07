@@ -23,13 +23,11 @@ import {
 import { isValidObjectId, toObjectId } from "@/services/mongoose/utils"
 import {
   BtcPaymentAmount,
-  ErrorLevel,
   WalletCurrency,
   ZERO_CENTS,
   ZERO_SATS,
   paymentAmountFromNumber,
 } from "@/domain/shared"
-import { recordExceptionInCurrentSpan } from "@/services/tracing"
 
 export const getTransactionsByPayoutId = async (
   payoutId: PayoutId,
@@ -177,16 +175,18 @@ export const setOnChainTxIdByPayoutId = async ({
     (txn) => txn.walletId === bankOwnerWalletId && !isOnChainFeeReconciliationTxn(txn),
   )
   if (bankOwnerTxns.length !== 1) {
-    recordExceptionInCurrentSpan({
-      error: new InvalidLedgerTransactionStateError(),
-      level: ErrorLevel.Critical,
-      attributes: { txns: JSON.stringify(txns), payoutId },
-      fallbackMsg: "InvalidLedgerTransactionStateError",
-    })
-
-    // cover the case when bankOwner is doing the transaction
-    return { estimatedProtocolFee: BtcPaymentAmount(0n) }
+    // If the sender is exempt from bank fees, satsFee represents only the protocol fee (network fee)
+    if (txns.length > 0) {
+      const estimatedProtocolFee = paymentAmountFromNumber({
+        amount: txns[0].satsFee || 0,
+        currency: WalletCurrency.Btc,
+      })
+      if (estimatedProtocolFee instanceof Error) return estimatedProtocolFee
+      return { estimatedProtocolFee }
+    }
+    return { estimatedProtocolFee: ZERO_SATS }
   }
+
   const bankOwnerTxn = bankOwnerTxns[0]
   const bankFee = bankOwnerTxn.credit
   const protocolFee = (bankOwnerTxn.satsFee || 0) - bankFee

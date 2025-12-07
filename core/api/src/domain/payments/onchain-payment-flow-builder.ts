@@ -14,7 +14,6 @@ import {
   ONE_CENT,
   ValidationError,
   WalletCurrency,
-  ZERO_SATS,
 } from "@/domain/shared"
 import { LessThanDustThresholdError, SelfPaymentError } from "@/domain/errors"
 import { PaymentInitiationMethod, SettlementMethod } from "@/domain/wallets"
@@ -417,7 +416,6 @@ const OPFBWithConversion = <S extends WalletCurrency, R extends WalletCurrency>(
 
     const feeAmounts = await WithdrawalFeeCalculator().intraledgerFee({
       paymentAmount: state.btcProposedAmount,
-      networkFee: { amount: ZERO_SATS },
       accountId: state.senderAccountId,
       accountRole: state.senderAccountRole,
       wallet: {
