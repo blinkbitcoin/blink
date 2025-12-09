@@ -120,7 +120,7 @@ export const ExponentialDecayStrategy = (
     }
 
     const bankFeeAmount = rawBankFeeAmount.isNegative()
-      ? BigNumber(0)
+      ? new BigNumber(0)
       : rawBankFeeAmount.integerValue(BigNumber.ROUND_CEIL)
     const bankFee = safeBigInt(bankFeeAmount.toFixed(0))
     if (bankFee instanceof BigIntFloatConversionError) {
