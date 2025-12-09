@@ -211,7 +211,11 @@ const feeStrategySchema = {
             minAmount: { type: "integer", minimum: 0 },
             exponentialFactor: { type: "number", minimum: 0 },
             minNetworkFee: { type: "integer", minimum: 0 },
-            maxNetworkFee: { type: "integer", minimum: 0 },
+            maxNetworkFee: {
+              type: "integer",
+              minimum: 0,
+              exclusiveMinimum: { $data: "1/minNetworkFee" },
+            },
             minRate: { type: "number", minimum: 0 },
             maxRate: { type: "number", minimum: 0 },
             divisor: { type: "integer", minimum: 1 },
