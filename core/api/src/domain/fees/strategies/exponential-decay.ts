@@ -1,3 +1,36 @@
+/**
+ * Exponential Decay Fee Strategy
+ *
+ * This strategy implements an exponential decay fee calculation for onchain payments,
+ * designed to encourage larger transactions by reducing fees as payment amounts increase.
+ *
+ * Algorithm Overview:
+ * - For amounts below `decayStartAmount`, fees decay exponentially from `maxRate` to `minRate`.
+ * - For amounts above `decayStartAmount`, fees follow a linear decay: `terminalDivisor / amount`.
+ * - The final fee is adjusted by a dynamic rate (combining decay and normalized network fee factor)
+ *   multiplied by the payment amount, plus a base multiplier applied to the network fee.
+ *
+ * Configuration Parameters:
+ * - `decayStartAmount`: Threshold above which linear decay begins.
+ * - `baseAmount`: Base amount for exponential decay calculation.
+ * - `decaySpeed`: Speed of exponential decay (higher values decay faster, previously `exponentialFactor`).
+ * - `minFeeRate`/`maxFeeRate`: Min/max fee rates for normalization.
+ * - `minRate`/`maxRate`: Min/max rates for exponential decay.
+ * - `terminalDivisor`: Divisor for linear decay above threshold.
+ * - `targetFeeRate`: Target fee rate for dynamic adjustment.
+ * - `networkFeeOffset`/`networkFeeFactor`: Offset and factor for base multiplier on network fees.
+ *
+ * Mathematical Model:
+ * 1. Exponential Decay: rate = minRate + (maxRate - minRate) * exp(-decaySpeed * ((amount - baseAmount) / (decayStartAmount - baseAmount)))
+ * 2. Linear Decay: rate = terminalDivisor / amount
+ * 3. Dynamic Rate: decay + normalizedFactor * (targetFeeRate - decay)
+ * 4. Base Multiplier: networkFeeFactor / feeRate + networkFeeOffset (if feeRate > MIN_FEE_RATE, else networkFeeOffset)
+ * 5. Final Fee: ceil(amount * dynamicRate + networkFee * baseMultiplier) - networkFee
+ *
+ * References:
+ * - Original implementation: https://github.com/pretyflaco/BlinkFeeCalculator
+ */
+
 import { BigNumber } from "bignumber.js"
 
 import {
