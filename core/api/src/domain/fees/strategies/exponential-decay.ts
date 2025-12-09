@@ -81,7 +81,10 @@ const calculateNormalizedFactor = ({
 }: NormalizedFactorArgs): BigNumber => {
   const diff = new BigNumber(maxFeeRate).minus(minFeeRate)
   if (diff.lte(0)) return new BigNumber(0)
-  return new BigNumber(feeRate).minus(minFeeRate).div(diff)
+  const factor = new BigNumber(feeRate).minus(minFeeRate).div(diff)
+  if (factor.lt(0)) return new BigNumber(0)
+  if (factor.gt(1)) return new BigNumber(1)
+  return factor
 }
 
 const calculateDynamicFeeRate = ({
