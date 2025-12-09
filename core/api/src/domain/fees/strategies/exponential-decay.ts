@@ -100,14 +100,12 @@ export const ExponentialDecayStrategy = (
       params: config,
     })
 
-    const bankFeeAmount = Math.ceil(
-      satoshis * dynamicRate + minerFeeSats * baseMultiplier,
-    )
-
-    if (bankFeeAmount < 0) {
-      return new ValidationError("Calculated bank fee is negative")
+    const rawBankFeeAmount = satoshis * dynamicRate + minerFeeSats * baseMultiplier
+    if (!isFinite(rawBankFeeAmount) || isNaN(rawBankFeeAmount)) {
+      return new ValidationError("Calculated bank fee is not a finite number")
     }
 
+    const bankFeeAmount = Math.max(Math.ceil(rawBankFeeAmount), 0)
     const totalFee = paymentAmountFromNumber({
       amount: bankFeeAmount,
       currency: WalletCurrency.Btc,
@@ -117,7 +115,6 @@ export const ExponentialDecayStrategy = (
         `Invalid amount for exponential decay fee: ${bankFeeAmount}`,
       )
     }
-    if (totalFee instanceof Error) return totalFee
 
     return totalFee
   }
