@@ -100,6 +100,10 @@ export const feeCapCasesData: {
   tier3: FeeCase[]
 } = {
   tier1: [
+    { feeRate: 1, satsAmount: 0, minerFee: 141, expectedSats: 0 },
+    { feeRate: 1, satsAmount: 21000, minerFee: -1, expectedSats: 0 },
+    { feeRate: 0, satsAmount: 21000, minerFee: 141, expectedSats: 0 },
+    { feeRate: 1, satsAmount: 21000, minerFee: 0, expectedSats: 840 },
     { feeRate: 1, satsAmount: 21000, minerFee: 141, expectedSats: 1306 },
     { feeRate: 2, satsAmount: 21000, minerFee: 282, expectedSats: 1489 },
     { feeRate: 4, satsAmount: 21000, minerFee: 564, expectedSats: 1855 },
@@ -144,6 +148,10 @@ export const feeCapCasesData: {
     { feeRate: 2000, satsAmount: 100000, minerFee: 282000, expectedSats: 367382 },
   ],
   tier2: [
+    { feeRate: 1, satsAmount: 0, minerFee: 141, expectedSats: 0 },
+    { feeRate: 1, satsAmount: 21000, minerFee: -1, expectedSats: 0 },
+    { feeRate: 0, satsAmount: 21000, minerFee: 141, expectedSats: 0 },
+    { feeRate: 1, satsAmount: 21000, minerFee: 0, expectedSats: 630 },
     { feeRate: 1, satsAmount: 21000, minerFee: 141, expectedSats: 927 },
     { feeRate: 2, satsAmount: 21000, minerFee: 282, expectedSats: 1081 },
     { feeRate: 4, satsAmount: 21000, minerFee: 564, expectedSats: 1391 },
@@ -188,6 +196,10 @@ export const feeCapCasesData: {
     { feeRate: 2000, satsAmount: 100000, minerFee: 282000, expectedSats: 310591 },
   ],
   tier3: [
+    { feeRate: 1, satsAmount: 0, minerFee: 56, expectedSats: 0 },
+    { feeRate: 1, satsAmount: 21000, minerFee: -1, expectedSats: 0 },
+    { feeRate: 0, satsAmount: 21000, minerFee: 56, expectedSats: 0 },
+    { feeRate: 1, satsAmount: 21000, minerFee: 0, expectedSats: 420 },
     { feeRate: 1, satsAmount: 21000, minerFee: 56, expectedSats: 594 },
     { feeRate: 2, satsAmount: 21000, minerFee: 111, expectedSats: 653 },
     { feeRate: 4, satsAmount: 21000, minerFee: 222, expectedSats: 775 },

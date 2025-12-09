@@ -86,20 +86,7 @@ export const ExponentialDecayStrategy = (
     const minerFeeSats = Number(networkFee.amount.amount)
     const currentFeeRate = networkFee.feeRate
 
-    if (satoshis < 0 || minerFeeSats < 0 || currentFeeRate < 0) {
-      return new ValidationError(
-        "ExponentialDecay inputs cannot be negative for fee calculation",
-      )
-    }
-
-    if (satoshis === 0) {
-      return paymentAmountFromNumber({
-        amount: 0,
-        currency: WalletCurrency.Btc,
-      }) as BtcPaymentAmount
-    }
-
-    if (currentFeeRate <= 0) {
+    if (satoshis <= 0 || minerFeeSats < 0 || currentFeeRate <= 0) {
       return paymentAmountFromNumber({
         amount: 0,
         currency: WalletCurrency.Btc,

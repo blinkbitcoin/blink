@@ -36,7 +36,7 @@ describe("ExponentialDecayStrategy", () => {
     const slowFeeCalculator = ExponentialDecayStrategy(slowStrategyConfig)
     describe("Tier 1 (Fast)", () => {
       test.each(feeCapCasesData.tier1)(
-        "amount=$satsAmount sats, feeRate=$feeRate => bankFee $expectedSats sats",
+        "amount=$satsAmount sats, feeRate=$feeRate, minerFee=$minerFee => bankFee $expectedSats sats",
         async ({ satsAmount, feeRate, expectedSats, minerFee }) => {
           const totalFee = await fastFeeCalculator.calculate({
             paymentAmount: { amount: BigInt(satsAmount), currency: WalletCurrency.Btc },
@@ -65,7 +65,7 @@ describe("ExponentialDecayStrategy", () => {
     })
     describe("Tier 2 (Medium)", () => {
       test.each(feeCapCasesData.tier2)(
-        "amount=$satsAmount sats, feeRate=$feeRate => bankFee $expectedSats sats",
+        "amount=$satsAmount sats, feeRate=$feeRate, minerFee=$minerFee => bankFee $expectedSats sats",
         async ({ satsAmount, feeRate, expectedSats, minerFee }) => {
           const totalFee = await mediumFeeCalculator.calculate({
             paymentAmount: { amount: BigInt(satsAmount), currency: WalletCurrency.Btc },
@@ -95,7 +95,7 @@ describe("ExponentialDecayStrategy", () => {
 
     describe("Tier 3 (Slow)", () => {
       test.each(feeCapCasesData.tier3)(
-        "amount=$satsAmount sats, feeRate=$feeRate => bankFee $expectedSats sats",
+        "amount=$satsAmount sats, feeRate=$feeRate, minerFee=$minerFee => bankFee $expectedSats sats",
         async ({ satsAmount, feeRate, expectedSats, minerFee }) => {
           const totalFee = await slowFeeCalculator.calculate({
             paymentAmount: { amount: BigInt(satsAmount), currency: WalletCurrency.Btc },
