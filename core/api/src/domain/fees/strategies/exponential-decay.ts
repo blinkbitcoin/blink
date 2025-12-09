@@ -4,6 +4,7 @@ import {
   paymentAmountFromNumber,
   ValidationError,
   BigIntFloatConversionError,
+  ZERO_SATS,
 } from "@/domain/shared"
 
 const MIN_FEE_RATE = 1e-8
@@ -83,10 +84,7 @@ export const ExponentialDecayStrategy = (
     const currentFeeRate = networkFee.feeRate
 
     if (satoshis <= 0 || minerFeeSats < 0 || currentFeeRate <= 0) {
-      return paymentAmountFromNumber({
-        amount: 0,
-        currency: WalletCurrency.Btc,
-      }) as BtcPaymentAmount
+      return ZERO_SATS
     }
 
     const dynamicRate = calculateDynamicFeeRate({
@@ -106,17 +104,17 @@ export const ExponentialDecayStrategy = (
     }
 
     const bankFeeAmount = Math.max(Math.ceil(rawBankFeeAmount), 0)
-    const totalFee = paymentAmountFromNumber({
+    const bankFee = paymentAmountFromNumber({
       amount: bankFeeAmount,
       currency: WalletCurrency.Btc,
     })
-    if (totalFee instanceof BigIntFloatConversionError) {
+    if (bankFee instanceof BigIntFloatConversionError) {
       return new ValidationError(
         `Invalid amount for exponential decay fee: ${bankFeeAmount}`,
       )
     }
 
-    return totalFee
+    return bankFee
   }
 
   return {
