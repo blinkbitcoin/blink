@@ -30,6 +30,9 @@ const slowStrategyConfig = {
 }
 
 describe("ExponentialDecayStrategy", () => {
+  const expectedFee = (expectedSats: number, minerFee: number) =>
+    BigInt(Math.max(0, minerFee < 0 ? 0 : expectedSats - minerFee))
+
   describe("calculate", () => {
     const fastFeeCalculator = ExponentialDecayStrategy(fastStrategyConfig)
     const mediumFeeCalculator = ExponentialDecayStrategy(mediumStrategyConfig)
@@ -59,7 +62,7 @@ describe("ExponentialDecayStrategy", () => {
           if (totalFee instanceof Error) {
             throw totalFee
           }
-          expect(totalFee.amount).toEqual(BigInt(expectedSats))
+          expect(totalFee.amount).toEqual(expectedFee(expectedSats, minerFee))
         },
       )
     })
@@ -88,7 +91,7 @@ describe("ExponentialDecayStrategy", () => {
           if (totalFee instanceof Error) {
             throw totalFee
           }
-          expect(totalFee.amount).toEqual(BigInt(expectedSats))
+          expect(totalFee.amount).toEqual(expectedFee(expectedSats, minerFee))
         },
       )
     })
@@ -118,17 +121,18 @@ describe("ExponentialDecayStrategy", () => {
           if (totalFee instanceof Error) {
             throw totalFee
           }
-          expect(totalFee.amount).toEqual(BigInt(expectedSats))
+          expect(totalFee.amount).toEqual(expectedFee(expectedSats, minerFee))
         },
       )
     })
 
     it("should calculate fee correctly for large paymentAmount", async () => {
       const largeAmount = 1267650600228229401496703205376n
+      const networkFee = 100n
       const totalFee = await fastFeeCalculator.calculate({
         paymentAmount: { amount: largeAmount, currency: WalletCurrency.Btc },
         networkFee: {
-          amount: { amount: BigInt(100), currency: WalletCurrency.Btc },
+          amount: { amount: networkFee, currency: WalletCurrency.Btc },
           feeRate: 1,
         },
         accountId: "dummyAccountId" as AccountId,
@@ -146,7 +150,7 @@ describe("ExponentialDecayStrategy", () => {
       if (totalFee instanceof Error) {
         throw totalFee
       }
-      expect(totalFee.amount).toEqual(30330n)
+      expect(totalFee.amount).toEqual(30330n - networkFee)
     })
 
     it("should calculate fee correctly for large networkFee", async () => {
@@ -172,7 +176,7 @@ describe("ExponentialDecayStrategy", () => {
       if (totalFee instanceof Error) {
         throw totalFee
       }
-      expect(totalFee.amount).toEqual(29723757540649363n)
+      expect(totalFee.amount).toEqual(20716558285908372n)
     })
   })
 

@@ -113,6 +113,8 @@ export const ExponentialDecayStrategy = (
     const rawBankFeeAmount = satoshis
       .times(dynamicRate)
       .plus(minerFeeSats.times(baseMultiplier))
+      // this is necessary because calculateCompositeFee adds network fee to bank fee
+      .minus(minerFeeSats)
     if (!rawBankFeeAmount.isFinite()) {
       return new ValidationError("Calculated bank fee is not a finite number")
     }
