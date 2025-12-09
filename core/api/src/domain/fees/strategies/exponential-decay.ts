@@ -43,12 +43,12 @@ const calculateDecayRate = (
 
 const calculateNormalizedFactor = ({
   feeRate,
-  minNetworkFee,
-  maxNetworkFee,
+  minNetworkFeeRate,
+  maxNetworkFeeRate,
 }: NormalizedFactorArgs): BigNumber => {
-  const diff = new BigNumber(maxNetworkFee).minus(minNetworkFee)
+  const diff = new BigNumber(maxNetworkFeeRate).minus(minNetworkFeeRate)
   if (diff.lte(0)) return new BigNumber(0)
-  return new BigNumber(feeRate).minus(minNetworkFee).div(diff)
+  return new BigNumber(feeRate).minus(minNetworkFeeRate).div(diff)
 }
 
 const calculateDynamicFeeRate = ({
@@ -56,13 +56,13 @@ const calculateDynamicFeeRate = ({
   feeRate,
   params,
 }: DynamicRateArgs): BigNumber => {
-  const { targetRate, minNetworkFee, maxNetworkFee } = params
+  const { targetRate, minNetworkFeeRate, maxNetworkFeeRate } = params
 
   const decay = calculateDecayRate(amount, params)
   const normalizedFactor = calculateNormalizedFactor({
     feeRate,
-    minNetworkFee,
-    maxNetworkFee,
+    minNetworkFeeRate,
+    maxNetworkFeeRate,
   })
   return decay.plus(normalizedFactor.times(new BigNumber(targetRate).minus(decay)))
 }

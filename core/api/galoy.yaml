@@ -186,8 +186,8 @@ feeStrategies:
       threshold: 4000000
       minAmount: 21000
       exponentialFactor: 21
-      minNetworkFee: 1
-      maxNetworkFee: 2000
+      minNetworkFeeRate: 1
+      maxNetworkFeeRate: 2000
       minRate: 0.0075
       maxRate: 0.04
       divisor: 30000
@@ -200,8 +200,8 @@ feeStrategies:
       threshold: 4000000
       minAmount: 21000
       exponentialFactor: 21
-      minNetworkFee: 1
-      maxNetworkFee: 2000
+      minNetworkFeeRate: 1
+      maxNetworkFeeRate: 2000
       minRate: 0.005
       maxRate: 0.03
       divisor: 20000
@@ -214,8 +214,8 @@ feeStrategies:
       threshold: 4000000
       minAmount: 21000
       exponentialFactor: 21
-      minNetworkFee: 1
-      maxNetworkFee: 2000
+      minNetworkFeeRate: 1
+      maxNetworkFeeRate: 2000
       minRate: 0.003125
       maxRate: 0.02
       divisor: 12500

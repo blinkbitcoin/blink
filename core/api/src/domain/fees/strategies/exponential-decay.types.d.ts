@@ -9,8 +9,8 @@ type ExponentialDecayArgs = {
 
 type NormalizedFactorArgs = {
   feeRate: number
-  minNetworkFee: number
-  maxNetworkFee: number
+  minNetworkFeeRate: number
+  maxNetworkFeeRate: number
 }
 
 type DynamicRateArgs = {

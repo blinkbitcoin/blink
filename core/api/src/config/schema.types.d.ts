@@ -49,8 +49,8 @@ type ExponentialDecayFeeStrategyParams = {
   threshold: number
   minAmount: number
   exponentialFactor: number
-  minNetworkFee: number
-  maxNetworkFee: number
+  minNetworkFeeRate: number
+  maxNetworkFeeRate: number
   minRate: number
   maxRate: number
   divisor: number
