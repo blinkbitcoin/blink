@@ -1,6 +1,6 @@
 import { BigIntFloatConversionError, UnknownBigIntConversionError } from "./errors"
 
-export const safeBigInt = (num: number): bigint | BigIntConversionError => {
+export const safeBigInt = (num: number | string): bigint | BigIntConversionError => {
   try {
     return BigInt(num)
   } catch (err) {
