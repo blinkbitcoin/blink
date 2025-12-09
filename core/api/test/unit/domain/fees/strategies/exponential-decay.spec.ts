@@ -148,6 +148,32 @@ describe("ExponentialDecayStrategy", () => {
       }
       expect(totalFee.amount).toEqual(30330n)
     })
+
+    it("should calculate fee correctly for large networkFee", async () => {
+      const largeAmount = 1267650600228229401496703205376n
+      const totalFee = await fastFeeCalculator.calculate({
+        paymentAmount: { amount: 210000n, currency: WalletCurrency.Btc },
+        networkFee: {
+          amount: { amount: largeAmount, currency: WalletCurrency.Btc },
+          feeRate: 1,
+        },
+        accountId: "dummyAccountId" as AccountId,
+        wallet: {
+          id: "dummyWalletId" as WalletId,
+          currency: WalletCurrency.Btc,
+          accountId: "dummyAccountId" as AccountId,
+        },
+        previousFee: {
+          totalFee: { amount: BigInt(0), currency: WalletCurrency.Btc },
+          bankFee: { amount: BigInt(0), currency: WalletCurrency.Btc },
+          minerFee: { amount: BigInt(0), currency: WalletCurrency.Btc },
+        },
+      })
+      if (totalFee instanceof Error) {
+        throw totalFee
+      }
+      expect(totalFee.amount).toEqual(29723757540649363n)
+    })
   })
 
   describe("calculateBaseMultiplier", () => {
@@ -156,7 +182,7 @@ describe("ExponentialDecayStrategy", () => {
         "feeRate=$feeRate => multiplier $expectedMultiplier",
         ({ feeRate, expectedMultiplier }) => {
           expect(
-            calculateBaseMultiplier({ feeRate, params: fastStrategyConfig }),
+            calculateBaseMultiplier({ feeRate, params: fastStrategyConfig }).toNumber(),
           ).toBeCloseTo(expectedMultiplier, 6)
         },
       )
@@ -167,7 +193,7 @@ describe("ExponentialDecayStrategy", () => {
         "feeRate=$feeRate => multiplier $expectedMultiplier",
         ({ feeRate, expectedMultiplier }) => {
           expect(
-            calculateBaseMultiplier({ feeRate, params: mediumStrategyConfig }),
+            calculateBaseMultiplier({ feeRate, params: mediumStrategyConfig }).toNumber(),
           ).toBeCloseTo(expectedMultiplier, 6)
         },
       )
@@ -178,7 +204,7 @@ describe("ExponentialDecayStrategy", () => {
         "feeRate=$feeRate => multiplier $expectedMultiplier",
         ({ feeRate, expectedMultiplier }) => {
           expect(
-            calculateBaseMultiplier({ feeRate, params: slowStrategyConfig }),
+            calculateBaseMultiplier({ feeRate, params: slowStrategyConfig }).toNumber(),
           ).toBeCloseTo(expectedMultiplier, 6)
         },
       )

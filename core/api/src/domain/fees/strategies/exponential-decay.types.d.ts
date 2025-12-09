@@ -1,5 +1,5 @@
 type ExponentialDecayArgs = {
-  amount: number
+  amount: BigNumber
   minRate: number
   maxRate: number
   threshold: number
@@ -14,7 +14,7 @@ type NormalizedFactorArgs = {
 }
 
 type DynamicRateArgs = {
-  amount: number
+  amount: BigNumber
   feeRate: number
   params: ExponentialDecayFeeStrategyParams
 }

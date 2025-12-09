@@ -1,10 +1,11 @@
+import { BigNumber } from "bignumber.js"
+
 import {
   BtcPaymentAmount,
-  WalletCurrency,
-  paymentAmountFromNumber,
   ValidationError,
   BigIntFloatConversionError,
   ZERO_SATS,
+  safeBigInt,
 } from "@/domain/shared"
 
 const MIN_FEE_RATE = 1e-8
@@ -16,42 +17,45 @@ const calculateExponentialDecay = ({
   threshold,
   minAmount,
   exponentialFactor,
-}: ExponentialDecayArgs): number => {
-  const span = threshold - minAmount
-  if (span <= 0) return minRate
-  const exponent = -((amount - minAmount) / span) * exponentialFactor
-  return minRate + (maxRate - minRate) * Math.exp(exponent)
+}: ExponentialDecayArgs): BigNumber => {
+  const span = new BigNumber(threshold).minus(minAmount)
+  if (span.lte(0)) return new BigNumber(minRate)
+  const exponent = amount.minus(minAmount).div(span).negated().times(exponentialFactor)
+  return new BigNumber(minRate).plus(
+    new BigNumber(maxRate).minus(minRate).times(Math.exp(exponent.toNumber())),
+  )
 }
 
 const calculateDecayRate = (
-  amount: number,
+  amount: BigNumber,
   config: ExponentialDecayFeeStrategyParams,
-): number => {
-  if (amount === 0) return 0
+): BigNumber => {
+  if (amount.isZero()) return new BigNumber(0)
 
   const { threshold, divisor } = config
 
-  if (amount < threshold) {
+  if (amount.lt(threshold)) {
     return calculateExponentialDecay({ ...config, amount })
   }
 
-  return divisor / amount
+  return new BigNumber(divisor).div(amount)
 }
 
 const calculateNormalizedFactor = ({
   feeRate,
   minNetworkFee,
   maxNetworkFee,
-}: NormalizedFactorArgs): number => {
-  if (maxNetworkFee - minNetworkFee <= 0) return 0
-  return (feeRate - minNetworkFee) / (maxNetworkFee - minNetworkFee)
+}: NormalizedFactorArgs): BigNumber => {
+  const diff = new BigNumber(maxNetworkFee).minus(minNetworkFee)
+  if (diff.lte(0)) return new BigNumber(0)
+  return new BigNumber(feeRate).minus(minNetworkFee).div(diff)
 }
 
 const calculateDynamicFeeRate = ({
   amount,
   feeRate,
   params,
-}: DynamicRateArgs): number => {
+}: DynamicRateArgs): BigNumber => {
   const { targetRate, minNetworkFee, maxNetworkFee } = params
 
   const decay = calculateDecayRate(amount, params)
@@ -60,16 +64,16 @@ const calculateDynamicFeeRate = ({
     minNetworkFee,
     maxNetworkFee,
   })
-  return decay + normalizedFactor * (targetRate - decay)
+  return decay.plus(normalizedFactor.times(new BigNumber(targetRate).minus(decay)))
 }
 
 export const calculateBaseMultiplier = ({
   feeRate,
   params,
-}: BaseMultiplierArgs): number => {
+}: BaseMultiplierArgs): BigNumber => {
   const { offset, factor } = params
-  if (Math.abs(feeRate) <= MIN_FEE_RATE) return offset
-  return factor / feeRate + offset
+  if (Math.abs(feeRate) <= MIN_FEE_RATE) return new BigNumber(offset)
+  return new BigNumber(factor).div(feeRate).plus(offset)
 }
 
 export const ExponentialDecayStrategy = (
@@ -79,11 +83,19 @@ export const ExponentialDecayStrategy = (
     paymentAmount,
     networkFee,
   }: FeeCalculationArgs): Promise<BtcPaymentAmount | ValidationError> => {
-    const satoshis = Number(paymentAmount.amount)
-    const minerFeeSats = Number(networkFee.amount.amount)
+    const satoshisAmount =
+      paymentAmount.amount > Number.MAX_SAFE_INTEGER
+        ? Number.MAX_SAFE_INTEGER
+        : paymentAmount.amount
+    const satoshis = new BigNumber(satoshisAmount)
+    const minerFeeAmount =
+      networkFee.amount.amount > Number.MAX_SAFE_INTEGER
+        ? Number.MAX_SAFE_INTEGER
+        : networkFee.amount.amount
+    const minerFeeSats = new BigNumber(minerFeeAmount)
     const currentFeeRate = networkFee.feeRate
 
-    if (satoshis <= 0 || minerFeeSats < 0 || currentFeeRate <= 0) {
+    if (satoshis.lte(0) || minerFeeSats.lt(0) || currentFeeRate <= 0) {
       return ZERO_SATS
     }
 
@@ -98,23 +110,25 @@ export const ExponentialDecayStrategy = (
       params: config,
     })
 
-    const rawBankFeeAmount = satoshis * dynamicRate + minerFeeSats * baseMultiplier
-    if (!isFinite(rawBankFeeAmount) || isNaN(rawBankFeeAmount)) {
+    const rawBankFeeAmount = satoshis
+      .times(dynamicRate)
+      .plus(minerFeeSats.times(baseMultiplier))
+    if (!rawBankFeeAmount.isFinite()) {
       return new ValidationError("Calculated bank fee is not a finite number")
     }
 
-    const bankFeeAmount = Math.max(Math.ceil(rawBankFeeAmount), 0)
-    const bankFee = paymentAmountFromNumber({
-      amount: bankFeeAmount,
-      currency: WalletCurrency.Btc,
-    })
+    const bankFeeAmount = rawBankFeeAmount.isNegative()
+      ? BigNumber(0)
+      : rawBankFeeAmount.integerValue(BigNumber.ROUND_CEIL)
+    const bankFee = safeBigInt(bankFeeAmount.toFixed(0))
     if (bankFee instanceof BigIntFloatConversionError) {
       return new ValidationError(
         `Invalid amount for exponential decay fee: ${bankFeeAmount}`,
       )
     }
+    if (bankFee instanceof Error) return bankFee
 
-    return bankFee
+    return BtcPaymentAmount(bankFee)
   }
 
   return {
