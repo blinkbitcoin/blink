@@ -2,15 +2,15 @@ type ExponentialDecayArgs = {
   amount: BigNumber
   minRate: number
   maxRate: number
-  threshold: number
-  minAmount: number
-  exponentialFactor: number
+  decayStartAmount: number
+  baseAmount: number
+  decaySpeed: number
 }
 
 type NormalizedFactorArgs = {
   feeRate: number
-  minNetworkFeeRate: number
-  maxNetworkFeeRate: number
+  minFeeRate: number
+  maxFeeRate: number
 }
 
 type DynamicRateArgs = {

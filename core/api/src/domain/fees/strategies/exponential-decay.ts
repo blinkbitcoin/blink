@@ -14,13 +14,13 @@ const calculateExponentialDecay = ({
   amount,
   minRate,
   maxRate,
-  threshold,
-  minAmount,
-  exponentialFactor,
+  decayStartAmount,
+  baseAmount,
+  decaySpeed,
 }: ExponentialDecayArgs): BigNumber => {
-  const span = new BigNumber(threshold).minus(minAmount)
+  const span = new BigNumber(decayStartAmount).minus(baseAmount)
   if (span.lte(0)) return new BigNumber(minRate)
-  const exponent = amount.minus(minAmount).div(span).negated().times(exponentialFactor)
+  const exponent = amount.minus(baseAmount).div(span).negated().times(decaySpeed)
   return new BigNumber(minRate).plus(
     new BigNumber(maxRate).minus(minRate).times(Math.exp(exponent.toNumber())),
   )
@@ -32,23 +32,23 @@ const calculateDecayRate = (
 ): BigNumber => {
   if (amount.isZero()) return new BigNumber(0)
 
-  const { threshold, divisor } = config
+  const { decayStartAmount, terminalDivisor } = config
 
-  if (amount.lt(threshold)) {
+  if (amount.lt(decayStartAmount)) {
     return calculateExponentialDecay({ ...config, amount })
   }
 
-  return new BigNumber(divisor).div(amount)
+  return new BigNumber(terminalDivisor).div(amount)
 }
 
 const calculateNormalizedFactor = ({
   feeRate,
-  minNetworkFeeRate,
-  maxNetworkFeeRate,
+  minFeeRate,
+  maxFeeRate,
 }: NormalizedFactorArgs): BigNumber => {
-  const diff = new BigNumber(maxNetworkFeeRate).minus(minNetworkFeeRate)
+  const diff = new BigNumber(maxFeeRate).minus(minFeeRate)
   if (diff.lte(0)) return new BigNumber(0)
-  return new BigNumber(feeRate).minus(minNetworkFeeRate).div(diff)
+  return new BigNumber(feeRate).minus(minFeeRate).div(diff)
 }
 
 const calculateDynamicFeeRate = ({
@@ -56,24 +56,24 @@ const calculateDynamicFeeRate = ({
   feeRate,
   params,
 }: DynamicRateArgs): BigNumber => {
-  const { targetRate, minNetworkFeeRate, maxNetworkFeeRate } = params
+  const { targetFeeRate, minFeeRate, maxFeeRate } = params
 
   const decay = calculateDecayRate(amount, params)
   const normalizedFactor = calculateNormalizedFactor({
     feeRate,
-    minNetworkFeeRate,
-    maxNetworkFeeRate,
+    minFeeRate,
+    maxFeeRate,
   })
-  return decay.plus(normalizedFactor.times(new BigNumber(targetRate).minus(decay)))
+  return decay.plus(normalizedFactor.times(new BigNumber(targetFeeRate).minus(decay)))
 }
 
 export const calculateBaseMultiplier = ({
   feeRate,
   params,
 }: BaseMultiplierArgs): BigNumber => {
-  const { offset, factor } = params
-  if (Math.abs(feeRate) <= MIN_FEE_RATE) return new BigNumber(offset)
-  return new BigNumber(factor).div(feeRate).plus(offset)
+  const { networkFeeOffset, networkFeeFactor } = params
+  if (Math.abs(feeRate) <= MIN_FEE_RATE) return new BigNumber(networkFeeOffset)
+  return new BigNumber(networkFeeFactor).div(feeRate).plus(networkFeeOffset)
 }
 
 export const ExponentialDecayStrategy = (

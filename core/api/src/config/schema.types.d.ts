@@ -46,17 +46,17 @@ type ImbalanceFeeStrategyParams = {
 }
 
 type ExponentialDecayFeeStrategyParams = {
-  threshold: number
-  minAmount: number
-  exponentialFactor: number
-  minNetworkFeeRate: number
-  maxNetworkFeeRate: number
+  decayStartAmount: number
+  baseAmount: number
+  decaySpeed: number
+  minFeeRate: number
+  maxFeeRate: number
   minRate: number
   maxRate: number
-  divisor: number
-  targetRate: number
-  offset: number
-  factor: number
+  terminalDivisor: number
+  targetFeeRate: number
+  networkFeeOffset: number
+  networkFeeFactor: number
 }
 
 type FeeStrategy =
