@@ -6,6 +6,8 @@ import {
   BigIntFloatConversionError,
 } from "@/domain/shared"
 
+const MIN_FEE_RATE = 1e-8
+
 const calculateExponentialDecay = ({
   amount,
   minRate,
@@ -65,7 +67,7 @@ export const calculateBaseMultiplier = ({
   params,
 }: BaseMultiplierArgs): number => {
   const { offset, factor } = params
-  if (feeRate === 0) return offset
+  if (Math.abs(feeRate) <= MIN_FEE_RATE) return offset
   return factor / feeRate + offset
 }
 
