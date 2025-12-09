@@ -217,7 +217,7 @@ const feeStrategySchema = {
               exclusiveMinimum: { $data: "1/minFeeRate" },
             },
             minRate: { type: "number", minimum: 0 },
-            maxRate: { type: "number", minimum: 0 },
+            maxRate: { type: "number", exclusiveMinimum: { $data: "1/minRate" } },
             terminalDivisor: { type: "integer", minimum: 1 },
             targetFeeRate: { type: "number", minimum: 0 },
             networkFeeOffset: { type: "number", minimum: 0 },
