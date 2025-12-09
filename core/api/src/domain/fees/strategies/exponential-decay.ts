@@ -24,20 +24,14 @@ const calculateDecayRate = (
   amount: number,
   config: ExponentialDecayFeeStrategyParams,
 ): number => {
-  const { threshold, minAmount, exponentialFactor, minRate, maxRate, divisor } = config
+  if (amount === 0) return 0
+
+  const { threshold, divisor } = config
 
   if (amount < threshold) {
-    return calculateExponentialDecay({
-      amount,
-      minRate,
-      maxRate,
-      threshold,
-      minAmount,
-      exponentialFactor,
-    })
+    return calculateExponentialDecay({ ...config, amount })
   }
 
-  if (amount === 0) return 0
   return divisor / amount
 }
 
