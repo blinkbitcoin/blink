@@ -41,7 +41,7 @@ describe("ExponentialDecayStrategy", () => {
       test.each(feeCapCasesData.tier1)(
         "amount=$satsAmount sats, feeRate=$feeRate, minerFee=$minerFee => bankFee $expectedSats sats",
         async ({ satsAmount, feeRate, expectedSats, minerFee }) => {
-          const totalFee = await fastFeeCalculator.calculate({
+          const bankFee = await fastFeeCalculator.calculate({
             paymentAmount: { amount: BigInt(satsAmount), currency: WalletCurrency.Btc },
             networkFee: {
               amount: { amount: BigInt(minerFee), currency: WalletCurrency.Btc },
@@ -59,10 +59,10 @@ describe("ExponentialDecayStrategy", () => {
               minerFee: { amount: BigInt(0), currency: WalletCurrency.Btc },
             },
           })
-          if (totalFee instanceof Error) {
-            throw totalFee
+          if (bankFee instanceof Error) {
+            throw bankFee
           }
-          expect(totalFee.amount).toEqual(expectedFee(expectedSats, minerFee))
+          expect(bankFee.amount).toEqual(expectedFee(expectedSats, minerFee))
         },
       )
     })
@@ -70,7 +70,7 @@ describe("ExponentialDecayStrategy", () => {
       test.each(feeCapCasesData.tier2)(
         "amount=$satsAmount sats, feeRate=$feeRate, minerFee=$minerFee => bankFee $expectedSats sats",
         async ({ satsAmount, feeRate, expectedSats, minerFee }) => {
-          const totalFee = await mediumFeeCalculator.calculate({
+          const bankFee = await mediumFeeCalculator.calculate({
             paymentAmount: { amount: BigInt(satsAmount), currency: WalletCurrency.Btc },
             networkFee: {
               amount: { amount: BigInt(minerFee), currency: WalletCurrency.Btc },
@@ -88,10 +88,10 @@ describe("ExponentialDecayStrategy", () => {
               minerFee: { amount: BigInt(0), currency: WalletCurrency.Btc },
             },
           })
-          if (totalFee instanceof Error) {
-            throw totalFee
+          if (bankFee instanceof Error) {
+            throw bankFee
           }
-          expect(totalFee.amount).toEqual(expectedFee(expectedSats, minerFee))
+          expect(bankFee.amount).toEqual(expectedFee(expectedSats, minerFee))
         },
       )
     })
@@ -100,7 +100,7 @@ describe("ExponentialDecayStrategy", () => {
       test.each(feeCapCasesData.tier3)(
         "amount=$satsAmount sats, feeRate=$feeRate, minerFee=$minerFee => bankFee $expectedSats sats",
         async ({ satsAmount, feeRate, expectedSats, minerFee }) => {
-          const totalFee = await slowFeeCalculator.calculate({
+          const bankFee = await slowFeeCalculator.calculate({
             paymentAmount: { amount: BigInt(satsAmount), currency: WalletCurrency.Btc },
             networkFee: {
               amount: { amount: BigInt(minerFee), currency: WalletCurrency.Btc },
@@ -118,10 +118,10 @@ describe("ExponentialDecayStrategy", () => {
               minerFee: { amount: BigInt(0), currency: WalletCurrency.Btc },
             },
           })
-          if (totalFee instanceof Error) {
-            throw totalFee
+          if (bankFee instanceof Error) {
+            throw bankFee
           }
-          expect(totalFee.amount).toEqual(expectedFee(expectedSats, minerFee))
+          expect(bankFee.amount).toEqual(expectedFee(expectedSats, minerFee))
         },
       )
     })
@@ -129,7 +129,7 @@ describe("ExponentialDecayStrategy", () => {
     it("should calculate fee correctly for large paymentAmount", async () => {
       const largeAmount = 1267650600228229401496703205376n
       const networkFee = 100n
-      const totalFee = await fastFeeCalculator.calculate({
+      const bankFee = await fastFeeCalculator.calculate({
         paymentAmount: { amount: largeAmount, currency: WalletCurrency.Btc },
         networkFee: {
           amount: { amount: networkFee, currency: WalletCurrency.Btc },
@@ -147,15 +147,15 @@ describe("ExponentialDecayStrategy", () => {
           minerFee: { amount: BigInt(0), currency: WalletCurrency.Btc },
         },
       })
-      if (totalFee instanceof Error) {
-        throw totalFee
+      if (bankFee instanceof Error) {
+        throw bankFee
       }
-      expect(totalFee.amount).toEqual(30330n - networkFee)
+      expect(bankFee.amount).toEqual(30330n - networkFee)
     })
 
     it("should calculate fee correctly for large networkFee", async () => {
       const largeAmount = 1267650600228229401496703205376n
-      const totalFee = await fastFeeCalculator.calculate({
+      const bankFee = await fastFeeCalculator.calculate({
         paymentAmount: { amount: 210000n, currency: WalletCurrency.Btc },
         networkFee: {
           amount: { amount: largeAmount, currency: WalletCurrency.Btc },
@@ -173,10 +173,10 @@ describe("ExponentialDecayStrategy", () => {
           minerFee: { amount: BigInt(0), currency: WalletCurrency.Btc },
         },
       })
-      if (totalFee instanceof Error) {
-        throw totalFee
+      if (bankFee instanceof Error) {
+        throw bankFee
       }
-      expect(totalFee.amount).toEqual(20716558285908372n)
+      expect(bankFee.amount).toEqual(20716558285908372n)
     })
   })
 
