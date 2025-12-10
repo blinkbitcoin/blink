@@ -225,6 +225,18 @@ impl From<proto::DeepLinkScreen> for notification_event::DeepLinkScreen {
             proto::DeepLinkScreen::SettingsEmail => {
                 notification_event::DeepLinkScreen::SettingsEmail
             }
+            proto::DeepLinkScreen::WelcomeCard => {
+                notification_event::DeepLinkScreen::WelcomeCard
+            }
+            proto::DeepLinkScreen::LoadingCard => {
+                notification_event::DeepLinkScreen::LoadingCard
+            }
+            proto::DeepLinkScreen::VisaCard => {
+                notification_event::DeepLinkScreen::VisaCard
+            }
+            proto::DeepLinkScreen::CreditCardLimit => {
+                notification_event::DeepLinkScreen::CreditCardLimit
+            }
         }
     }
 }
