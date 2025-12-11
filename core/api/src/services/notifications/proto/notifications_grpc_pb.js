@@ -158,6 +158,160 @@ function deserialize_services_notifications_v1_HandleNotificationEventResponse(b
   return notifications_pb.HandleNotificationEventResponse.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
+function serialize_services_notifications_v1_MsgMessageCreateRequest(arg) {
+  if (!(arg instanceof notifications_pb.MsgMessageCreateRequest)) {
+    throw new Error('Expected argument of type services.notifications.v1.MsgMessageCreateRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_services_notifications_v1_MsgMessageCreateRequest(buffer_arg) {
+  return notifications_pb.MsgMessageCreateRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_services_notifications_v1_MsgMessageCreateResponse(arg) {
+  if (!(arg instanceof notifications_pb.MsgMessageCreateResponse)) {
+    throw new Error('Expected argument of type services.notifications.v1.MsgMessageCreateResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_services_notifications_v1_MsgMessageCreateResponse(buffer_arg) {
+  return notifications_pb.MsgMessageCreateResponse.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_services_notifications_v1_MsgMessageUpdateStatusRequest(arg) {
+  if (!(arg instanceof notifications_pb.MsgMessageUpdateStatusRequest)) {
+    throw new Error('Expected argument of type services.notifications.v1.MsgMessageUpdateStatusRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_services_notifications_v1_MsgMessageUpdateStatusRequest(buffer_arg) {
+  return notifications_pb.MsgMessageUpdateStatusRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_services_notifications_v1_MsgMessageUpdateStatusResponse(arg) {
+  if (!(arg instanceof notifications_pb.MsgMessageUpdateStatusResponse)) {
+    throw new Error('Expected argument of type services.notifications.v1.MsgMessageUpdateStatusResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_services_notifications_v1_MsgMessageUpdateStatusResponse(buffer_arg) {
+  return notifications_pb.MsgMessageUpdateStatusResponse.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_services_notifications_v1_MsgMessagesListRequest(arg) {
+  if (!(arg instanceof notifications_pb.MsgMessagesListRequest)) {
+    throw new Error('Expected argument of type services.notifications.v1.MsgMessagesListRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_services_notifications_v1_MsgMessagesListRequest(buffer_arg) {
+  return notifications_pb.MsgMessagesListRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_services_notifications_v1_MsgMessagesListResponse(arg) {
+  if (!(arg instanceof notifications_pb.MsgMessagesListResponse)) {
+    throw new Error('Expected argument of type services.notifications.v1.MsgMessagesListResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_services_notifications_v1_MsgMessagesListResponse(buffer_arg) {
+  return notifications_pb.MsgMessagesListResponse.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_services_notifications_v1_MsgTemplateCreateRequest(arg) {
+  if (!(arg instanceof notifications_pb.MsgTemplateCreateRequest)) {
+    throw new Error('Expected argument of type services.notifications.v1.MsgTemplateCreateRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_services_notifications_v1_MsgTemplateCreateRequest(buffer_arg) {
+  return notifications_pb.MsgTemplateCreateRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_services_notifications_v1_MsgTemplateCreateResponse(arg) {
+  if (!(arg instanceof notifications_pb.MsgTemplateCreateResponse)) {
+    throw new Error('Expected argument of type services.notifications.v1.MsgTemplateCreateResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_services_notifications_v1_MsgTemplateCreateResponse(buffer_arg) {
+  return notifications_pb.MsgTemplateCreateResponse.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_services_notifications_v1_MsgTemplateDeleteRequest(arg) {
+  if (!(arg instanceof notifications_pb.MsgTemplateDeleteRequest)) {
+    throw new Error('Expected argument of type services.notifications.v1.MsgTemplateDeleteRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_services_notifications_v1_MsgTemplateDeleteRequest(buffer_arg) {
+  return notifications_pb.MsgTemplateDeleteRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_services_notifications_v1_MsgTemplateDeleteResponse(arg) {
+  if (!(arg instanceof notifications_pb.MsgTemplateDeleteResponse)) {
+    throw new Error('Expected argument of type services.notifications.v1.MsgTemplateDeleteResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_services_notifications_v1_MsgTemplateDeleteResponse(buffer_arg) {
+  return notifications_pb.MsgTemplateDeleteResponse.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_services_notifications_v1_MsgTemplateUpdateRequest(arg) {
+  if (!(arg instanceof notifications_pb.MsgTemplateUpdateRequest)) {
+    throw new Error('Expected argument of type services.notifications.v1.MsgTemplateUpdateRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_services_notifications_v1_MsgTemplateUpdateRequest(buffer_arg) {
+  return notifications_pb.MsgTemplateUpdateRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_services_notifications_v1_MsgTemplateUpdateResponse(arg) {
+  if (!(arg instanceof notifications_pb.MsgTemplateUpdateResponse)) {
+    throw new Error('Expected argument of type services.notifications.v1.MsgTemplateUpdateResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_services_notifications_v1_MsgTemplateUpdateResponse(buffer_arg) {
+  return notifications_pb.MsgTemplateUpdateResponse.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_services_notifications_v1_MsgTemplatesListRequest(arg) {
+  if (!(arg instanceof notifications_pb.MsgTemplatesListRequest)) {
+    throw new Error('Expected argument of type services.notifications.v1.MsgTemplatesListRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_services_notifications_v1_MsgTemplatesListRequest(buffer_arg) {
+  return notifications_pb.MsgTemplatesListRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_services_notifications_v1_MsgTemplatesListResponse(arg) {
+  if (!(arg instanceof notifications_pb.MsgTemplatesListResponse)) {
+    throw new Error('Expected argument of type services.notifications.v1.MsgTemplatesListResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_services_notifications_v1_MsgTemplatesListResponse(buffer_arg) {
+  return notifications_pb.MsgTemplatesListResponse.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
 function serialize_services_notifications_v1_RemoveEmailAddressRequest(arg) {
   if (!(arg instanceof notifications_pb.RemoveEmailAddressRequest)) {
     throw new Error('Expected argument of type services.notifications.v1.RemoveEmailAddressRequest');
@@ -369,6 +523,83 @@ var NotificationsServiceService = exports.NotificationsServiceService = {
     responseSerialize: serialize_services_notifications_v1_HandleNotificationEventResponse,
     responseDeserialize: deserialize_services_notifications_v1_HandleNotificationEventResponse,
   },
+  msgTemplateCreate: {
+    path: '/services.notifications.v1.NotificationsService/MsgTemplateCreate',
+    requestStream: false,
+    responseStream: false,
+    requestType: notifications_pb.MsgTemplateCreateRequest,
+    responseType: notifications_pb.MsgTemplateCreateResponse,
+    requestSerialize: serialize_services_notifications_v1_MsgTemplateCreateRequest,
+    requestDeserialize: deserialize_services_notifications_v1_MsgTemplateCreateRequest,
+    responseSerialize: serialize_services_notifications_v1_MsgTemplateCreateResponse,
+    responseDeserialize: deserialize_services_notifications_v1_MsgTemplateCreateResponse,
+  },
+  msgTemplateUpdate: {
+    path: '/services.notifications.v1.NotificationsService/MsgTemplateUpdate',
+    requestStream: false,
+    responseStream: false,
+    requestType: notifications_pb.MsgTemplateUpdateRequest,
+    responseType: notifications_pb.MsgTemplateUpdateResponse,
+    requestSerialize: serialize_services_notifications_v1_MsgTemplateUpdateRequest,
+    requestDeserialize: deserialize_services_notifications_v1_MsgTemplateUpdateRequest,
+    responseSerialize: serialize_services_notifications_v1_MsgTemplateUpdateResponse,
+    responseDeserialize: deserialize_services_notifications_v1_MsgTemplateUpdateResponse,
+  },
+  msgTemplateDelete: {
+    path: '/services.notifications.v1.NotificationsService/MsgTemplateDelete',
+    requestStream: false,
+    responseStream: false,
+    requestType: notifications_pb.MsgTemplateDeleteRequest,
+    responseType: notifications_pb.MsgTemplateDeleteResponse,
+    requestSerialize: serialize_services_notifications_v1_MsgTemplateDeleteRequest,
+    requestDeserialize: deserialize_services_notifications_v1_MsgTemplateDeleteRequest,
+    responseSerialize: serialize_services_notifications_v1_MsgTemplateDeleteResponse,
+    responseDeserialize: deserialize_services_notifications_v1_MsgTemplateDeleteResponse,
+  },
+  msgTemplatesList: {
+    path: '/services.notifications.v1.NotificationsService/MsgTemplatesList',
+    requestStream: false,
+    responseStream: false,
+    requestType: notifications_pb.MsgTemplatesListRequest,
+    responseType: notifications_pb.MsgTemplatesListResponse,
+    requestSerialize: serialize_services_notifications_v1_MsgTemplatesListRequest,
+    requestDeserialize: deserialize_services_notifications_v1_MsgTemplatesListRequest,
+    responseSerialize: serialize_services_notifications_v1_MsgTemplatesListResponse,
+    responseDeserialize: deserialize_services_notifications_v1_MsgTemplatesListResponse,
+  },
+  msgMessageCreate: {
+    path: '/services.notifications.v1.NotificationsService/MsgMessageCreate',
+    requestStream: false,
+    responseStream: false,
+    requestType: notifications_pb.MsgMessageCreateRequest,
+    responseType: notifications_pb.MsgMessageCreateResponse,
+    requestSerialize: serialize_services_notifications_v1_MsgMessageCreateRequest,
+    requestDeserialize: deserialize_services_notifications_v1_MsgMessageCreateRequest,
+    responseSerialize: serialize_services_notifications_v1_MsgMessageCreateResponse,
+    responseDeserialize: deserialize_services_notifications_v1_MsgMessageCreateResponse,
+  },
+  msgMessageUpdateStatus: {
+    path: '/services.notifications.v1.NotificationsService/MsgMessageUpdateStatus',
+    requestStream: false,
+    responseStream: false,
+    requestType: notifications_pb.MsgMessageUpdateStatusRequest,
+    responseType: notifications_pb.MsgMessageUpdateStatusResponse,
+    requestSerialize: serialize_services_notifications_v1_MsgMessageUpdateStatusRequest,
+    requestDeserialize: deserialize_services_notifications_v1_MsgMessageUpdateStatusRequest,
+    responseSerialize: serialize_services_notifications_v1_MsgMessageUpdateStatusResponse,
+    responseDeserialize: deserialize_services_notifications_v1_MsgMessageUpdateStatusResponse,
+  },
+  msgMessagesList: {
+    path: '/services.notifications.v1.NotificationsService/MsgMessagesList',
+    requestStream: false,
+    responseStream: false,
+    requestType: notifications_pb.MsgMessagesListRequest,
+    responseType: notifications_pb.MsgMessagesListResponse,
+    requestSerialize: serialize_services_notifications_v1_MsgMessagesListRequest,
+    requestDeserialize: deserialize_services_notifications_v1_MsgMessagesListRequest,
+    responseSerialize: serialize_services_notifications_v1_MsgMessagesListResponse,
+    responseDeserialize: deserialize_services_notifications_v1_MsgMessagesListResponse,
+  },
 };
 
-exports.NotificationsServiceClient = grpc.makeGenericClientConstructor(NotificationsServiceService);
+exports.NotificationsServiceClient = grpc.makeGenericClientConstructor(NotificationsServiceService, 'NotificationsService');

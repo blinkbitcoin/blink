@@ -7,6 +7,8 @@ mod app;
 mod data_import;
 mod job;
 mod messages;
+mod msg_templates;
+mod msg_messages;
 
 pub mod cli;
 pub mod email_executor;

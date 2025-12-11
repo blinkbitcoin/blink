@@ -14,6 +14,13 @@ service NotificationsService {
   rpc UpdateEmailAddress (UpdateEmailAddressRequest) returns (UpdateEmailAddressResponse) {}
   rpc RemoveEmailAddress (RemoveEmailAddressRequest) returns (RemoveEmailAddressResponse) {}
   rpc HandleNotificationEvent (HandleNotificationEventRequest) returns (HandleNotificationEventResponse) {}
+  rpc MsgTemplateCreate (MsgTemplateCreateRequest) returns (MsgTemplateCreateResponse) {}
+  rpc MsgTemplateUpdate (MsgTemplateUpdateRequest) returns (MsgTemplateUpdateResponse) {}
+  rpc MsgTemplateDelete (MsgTemplateDeleteRequest) returns (MsgTemplateDeleteResponse) {}
+  rpc MsgTemplatesList (MsgTemplatesListRequest) returns (MsgTemplatesListResponse) {}
+  rpc MsgMessageCreate (MsgMessageCreateRequest) returns (MsgMessageCreateResponse) {}
+  rpc MsgMessageUpdateStatus (MsgMessageUpdateStatusRequest) returns (MsgMessageUpdateStatusResponse) {}
+  rpc MsgMessagesList (MsgMessagesListRequest) returns (MsgMessagesListResponse) {}
 }
 
 enum NotificationChannel {
@@ -344,4 +351,107 @@ enum Icon {
   PaymentError = 48;
   Bell = 49;
   Refresh = 50;
+}
+
+enum MsgMessageStatus {
+  PENDING = 0;
+  ACCEPTED = 1;
+  REVOKED = 2;
+}
+
+message MsgTemplate {
+  string id = 1;
+  string name = 2;
+  string language_code = 3;
+  string icon_name = 4;
+  string title = 5;
+  string body = 6;
+  bool should_send_push = 7;
+  bool should_add_to_history = 8;
+  bool should_add_to_bulletin = 9;
+}
+
+message MsgMessage {
+  string id = 1;
+  string username = 2;
+  MsgMessageStatus status = 3;
+  string sent_by = 4;
+  int64 updated_at = 5;
+}
+
+message MsgTemplateCreateRequest {
+  string name = 1;
+  string language_code = 2;
+  string icon_name = 3;
+  string title = 4;
+  string body = 5;
+  bool should_send_push = 6;
+  bool should_add_to_history = 7;
+  bool should_add_to_bulletin = 8;
+}
+
+message MsgTemplateCreateResponse {
+  MsgTemplate template = 1;
+}
+
+message MsgTemplateUpdateRequest {
+  string id = 1;
+  string name = 2;
+  string language_code = 3;
+  string icon_name = 4;
+  string title = 5;
+  string body = 6;
+  bool should_send_push = 7;
+  bool should_add_to_history = 8;
+  bool should_add_to_bulletin = 9;
+}
+
+message MsgTemplateUpdateResponse {
+  MsgTemplate template = 1;
+}
+
+message MsgTemplateDeleteRequest {
+  string id = 1;
+}
+
+message MsgTemplateDeleteResponse {
+  string id = 1;
+}
+
+message MsgTemplatesListRequest {
+  string language_code = 1;
+  int64 limit = 2;
+  int64 offset = 3;
+}
+
+message MsgTemplatesListResponse {
+  repeated MsgTemplate templates = 1;
+}
+
+message MsgMessageCreateRequest {
+  string username = 1;
+  string status = 2;
+  string sent_by = 3;
+}
+
+message MsgMessageCreateResponse {
+  MsgMessage message = 1;
+}
+
+message MsgMessageUpdateStatusRequest {
+  string id = 1;
+  string status = 2;
+}
+
+message MsgMessageUpdateStatusResponse {
+  MsgMessage message = 1;
+}
+
+message MsgMessagesListRequest {
+  int64 limit = 1;
+  int64 offset = 2;
+}
+
+message MsgMessagesListResponse {
+  repeated MsgMessage messages = 1;
 }

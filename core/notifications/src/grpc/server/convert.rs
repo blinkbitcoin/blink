@@ -346,3 +346,38 @@ impl From<proto::Icon> for notification_event::Icon {
         }
     }
 }
+
+impl From<crate::msg_templates::MsgTemplate> for proto::MsgTemplate {
+    fn from(template: crate::msg_templates::MsgTemplate) -> Self {
+        proto::MsgTemplate {
+            id: template.id.to_string(),
+            name: template.name,
+            language_code: template.language_code,
+            icon_name: template.icon_name,
+            title: template.title,
+            body: template.body,
+            should_send_push: template.should_send_push,
+            should_add_to_history: template.should_add_to_history,
+            should_add_to_bulletin: template.should_add_to_bulletin,
+        }
+    }
+}
+
+impl From<crate::msg_messages::MsgMessage> for proto::MsgMessage {
+    fn from(message: crate::msg_messages::MsgMessage) -> Self {
+        let status = match message.status.as_str() {
+            "pending" => proto::MsgMessageStatus::Pending,
+            "accepted" => proto::MsgMessageStatus::Accepted,
+            "revoked" => proto::MsgMessageStatus::Revoked,
+            _ => proto::MsgMessageStatus::Pending,
+        };
+
+        proto::MsgMessage {
+            id: message.id.to_string(),
+            username: message.username,
+            status: status.into(),
+            sent_by: message.sent_by,
+            updated_at: message.updated_at.timestamp(),
+        }
+    }
+}

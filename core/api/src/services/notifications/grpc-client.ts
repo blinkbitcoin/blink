@@ -27,6 +27,20 @@ import {
   RemoveEmailAddressResponse,
   HandleNotificationEventRequest,
   HandleNotificationEventResponse,
+  MsgTemplateCreateRequest,
+  MsgTemplateCreateResponse,
+  MsgTemplateUpdateRequest,
+  MsgTemplateUpdateResponse,
+  MsgTemplateDeleteRequest,
+  MsgTemplateDeleteResponse,
+  MsgTemplatesListRequest,
+  MsgTemplatesListResponse,
+  MsgMessageCreateRequest,
+  MsgMessageCreateResponse,
+  MsgMessageUpdateStatusRequest,
+  MsgMessageUpdateStatusResponse,
+  MsgMessagesListRequest,
+  MsgMessagesListResponse,
 } from "./proto/notifications_pb"
 
 import { NOTIFICATIONS_HOST, NOTIFICATIONS_PORT } from "@/config"
@@ -106,3 +120,45 @@ export const handleNotificationEvent = promisify<
   Metadata,
   HandleNotificationEventResponse
 >(notificationsClient.handleNotificationEvent.bind(notificationsClient))
+
+export const msgTemplateCreate = promisify<
+  MsgTemplateCreateRequest,
+  Metadata,
+  MsgTemplateCreateResponse
+>(notificationsClient.msgTemplateCreate.bind(notificationsClient))
+
+export const msgTemplateUpdate = promisify<
+  MsgTemplateUpdateRequest,
+  Metadata,
+  MsgTemplateUpdateResponse
+>(notificationsClient.msgTemplateUpdate.bind(notificationsClient))
+
+export const msgTemplateDelete = promisify<
+  MsgTemplateDeleteRequest,
+  Metadata,
+  MsgTemplateDeleteResponse
+>(notificationsClient.msgTemplateDelete.bind(notificationsClient))
+
+export const msgTemplatesList = promisify<
+  MsgTemplatesListRequest,
+  Metadata,
+  MsgTemplatesListResponse
+>(notificationsClient.msgTemplatesList.bind(notificationsClient))
+
+export const msgMessageCreate = promisify<
+  MsgMessageCreateRequest,
+  Metadata,
+  MsgMessageCreateResponse
+>(notificationsClient.msgMessageCreate.bind(notificationsClient))
+
+export const msgMessageUpdateStatus = promisify<
+  MsgMessageUpdateStatusRequest,
+  Metadata,
+  MsgMessageUpdateStatusResponse
+>(notificationsClient.msgMessageUpdateStatus.bind(notificationsClient))
+
+export const msgMessagesList = promisify<
+  MsgMessagesListRequest,
+  Metadata,
+  MsgMessagesListResponse
+>(notificationsClient.msgMessagesList.bind(notificationsClient))

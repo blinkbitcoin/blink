@@ -13,6 +13,8 @@ import AccountDetailsByUserId from "./root/query/account-details-by-user-id"
 import MerchantsPendingApprovalQuery from "./root/query/merchants-pending-approval-listing"
 import InactiveMerchantsQuery from "./root/query/inactive-merchants-listing"
 import FilteredUserCountQuery from "./root/query/filtered-user-count"
+import NotificationTemplatesQuery from "./root/query/notification-templates"
+import NotificationMessagesQuery from "./root/query/notification-messages"
 
 import { GT } from "@/graphql/index"
 
@@ -34,6 +36,8 @@ export const queryFields = {
     merchantsPendingApproval: MerchantsPendingApprovalQuery,
     inactiveMerchants: InactiveMerchantsQuery,
     filteredUserCount: FilteredUserCountQuery,
+    notificationTemplates: NotificationTemplatesQuery,
+    notificationMessages: NotificationMessagesQuery,
   },
 }
 

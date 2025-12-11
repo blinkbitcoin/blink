@@ -19,6 +19,13 @@ interface INotificationsServiceService extends grpc.ServiceDefinition<grpc.Untyp
     updateEmailAddress: INotificationsServiceService_IUpdateEmailAddress;
     removeEmailAddress: INotificationsServiceService_IRemoveEmailAddress;
     handleNotificationEvent: INotificationsServiceService_IHandleNotificationEvent;
+    msgTemplateCreate: INotificationsServiceService_IMsgTemplateCreate;
+    msgTemplateUpdate: INotificationsServiceService_IMsgTemplateUpdate;
+    msgTemplateDelete: INotificationsServiceService_IMsgTemplateDelete;
+    msgTemplatesList: INotificationsServiceService_IMsgTemplatesList;
+    msgMessageCreate: INotificationsServiceService_IMsgMessageCreate;
+    msgMessageUpdateStatus: INotificationsServiceService_IMsgMessageUpdateStatus;
+    msgMessagesList: INotificationsServiceService_IMsgMessagesList;
 }
 
 interface INotificationsServiceService_IEnableNotificationChannel extends grpc.MethodDefinition<notifications_pb.EnableNotificationChannelRequest, notifications_pb.EnableNotificationChannelResponse> {
@@ -120,6 +127,69 @@ interface INotificationsServiceService_IHandleNotificationEvent extends grpc.Met
     responseSerialize: grpc.serialize<notifications_pb.HandleNotificationEventResponse>;
     responseDeserialize: grpc.deserialize<notifications_pb.HandleNotificationEventResponse>;
 }
+interface INotificationsServiceService_IMsgTemplateCreate extends grpc.MethodDefinition<notifications_pb.MsgTemplateCreateRequest, notifications_pb.MsgTemplateCreateResponse> {
+    path: "/services.notifications.v1.NotificationsService/MsgTemplateCreate";
+    requestStream: false;
+    responseStream: false;
+    requestSerialize: grpc.serialize<notifications_pb.MsgTemplateCreateRequest>;
+    requestDeserialize: grpc.deserialize<notifications_pb.MsgTemplateCreateRequest>;
+    responseSerialize: grpc.serialize<notifications_pb.MsgTemplateCreateResponse>;
+    responseDeserialize: grpc.deserialize<notifications_pb.MsgTemplateCreateResponse>;
+}
+interface INotificationsServiceService_IMsgTemplateUpdate extends grpc.MethodDefinition<notifications_pb.MsgTemplateUpdateRequest, notifications_pb.MsgTemplateUpdateResponse> {
+    path: "/services.notifications.v1.NotificationsService/MsgTemplateUpdate";
+    requestStream: false;
+    responseStream: false;
+    requestSerialize: grpc.serialize<notifications_pb.MsgTemplateUpdateRequest>;
+    requestDeserialize: grpc.deserialize<notifications_pb.MsgTemplateUpdateRequest>;
+    responseSerialize: grpc.serialize<notifications_pb.MsgTemplateUpdateResponse>;
+    responseDeserialize: grpc.deserialize<notifications_pb.MsgTemplateUpdateResponse>;
+}
+interface INotificationsServiceService_IMsgTemplateDelete extends grpc.MethodDefinition<notifications_pb.MsgTemplateDeleteRequest, notifications_pb.MsgTemplateDeleteResponse> {
+    path: "/services.notifications.v1.NotificationsService/MsgTemplateDelete";
+    requestStream: false;
+    responseStream: false;
+    requestSerialize: grpc.serialize<notifications_pb.MsgTemplateDeleteRequest>;
+    requestDeserialize: grpc.deserialize<notifications_pb.MsgTemplateDeleteRequest>;
+    responseSerialize: grpc.serialize<notifications_pb.MsgTemplateDeleteResponse>;
+    responseDeserialize: grpc.deserialize<notifications_pb.MsgTemplateDeleteResponse>;
+}
+interface INotificationsServiceService_IMsgTemplatesList extends grpc.MethodDefinition<notifications_pb.MsgTemplatesListRequest, notifications_pb.MsgTemplatesListResponse> {
+    path: "/services.notifications.v1.NotificationsService/MsgTemplatesList";
+    requestStream: false;
+    responseStream: false;
+    requestSerialize: grpc.serialize<notifications_pb.MsgTemplatesListRequest>;
+    requestDeserialize: grpc.deserialize<notifications_pb.MsgTemplatesListRequest>;
+    responseSerialize: grpc.serialize<notifications_pb.MsgTemplatesListResponse>;
+    responseDeserialize: grpc.deserialize<notifications_pb.MsgTemplatesListResponse>;
+}
+interface INotificationsServiceService_IMsgMessageCreate extends grpc.MethodDefinition<notifications_pb.MsgMessageCreateRequest, notifications_pb.MsgMessageCreateResponse> {
+    path: "/services.notifications.v1.NotificationsService/MsgMessageCreate";
+    requestStream: false;
+    responseStream: false;
+    requestSerialize: grpc.serialize<notifications_pb.MsgMessageCreateRequest>;
+    requestDeserialize: grpc.deserialize<notifications_pb.MsgMessageCreateRequest>;
+    responseSerialize: grpc.serialize<notifications_pb.MsgMessageCreateResponse>;
+    responseDeserialize: grpc.deserialize<notifications_pb.MsgMessageCreateResponse>;
+}
+interface INotificationsServiceService_IMsgMessageUpdateStatus extends grpc.MethodDefinition<notifications_pb.MsgMessageUpdateStatusRequest, notifications_pb.MsgMessageUpdateStatusResponse> {
+    path: "/services.notifications.v1.NotificationsService/MsgMessageUpdateStatus";
+    requestStream: false;
+    responseStream: false;
+    requestSerialize: grpc.serialize<notifications_pb.MsgMessageUpdateStatusRequest>;
+    requestDeserialize: grpc.deserialize<notifications_pb.MsgMessageUpdateStatusRequest>;
+    responseSerialize: grpc.serialize<notifications_pb.MsgMessageUpdateStatusResponse>;
+    responseDeserialize: grpc.deserialize<notifications_pb.MsgMessageUpdateStatusResponse>;
+}
+interface INotificationsServiceService_IMsgMessagesList extends grpc.MethodDefinition<notifications_pb.MsgMessagesListRequest, notifications_pb.MsgMessagesListResponse> {
+    path: "/services.notifications.v1.NotificationsService/MsgMessagesList";
+    requestStream: false;
+    responseStream: false;
+    requestSerialize: grpc.serialize<notifications_pb.MsgMessagesListRequest>;
+    requestDeserialize: grpc.deserialize<notifications_pb.MsgMessagesListRequest>;
+    responseSerialize: grpc.serialize<notifications_pb.MsgMessagesListResponse>;
+    responseDeserialize: grpc.deserialize<notifications_pb.MsgMessagesListResponse>;
+}
 
 export const NotificationsServiceService: INotificationsServiceService;
 
@@ -135,6 +205,13 @@ export interface INotificationsServiceServer extends grpc.UntypedServiceImplemen
     updateEmailAddress: grpc.handleUnaryCall<notifications_pb.UpdateEmailAddressRequest, notifications_pb.UpdateEmailAddressResponse>;
     removeEmailAddress: grpc.handleUnaryCall<notifications_pb.RemoveEmailAddressRequest, notifications_pb.RemoveEmailAddressResponse>;
     handleNotificationEvent: grpc.handleUnaryCall<notifications_pb.HandleNotificationEventRequest, notifications_pb.HandleNotificationEventResponse>;
+    msgTemplateCreate: grpc.handleUnaryCall<notifications_pb.MsgTemplateCreateRequest, notifications_pb.MsgTemplateCreateResponse>;
+    msgTemplateUpdate: grpc.handleUnaryCall<notifications_pb.MsgTemplateUpdateRequest, notifications_pb.MsgTemplateUpdateResponse>;
+    msgTemplateDelete: grpc.handleUnaryCall<notifications_pb.MsgTemplateDeleteRequest, notifications_pb.MsgTemplateDeleteResponse>;
+    msgTemplatesList: grpc.handleUnaryCall<notifications_pb.MsgTemplatesListRequest, notifications_pb.MsgTemplatesListResponse>;
+    msgMessageCreate: grpc.handleUnaryCall<notifications_pb.MsgMessageCreateRequest, notifications_pb.MsgMessageCreateResponse>;
+    msgMessageUpdateStatus: grpc.handleUnaryCall<notifications_pb.MsgMessageUpdateStatusRequest, notifications_pb.MsgMessageUpdateStatusResponse>;
+    msgMessagesList: grpc.handleUnaryCall<notifications_pb.MsgMessagesListRequest, notifications_pb.MsgMessagesListResponse>;
 }
 
 export interface INotificationsServiceClient {
@@ -171,6 +248,27 @@ export interface INotificationsServiceClient {
     handleNotificationEvent(request: notifications_pb.HandleNotificationEventRequest, callback: (error: grpc.ServiceError | null, response: notifications_pb.HandleNotificationEventResponse) => void): grpc.ClientUnaryCall;
     handleNotificationEvent(request: notifications_pb.HandleNotificationEventRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: notifications_pb.HandleNotificationEventResponse) => void): grpc.ClientUnaryCall;
     handleNotificationEvent(request: notifications_pb.HandleNotificationEventRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: notifications_pb.HandleNotificationEventResponse) => void): grpc.ClientUnaryCall;
+    msgTemplateCreate(request: notifications_pb.MsgTemplateCreateRequest, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgTemplateCreateResponse) => void): grpc.ClientUnaryCall;
+    msgTemplateCreate(request: notifications_pb.MsgTemplateCreateRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgTemplateCreateResponse) => void): grpc.ClientUnaryCall;
+    msgTemplateCreate(request: notifications_pb.MsgTemplateCreateRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgTemplateCreateResponse) => void): grpc.ClientUnaryCall;
+    msgTemplateUpdate(request: notifications_pb.MsgTemplateUpdateRequest, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgTemplateUpdateResponse) => void): grpc.ClientUnaryCall;
+    msgTemplateUpdate(request: notifications_pb.MsgTemplateUpdateRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgTemplateUpdateResponse) => void): grpc.ClientUnaryCall;
+    msgTemplateUpdate(request: notifications_pb.MsgTemplateUpdateRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgTemplateUpdateResponse) => void): grpc.ClientUnaryCall;
+    msgTemplateDelete(request: notifications_pb.MsgTemplateDeleteRequest, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgTemplateDeleteResponse) => void): grpc.ClientUnaryCall;
+    msgTemplateDelete(request: notifications_pb.MsgTemplateDeleteRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgTemplateDeleteResponse) => void): grpc.ClientUnaryCall;
+    msgTemplateDelete(request: notifications_pb.MsgTemplateDeleteRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgTemplateDeleteResponse) => void): grpc.ClientUnaryCall;
+    msgTemplatesList(request: notifications_pb.MsgTemplatesListRequest, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgTemplatesListResponse) => void): grpc.ClientUnaryCall;
+    msgTemplatesList(request: notifications_pb.MsgTemplatesListRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgTemplatesListResponse) => void): grpc.ClientUnaryCall;
+    msgTemplatesList(request: notifications_pb.MsgTemplatesListRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgTemplatesListResponse) => void): grpc.ClientUnaryCall;
+    msgMessageCreate(request: notifications_pb.MsgMessageCreateRequest, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgMessageCreateResponse) => void): grpc.ClientUnaryCall;
+    msgMessageCreate(request: notifications_pb.MsgMessageCreateRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgMessageCreateResponse) => void): grpc.ClientUnaryCall;
+    msgMessageCreate(request: notifications_pb.MsgMessageCreateRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgMessageCreateResponse) => void): grpc.ClientUnaryCall;
+    msgMessageUpdateStatus(request: notifications_pb.MsgMessageUpdateStatusRequest, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgMessageUpdateStatusResponse) => void): grpc.ClientUnaryCall;
+    msgMessageUpdateStatus(request: notifications_pb.MsgMessageUpdateStatusRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgMessageUpdateStatusResponse) => void): grpc.ClientUnaryCall;
+    msgMessageUpdateStatus(request: notifications_pb.MsgMessageUpdateStatusRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgMessageUpdateStatusResponse) => void): grpc.ClientUnaryCall;
+    msgMessagesList(request: notifications_pb.MsgMessagesListRequest, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgMessagesListResponse) => void): grpc.ClientUnaryCall;
+    msgMessagesList(request: notifications_pb.MsgMessagesListRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgMessagesListResponse) => void): grpc.ClientUnaryCall;
+    msgMessagesList(request: notifications_pb.MsgMessagesListRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgMessagesListResponse) => void): grpc.ClientUnaryCall;
 }
 
 export class NotificationsServiceClient extends grpc.Client implements INotificationsServiceClient {
@@ -208,4 +306,25 @@ export class NotificationsServiceClient extends grpc.Client implements INotifica
     public handleNotificationEvent(request: notifications_pb.HandleNotificationEventRequest, callback: (error: grpc.ServiceError | null, response: notifications_pb.HandleNotificationEventResponse) => void): grpc.ClientUnaryCall;
     public handleNotificationEvent(request: notifications_pb.HandleNotificationEventRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: notifications_pb.HandleNotificationEventResponse) => void): grpc.ClientUnaryCall;
     public handleNotificationEvent(request: notifications_pb.HandleNotificationEventRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: notifications_pb.HandleNotificationEventResponse) => void): grpc.ClientUnaryCall;
+    public msgTemplateCreate(request: notifications_pb.MsgTemplateCreateRequest, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgTemplateCreateResponse) => void): grpc.ClientUnaryCall;
+    public msgTemplateCreate(request: notifications_pb.MsgTemplateCreateRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgTemplateCreateResponse) => void): grpc.ClientUnaryCall;
+    public msgTemplateCreate(request: notifications_pb.MsgTemplateCreateRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgTemplateCreateResponse) => void): grpc.ClientUnaryCall;
+    public msgTemplateUpdate(request: notifications_pb.MsgTemplateUpdateRequest, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgTemplateUpdateResponse) => void): grpc.ClientUnaryCall;
+    public msgTemplateUpdate(request: notifications_pb.MsgTemplateUpdateRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgTemplateUpdateResponse) => void): grpc.ClientUnaryCall;
+    public msgTemplateUpdate(request: notifications_pb.MsgTemplateUpdateRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgTemplateUpdateResponse) => void): grpc.ClientUnaryCall;
+    public msgTemplateDelete(request: notifications_pb.MsgTemplateDeleteRequest, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgTemplateDeleteResponse) => void): grpc.ClientUnaryCall;
+    public msgTemplateDelete(request: notifications_pb.MsgTemplateDeleteRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgTemplateDeleteResponse) => void): grpc.ClientUnaryCall;
+    public msgTemplateDelete(request: notifications_pb.MsgTemplateDeleteRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgTemplateDeleteResponse) => void): grpc.ClientUnaryCall;
+    public msgTemplatesList(request: notifications_pb.MsgTemplatesListRequest, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgTemplatesListResponse) => void): grpc.ClientUnaryCall;
+    public msgTemplatesList(request: notifications_pb.MsgTemplatesListRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgTemplatesListResponse) => void): grpc.ClientUnaryCall;
+    public msgTemplatesList(request: notifications_pb.MsgTemplatesListRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgTemplatesListResponse) => void): grpc.ClientUnaryCall;
+    public msgMessageCreate(request: notifications_pb.MsgMessageCreateRequest, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgMessageCreateResponse) => void): grpc.ClientUnaryCall;
+    public msgMessageCreate(request: notifications_pb.MsgMessageCreateRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgMessageCreateResponse) => void): grpc.ClientUnaryCall;
+    public msgMessageCreate(request: notifications_pb.MsgMessageCreateRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgMessageCreateResponse) => void): grpc.ClientUnaryCall;
+    public msgMessageUpdateStatus(request: notifications_pb.MsgMessageUpdateStatusRequest, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgMessageUpdateStatusResponse) => void): grpc.ClientUnaryCall;
+    public msgMessageUpdateStatus(request: notifications_pb.MsgMessageUpdateStatusRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgMessageUpdateStatusResponse) => void): grpc.ClientUnaryCall;
+    public msgMessageUpdateStatus(request: notifications_pb.MsgMessageUpdateStatusRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgMessageUpdateStatusResponse) => void): grpc.ClientUnaryCall;
+    public msgMessagesList(request: notifications_pb.MsgMessagesListRequest, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgMessagesListResponse) => void): grpc.ClientUnaryCall;
+    public msgMessagesList(request: notifications_pb.MsgMessagesListRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgMessagesListResponse) => void): grpc.ClientUnaryCall;
+    public msgMessagesList(request: notifications_pb.MsgMessagesListRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: notifications_pb.MsgMessagesListResponse) => void): grpc.ClientUnaryCall;
 }

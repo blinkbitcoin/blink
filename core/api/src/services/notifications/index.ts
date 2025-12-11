@@ -28,6 +28,13 @@ import {
   DeepLink as ProtoDeepLink,
   HandleNotificationEventResponse,
   Action,
+  MsgTemplateCreateRequest,
+  MsgTemplateUpdateRequest,
+  MsgTemplateDeleteRequest,
+  MsgTemplatesListRequest,
+  MsgMessageCreateRequest,
+  MsgMessageUpdateStatusRequest,
+  MsgMessagesListRequest,
 } from "./proto/notifications_pb"
 
 import * as notificationsGrpc from "./grpc-client"
@@ -705,6 +712,248 @@ export const NotificationsService = (): INotificationsService => {
     }
   }
 
+  const msgTemplateCreate = async ({
+    name,
+    languageCode,
+    iconName,
+    title,
+    body,
+    shouldSendPush,
+    shouldAddToHistory,
+    shouldAddToBulletin,
+  }: {
+    name: string
+    languageCode: string
+    iconName: string
+    title: string
+    body: string
+    shouldSendPush?: boolean
+    shouldAddToHistory?: boolean
+    shouldAddToBulletin?: boolean
+  }): Promise<true | NotificationsServiceError> => {
+    try {
+      const request = new MsgTemplateCreateRequest()
+      request.setName(name)
+      request.setLanguageCode(languageCode)
+      request.setIconName(iconName)
+      request.setTitle(title)
+      request.setBody(body)
+      if (typeof shouldSendPush === "boolean") {
+        request.setShouldSendPush(shouldSendPush)
+      }
+      if (typeof shouldAddToHistory === "boolean") {
+        request.setShouldAddToHistory(shouldAddToHistory)
+      }
+      if (typeof shouldAddToBulletin === "boolean") {
+        request.setShouldAddToBulletin(shouldAddToBulletin)
+      }
+
+      await notificationsGrpc.msgTemplateCreate(
+        request,
+        notificationsGrpc.notificationsMetadata,
+      )
+
+      return true
+    } catch (err) {
+      return handleCommonNotificationErrors(err)
+    }
+  }
+
+  const msgTemplateUpdate = async ({
+    id,
+    name,
+    languageCode,
+    iconName,
+    title,
+    body,
+    shouldSendPush,
+    shouldAddToHistory,
+    shouldAddToBulletin,
+  }: {
+    id: string
+    name: string
+    languageCode: string
+    iconName: string
+    title: string
+    body: string
+    shouldSendPush?: boolean
+    shouldAddToHistory?: boolean
+    shouldAddToBulletin?: boolean
+  }): Promise<true | NotificationsServiceError> => {
+    try {
+      const request = new MsgTemplateUpdateRequest()
+      request.setId(id)
+      request.setName(name)
+      request.setLanguageCode(languageCode)
+      request.setIconName(iconName)
+      request.setTitle(title)
+      request.setBody(body)
+      if (typeof shouldSendPush === "boolean") {
+        request.setShouldSendPush(shouldSendPush)
+      }
+      if (typeof shouldAddToHistory === "boolean") {
+        request.setShouldAddToHistory(shouldAddToHistory)
+      }
+      if (typeof shouldAddToBulletin === "boolean") {
+        request.setShouldAddToBulletin(shouldAddToBulletin)
+      }
+
+      await notificationsGrpc.msgTemplateUpdate(
+        request,
+        notificationsGrpc.notificationsMetadata,
+      )
+
+      return true
+    } catch (err) {
+      return handleCommonNotificationErrors(err)
+    }
+  }
+
+  const msgTemplateDelete = async ({
+    id,
+  }: {
+    id: string
+  }): Promise<true | NotificationsServiceError> => {
+    try {
+      const request = new MsgTemplateDeleteRequest()
+      request.setId(id)
+
+      await notificationsGrpc.msgTemplateDelete(
+        request,
+        notificationsGrpc.notificationsMetadata,
+      )
+
+      return true
+    } catch (err) {
+      return handleCommonNotificationErrors(err)
+    }
+  }
+
+  const msgTemplatesList = async ({
+    languageCode,
+    limit,
+    offset,
+  }: {
+    languageCode?: string
+    limit?: number
+    offset?: number
+  }): Promise<MsgTemplate[] | NotificationsServiceError> => {
+    try {
+      const request = new MsgTemplatesListRequest()
+      if (languageCode) request.setLanguageCode(languageCode)
+      if (typeof limit === "number") request.setLimit(limit)
+      if (typeof offset === "number") request.setOffset(offset)
+
+      const response = await notificationsGrpc.msgTemplatesList(
+        request,
+        notificationsGrpc.notificationsMetadata,
+      )
+
+      const templates = response.getTemplatesList().map<MsgTemplate>((template) => ({
+        id: template.getId(),
+        name: template.getName(),
+        languageCode: template.getLanguageCode(),
+        iconName: template.getIconName(),
+        title: template.getTitle(),
+        body: template.getBody(),
+        shouldSendPush: template.getShouldSendPush(),
+        shouldAddToHistory: template.getShouldAddToHistory(),
+        shouldAddToBulletin: template.getShouldAddToBulletin(),
+      }))
+
+      return templates
+    } catch (err) {
+      return handleCommonNotificationErrors(err)
+    }
+  }
+
+  const msgMessageCreate = async ({
+    username,
+    status,
+    sentBy,
+  }: {
+    username: string
+    status?: MsgMessageStatus | string
+    sentBy: string
+  }): Promise<true | NotificationsServiceError> => {
+    try {
+      const request = new MsgMessageCreateRequest()
+      request.setUsername(username)
+      if (typeof status === "string") request.setStatus(status)
+      request.setSentBy(sentBy)
+
+      await notificationsGrpc.msgMessageCreate(
+        request,
+        notificationsGrpc.notificationsMetadata,
+      )
+
+      return true
+    } catch (err) {
+      return handleCommonNotificationErrors(err)
+    }
+  }
+
+  const msgMessageUpdateStatus = async ({
+    id,
+    status,
+  }: {
+    id: string
+    status: MsgMessageStatus | string
+  }): Promise<true | NotificationsServiceError> => {
+    try {
+      const request = new MsgMessageUpdateStatusRequest()
+      request.setId(id)
+      request.setStatus(status)
+
+      await notificationsGrpc.msgMessageUpdateStatus(
+        request,
+        notificationsGrpc.notificationsMetadata,
+      )
+
+      return true
+    } catch (err) {
+      return handleCommonNotificationErrors(err)
+    }
+  }
+
+  const msgMessagesList = async ({
+    limit,
+    offset,
+  }: {
+    limit?: number
+    offset?: number
+  }): Promise<MsgMessage[] | NotificationsServiceError> => {
+    try {
+      const request = new MsgMessagesListRequest()
+      if (typeof limit === "number") request.setLimit(limit)
+      if (typeof offset === "number") request.setOffset(offset)
+
+      const response = await notificationsGrpc.msgMessagesList(
+        request,
+        notificationsGrpc.notificationsMetadata,
+      )
+
+      const messages = response.getMessagesList().map<MsgMessage>((message) => {
+        const statusProto = message.getStatus()
+
+        const status: MsgMessageStatus =
+          statusProto === 1 ? "accepted" : statusProto === 2 ? "revoked" : "pending"
+
+        return {
+          id: message.getId(),
+          username: message.getUsername(),
+          status,
+          sentBy: message.getSentBy(),
+          updatedAt: message.getUpdatedAt(),
+        }
+      })
+
+      return messages
+    } catch (err) {
+      return handleCommonNotificationErrors(err)
+    }
+  }
+
   // trace everything except price update because it runs every 30 seconds
   return {
     priceUpdate,
@@ -727,6 +976,13 @@ export const NotificationsService = (): INotificationsService => {
         updateEmailAddress,
         removeEmailAddress,
         removePushDeviceToken,
+        msgTemplateCreate,
+        msgTemplateUpdate,
+        msgTemplateDelete,
+        msgTemplatesList,
+        msgMessageCreate,
+        msgMessageUpdateStatus,
+        msgMessagesList,
       },
     }),
   }
