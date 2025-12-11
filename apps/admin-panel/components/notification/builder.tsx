@@ -336,7 +336,7 @@ const NotificationBuilder = ({
   )
 }
 
-type LocalizedNotificationContent = {
+export type LocalizedNotificationContent = {
   title: string
   body: string
   language: string

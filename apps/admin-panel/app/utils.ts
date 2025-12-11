@@ -21,6 +21,16 @@ export const formatDate = (timestamp: number) =>
 export const formatNumber = (val: string) =>
   countDecimals(val) > 8 ? Number(val).toFixed(8) : val
 
+export const formatDateDisplay = (dateString: string): string => {
+  return new Date(`${dateString}T00:00:00Z`)
+    .toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    })
+    .replace(/ /g, " ")
+}
+
 const countDecimals = (val: string) => {
   const value = Number(val)
   if (Math.floor(value.valueOf()) === value.valueOf()) return 0

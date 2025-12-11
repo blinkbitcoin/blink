@@ -52,6 +52,12 @@ body {
   font-size: 14px;
 }
 
+/* When this class is present on the body, hide the main sidebar so
+   full-screen views can take the entire window. */
+.hide-sidebar aside {
+  display: none !important;
+}
+
 body {
   color: rbg(--foreground-rgb);
   background: linear-gradient(to bottom, transparent, rgb(var(--background-end-rgb)))

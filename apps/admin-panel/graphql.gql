@@ -409,3 +409,43 @@ mutation marketingNotificationTrigger($input: MarketingNotificationTriggerInput!
     success
   }
 }
+
+query notificationMessages {
+  notificationMessages {
+    id
+    sentBy
+    status
+    updatedAt
+    username
+  }
+}
+
+query notificationTemplates {
+  notificationTemplates {
+    body
+    iconName
+    id
+    languageCode
+    name
+    shouldAddToBulletin
+    shouldAddToHistory
+    shouldSendPush
+    title
+  }
+}
+
+mutation notificationMessageCreate($input: NotificationMessageCreateInput!) {
+  notificationMessageCreate(input: $input) {
+    errors {
+      message
+    }
+  }
+}
+
+mutation notificationMessageUpdateStatus($input: NotificationMessageUpdateStatusInput!) {
+  notificationMessageUpdateStatus(input: $input) {
+    errors {
+      message
+    }
+  }
+}
