@@ -226,8 +226,10 @@ export const DeepLinkScreen = {
   Chat: 'CHAT',
   Circles: 'CIRCLES',
   Convert: 'CONVERT',
+  CreditCardLimit: 'CREDIT_CARD_LIMIT',
   Earn: 'EARN',
   Home: 'HOME',
+  LoadingCard: 'LOADING_CARD',
   Map: 'MAP',
   People: 'PEOPLE',
   Price: 'PRICE',
@@ -243,7 +245,9 @@ export const DeepLinkScreen = {
   SettingsNotifications: 'SETTINGS_NOTIFICATIONS',
   SettingsSecurity: 'SETTINGS_SECURITY',
   SettingsTheme: 'SETTINGS_THEME',
-  SettingsTxLimits: 'SETTINGS_TX_LIMITS'
+  SettingsTxLimits: 'SETTINGS_TX_LIMITS',
+  VisaCard: 'VISA_CARD',
+  WelcomeCard: 'WELCOME_CARD'
 } as const;
 
 export type DeepLinkScreen = typeof DeepLinkScreen[keyof typeof DeepLinkScreen];

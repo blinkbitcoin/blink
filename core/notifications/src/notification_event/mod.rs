@@ -106,6 +106,10 @@ pub enum DeepLinkScreen {
     SettingsTxLimits,
     SettingsNotifications,
     SettingsEmail,
+    WelcomeCard,
+    LoadingCard,
+    VisaCard,
+    CreditCardLimit,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -162,6 +166,10 @@ impl DeepLink {
                 DeepLinkScreen::SettingsTxLimits => "settings/tx-limits".to_string(),
                 DeepLinkScreen::SettingsNotifications => "settings/notifications".to_string(),
                 DeepLinkScreen::SettingsEmail => "settings/email".to_string(),
+                DeepLinkScreen::WelcomeCard => "welcomeCard".to_string(),
+                DeepLinkScreen::LoadingCard => "loadingCard".to_string(),
+                DeepLinkScreen::VisaCard => "visaCard".to_string(),
+                DeepLinkScreen::CreditCardLimit => "creditCardLimit".to_string(),
             };
             link_string.push_str(&screen);
         }
