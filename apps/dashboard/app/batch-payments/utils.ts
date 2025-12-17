@@ -178,7 +178,7 @@ export const processRecords = async ({
   }
 
   if (validationErrors.length > 0) {
-    const errorMessage = `Invalid username(s) found:\n${validationErrors.join("\n")}`
+    const errorMessage = `Invalid username(s) found:\n\n${validationErrors.join("\n")}`
     return new Error(errorMessage)
   }
 
