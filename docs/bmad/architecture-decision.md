@@ -66,7 +66,7 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 - Admin panel: Next.js 14 app (no current background job capability)
 - Notification service: Existing `MarketingNotificationTrigger` mutation
 - Main API: Sumsub L2 verification status query exists
-- blink-card: Rain KYC status query **needs to be added**
+- blink-card: Rain KYC status via **gRPC** (adding `GetApplicationStatus` RPC)
 
 **New Infrastructure Needed:**
 - Background job scheduler in admin-panel (recommendation: `node-cron` for MVP)
@@ -317,8 +317,21 @@ async function resendNotification(invitationId: string, flow: 'FLOW1' | 'FLOW2')
 |-----------|---------|--------|
 | User search by phone/email | Main API | ✅ Exists |
 | L2 verification status | Main API | ✅ Exists |
-| Card KYC status | blink-card | ⚠️ Needs to be added |
 | Send notification | Main API (`MarketingNotificationTrigger`) | ✅ Exists |
+
+**External gRPC Calls:**
+
+| Operation | Service | Status |
+|-----------|---------|--------|
+| Card KYC statuses (`GetApplicationStatuses`) | blink-card | ⚠️ Needs to be added |
+
+*Note: Batch API for efficiency—single round trip for all invitations in a polling cycle.*
+
+**Why gRPC for blink-card:**
+- blink-card is a separate repository with existing gRPC services
+- Adding a GraphQL query would require federation infrastructure (supergraph config, Apollo Router, deployment pipeline changes)
+- gRPC is the direct, boring solution for service-to-service communication
+- Background job polling fits gRPC pattern better than extending user-facing GraphQL
 
 **Notification Integration:**
 - Fire-and-forget pattern via existing `MarketingNotificationTrigger`
@@ -424,7 +437,7 @@ cron.schedule('*/15 * * * *', async () => {
 7. Coordinate with mobile team for DeepLinkScreen values
 
 **External Dependencies:**
-- Card KYC status query in blink-card admin GraphQL (needs to be added)
+- `GetApplicationStatus` gRPC RPC in blink-card (needs to be added)
 - New DeepLinkScreen enum values in mobile app
 
 ### Template Architecture
@@ -588,9 +601,10 @@ apps/admin-panel/
 │   ├── prisma.ts                        # NEW - Prisma client singleton
 │   ├── invitation-service.ts            # NEW - Business logic
 │   ├── template-parser.ts               # NEW - YAML template validation
-│   └── invitation-code.ts               # NEW - HMAC token generation
+│   ├── invitation-code.ts               # NEW - HMAC token generation
+│   └── blink-card-client.ts             # NEW - gRPC client for blink-card
 │
-└── graphql.gql                          # MODIFIED - Add card KYC status query
+└── graphql.gql                          # EXISTING - No changes needed
 ```
 
 ### Requirements to Structure Mapping
@@ -632,8 +646,13 @@ apps/admin-panel/
 | `accountDetailsByUserPhone` | Main API | User search by phone |
 | `accountDetailsByUserEmail` | Main API | User search by email |
 | `accountDetailsByAccountId` | Main API | Get L2 verification status |
-| `cardKycStatus` (NEW) | blink-card | Get card KYC status |
 | `marketingNotificationTrigger` | Main API | Send notifications |
+
+**gRPC Integration Points:**
+
+| RPC | Service | Purpose |
+|-----|---------|---------|
+| `GetApplicationStatuses` | blink-card | Batch query card KYC status for multiple invited users |
 
 ### Dev Environment Changes
 
@@ -655,7 +674,126 @@ admin-panel-db:
 ```
 DATABASE_URL="postgresql://admin:admin@localhost:5433/admin_panel"
 INVITATION_TOKEN_SECRET="<shared-secret-from-vault>"  # Same secret in blink-card
+BLINK_CARD_GRPC_URL="localhost:50051"  # blink-card gRPC endpoint
 ```
+
+### gRPC Infrastructure
+
+**New Dependencies for admin-panel:**
+
+```json
+{
+  "dependencies": {
+    "@grpc/grpc-js": "^1.9.0",
+    "@grpc/proto-loader": "^0.7.0"
+  }
+}
+```
+
+**Proto Contract (blink-card side):**
+
+```protobuf
+// invitation_service.proto
+syntax = "proto3";
+
+package blink.card.invitation;
+
+service InvitationService {
+  // Batch query - efficient for background job polling multiple invitations
+  rpc GetApplicationStatuses(GetApplicationStatusesRequest) returns (GetApplicationStatusesResponse);
+}
+
+message GetApplicationStatusesRequest {
+  repeated string user_ids = 1;  // Batch of user IDs to query
+}
+
+message ApplicationStatus {
+  string user_id = 1;
+  string status = 2;             // "pending", "approved", "rejected", "not_found"
+  string rejection_reason = 3;   // Populated if status == "rejected"
+  string updated_at = 4;         // ISO8601 timestamp
+}
+
+message GetApplicationStatusesResponse {
+  repeated ApplicationStatus statuses = 1;  // Results keyed by user_id
+}
+```
+
+**Client Implementation (`lib/blink-card-client.ts`):**
+
+```typescript
+import * as grpc from '@grpc/grpc-js';
+import * as protoLoader from '@grpc/proto-loader';
+
+const PROTO_PATH = './protos/invitation_service.proto';
+
+const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
+  keepCase: true,
+  longs: String,
+  enums: String,
+  defaults: true,
+  oneofs: true,
+});
+
+const proto = grpc.loadPackageDefinition(packageDefinition).blink.card.invitation;
+
+const client = new proto.InvitationService(
+  process.env.BLINK_CARD_GRPC_URL,
+  grpc.credentials.createInsecure() // Use TLS in production
+);
+
+export type CardKycStatus = {
+  userId: string;
+  status: 'pending' | 'approved' | 'rejected' | 'not_found';
+  rejectionReason?: string;
+  updatedAt?: string;
+};
+
+// Batch query - single round trip for multiple users
+export async function getCardKycStatuses(userIds: string[]): Promise<Map<string, CardKycStatus>> {
+  return new Promise((resolve, reject) => {
+    client.GetApplicationStatuses({ user_ids: userIds }, (err, response) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+
+      const statusMap = new Map<string, CardKycStatus>();
+      for (const status of response.statuses) {
+        statusMap.set(status.user_id, {
+          userId: status.user_id,
+          status: status.status,
+          rejectionReason: status.rejection_reason || undefined,
+          updatedAt: status.updated_at || undefined,
+        });
+      }
+      resolve(statusMap);
+    });
+  });
+}
+```
+
+**Usage in background job:**
+
+```typescript
+// Efficient: single gRPC call for all invitations
+const userIds = invitations.map(inv => inv.userId);
+const statuses = await getCardKycStatuses(userIds);
+
+for (const inv of invitations) {
+  const kycStatus = statuses.get(inv.userId);
+  // Process each invitation with cached status
+}
+```
+
+**Why gRPC over GraphQL Federation:**
+- blink-card already has gRPC services exposed (trivial to add new RPC)
+- Admin GraphQL is monolithic - would need to set up federation infrastructure:
+  - Supergraph config (doesn't exist for admin)
+  - Apollo Router
+  - Deployment pipeline changes for schema composition
+- gRPC is direct service-to-service call (1 hop vs 2 hops)
+- Background job polling fits gRPC pattern better than user-facing GraphQL
 
 ## Architecture Validation Results
 
@@ -707,7 +845,7 @@ model Invitation {
 | Dependency | Owner | Required For |
 |------------|-------|--------------|
 | New DeepLinkScreen values (`KYC_START`, `PROGRAM_SIGNUP`) | Mobile team | Flow 1 & 2 notifications |
-| New `cardKycStatus` query | blink-card team | Background job polling |
+| New `GetApplicationStatuses` gRPC RPC (batch) | blink-card team | Background job polling |
 | Shared `INVITATION_TOKEN_SECRET` | DevOps/blink-card | Token validation |
 
 ### Implementation Readiness ✅

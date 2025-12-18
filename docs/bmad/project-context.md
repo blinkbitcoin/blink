@@ -25,6 +25,7 @@ _Critical rules and patterns for implementing the Program Invitation System in a
 - PostgreSQL 15
 - node-cron (background jobs)
 - js-yaml (template parsing)
+- @grpc/grpc-js + @grpc/proto-loader (blink-card communication)
 
 ---
 
@@ -114,7 +115,8 @@ apps/admin-panel/
 └── lib/
     ├── prisma.ts                  # Prisma client singleton
     ├── template-parser.ts         # YAML validation
-    └── invitation-code.ts         # HMAC token generation
+    ├── invitation-code.ts         # HMAC token generation
+    └── blink-card-client.ts       # gRPC client for card KYC status
 ```
 
 ---
@@ -143,7 +145,7 @@ apps/admin-panel/
 |------------|-------|--------|
 | `KYC_START` DeepLinkScreen | Mobile team | Required |
 | `PROGRAM_SIGNUP` DeepLinkScreen | Mobile team | Required |
-| `cardKycStatus` admin query | blink-card team | Required |
+| `GetApplicationStatuses` gRPC RPC (batch) | blink-card team | Required |
 | `INVITATION_TOKEN_SECRET` shared | DevOps + blink-card | Required |
 
 ---
