@@ -63,5 +63,5 @@ target
 #pnpm
 .pnpm-store
 .novu-api-key
-.bmad
+_bmad
 .claude
