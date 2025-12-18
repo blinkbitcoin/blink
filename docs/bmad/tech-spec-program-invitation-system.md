@@ -1,0 +1,744 @@
+---
+title: 'Technical Specification: Program Invitation System'
+author: hn
+date: '2025-12-18'
+status: draft
+reviewers: []
+---
+
+# Technical Specification: Program Invitation System
+
+**Version:** 1.0
+**Status:** Draft - Ready for Peer Review
+**Last Updated:** 2025-12-18
+
+---
+
+## Table of Contents
+
+1. [Executive Summary](#executive-summary)
+2. [Problem Statement](#problem-statement)
+3. [System Architecture](#system-architecture)
+4. [Data Model](#data-model)
+5. [Flow Diagrams](#flow-diagrams)
+6. [API Design](#api-design)
+7. [Background Job Design](#background-job-design)
+8. [Security Considerations](#security-considerations)
+9. [External Dependencies](#external-dependencies)
+10. [Implementation Patterns](#implementation-patterns)
+11. [Risk Analysis](#risk-analysis)
+12. [Open Questions](#open-questions)
+
+---
+
+## Executive Summary
+
+The Program Invitation System enables Blink's CEO to personally invite select VIP users to an exclusive two-phase onboarding program (initially the card program). The system provides:
+
+- **One-click batch invitations** (up to 50 users)
+- **Real-time status visibility** across the entire invitation lifecycle
+- **Automatic Flow 2 triggering** when KYC completes
+- **Manual retry capabilities** for failed notifications
+
+This is a brownfield extension to the existing admin-panel, adding Prisma/PostgreSQL database infrastructure and a background polling job.
+
+---
+
+## Problem Statement
+
+### Current State
+
+- CEO personally knows VIP users to invite to exclusive programs
+- No systematic way to track invitation status
+- No visibility into where invitees are in the KYC/enrollment funnel
+- Manual follow-up required for every user
+
+### Pain Points
+
+1. **Lost context** - No centralized view of who was invited and their progress
+2. **Manual coordination** - CEO must remember to follow up with each user
+3. **No automation** - When KYC completes, someone must manually trigger the next step
+4. **Failure blindness** - If a notification fails, nobody knows
+
+### Success Criteria
+
+| Metric | Target |
+|--------|--------|
+| Batch invite speed | <2 min for 10 users |
+| Status accuracy | Real-time on panel load |
+| Auto-trigger latency | <15 min after KYC approval |
+| Enrollment conversion | >80% |
+
+---
+
+## System Architecture
+
+### High-Level Overview
+
+```mermaid
+flowchart TB
+    subgraph AdminPanel["Admin Panel (Next.js 14)"]
+        Pages["/invitations Pages"]
+        Actions["Server Actions"]
+        Prisma["Prisma ORM"]
+        Cron["node-cron Scheduler"]
+        Poller["invitation-status-poller.ts"]
+    end
+
+    subgraph Database["Admin Panel Database"]
+        InvTable[("invitations table")]
+    end
+
+    subgraph MainAPI["Main API (Admin GraphQL)"]
+        UserSearch["accountDetailsByUserPhone"]
+        L2Status["accountDetailsByAccountId"]
+        NotifMutation["MarketingNotificationTrigger"]
+    end
+
+    subgraph BlinkCard["blink-card (Admin GraphQL)"]
+        CardKYC["cardKycStatus (NEW)"]
+    end
+
+    subgraph Mobile["Mobile App"]
+        DeepLink["Deep Link Handler"]
+        KYCFlow["KYC Flow"]
+        EnrollFlow["Enrollment Flow"]
+    end
+
+    Pages --> Actions
+    Actions --> Prisma
+    Prisma --> InvTable
+
+    Cron --> Poller
+    Poller --> Prisma
+    Poller -->|"GraphQL Query"| L2Status
+    Poller -->|"GraphQL Query"| CardKYC
+    Poller -->|"GraphQL Mutation"| NotifMutation
+
+    Actions -->|"GraphQL Query"| UserSearch
+    Actions -->|"GraphQL Mutation"| NotifMutation
+
+    NotifMutation -.->|"Push Notification"| Mobile
+    DeepLink --> KYCFlow
+    DeepLink --> EnrollFlow
+```
+
+**Key point:** Admin panel queries KYC status through internal admin GraphQL APIs. It does not call external services (Sumsub, Rain) directly - those are abstracted behind the Main API and blink-card service.
+
+### Key Design Decisions
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Database | Prisma + PostgreSQL (new) | Admin-panel has no DB; Prisma provides type-safe access |
+| Background Job | `node-cron` embedded | Simple, no external dependencies, MVP-appropriate |
+| KYC Status | Cache-on-poll | Eliminates timeout cascade risk on page load |
+| Template Storage | YAML upload (not DB) | Lean approach; avoids over-engineering |
+| Notification | Fire-and-forget | Cannot confirm FCM delivery; track "triggered" not "sent" |
+
+### Cache-on-Poll Pattern
+
+Rather than fetching KYC status on every page load (which causes timeout cascades), we:
+
+1. **Poll internal APIs** (Main API, blink-card) every 15 minutes via background job
+2. **Cache status locally** in the invitations table
+3. **UI reads from cache** for instant page loads
+4. **Background job is single writer** for KYC status columns
+
+### New Infrastructure Required
+
+**Admin Panel Database Container:**
+
+```yaml
+admin-panel-db:
+  image: postgres:15
+  environment:
+    POSTGRES_DB: admin_panel
+    POSTGRES_USER: admin
+    POSTGRES_PASSWORD: admin
+  ports:
+    - "5433:5432"
+```
+
+**New Environment Variables:**
+
+```
+DATABASE_URL="postgresql://admin:admin@localhost:5433/admin_panel"
+INVITATION_TOKEN_SECRET="<shared-secret-from-vault>"
+```
+
+---
+
+## Data Model
+
+### Invitations Table Schema
+
+```mermaid
+erDiagram
+    INVITATION {
+        uuid id PK
+        string user_id
+        string status
+        timestamp invited_at
+        string invited_by
+        string l2_verification_status
+        string card_kyc_status
+        timestamp last_status_check_at
+        timestamp flow1_triggered_at
+        timestamp flow2_triggered_at
+        timestamp enrolled_at
+        string last_trigger_error
+        string invitation_code
+        jsonb metadata
+    }
+```
+
+### Prisma Schema
+
+```prisma
+model Invitation {
+  id                    String    @id @default(uuid())
+  userId                String    @map("user_id")
+  status                String    @default("INVITED")
+  invitedAt             DateTime  @default(now()) @map("invited_at")
+  invitedBy             String    @map("invited_by")
+
+  // KYC Status Cache (single-writer: background job only)
+  l2VerificationStatus  String?   @map("l2_verification_status")
+  cardKycStatus         String?   @map("card_kyc_status")
+  lastStatusCheckAt     DateTime? @map("last_status_check_at")
+
+  // Flow tracking with idempotency guards
+  flow1TriggeredAt      DateTime? @map("flow1_triggered_at")
+  flow2TriggeredAt      DateTime? @map("flow2_triggered_at")
+  enrolledAt            DateTime? @map("enrolled_at")
+
+  // Security
+  invitationCode        String?   @map("invitation_code")
+
+  // Error tracking
+  lastTriggerError      String?   @map("last_trigger_error")
+
+  // Metadata (template content, rejection reasons)
+  metadata              Json      @default("{}")
+
+  @@index([userId])
+  @@index([status])
+  @@unique([userId], name: "idx_invitations_user_active")
+  @@map("invitations")
+}
+```
+
+### Status State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> INVITED: Create invitation
+    INVITED --> KYC_IN_PROGRESS: L2 verification detected
+    KYC_IN_PROGRESS --> KYC_APPROVED: Card KYC approved
+    KYC_IN_PROGRESS --> KYC_REJECTED: Card KYC rejected
+    KYC_APPROVED --> PROGRAM_SIGNUP_TRIGGERED: Auto Flow 2
+    PROGRAM_SIGNUP_TRIGGERED --> ENROLLED: User completes enrollment
+    KYC_REJECTED --> [*]: Final state
+    ENROLLED --> [*]: Final state
+```
+
+**Status Definitions:**
+
+| Status | Meaning |
+|--------|---------|
+| `INVITED` | Invitation sent, user hasn't completed L2 verification |
+| `KYC_IN_PROGRESS` | User has L2 verification, waiting on card KYC |
+| `KYC_APPROVED` | Both L2 and card KYC approved |
+| `KYC_REJECTED` | Card KYC rejected (final for card program) |
+| `PROGRAM_SIGNUP_TRIGGERED` | Flow 2 notification triggered |
+| `ENROLLED` | User completed program enrollment |
+
+**Key Insight:** We cannot observe "user started KYC" - we only detect L2 approval. `KYC_IN_PROGRESS` means L2 done, waiting on card KYC.
+
+---
+
+## Flow Diagrams
+
+### Flow 1: Invitation Creation
+
+```mermaid
+sequenceDiagram
+    actor CEO
+    participant UI as Admin Panel UI
+    participant Actions as Server Actions
+    participant DB as PostgreSQL
+    participant Notif as Notification Service
+    participant Mobile as Mobile App
+
+    CEO->>UI: Select users + upload YAML template
+    UI->>Actions: createInvitations(userIds, template)
+    Actions->>Actions: Validate template YAML
+    Actions->>Actions: Generate invitation codes (HMAC)
+    Actions->>DB: Create invitation records
+
+    loop For each user
+        Actions->>Notif: MarketingNotificationTrigger (Flow 1)
+        Notif-->>Actions: gRPC success/failure
+        Actions->>DB: Update flow1_triggered_at
+    end
+
+    Actions-->>UI: ActionResult with created/failed counts
+    UI-->>CEO: Show invitation list with status
+
+    Note over Notif,Mobile: Async - Push notification
+    Notif--)Mobile: Push notification with deep link
+    Mobile->>Mobile: Open KYC_START screen
+```
+
+### Flow 2: Automatic KYC-to-Enrollment Trigger
+
+```mermaid
+sequenceDiagram
+    participant Cron as node-cron
+    participant Poller as Status Poller Job
+    participant DB as PostgreSQL
+    participant MainAPI as Main API (GraphQL)
+    participant BlinkCard as blink-card (GraphQL)
+    participant Notif as Notification Service
+
+    Cron->>Poller: Every 15 minutes
+    Poller->>DB: Fetch active invitations
+
+    loop For each invitation
+        alt Status = INVITED
+            Poller->>MainAPI: accountDetailsByAccountId (L2 status)
+            MainAPI-->>Poller: level = TWO
+            alt L2 Approved
+                Poller->>DB: Update status = KYC_IN_PROGRESS
+            end
+        else Status = KYC_IN_PROGRESS
+            Poller->>BlinkCard: cardKycStatus query
+            BlinkCard-->>Poller: status = APPROVED | REJECTED
+            alt Card KYC Approved
+                Poller->>DB: Update status = KYC_APPROVED
+            else Card KYC Rejected
+                Poller->>DB: Update status = KYC_REJECTED
+            end
+        else Status = KYC_APPROVED
+            alt flow2_triggered_at is NULL
+                Poller->>Notif: MarketingNotificationTrigger (Flow 2)
+                Poller->>DB: Update status = PROGRAM_SIGNUP_TRIGGERED
+                Poller->>DB: Set flow2_triggered_at
+            end
+        end
+    end
+```
+
+### User Journey: Complete Lifecycle
+
+```mermaid
+flowchart TD
+    subgraph Admin["Admin Panel"]
+        A1[CEO selects users]
+        A2[Upload YAML template]
+        A3[Send invitations]
+        A4[Monitor status dashboard]
+        A5[Manual resend if needed]
+    end
+
+    subgraph System["Background Automation"]
+        S1[Poll KYC status every 15 min]
+        S2[Detect L2 approval]
+        S3[Detect card KYC approval]
+        S4[Auto-trigger Flow 2]
+    end
+
+    subgraph User["User Mobile App"]
+        U1[Receive Flow 1 notification]
+        U2[Complete L2 verification]
+        U3[Complete card KYC]
+        U4[Receive Flow 2 notification]
+        U5[Complete program enrollment]
+    end
+
+    A1 --> A2 --> A3
+    A3 --> U1
+    A3 --> A4
+
+    U1 --> U2 --> U3
+
+    S1 --> S2
+    S2 --> S3
+    S3 --> S4
+
+    U2 -.-> S2
+    U3 -.-> S3
+    S4 --> U4
+
+    U4 --> U5
+
+    A4 -.->|Status updates| S1
+    A5 --> U1
+```
+
+---
+
+## API Design
+
+### Server Actions
+
+```typescript
+// app/invitations/actions.ts
+
+type ActionResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: string }
+
+// Create invitations for multiple users
+async function createInvitations(
+  userIds: string[],
+  templateYaml: string
+): Promise<ActionResult<{ created: number; failed: string[] }>>
+
+// Get paginated invitation list with optional status filter
+async function getInvitations(
+  status?: InvitationStatus,
+  limit?: number,
+  offset?: number
+): Promise<ActionResult<{ invitations: Invitation[]; total: number }>>
+
+// Get single invitation by ID
+async function getInvitationById(
+  id: string
+): Promise<ActionResult<Invitation>>
+
+// Resend notification for an invitation
+async function resendNotification(
+  invitationId: string,
+  flow: 'FLOW1' | 'FLOW2'
+): Promise<ActionResult<{ sent: boolean }>>
+```
+
+### External GraphQL Queries
+
+**Existing (Main API):**
+
+```graphql
+# User search
+query accountDetailsByUserPhone($phone: Phone!) {
+  accountDetailsByUserPhone(phone: $phone) {
+    id
+    username
+    level
+  }
+}
+
+# L2 verification status (within account details)
+query accountDetailsByAccountId($accountId: ID!) {
+  accountDetailsByAccountId(accountId: $accountId) {
+    id
+    level  # LEVEL_TWO indicates L2 approved
+  }
+}
+
+# Send notification
+mutation marketingNotificationTrigger($input: MarketingNotificationTriggerInput!) {
+  marketingNotificationTrigger(input: $input) {
+    success
+    errors { message }
+  }
+}
+```
+
+**New (blink-card - needs to be added):**
+
+```graphql
+# Card KYC status query (NEW - required before MVP)
+query cardKycStatus($userId: ID!) {
+  cardKycStatus(userId: $userId) {
+    status  # PENDING | IN_PROGRESS | APPROVED | REJECTED
+    rejectionReason
+  }
+}
+```
+
+### Notification Template Structure
+
+```yaml
+# invitation-template.yaml
+flow1:
+  localizedContents:
+    - language: en
+      title: "You're invited to join our exclusive program"
+      body: "Tap to begin your verification"
+    - language: es
+      title: "Has sido invitado a unirse a nuestro programa"
+      body: "Toca para comenzar tu verificación"
+  icon: BELL
+  deepLinkScreen: KYC_START
+  shouldSendPush: true
+  shouldAddToHistory: true
+  shouldAddToBulletin: false
+
+flow2:
+  localizedContents:
+    - language: en
+      title: "Verification approved!"
+      body: "Complete your enrollment"
+    - language: es
+      title: "Verificación aprobada!"
+      body: "Completa tu inscripción"
+  icon: CHECK
+  deepLinkScreen: PROGRAM_SIGNUP
+  shouldSendPush: true
+  shouldAddToHistory: true
+  shouldAddToBulletin: false
+```
+
+---
+
+## Background Job Design
+
+### Polling Architecture
+
+```typescript
+// app/jobs/invitation-status-poller.ts
+import cron from 'node-cron';
+
+// Runs every 15 minutes
+cron.schedule('*/15 * * * *', async () => {
+  const invitations = await prisma.invitation.findMany({
+    where: {
+      status: { in: ['INVITED', 'KYC_IN_PROGRESS', 'KYC_APPROVED'] }
+    }
+  });
+
+  for (const inv of invitations) {
+    await processInvitation(inv);
+  }
+});
+```
+
+### Single-Writer Pattern
+
+| Writer | Columns | Access |
+|--------|---------|--------|
+| Background Job | `l2VerificationStatus`, `cardKycStatus`, `lastStatusCheckAt`, `status` (transitions), `flow2TriggeredAt` | Exclusive |
+| Server Actions | `invitedBy`, `flow1TriggeredAt`, `lastTriggerError` (manual resend), `invitationCode` | Exclusive |
+| UI | None | Read-only |
+
+### Idempotency Guard
+
+Flow 2 is triggered **only once** via the `flow2TriggeredAt` column:
+
+```typescript
+if (inv.status === 'KYC_APPROVED' && !inv.flow2TriggeredAt) {
+  await triggerFlow2Notification(inv);
+  await prisma.invitation.update({
+    where: { id: inv.id },
+    data: {
+      status: 'PROGRAM_SIGNUP_TRIGGERED',
+      flow2TriggeredAt: new Date()
+    }
+  });
+}
+```
+
+---
+
+## Security Considerations
+
+### Invitation Code Authentication
+
+**Purpose:** Prevent unauthorized access to `cardConsumerApplicationCreate` mutation (public GraphQL).
+
+**Token Structure:**
+
+```
+HMAC-SHA256(userId + expiration_day + nonce, INVITATION_TOKEN_SECRET)
+```
+
+**Validation Flow:**
+
+```mermaid
+sequenceDiagram
+    participant Admin as Admin Panel
+    participant Mobile as Mobile App
+    participant Card as blink-card
+
+    Admin->>Admin: Generate HMAC token
+    Admin->>Admin: Store in invitation record
+    Admin->>Mobile: Deep link with ?code=token
+    Mobile->>Card: cardConsumerApplicationCreate(code)
+    Card->>Card: Validate HMAC with shared secret
+    alt Valid
+        Card-->>Mobile: Proceed with KYC
+    else Invalid
+        Card-->>Mobile: Reject with error
+    end
+```
+
+**Implementation (`lib/invitation-code.ts`):**
+
+```typescript
+import crypto from 'crypto';
+
+export function generateInvitationCode(userId: string): string {
+  const secret = process.env.INVITATION_TOKEN_SECRET!;
+  const expiration = getExpirationDay(); // 30 days from now
+  const nonce = crypto.randomBytes(16).toString('hex');
+
+  const payload = `${userId}:${expiration}:${nonce}`;
+  const signature = crypto
+    .createHmac('sha256', secret)
+    .update(payload)
+    .digest('hex');
+
+  return Buffer.from(`${payload}:${signature}`).toString('base64url');
+}
+```
+
+### Access Control
+
+- Inherits existing admin-panel authentication
+- All actions logged with admin identity (`invitedBy`)
+- No multi-admin role permissions in MVP (single CEO use case)
+
+---
+
+## External Dependencies
+
+### Blocking Dependencies
+
+| Dependency | Owner | Status | Impact |
+|------------|-------|--------|--------|
+| `KYC_START` DeepLinkScreen | Mobile team | **Required** | Flow 1 deep link |
+| `PROGRAM_SIGNUP` DeepLinkScreen | Mobile team | **Required** | Flow 2 deep link |
+| `cardKycStatus` admin query | blink-card team | **Required** | Background polling |
+| `INVITATION_TOKEN_SECRET` | DevOps + blink-card | **Required** | Token validation |
+
+### Existing Integrations
+
+| Integration | Service | Status |
+|-------------|---------|--------|
+| User search by phone/email | Main API | Available |
+| L2 verification status | Main API | Available |
+| `MarketingNotificationTrigger` | Main API | Available |
+
+---
+
+## Implementation Patterns
+
+### File Organization
+
+```
+apps/admin-panel/
+├── prisma/
+│   ├── schema.prisma
+│   └── migrations/
+│
+├── app/
+│   ├── invitations/
+│   │   ├── page.tsx            # List view
+│   │   ├── [id]/page.tsx       # Detail view
+│   │   ├── new/page.tsx        # Create form
+│   │   ├── actions.ts          # Server actions
+│   │   └── types.ts
+│   │
+│   └── jobs/
+│       ├── cron.ts             # Scheduler init
+│       └── invitation-status-poller.ts
+│
+├── components/invitations/
+│   ├── invitation-list.tsx
+│   ├── invitation-detail.tsx
+│   ├── invitation-form.tsx
+│   ├── status-badge.tsx
+│   ├── template-uploader.tsx
+│   └── index.ts
+│
+└── lib/
+    ├── prisma.ts               # Client singleton
+    ├── invitation-service.ts   # Business logic
+    ├── template-parser.ts      # YAML validation
+    └── invitation-code.ts      # HMAC generation
+```
+
+### Naming Conventions
+
+| Element | Convention | Example |
+|---------|------------|---------|
+| DB tables | snake_case plural | `invitations` |
+| DB columns | snake_case | `user_id`, `last_status_check_at` |
+| Prisma models | PascalCase singular | `Invitation` |
+| Prisma fields | camelCase | `userId`, `lastStatusCheckAt` |
+| Status values | SCREAMING_SNAKE_CASE | `KYC_IN_PROGRESS` |
+| Server actions | verb + noun | `createInvitations`, `getInvitationById` |
+
+### Anti-Patterns to Avoid
+
+| Don't | Do Instead |
+|-------|------------|
+| `SumsubStatus`, `RainKycStatus` | `l2VerificationStatus`, `cardKycStatus` |
+| Throw errors from server actions | Return `{ success: false, error }` |
+| Store templates in database | Pass YAML content at runtime |
+| Fetch KYC on every page load | Read from cached columns |
+| UI writing to KYC status columns | Background job is single writer |
+| Single-language notifications | Multi-language `localizedContents` |
+| Assume notification delivered | Fire-and-forget, show "triggered" not "sent" |
+
+---
+
+## Risk Analysis
+
+| Risk | Probability | Impact | Mitigation |
+|------|-------------|--------|------------|
+| Background job misses KYC approval window | Medium | High | Accept 15-min delay; monitor and alert if job hasn't run in >20 min |
+| GraphQL API timeout on page load | Medium | Medium | Cache-on-poll eliminates page load dependency; UI reads from local DB |
+| Duplicate Flow 2 notifications | Low | High | `flow2TriggeredAt` idempotency guard |
+| State inconsistency between polling cycles | Medium | Medium | Single-writer pattern enforced |
+| Mobile team coordination delays | Medium | High | Track DeepLinkScreen as explicit blocker |
+| Multi-replica duplicate job execution | Low (MVP) | Medium | Use K8s CronJob if scaling needed post-MVP |
+
+### Graceful Degradation
+
+| Service Unavailable | UI Display |
+|---------------------|------------|
+| Main API timeout (L2 status) | "L2 verification status pending" |
+| blink-card API timeout | "Card KYC status pending" |
+| Both unavailable | Invitation visible, status shows "Checking..." |
+| Notification service down | "Notification pending", manual resend when restored |
+
+---
+
+## Open Questions
+
+1. **Enrollment detection:** How do we detect when a user completes program enrollment? Does blink-card emit an event, or do we need to poll another endpoint?
+
+2. **Template versioning:** Should we store the template content in the invitation metadata for audit trail and resend capability? (Architecture doc suggests yes)
+
+3. **Invitation expiration:** Should invitation codes expire? Current design uses expiration_day in HMAC but no enforcement is documented.
+
+4. **Batch limits:** 50 users per batch - is this sufficient for future cohorts, or should we design for larger batches?
+
+5. **Observability:** What metrics and alerts should we add for the background job? Suggested: `job_last_run_at`, `job_run_count`, alert if >20 min since last run.
+
+---
+
+## Appendix: Requirements Traceability
+
+| PRD Requirement | Implementation |
+|-----------------|----------------|
+| FR1-3: Invitation list/detail | `app/invitations/page.tsx`, `[id]/page.tsx` |
+| FR4-6: Create invitation | `app/invitations/new/page.tsx`, `actions.ts` |
+| FR7-10: User discovery | `invitation-form.tsx` (uses existing user search query) |
+| FR11-15: Status monitoring | `invitation-detail.tsx`, `status-badge.tsx` |
+| FR16-20: Notification delivery | `actions.ts` -> `MarketingNotificationTrigger` |
+| FR21-24: Automated workflows | `jobs/invitation-status-poller.ts` |
+| FR25-28: Template management | `template-uploader.tsx`, `template-parser.ts` |
+
+---
+
+**Document Status:** Ready for peer review
+
+**Next Steps:**
+
+1. Review and approve this technical specification
+2. Coordinate with mobile team on DeepLinkScreen values
+3. Request cardKycStatus query from blink-card team
+4. Begin implementation per architecture decision document
