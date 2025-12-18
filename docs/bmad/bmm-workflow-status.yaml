@@ -63,10 +63,12 @@ workflow_status:
   # Phase 2 - Solutioning
   phase_2_solutioning:
     create-architecture:
-      status: "recommended"
+      status: "completed"
+      output: "docs/bmad/architecture-decision.md"
       agent: "architect"
       command: "/bmad:bmm:workflows:create-architecture"
-      note: "HIGHLY RECOMMENDED for brownfield - distills context into focused solution"
+      completed_date: "2025-12-18"
+      note: "Program Invitation System architecture - Prisma, PostgreSQL, node-cron, multi-language templates"
     create-epics-and-stories:
       status: "required"
       agent: "pm"
@@ -95,7 +97,7 @@ workflow_status:
       note: "Creates sprint-status.yaml for implementation tracking"
 
 # Next action
-next_workflow: "create-architecture"
-next_agent: "architect"
-next_command: "/bmad:bmm:workflows:create-architecture"
-next_note: "Recommended: Create focused architecture for invitation system integration"
+next_workflow: "create-epics-and-stories"
+next_agent: "pm"
+next_command: "/bmad:bmm:workflows:create-epics-stories"
+next_note: "Required: Break down PRD + Architecture into implementation-ready epics and stories"
