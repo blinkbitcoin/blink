@@ -673,7 +673,8 @@ admin-panel-db:
 
 ```
 DATABASE_URL="postgresql://admin:admin@localhost:5433/admin_panel"
-INVITATION_TOKEN_SECRET="<shared-secret-from-vault>"  # Same secret in blink-card
+INVITATION_TOKEN_SECRET="<32-byte-hex-key-from-vault>"  # AES key shared with blink-card
+CARD_PROGRAM_SOURCE_KEY="<string-from-vault>"  # Card program identifier shared with blink-card
 BLINK_CARD_GRPC_URL="localhost:50051"  # blink-card gRPC endpoint
 ```
 
@@ -813,30 +814,46 @@ All architectural decisions are compatible and consistent:
 
 **Purpose:** Restrict access to Rain KYC flow (`cardConsumerApplicationCreate` mutation in blink-card). Since the GraphQL API is public, invitation codes prevent unauthorized access.
 
-**Token Structure:**
+**Token Structure (AES-256-GCM Encryption):**
+
 ```
-HMAC-SHA256(source_key + expiration_day + nonce, INVITATION_TOKEN_SECRET)
+Encrypted Payload = AES-256-GCM({
+  source_key: String,    // Card program identifier (from CARD_PROGRAM_SOURCE_KEY env var)
+  account_id: String,    // Binds token to specific account (prevents transfer)
+  timestamp: i64,        // Unix timestamp for expiration checking
+  nonce: u64             // Random value for replay protection
+})
+
+Final Token = Base64(iv || ciphertext)
+                     ↑
+                     12-byte IV for AES-GCM (separate from payload nonce)
 ```
+
+**Security Properties:**
+- **Account binding**: `account_id` in payload prevents token transfer between users
+- **Expiration**: `timestamp` allows server to reject expired tokens
+- **Replay protection**: `nonce` ensures each token is unique
+- **Confidentiality**: AES-256-GCM encrypts payload, preventing inspection
 
 **Flow:**
-1. Admin-panel generates signed invitation code when creating invitation
+1. Admin-panel generates encrypted invitation code when creating invitation
 2. Code included in Flow 1 notification deep link: `blink://kyc?code=<token>`
 3. Mobile app extracts code, passes to `cardConsumerApplicationCreate`
-4. blink-card validates code using shared secret
+4. blink-card decrypts and validates: checks account_id matches, timestamp not expired
 
 **Infrastructure:**
-- Secret stored in vault (HashiCorp Vault / K8s secrets)
-- Passed to admin-panel via `INVITATION_TOKEN_SECRET` env var
-- Same secret configured in blink-card for validation
+- Secrets stored in vault (HashiCorp Vault / K8s secrets)
+- `INVITATION_TOKEN_SECRET` env var: 32-byte AES key (shared with blink-card)
+- `CARD_PROGRAM_SOURCE_KEY` env var: string identifying the card program (shared with blink-card)
 
 **New Files:**
-- `lib/invitation-code.ts` - Token generation logic
+- `lib/invitation-code.ts` - Token generation logic (AES-256-GCM encryption)
 
 **Schema Addition:**
 ```prisma
 model Invitation {
   // ... existing fields ...
-  invitationCode    String?   @map("invitation_code")  // Generated signed token
+  invitationCode    String?   @map("invitation_code")  // Generated encrypted token
 }
 ```
 
@@ -846,7 +863,8 @@ model Invitation {
 |------------|-------|--------------|
 | New DeepLinkScreen values (`KYC_START`, `PROGRAM_SIGNUP`) | Mobile team | Flow 1 & 2 notifications |
 | New `GetApplicationStatuses` gRPC RPC (batch) | blink-card team | Background job polling |
-| Shared `INVITATION_TOKEN_SECRET` | DevOps/blink-card | Token validation |
+| `INVITATION_TOKEN_SECRET` (32-byte AES key) | DevOps/blink-card | Token encryption/decryption |
+| `CARD_PROGRAM_SOURCE_KEY` (String) | DevOps/blink-card | Token payload validation |
 
 ### Implementation Readiness ✅
 

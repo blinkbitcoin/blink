@@ -125,13 +125,34 @@ apps/admin-panel/
 
 **Purpose:** Restrict access to `cardConsumerApplicationCreate` mutation (public GraphQL)
 
-**Token:** `HMAC-SHA256(source_key + expiration_day + nonce, secret)`
+**Token Structure (AES-256-GCM):**
+```
+Encrypted Payload = AES-256-GCM({
+  source_key: String,    // From CARD_PROGRAM_SOURCE_KEY env var
+  account_id: String,    // Binds token to specific account (prevents transfer)
+  timestamp: i64,        // Unix timestamp for expiration checking
+  nonce: u64             // Random value for replay protection
+})
+
+Final Token = Base64(iv || ciphertext)
+                     ↑
+                     12-byte IV (separate from payload nonce)
+```
+
+**Environment Variables:**
+- `INVITATION_TOKEN_SECRET`: 32-byte AES key (shared with blink-card)
+- `CARD_PROGRAM_SOURCE_KEY`: String identifying the card program (shared with blink-card)
+
+**Security Properties:**
+- Account binding prevents token transfer between users
+- Timestamp enables expiration checking
+- Nonce ensures uniqueness (replay protection)
 
 **Flow:**
-1. Admin-panel generates code using `INVITATION_TOKEN_SECRET` env var
+1. Admin-panel encrypts payload using `INVITATION_TOKEN_SECRET`
 2. Code included in deep link: `blink://kyc?code=<token>`
 3. Mobile passes code to blink-card mutation
-4. blink-card validates with same shared secret
+4. blink-card decrypts and validates: source_key + account_id match + expiration check
 
 **New file:** `lib/invitation-code.ts`
 
@@ -146,7 +167,8 @@ apps/admin-panel/
 | `KYC_START` DeepLinkScreen | Mobile team | Required |
 | `PROGRAM_SIGNUP` DeepLinkScreen | Mobile team | Required |
 | `GetApplicationStatuses` gRPC RPC (batch) | blink-card team | Required |
-| `INVITATION_TOKEN_SECRET` shared | DevOps + blink-card | Required |
+| `INVITATION_TOKEN_SECRET` (32-byte AES key) | DevOps + blink-card | Required |
+| `CARD_PROGRAM_SOURCE_KEY` (String) | DevOps + blink-card | Required |
 
 ---
 

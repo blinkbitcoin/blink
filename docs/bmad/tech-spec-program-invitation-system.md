@@ -8,9 +8,9 @@ reviewers: []
 
 # Technical Specification: Program Invitation System
 
-**Version:** 1.0
+**Version:** 1.1
 **Status:** Draft - Ready for Peer Review
-**Last Updated:** 2025-12-18
+**Last Updated:** 2025-12-19
 
 ---
 
@@ -27,7 +27,6 @@ reviewers: []
 9. [External Dependencies](#external-dependencies)
 10. [Implementation Patterns](#implementation-patterns)
 11. [Risk Analysis](#risk-analysis)
-12. [Open Questions](#open-questions)
 
 ---
 
@@ -83,6 +82,7 @@ flowchart TB
         Prisma["Prisma ORM"]
         Cron["node-cron Scheduler"]
         Poller["invitation-status-poller.ts"]
+        GrpcClient["blink-card-client.ts"]
     end
 
     subgraph Database["Admin Panel Database"]
@@ -95,8 +95,8 @@ flowchart TB
         NotifMutation["MarketingNotificationTrigger"]
     end
 
-    subgraph BlinkCard["blink-card (Admin GraphQL)"]
-        CardKYC["cardKycStatus (NEW)"]
+    subgraph BlinkCard["blink-card (gRPC)"]
+        CardKYC["GetApplicationStatuses (NEW)"]
     end
 
     subgraph Mobile["Mobile App"]
@@ -112,7 +112,8 @@ flowchart TB
     Cron --> Poller
     Poller --> Prisma
     Poller -->|"GraphQL Query"| L2Status
-    Poller -->|"GraphQL Query"| CardKYC
+    Poller --> GrpcClient
+    GrpcClient -->|"gRPC (batch)"| CardKYC
     Poller -->|"GraphQL Mutation"| NotifMutation
 
     Actions -->|"GraphQL Query"| UserSearch
@@ -123,7 +124,10 @@ flowchart TB
     DeepLink --> EnrollFlow
 ```
 
-**Key point:** Admin panel queries KYC status through internal admin GraphQL APIs. It does not call external services (Sumsub, Rain) directly - those are abstracted behind the Main API and blink-card service.
+**Key points:**
+- Admin panel queries L2 status and sends notifications via **Main API (GraphQL)**
+- Admin panel queries card KYC status via **blink-card (gRPC)** - not GraphQL
+- gRPC chosen over GraphQL federation because blink-card already has gRPC services; adding GraphQL would require supergraph infrastructure
 
 ### Key Design Decisions
 
@@ -132,6 +136,7 @@ flowchart TB
 | Database | Prisma + PostgreSQL (new) | Admin-panel has no DB; Prisma provides type-safe access |
 | Background Job | `node-cron` embedded | Simple, no external dependencies, MVP-appropriate |
 | KYC Status | Cache-on-poll | Eliminates timeout cascade risk on page load |
+| Card KYC API | gRPC | blink-card has existing gRPC interface; extending admin GraphQL would require federation infrastructure |
 | Template Storage | YAML upload (not DB) | Lean approach; avoids over-engineering |
 | Notification | Fire-and-forget | Cannot confirm FCM delivery; track "triggered" not "sent" |
 
@@ -163,7 +168,9 @@ admin-panel-db:
 
 ```
 DATABASE_URL="postgresql://admin:admin@localhost:5433/admin_panel"
-INVITATION_TOKEN_SECRET="<shared-secret-from-vault>"
+INVITATION_TOKEN_SECRET="<32-byte-hex-key-from-vault>"
+CARD_PROGRAM_SOURCE_KEY="<string-from-vault>"
+BLINK_CARD_GRPC_URL="localhost:50051"
 ```
 
 ---
@@ -273,7 +280,7 @@ sequenceDiagram
     CEO->>UI: Select users + upload YAML template
     UI->>Actions: createInvitations(userIds, template)
     Actions->>Actions: Validate template YAML
-    Actions->>Actions: Generate invitation codes (HMAC)
+    Actions->>Actions: Generate invitation codes (AES-256-GCM)
     Actions->>DB: Create invitation records
 
     loop For each user
@@ -298,11 +305,15 @@ sequenceDiagram
     participant Poller as Status Poller Job
     participant DB as PostgreSQL
     participant MainAPI as Main API (GraphQL)
-    participant BlinkCard as blink-card (GraphQL)
+    participant BlinkCard as blink-card (gRPC)
     participant Notif as Notification Service
 
     Cron->>Poller: Every 15 minutes
     Poller->>DB: Fetch active invitations
+
+    Note over Poller,BlinkCard: Batch gRPC call for all KYC_IN_PROGRESS invitations
+    Poller->>BlinkCard: GetApplicationStatuses(user_ids[])
+    BlinkCard-->>Poller: Map of userId → status
 
     loop For each invitation
         alt Status = INVITED
@@ -312,8 +323,7 @@ sequenceDiagram
                 Poller->>DB: Update status = KYC_IN_PROGRESS
             end
         else Status = KYC_IN_PROGRESS
-            Poller->>BlinkCard: cardKycStatus query
-            BlinkCard-->>Poller: status = APPROVED | REJECTED
+            Note over Poller: Use cached gRPC response
             alt Card KYC Approved
                 Poller->>DB: Update status = KYC_APPROVED
             else Card KYC Rejected
@@ -414,9 +424,7 @@ async function resendNotification(
 ): Promise<ActionResult<{ sent: boolean }>>
 ```
 
-### External GraphQL Queries
-
-**Existing (Main API):**
+### External GraphQL Queries (Main API)
 
 ```graphql
 # User search
@@ -445,17 +453,41 @@ mutation marketingNotificationTrigger($input: MarketingNotificationTriggerInput!
 }
 ```
 
-**New (blink-card - needs to be added):**
+### External gRPC Calls (blink-card)
 
-```graphql
-# Card KYC status query (NEW - required before MVP)
-query cardKycStatus($userId: ID!) {
-  cardKycStatus(userId: $userId) {
-    status  # PENDING | IN_PROGRESS | APPROVED | REJECTED
-    rejectionReason
-  }
+**Proto Contract (NEW - needs to be added to blink-card):**
+
+```protobuf
+// invitation_service.proto
+syntax = "proto3";
+package blink.card.invitation;
+
+service InvitationService {
+  // Batch query - efficient for background job polling multiple invitations
+  rpc GetApplicationStatuses(GetApplicationStatusesRequest) returns (GetApplicationStatusesResponse);
+}
+
+message GetApplicationStatusesRequest {
+  repeated string user_ids = 1;  // Batch of user IDs to query
+}
+
+message ApplicationStatus {
+  string user_id = 1;
+  string status = 2;             // "pending", "approved", "rejected", "not_found"
+  string rejection_reason = 3;   // Populated if status == "rejected"
+  string updated_at = 4;         // ISO8601 timestamp
+}
+
+message GetApplicationStatusesResponse {
+  repeated ApplicationStatus statuses = 1;
 }
 ```
+
+**Why gRPC over GraphQL:**
+- blink-card already has gRPC services exposed (trivial to add new RPC)
+- Admin GraphQL is monolithic - would need federation infrastructure (supergraph config, Apollo Router, deployment pipeline)
+- gRPC is direct service-to-service call (1 hop vs 2 hops)
+- Batch API pattern fits background job polling better
 
 ### Notification Template Structure
 
@@ -547,11 +579,29 @@ if (inv.status === 'KYC_APPROVED' && !inv.flow2TriggeredAt) {
 
 **Purpose:** Prevent unauthorized access to `cardConsumerApplicationCreate` mutation (public GraphQL).
 
-**Token Structure:**
+**Token Structure (AES-256-GCM Encryption):**
 
 ```
-HMAC-SHA256(userId + expiration_day + nonce, INVITATION_TOKEN_SECRET)
+Encrypted Payload = AES-256-GCM({
+  source_key: String,    // Card program identifier (from CARD_PROGRAM_SOURCE_KEY env var)
+  account_id: String,    // Binds token to specific account (prevents transfer)
+  timestamp: i64,        // Unix timestamp for expiration checking
+  nonce: u64             // Random value for replay protection
+})
+
+Final Token = Base64(iv || ciphertext)
+                     ↑
+                     12-byte IV for AES-GCM (separate from payload nonce)
 ```
+
+**Security Properties:**
+
+| Property | Implementation | Benefit |
+|----------|----------------|---------|
+| Account binding | `account_id` in encrypted payload | Prevents token transfer between users |
+| Expiration | `timestamp` field | Server rejects stale tokens |
+| Replay protection | `nonce` value | Each token is unique |
+| Confidentiality | AES-256-GCM encryption | Payload cannot be inspected |
 
 **Validation Flow:**
 
@@ -561,14 +611,16 @@ sequenceDiagram
     participant Mobile as Mobile App
     participant Card as blink-card
 
-    Admin->>Admin: Generate HMAC token
-    Admin->>Admin: Store in invitation record
+    Admin->>Admin: Encrypt payload (AES-256-GCM)
+    Admin->>Admin: Store token in invitation record
     Admin->>Mobile: Deep link with ?code=token
     Mobile->>Card: cardConsumerApplicationCreate(code)
-    Card->>Card: Validate HMAC with shared secret
+    Card->>Card: Decrypt with shared 32-byte key
+    Card->>Card: Validate account_id matches caller
+    Card->>Card: Check timestamp not expired
     alt Valid
         Card-->>Mobile: Proceed with KYC
-    else Invalid
+    else Invalid (wrong user, expired, or tampered)
         Card-->>Mobile: Reject with error
     end
 ```
@@ -578,18 +630,39 @@ sequenceDiagram
 ```typescript
 import crypto from 'crypto';
 
-export function generateInvitationCode(userId: string): string {
-  const secret = process.env.INVITATION_TOKEN_SECRET!;
-  const expiration = getExpirationDay(); // 30 days from now
-  const nonce = crypto.randomBytes(16).toString('hex');
+const ALGORITHM = 'aes-256-gcm';
+const NONCE_LENGTH = 12;
 
-  const payload = `${userId}:${expiration}:${nonce}`;
-  const signature = crypto
-    .createHmac('sha256', secret)
-    .update(payload)
-    .digest('hex');
+interface InvitationPayload {
+  source_key: string;    // Card program identifier
+  account_id: string;    // Binds to specific account
+  timestamp: number;     // Unix timestamp (expiration)
+  nonce: number;         // Random value for replay protection
+}
 
-  return Buffer.from(`${payload}:${signature}`).toString('base64url');
+export function generateInvitationCode(accountId: string): string {
+  const secret = Buffer.from(process.env.INVITATION_TOKEN_SECRET!, 'hex'); // 32-byte key
+  const iv = crypto.randomBytes(12);  // 12-byte IV for AES-GCM
+
+  const payload: InvitationPayload = {
+    source_key: process.env.CARD_PROGRAM_SOURCE_KEY!,
+    account_id: accountId,
+    timestamp: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60), // 30 days
+    nonce: crypto.randomBytes(8).readBigUInt64BE()  // Random u64 for replay protection
+  };
+
+  const cipher = crypto.createCipheriv(ALGORITHM, secret, iv);
+  const plaintext = Buffer.from(JSON.stringify(payload));
+
+  const ciphertext = Buffer.concat([
+    cipher.update(plaintext),
+    cipher.final(),
+    cipher.getAuthTag()  // GCM auth tag appended to ciphertext
+  ]);
+
+  // Final token: iv || ciphertext (includes auth tag)
+  const token = Buffer.concat([iv, ciphertext]);
+  return token.toString('base64url');
 }
 ```
 
@@ -609,8 +682,9 @@ export function generateInvitationCode(userId: string): string {
 |------------|-------|--------|--------|
 | `KYC_START` DeepLinkScreen | Mobile team | **Required** | Flow 1 deep link |
 | `PROGRAM_SIGNUP` DeepLinkScreen | Mobile team | **Required** | Flow 2 deep link |
-| `cardKycStatus` admin query | blink-card team | **Required** | Background polling |
-| `INVITATION_TOKEN_SECRET` | DevOps + blink-card | **Required** | Token validation |
+| `GetApplicationStatuses` gRPC RPC (batch) | blink-card team | **Required** | Background polling |
+| `INVITATION_TOKEN_SECRET` (32-byte AES key) | DevOps + blink-card | **Required** | Token encryption/decryption |
+| `CARD_PROGRAM_SOURCE_KEY` (String) | DevOps + blink-card | **Required** | Token payload validation |
 
 ### Existing Integrations
 
@@ -652,11 +726,15 @@ apps/admin-panel/
 │   ├── template-uploader.tsx
 │   └── index.ts
 │
-└── lib/
-    ├── prisma.ts               # Client singleton
-    ├── invitation-service.ts   # Business logic
-    ├── template-parser.ts      # YAML validation
-    └── invitation-code.ts      # HMAC generation
+├── lib/
+│   ├── prisma.ts               # Client singleton
+│   ├── invitation-service.ts   # Business logic
+│   ├── template-parser.ts      # YAML validation
+│   ├── invitation-code.ts      # AES-256-GCM token generation
+│   └── blink-card-client.ts    # gRPC client for card KYC status
+│
+└── protos/
+    └── invitation_service.proto  # blink-card proto definition
 ```
 
 ### Naming Conventions
@@ -700,45 +778,6 @@ apps/admin-panel/
 | Service Unavailable | UI Display |
 |---------------------|------------|
 | Main API timeout (L2 status) | "L2 verification status pending" |
-| blink-card API timeout | "Card KYC status pending" |
+| blink-card gRPC timeout | "Card KYC status pending" |
 | Both unavailable | Invitation visible, status shows "Checking..." |
 | Notification service down | "Notification pending", manual resend when restored |
-
----
-
-## Open Questions
-
-1. **Enrollment detection:** How do we detect when a user completes program enrollment? Does blink-card emit an event, or do we need to poll another endpoint?
-
-2. **Template versioning:** Should we store the template content in the invitation metadata for audit trail and resend capability? (Architecture doc suggests yes)
-
-3. **Invitation expiration:** Should invitation codes expire? Current design uses expiration_day in HMAC but no enforcement is documented.
-
-4. **Batch limits:** 50 users per batch - is this sufficient for future cohorts, or should we design for larger batches?
-
-5. **Observability:** What metrics and alerts should we add for the background job? Suggested: `job_last_run_at`, `job_run_count`, alert if >20 min since last run.
-
----
-
-## Appendix: Requirements Traceability
-
-| PRD Requirement | Implementation |
-|-----------------|----------------|
-| FR1-3: Invitation list/detail | `app/invitations/page.tsx`, `[id]/page.tsx` |
-| FR4-6: Create invitation | `app/invitations/new/page.tsx`, `actions.ts` |
-| FR7-10: User discovery | `invitation-form.tsx` (uses existing user search query) |
-| FR11-15: Status monitoring | `invitation-detail.tsx`, `status-badge.tsx` |
-| FR16-20: Notification delivery | `actions.ts` -> `MarketingNotificationTrigger` |
-| FR21-24: Automated workflows | `jobs/invitation-status-poller.ts` |
-| FR25-28: Template management | `template-uploader.tsx`, `template-parser.ts` |
-
----
-
-**Document Status:** Ready for peer review
-
-**Next Steps:**
-
-1. Review and approve this technical specification
-2. Coordinate with mobile team on DeepLinkScreen values
-3. Request cardKycStatus query from blink-card team
-4. Begin implementation per architecture decision document
