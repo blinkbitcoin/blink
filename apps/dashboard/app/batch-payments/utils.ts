@@ -21,6 +21,11 @@ const HEADERS = {
   MEMO: "memo",
 } as const
 
+const ERROR_MESSAGES = {
+  INVALID_USERNAMES_PREFIX: "Invalid username(s) found:",
+  NO_WALLET_FOUND: "No wallet found for this user",
+} as const
+
 export function validateCSV({
   fileContent,
   defaultWallet,
@@ -159,7 +164,7 @@ export const processRecords = async ({
     }
 
     if (!getDefaultWalletID.responsePayload) {
-      validationErrors.push(`${record.username}: No wallet found for this user`)
+      validationErrors.push(`${record.username}: ${ERROR_MESSAGES.NO_WALLET_FOUND}`)
       continue
     }
 
@@ -178,7 +183,7 @@ export const processRecords = async ({
   }
 
   if (validationErrors.length > 0) {
-    const errorMessage = `Invalid username(s) found:\n\n${validationErrors.join("\n")}`
+    const errorMessage = `${ERROR_MESSAGES.INVALID_USERNAMES_PREFIX}\n\n${validationErrors.join("\n")}`
     return new Error(errorMessage)
   }
 

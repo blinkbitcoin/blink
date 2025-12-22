@@ -14,7 +14,7 @@ describe("processRecords - Batch Validation Tests", () => {
     jest.clearAllMocks()
   })
 
-  it("should collect all invalid usernames and return them in a single error", async () => {
+  it("should collect all invalid usernames and return aggregated error message", async () => {
     const records: CSVRecord[] = [
       {
         username: "valid_user1",
