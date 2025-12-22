@@ -45,7 +45,7 @@ const OnChainUsdPaymentSendMutation = GT.Field<
   args: {
     input: { type: GT.NonNull(OnChainUsdPaymentSendInput) },
   },
-  resolve: async (_, args, { domainAccount }) => {
+  resolve: async (_, args, { domainAccount, apiKeyId }) => {
     const { walletId, address, amount, memo, speed } = args.input
 
     if (walletId instanceof Error) {
@@ -71,6 +71,7 @@ const OnChainUsdPaymentSendMutation = GT.Field<
       address,
       speed,
       memo,
+      apiKeyId,
     })
 
     if (result instanceof Error) {

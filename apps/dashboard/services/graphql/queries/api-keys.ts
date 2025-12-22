@@ -16,6 +16,16 @@ gql`
         expiresAt
         readOnly
         scopes
+        limits {
+          dailyLimitSats
+          weeklyLimitSats
+          monthlyLimitSats
+          annualLimitSats
+          spentLast24HSats
+          spentLast7DSats
+          spentLast30DSats
+          spentLast365DSats
+        }
       }
     }
   }

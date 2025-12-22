@@ -49,7 +49,7 @@ const LnInvoicePaymentSendMutation = GT.Field<
   args: {
     input: { type: GT.NonNull(LnInvoicePaymentInput) },
   },
-  resolve: async (_, args, { domainAccount }) => {
+  resolve: async (_, args, { domainAccount, apiKeyId }) => {
     const { walletId, paymentRequest, memo } = args.input
     if (walletId instanceof InputValidationError) {
       return { errors: [{ message: walletId.message }] }
@@ -66,6 +66,7 @@ const LnInvoicePaymentSendMutation = GT.Field<
       uncheckedPaymentRequest: paymentRequest,
       memo: memo ?? null,
       senderAccount: domainAccount,
+      apiKeyId,
     })
 
     if (result instanceof Error) {
