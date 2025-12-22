@@ -85,8 +85,8 @@ describe("processRecords - Batch Validation Tests", () => {
     expect(result).toBeInstanceOf(Error)
 
     if (result instanceof Error) {
-      // Error message should contain both invalid usernames
-      expect(result.message).toContain("Invalid username(s) found:")
+      // Error message should contain count and both invalid usernames
+      expect(result.message).toContain("2 Invalid username(s) found:")
       expect(result.message).toContain("invalid_user1")
       expect(result.message).toContain("invalid_user2")
       expect(result.message).toContain("User not found")
@@ -208,9 +208,70 @@ describe("processRecords - Batch Validation Tests", () => {
 
     expect(result).toBeInstanceOf(Error)
     if (result instanceof Error) {
-      expect(result.message).toContain("Invalid username(s) found:")
+      expect(result.message).toContain("1 Invalid username(s) found:")
       expect(result.message).toContain("user_without_wallet")
       expect(result.message).toContain("No wallet found for this user")
+    }
+  })
+
+  it("should return empty array for empty records input", async () => {
+    const records: CSVRecord[] = []
+
+    const result = await processRecords({ records })
+
+    expect(Array.isArray(result)).toBe(true)
+    if (Array.isArray(result)) {
+      expect(result).toHaveLength(0)
+    }
+  })
+
+  it("should return all errors when every username is invalid", async () => {
+    const records: CSVRecord[] = [
+      {
+        username: "bad_user1",
+        amount: "100",
+        currency: AmountCurrency.SATS,
+        wallet: WalletCurrency.Btc,
+      },
+      {
+        username: "bad_user2",
+        amount: "200",
+        currency: AmountCurrency.SATS,
+        wallet: WalletCurrency.Btc,
+      },
+      {
+        username: "bad_user3",
+        amount: "300",
+        currency: AmountCurrency.USD,
+        wallet: WalletCurrency.Usd,
+      },
+    ]
+
+    mockedGetUserDetailsAction
+      .mockResolvedValueOnce({
+        error: true,
+        message: "User not found",
+        responsePayload: null,
+      })
+      .mockResolvedValueOnce({
+        error: true,
+        message: "Invalid username",
+        responsePayload: null,
+      })
+      .mockResolvedValueOnce({
+        error: false,
+        message: "success",
+        responsePayload: null,
+      })
+
+    const result = await processRecords({ records })
+
+    expect(result).toBeInstanceOf(Error)
+    if (result instanceof Error) {
+      expect(result.message).toContain("3 Invalid username(s) found:")
+      expect(result.message).toContain("bad_user1")
+      expect(result.message).toContain("bad_user2")
+      expect(result.message).toContain("bad_user3")
     }
   })
 })

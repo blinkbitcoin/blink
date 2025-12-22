@@ -183,7 +183,8 @@ export const processRecords = async ({
   }
 
   if (validationErrors.length > 0) {
-    const errorMessage = `${ERROR_MESSAGES.INVALID_USERNAMES_PREFIX}\n\n${validationErrors.join("\n")}`
+    const count = validationErrors.length
+    const errorMessage = `${count} ${ERROR_MESSAGES.INVALID_USERNAMES_PREFIX}\n\n${validationErrors.join("\n")}`
     return new Error(errorMessage)
   }
 
