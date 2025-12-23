@@ -313,6 +313,12 @@ export type BtcWalletTransactionsByPaymentRequestArgs = {
   paymentRequest: Scalars['LnPaymentRequest']['input'];
 };
 
+export type BlockInfo = {
+  readonly __typename: 'BlockInfo';
+  readonly blockHash?: Maybe<Scalars['String']['output']>;
+  readonly blockHeight?: Maybe<Scalars['Int']['output']>;
+};
+
 export type BuildInformation = {
   readonly __typename: 'BuildInformation';
   readonly commitHash?: Maybe<Scalars['String']['output']>;
@@ -535,6 +541,8 @@ export type FeesInformation = {
 /** Provides global settings for the application which might have an impact for the user. */
 export type Globals = {
   readonly __typename: 'Globals';
+  /** Current block height and block hash */
+  readonly blockInfo?: Maybe<BlockInfo>;
   readonly buildInformation: BuildInformation;
   readonly feesInformation: FeesInformation;
   /** The domain name for lightning addresses accepted by this Galoy instance */
