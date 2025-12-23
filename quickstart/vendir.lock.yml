@@ -2,24 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat(core): add exponential decay fee strategy (#355)'
-      sha: 4b77e91e4299c00c5f9e4018d1084131eff66929
+      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1389
+        (#379)...'
+      sha: 8cbce980eff9981012c46e70688d516085619eca
       tags:
-      - 0.21.124-1-g4b77e91e4
+      - 0.21.125-2-g8cbce980e
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat(core): add exponential decay fee strategy (#355)'
-      sha: 4b77e91e4299c00c5f9e4018d1084131eff66929
+      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1389
+        (#379)...'
+      sha: 8cbce980eff9981012c46e70688d516085619eca
       tags:
-      - 0.21.124-1-g4b77e91e4
+      - 0.21.125-2-g8cbce980e
     path: schemas
   - git:
-      commitTitle: 'feat(core): add exponential decay fee strategy (#355)'
-      sha: 4b77e91e4299c00c5f9e4018d1084131eff66929
+      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1389
+        (#379)...'
+      sha: 8cbce980eff9981012c46e70688d516085619eca
       tags:
-      - 0.21.124-1-g4b77e91e4
+      - 0.21.125-2-g8cbce980e
     path: gql
   path: graphql
 kind: LockConfig
