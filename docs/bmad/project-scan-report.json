@@ -1,0 +1,56 @@
+{
+  "workflow_version": "1.2.0",
+  "timestamps": {
+    "started": "2025-12-22T00:00:00Z",
+    "completed": "2025-12-22T17:00:00Z"
+  },
+  "mode": "initial_scan",
+  "scan_level": "exhaustive",
+  "project_root": ".",
+  "output_folder": "./_bmad-output",
+  "status": "completed",
+  "completed_steps": [
+    {"step": "step_1", "status": "completed", "summary": "Classified as monorepo with 11 parts"},
+    {"step": "step_2", "status": "completed", "summary": "Found 17+ existing documentation files"},
+    {"step": "step_3", "status": "completed", "summary": "Analyzed tech stack: TypeScript, Rust, Next.js, GraphQL"},
+    {"step": "step_4", "status": "completed", "summary": "Extracted API contracts, data models"},
+    {"step": "step_5", "status": "completed", "summary": "Generated source tree documentation"},
+    {"step": "step_6", "status": "completed", "summary": "Documented dev/ops setup"},
+    {"step": "step_7", "status": "completed", "summary": "Multi-part integration documented"},
+    {"step": "step_8", "status": "completed", "summary": "Generated architecture documentation"},
+    {"step": "step_9", "status": "completed", "summary": "Generated supporting docs"},
+    {"step": "step_10", "status": "completed", "summary": "Generated master index"}
+  ],
+  "findings": {
+    "project_name": "Blink (formerly Galoy)",
+    "project_type": "Bitcoin Banking Platform",
+    "repository_type": "Monorepo (pnpm + Cargo)",
+    "languages": ["TypeScript", "Rust", "JavaScript"],
+    "frameworks": ["Node.js", "Next.js", "Axum", "Apollo GraphQL"],
+    "databases": ["MongoDB", "PostgreSQL", "Redis"],
+    "auth_stack": "Ory (Kratos, Hydra, Oathkeeper)",
+    "bitcoin_stack": "LND, Bria, bitcoind"
+  },
+  "project_types": [
+    {"part_id": "core-api", "project_type_id": "backend", "display_name": "Core API (TypeScript)"},
+    {"part_id": "core-api-keys", "project_type_id": "backend", "display_name": "API Keys Service (Rust)"},
+    {"part_id": "core-notifications", "project_type_id": "backend", "display_name": "Notifications Service (Rust)"},
+    {"part_id": "apps-dashboard", "project_type_id": "web", "display_name": "Dashboard App"},
+    {"part_id": "apps-admin-panel", "project_type_id": "web", "display_name": "Admin Panel App"},
+    {"part_id": "apps-consent", "project_type_id": "web", "display_name": "Consent App"},
+    {"part_id": "apps-pay", "project_type_id": "web", "display_name": "Pay App"},
+    {"part_id": "apps-map", "project_type_id": "web", "display_name": "Map App"},
+    {"part_id": "apps-voucher", "project_type_id": "web", "display_name": "Voucher App"},
+    {"part_id": "lib-galoy-components", "project_type_id": "library", "display_name": "Galoy Components"},
+    {"part_id": "lib-rust", "project_type_id": "library", "display_name": "Rust Shared Crates"}
+  ],
+  "outputs_generated": [
+    "index.md",
+    "architecture.md",
+    "api-contracts.md",
+    "data-models.md",
+    "source-tree.md",
+    "devops.md",
+    "project-scan-report.json"
+  ]
+}
