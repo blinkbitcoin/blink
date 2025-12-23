@@ -208,13 +208,14 @@ Admin-panel currently has no database. Adding:
 CREATE TABLE invitations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id VARCHAR NOT NULL,
+  account_id VARCHAR NOT NULL,  -- For blink-card queries (fetched via admin GraphQL)
   status VARCHAR NOT NULL DEFAULT 'INVITED',
   invited_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   invited_by VARCHAR NOT NULL,
 
   -- KYC Status Cache (single-writer: background job)
   l2_verification_status VARCHAR,
-  card_kyc_status VARCHAR,
+  card_kyc_status VARCHAR,       -- Stores granular Rain status (e.g., ManualReview, Pending)
   last_status_check_at TIMESTAMPTZ,
 
   -- Flow tracking with idempotency guards
@@ -230,6 +231,7 @@ CREATE TABLE invitations (
 );
 
 CREATE INDEX idx_invitations_user_id ON invitations(user_id);
+CREATE INDEX idx_invitations_account_id ON invitations(account_id);
 CREATE INDEX idx_invitations_status ON invitations(status);
 CREATE UNIQUE INDEX idx_invitations_user_active ON invitations(user_id)
   WHERE status NOT IN ('KYC_REJECTED');
@@ -241,13 +243,14 @@ CREATE UNIQUE INDEX idx_invitations_user_active ON invitations(user_id)
 model Invitation {
   id                    String    @id @default(uuid())
   userId                String    @map("user_id")
+  accountId             String    @map("account_id")  // For blink-card queries
   status                String    @default("INVITED")
   invitedAt             DateTime  @default(now()) @map("invited_at")
   invitedBy             String    @map("invited_by")
 
   // KYC Status Cache
   l2VerificationStatus  String?   @map("l2_verification_status")
-  cardKycStatus         String?   @map("card_kyc_status")
+  cardKycStatus         String?   @map("card_kyc_status")  // Granular Rain status
   lastStatusCheckAt     DateTime? @map("last_status_check_at")
 
   // Flow tracking
@@ -299,6 +302,30 @@ PROGRAM_SIGNUP_TRIGGERED → ENROLLED (User completes enrollment)
 
 **Key Insight:** We cannot observe "user started KYC" - we only detect L2 approval. `KYC_IN_PROGRESS` means L2 done, waiting on card KYC.
 
+**Granular Rain KYC Status Mapping:**
+
+The `card_kyc_status` column stores the granular Rain status for detailed visibility:
+
+| Rain Status | Maps to Invitation Status | UI Display |
+|-------------|---------------------------|------------|
+| `NotStarted` | `KYC_IN_PROGRESS` | Card KYC: Not Started |
+| `Pending` | `KYC_IN_PROGRESS` | Card KYC: Pending |
+| `NeedsInformation` | `KYC_IN_PROGRESS` | Card KYC: Needs Information |
+| `NeedsVerification` | `KYC_IN_PROGRESS` | Card KYC: Needs Verification |
+| `ManualReview` | `KYC_IN_PROGRESS` | Card KYC: Manual Review |
+| `Approved` | `KYC_APPROVED` | Card KYC: Approved |
+| `Denied` | `KYC_REJECTED` | Card KYC: Denied |
+| `Locked` | `KYC_REJECTED` | Card KYC: Locked |
+| `Canceled` | `KYC_REJECTED` | Card KYC: Canceled |
+
+**UI Display Pattern:**
+```
+┌─────────────────────────────────────────────┐
+│ Status: KYC_IN_PROGRESS                     │  ← Main status badge
+│ Card KYC: ManualReview                      │  ← Sub-text (granular)
+└─────────────────────────────────────────────┘
+```
+
 ### API & Communication Patterns
 
 **Admin Panel Internal (Server Actions + Prisma):**
@@ -315,9 +342,13 @@ async function resendNotification(invitationId: string, flow: 'FLOW1' | 'FLOW2')
 
 | Operation | Service | Status |
 |-----------|---------|--------|
-| User search by phone/email | Main API | ✅ Exists |
+| User search by phone/email | Admin API | ✅ Exists |
+| Get account_id for user | Admin API | ✅ Exists (used at invitation creation) |
 | L2 verification status | Main API | ✅ Exists |
 | Send notification | Main API (`MarketingNotificationTrigger`) | ✅ Exists |
+
+**account_id Resolution:**
+During invitation creation, `account_id` is fetched via Admin GraphQL and stored alongside `user_id`. The background job uses `account_id` to query blink-card.
 
 **External gRPC Calls:**
 
@@ -705,18 +736,18 @@ service InvitationService {
 }
 
 message GetApplicationStatusesRequest {
-  repeated string user_ids = 1;  // Batch of user IDs to query
+  repeated string account_ids = 1;  // Batch of account IDs to query
 }
 
 message ApplicationStatus {
-  string user_id = 1;
-  string status = 2;             // "pending", "approved", "rejected", "not_found"
-  string rejection_reason = 3;   // Populated if status == "rejected"
+  string account_id = 1;
+  string status = 2;             // Granular: NotStarted, Pending, Approved, NeedsInformation, NeedsVerification, ManualReview, Denied, Locked, Canceled
+  string rejection_reason = 3;   // Populated if status is Denied/Locked/Canceled
   string updated_at = 4;         // ISO8601 timestamp
 }
 
 message GetApplicationStatusesResponse {
-  repeated ApplicationStatus statuses = 1;  // Results keyed by user_id
+  repeated ApplicationStatus statuses = 1;  // Results keyed by account_id
 }
 ```
 
@@ -743,17 +774,23 @@ const client = new proto.InvitationService(
   grpc.credentials.createInsecure() // Use TLS in production
 );
 
+// Granular Rain KYC statuses
+export type RainKycStatus =
+  | 'NotStarted' | 'Pending' | 'Approved'
+  | 'NeedsInformation' | 'NeedsVerification' | 'ManualReview'
+  | 'Denied' | 'Locked' | 'Canceled';
+
 export type CardKycStatus = {
-  userId: string;
-  status: 'pending' | 'approved' | 'rejected' | 'not_found';
+  accountId: string;
+  status: RainKycStatus;
   rejectionReason?: string;
   updatedAt?: string;
 };
 
-// Batch query - single round trip for multiple users
-export async function getCardKycStatuses(userIds: string[]): Promise<Map<string, CardKycStatus>> {
+// Batch query - single round trip for multiple accounts
+export async function getCardKycStatuses(accountIds: string[]): Promise<Map<string, CardKycStatus>> {
   return new Promise((resolve, reject) => {
-    client.GetApplicationStatuses({ user_ids: userIds }, (err, response) => {
+    client.GetApplicationStatuses({ account_ids: accountIds }, (err, response) => {
       if (err) {
         reject(err);
         return;
@@ -761,8 +798,8 @@ export async function getCardKycStatuses(userIds: string[]): Promise<Map<string,
 
       const statusMap = new Map<string, CardKycStatus>();
       for (const status of response.statuses) {
-        statusMap.set(status.user_id, {
-          userId: status.user_id,
+        statusMap.set(status.account_id, {
+          accountId: status.account_id,
           status: status.status,
           rejectionReason: status.rejection_reason || undefined,
           updatedAt: status.updated_at || undefined,
@@ -778,12 +815,12 @@ export async function getCardKycStatuses(userIds: string[]): Promise<Map<string,
 
 ```typescript
 // Efficient: single gRPC call for all invitations
-const userIds = invitations.map(inv => inv.userId);
-const statuses = await getCardKycStatuses(userIds);
+const accountIds = invitations.map(inv => inv.accountId);
+const statuses = await getCardKycStatuses(accountIds);
 
 for (const inv of invitations) {
-  const kycStatus = statuses.get(inv.userId);
-  // Process each invitation with cached status
+  const kycStatus = statuses.get(inv.accountId);
+  // Process each invitation with cached granular status
 }
 ```
 
@@ -862,7 +899,7 @@ model Invitation {
 | Dependency | Owner | Required For |
 |------------|-------|--------------|
 | New DeepLinkScreen values (`KYC_START`, `PROGRAM_SIGNUP`) | Mobile team | Flow 1 & 2 notifications |
-| New `GetApplicationStatuses` gRPC RPC (batch) | blink-card team | Background job polling |
+| `GetApplicationStatuses` gRPC RPC (batch by account_id) | blink-card team | Background job polling |
 | `INVITATION_TOKEN_SECRET` (32-byte AES key) | DevOps/blink-card | Token encryption/decryption |
 | `CARD_PROGRAM_SOURCE_KEY` (String) | DevOps/blink-card | Token payload validation |
 

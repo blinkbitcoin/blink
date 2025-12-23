@@ -184,6 +184,7 @@ erDiagram
     INVITATION {
         uuid id PK
         string user_id
+        string account_id
         string status
         timestamp invited_at
         string invited_by
@@ -205,13 +206,14 @@ erDiagram
 model Invitation {
   id                    String    @id @default(uuid())
   userId                String    @map("user_id")
+  accountId             String    @map("account_id")  // For blink-card queries
   status                String    @default("INVITED")
   invitedAt             DateTime  @default(now()) @map("invited_at")
   invitedBy             String    @map("invited_by")
 
   // KYC Status Cache (single-writer: background job only)
   l2VerificationStatus  String?   @map("l2_verification_status")
-  cardKycStatus         String?   @map("card_kyc_status")
+  cardKycStatus         String?   @map("card_kyc_status")  // Granular Rain status
   lastStatusCheckAt     DateTime? @map("last_status_check_at")
 
   // Flow tracking with idempotency guards
@@ -229,6 +231,7 @@ model Invitation {
   metadata              Json      @default("{}")
 
   @@index([userId])
+  @@index([accountId])
   @@index([status])
   @@unique([userId], name: "idx_invitations_user_active")
   @@map("invitations")
@@ -312,8 +315,8 @@ sequenceDiagram
     Poller->>DB: Fetch active invitations
 
     Note over Poller,BlinkCard: Batch gRPC call for all KYC_IN_PROGRESS invitations
-    Poller->>BlinkCard: GetApplicationStatuses(user_ids[])
-    BlinkCard-->>Poller: Map of userId → status
+    Poller->>BlinkCard: GetApplicationStatuses(account_ids[])
+    BlinkCard-->>Poller: Map of accountId → granular Rain status
 
     loop For each invitation
         alt Status = INVITED
@@ -468,18 +471,18 @@ service InvitationService {
 }
 
 message GetApplicationStatusesRequest {
-  repeated string user_ids = 1;  // Batch of user IDs to query
+  repeated string account_ids = 1;  // Batch of account IDs to query
 }
 
 message ApplicationStatus {
-  string user_id = 1;
-  string status = 2;             // "pending", "approved", "rejected", "not_found"
-  string rejection_reason = 3;   // Populated if status == "rejected"
+  string account_id = 1;
+  string status = 2;             // Granular: NotStarted, Pending, Approved, NeedsInformation, NeedsVerification, ManualReview, Denied, Locked, Canceled
+  string rejection_reason = 3;   // Populated if status is Denied/Locked/Canceled
   string updated_at = 4;         // ISO8601 timestamp
 }
 
 message GetApplicationStatusesResponse {
-  repeated ApplicationStatus statuses = 1;
+  repeated ApplicationStatus statuses = 1;  // Results keyed by account_id
 }
 ```
 
@@ -682,7 +685,7 @@ export function generateInvitationCode(accountId: string): string {
 |------------|-------|--------|--------|
 | `KYC_START` DeepLinkScreen | Mobile team | **Required** | Flow 1 deep link |
 | `PROGRAM_SIGNUP` DeepLinkScreen | Mobile team | **Required** | Flow 2 deep link |
-| `GetApplicationStatuses` gRPC RPC (batch) | blink-card team | **Required** | Background polling |
+| `GetApplicationStatuses` gRPC RPC (batch by account_id) | blink-card team | **Required** | Background polling |
 | `INVITATION_TOKEN_SECRET` (32-byte AES key) | DevOps + blink-card | **Required** | Token encryption/decryption |
 | `CARD_PROGRAM_SOURCE_KEY` (String) | DevOps + blink-card | **Required** | Token payload validation |
 
@@ -742,7 +745,7 @@ apps/admin-panel/
 | Element | Convention | Example |
 |---------|------------|---------|
 | DB tables | snake_case plural | `invitations` |
-| DB columns | snake_case | `user_id`, `last_status_check_at` |
+| DB columns | snake_case | `user_id`, `account_id`, `last_status_check_at` |
 | Prisma models | PascalCase singular | `Invitation` |
 | Prisma fields | camelCase | `userId`, `lastStatusCheckAt` |
 | Status values | SCREAMING_SNAKE_CASE | `KYC_IN_PROGRESS` |

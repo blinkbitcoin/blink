@@ -34,9 +34,10 @@ _Critical rules and patterns for implementing the Program Invitation System in a
 ### Database & Schema Rules
 
 - **Vendor-agnostic naming**: Use `l2_verification_status` not `sumsub_status`
-- **Snake_case for columns**: `user_id`, `last_status_check_at`
-- **CamelCase for Prisma fields**: `userId`, `lastStatusCheckAt`
+- **Snake_case for columns**: `user_id`, `account_id`, `last_status_check_at`
+- **CamelCase for Prisma fields**: `userId`, `accountId`, `lastStatusCheckAt`
 - **Index naming**: `idx_{table}_{column}` pattern
+- **account_id**: Fetched via Admin GraphQL at invitation creation, used for blink-card queries
 
 ### Server Actions
 
@@ -78,6 +79,16 @@ Valid states: `INVITED` → `KYC_IN_PROGRESS` → `KYC_APPROVED` → `PROGRAM_SI
 Branch: `KYC_IN_PROGRESS` → `KYC_REJECTED` (final for card program)
 
 **Key insight**: `KYC_IN_PROGRESS` means L2 approved, waiting on card KYC (not "user started KYC")
+
+### Granular Rain KYC Status
+
+The `card_kyc_status` column stores granular Rain status for UI sub-text display:
+
+| Rain Status | Maps to | UI Sub-text |
+|-------------|---------|-------------|
+| NotStarted, Pending, NeedsInfo, NeedsVerification, ManualReview | `KYC_IN_PROGRESS` | "Card KYC: {status}" |
+| Approved | `KYC_APPROVED` | "Card KYC: Approved" |
+| Denied, Locked, Canceled | `KYC_REJECTED` | "Card KYC: {status}" |
 
 ---
 
@@ -166,7 +177,7 @@ Final Token = Base64(iv || ciphertext)
 |------------|-------|--------|
 | `KYC_START` DeepLinkScreen | Mobile team | Required |
 | `PROGRAM_SIGNUP` DeepLinkScreen | Mobile team | Required |
-| `GetApplicationStatuses` gRPC RPC (batch) | blink-card team | Required |
+| `GetApplicationStatuses` gRPC RPC (batch by account_id) | blink-card team | Required |
 | `INVITATION_TOKEN_SECRET` (32-byte AES key) | DevOps + blink-card | Required |
 | `CARD_PROGRAM_SOURCE_KEY` (String) | DevOps + blink-card | Required |
 
