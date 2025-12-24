@@ -851,6 +851,30 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       message = "Multiple localized push contents with the same language"
       return new ValidationInternalError({ message, logger: baseLogger })
 
+    case "NotificationTemplateNotFoundError":
+      message = "No notification template found for the requested criteria."
+      return new NotFoundError({ message, logger: baseLogger })
+
+    case "InvalidNotificationStatusError":
+      message = "Invalid notification status"
+      return new ValidationInternalError({ message, logger: baseLogger })
+
+    case "InvalidNotificationIconError":
+      message = "Invalid notification icon"
+      return new ValidationInternalError({ message, logger: baseLogger })
+
+    case "InvalidNotificationDeepLinkScreenError":
+      message = "Invalid notification deeplink screen"
+      return new ValidationInternalError({ message, logger: baseLogger })
+
+    case "InvalidNotificationDeepLinkActionError":
+      message = "Invalid notification deeplink action"
+      return new ValidationInternalError({ message, logger: baseLogger })
+
+    case "InvalidNotificationExternalUrlError":
+      message = "Invalid notification external url"
+      return new ValidationInternalError({ message, logger: baseLogger })
+
     // ----------
     // Unknown below here
     // ----------

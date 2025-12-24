@@ -137,6 +137,14 @@ export const deepLinkScreenToGrpcDeepLinkScreen = (
       return Grpc.DeepLinkScreen.SETTINGSNOTIFICATIONS
     case DeepLinkScreen.SettingsEmail:
       return Grpc.DeepLinkScreen.SETTINGSEMAIL
+    case DeepLinkScreen.WelcomeCard:
+      return Grpc.DeepLinkScreen.WELCOMECARD
+    case DeepLinkScreen.LoadingCard:
+      return Grpc.DeepLinkScreen.LOADINGCARD
+    case DeepLinkScreen.VisaCard:
+      return Grpc.DeepLinkScreen.VISACARD
+    case DeepLinkScreen.CreditCardLimit:
+      return Grpc.DeepLinkScreen.CREDITCARDLIMIT
   }
 }
 

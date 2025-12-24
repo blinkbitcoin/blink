@@ -28,6 +28,15 @@ import {
   DeepLink as ProtoDeepLink,
   HandleNotificationEventResponse,
   Action,
+  MsgTemplateCreateRequest,
+  MsgTemplateUpdateRequest,
+  MsgTemplateDeleteRequest,
+  MsgTemplatesListRequest,
+  MsgMessageCreateRequest,
+  MsgMessageUpdateStatusRequest,
+  MsgMessagesListRequest,
+  MsgMessageHistoryListRequest,
+  MsgTemplateByIdRequest,
 } from "./proto/notifications_pb"
 
 import * as notificationsGrpc from "./grpc-client"
@@ -705,7 +714,324 @@ export const NotificationsService = (): INotificationsService => {
     }
   }
 
-  // trace everything except price update because it runs every 30 seconds
+  const msgTemplateCreate = async ({
+    name,
+    languageCode,
+    iconName,
+    title,
+    body,
+    status,
+    shouldSendPush,
+    shouldAddToHistory,
+    shouldAddToBulletin,
+    deeplinkAction,
+    deeplinkScreen,
+    externalUrl,
+  }: {
+    name: string
+    languageCode: string
+    iconName: string
+    title: string
+    body: string
+    status: string
+    shouldSendPush?: boolean
+    shouldAddToHistory?: boolean
+    shouldAddToBulletin?: boolean
+    deeplinkAction?: string
+    deeplinkScreen?: string
+    externalUrl?: string
+  }): Promise<true | NotificationsServiceError> => {
+    try {
+      const request = new MsgTemplateCreateRequest()
+      request.setName(name)
+      request.setLanguageCode(languageCode)
+      request.setIconName(iconName)
+      request.setTitle(title)
+      request.setBody(body)
+      request.setStatus(status)
+      if (shouldSendPush) request.setShouldSendPush(shouldSendPush)
+      if (shouldAddToHistory) request.setShouldAddToHistory(shouldAddToHistory)
+      if (shouldAddToBulletin) request.setShouldAddToBulletin(shouldAddToBulletin)
+      if (deeplinkAction) request.setDeeplinkAction(deeplinkAction)
+      if (deeplinkScreen) request.setDeeplinkScreen(deeplinkScreen)
+      if (externalUrl) request.setExternalUrl(externalUrl)
+
+      await notificationsGrpc.msgTemplateCreate(
+        request,
+        notificationsGrpc.notificationsMetadata,
+      )
+
+      return true
+    } catch (err) {
+      return handleCommonNotificationErrors(err)
+    }
+  }
+
+  const msgTemplateUpdate = async ({
+    id,
+    name,
+    languageCode,
+    iconName,
+    title,
+    body,
+    status,
+    shouldSendPush,
+    shouldAddToHistory,
+    shouldAddToBulletin,
+    deeplinkAction,
+    deeplinkScreen,
+    externalUrl,
+  }: {
+    id: string
+    name: string
+    languageCode: string
+    iconName: string
+    title: string
+    body: string
+    status: string
+    shouldSendPush?: boolean
+    shouldAddToHistory?: boolean
+    shouldAddToBulletin?: boolean
+    deeplinkAction?: string
+    deeplinkScreen?: string
+    externalUrl?: string
+  }): Promise<true | NotificationsServiceError> => {
+    try {
+      const request = new MsgTemplateUpdateRequest()
+      request.setId(id)
+      request.setName(name)
+      request.setLanguageCode(languageCode)
+      request.setIconName(iconName)
+      request.setTitle(title)
+      request.setBody(body)
+      request.setStatus(status)
+      if (shouldSendPush) request.setShouldSendPush(shouldSendPush)
+      if (shouldAddToHistory) request.setShouldAddToHistory(shouldAddToHistory)
+      if (shouldAddToBulletin) request.setShouldAddToBulletin(shouldAddToBulletin)
+      if (deeplinkAction) request.setDeeplinkAction(deeplinkAction)
+      if (deeplinkScreen) request.setDeeplinkScreen(deeplinkScreen)
+      if (externalUrl) request.setExternalUrl(externalUrl)
+
+      await notificationsGrpc.msgTemplateUpdate(
+        request,
+        notificationsGrpc.notificationsMetadata,
+      )
+
+      return true
+    } catch (err) {
+      return handleCommonNotificationErrors(err)
+    }
+  }
+
+  const msgTemplateDelete = async ({
+    id,
+  }: {
+    id: string
+  }): Promise<true | NotificationsServiceError> => {
+    try {
+      const request = new MsgTemplateDeleteRequest()
+      request.setId(id)
+
+      await notificationsGrpc.msgTemplateDelete(
+        request,
+        notificationsGrpc.notificationsMetadata,
+      )
+
+      return true
+    } catch (err) {
+      return handleCommonNotificationErrors(err)
+    }
+  }
+
+  const msgTemplateById = async ({
+    id,
+  }: {
+    id: string
+  }): Promise<MsgTemplate | null | NotificationsServiceError> => {
+    try {
+      const request = new MsgTemplateByIdRequest()
+      request.setId(id)
+
+      const response = await notificationsGrpc.msgTemplateById(
+        request,
+        notificationsGrpc.notificationsMetadata,
+      )
+
+      const template = response.getTemplate()
+      if (!template) return null
+
+      return {
+        id: template.getId(),
+        name: template.getName(),
+        languageCode: template.getLanguageCode(),
+        iconName: template.getIconName(),
+        title: template.getTitle(),
+        body: template.getBody(),
+        status: template.getStatus(),
+        shouldSendPush: template.getShouldSendPush(),
+        shouldAddToHistory: template.getShouldAddToHistory(),
+        shouldAddToBulletin: template.getShouldAddToBulletin(),
+        deeplinkAction: template.getDeeplinkAction(),
+        deeplinkScreen: template.getDeeplinkScreen(),
+        externalUrl: template.getExternalUrl(),
+      }
+    } catch (err) {
+      return handleCommonNotificationErrors(err)
+    }
+  }
+
+  const msgTemplatesList = async ({
+    languageCode,
+    status,
+    limit,
+    offset,
+  }: MsgTemplatesListArgs & { status?: string }): Promise<
+    { total: number; items: MsgTemplate[] } | NotificationsServiceError
+  > => {
+    try {
+      const request = new MsgTemplatesListRequest()
+      if (languageCode) request.setLanguageCode(languageCode)
+      if (status) request.setStatus(status)
+      if (limit) request.setLimit(limit)
+      if (offset) request.setOffset(offset)
+
+      const response = await notificationsGrpc.msgTemplatesList(
+        request,
+        notificationsGrpc.notificationsMetadata,
+      )
+
+      const items = response.getTemplatesList().map<MsgTemplate>((template) => ({
+        id: template.getId(),
+        name: template.getName(),
+        languageCode: template.getLanguageCode(),
+        iconName: template.getIconName(),
+        title: template.getTitle(),
+        body: template.getBody(),
+        status: template.getStatus(),
+        shouldSendPush: template.getShouldSendPush(),
+        shouldAddToHistory: template.getShouldAddToHistory(),
+        shouldAddToBulletin: template.getShouldAddToBulletin(),
+        deeplinkAction: template.getDeeplinkAction(),
+        deeplinkScreen: template.getDeeplinkScreen(),
+        externalUrl: template.getExternalUrl(),
+      }))
+
+      return { total: response.getTotal(), items }
+    } catch (err) {
+      return handleCommonNotificationErrors(err)
+    }
+  }
+
+  const msgMessageCreate = async ({
+    username,
+    status,
+    sentBy,
+    templateId,
+  }: MsgMessageCreateArgs): Promise<true | NotificationsServiceError> => {
+    try {
+      const request = new MsgMessageCreateRequest()
+      request.setUsername(username)
+      request.setSentBy(sentBy)
+      request.setTemplateId(templateId)
+      if (status) request.setStatus(status)
+
+      await notificationsGrpc.msgMessageCreate(
+        request,
+        notificationsGrpc.notificationsMetadata,
+      )
+
+      return true
+    } catch (err) {
+      return handleCommonNotificationErrors(err)
+    }
+  }
+
+  const msgMessageUpdateStatus = async ({
+    id,
+    status,
+  }: MsgMessageUpdateStatusArgs): Promise<true | NotificationsServiceError> => {
+    try {
+      const request = new MsgMessageUpdateStatusRequest()
+      request.setId(id)
+      request.setStatus(status)
+
+      await notificationsGrpc.msgMessageUpdateStatus(
+        request,
+        notificationsGrpc.notificationsMetadata,
+      )
+
+      return true
+    } catch (err) {
+      return handleCommonNotificationErrors(err)
+    }
+  }
+
+  const msgMessagesList = async ({
+    username,
+    status,
+    updatedAtFrom,
+    updatedAtTo,
+    limit,
+    offset,
+  }: MsgMessagesListArgs): Promise<
+    { total: number; items: MsgMessage[] } | NotificationsServiceError
+  > => {
+    try {
+      const request = new MsgMessagesListRequest()
+      if (username) request.setUsername(username)
+      if (status) request.setStatus(status)
+      if (updatedAtFrom) request.setUpdatedAtFrom(updatedAtFrom)
+      if (updatedAtTo) request.setUpdatedAtTo(updatedAtTo)
+      if (limit) request.setLimit(limit)
+      if (offset) request.setOffset(offset)
+
+      const response = await notificationsGrpc.msgMessagesList(
+        request,
+        notificationsGrpc.notificationsMetadata,
+      )
+
+      const items = response.getMessagesList().map<MsgMessage>((message) => ({
+        id: message.getId(),
+        username: message.getUsername(),
+        templateId: message.getTemplateId(),
+        status: message.getStatus() as MsgMessageStatus,
+        sentBy: message.getSentBy(),
+        updatedAt: message.getUpdatedAt(),
+      }))
+
+      return { total: response.getTotal(), items }
+    } catch (err) {
+      return handleCommonNotificationErrors(err)
+    }
+  }
+
+  const msgMessageHistoryList = async ({
+    id,
+  }: {
+    id: string
+  }): Promise<
+    | { id: string; status: MsgMessageStatus; createdAt: number }[]
+    | NotificationsServiceError
+  > => {
+    try {
+      const request = new MsgMessageHistoryListRequest()
+      request.setId(id)
+
+      const response = await notificationsGrpc.msgMessageHistoryList(
+        request,
+        notificationsGrpc.notificationsMetadata,
+      )
+
+      return response.getHistoryList().map((item) => ({
+        id: item.getId(),
+        status: item.getStatus() as MsgMessageStatus,
+        createdAt: item.getCreatedAt(),
+      }))
+    } catch (err) {
+      return handleCommonNotificationErrors(err)
+    }
+  }
+
   return {
     priceUpdate,
     triggerMarketingNotification: wrapAsyncToRunInSpan({
@@ -727,6 +1053,15 @@ export const NotificationsService = (): INotificationsService => {
         updateEmailAddress,
         removeEmailAddress,
         removePushDeviceToken,
+        msgTemplateCreate,
+        msgTemplateUpdate,
+        msgTemplateDelete,
+        msgTemplateById,
+        msgTemplatesList,
+        msgMessageCreate,
+        msgMessageUpdateStatus,
+        msgMessagesList,
+        msgMessageHistoryList,
       },
     }),
   }

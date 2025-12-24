@@ -67,6 +67,18 @@ const DeepLinkScreen = GT.Enum({
     SETTINGS_EMAIL: {
       value: DomainDeepLinkScreen.SettingsEmail,
     },
+    WELCOME_CARD: {
+      value: DomainDeepLinkScreen.WelcomeCard,
+    },
+    LOADING_CARD: {
+      value: DomainDeepLinkScreen.LoadingCard,
+    },
+    VISA_CARD: {
+      value: DomainDeepLinkScreen.VisaCard,
+    },
+    CREDIT_CARD_LIMIT: {
+      value: DomainDeepLinkScreen.CreditCardLimit,
+    },
   },
 })
 

@@ -1,6 +1,7 @@
 export * from "./update-user-phone"
 export * from "./update-user-email"
 export * from "./trigger-marketing-notification"
+export * from "./trigger-notification-templated"
 export * from "./filtered-user-count"
 import { checkedToAccountId, checkedToUserId, checkedToUsername } from "@/domain/accounts"
 import { IdentityRepository } from "@/services/kratos"

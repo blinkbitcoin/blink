@@ -27,3 +27,9 @@ type AdminFilteredUserCountArgs = {
   userIdsFilter: string[] | undefined
   phoneCountryCodesFilter: string[] | undefined
 }
+
+type TriggerAdminNotificationTemplatedArgs = {
+  handle: string
+  status: string
+  language?: string
+}

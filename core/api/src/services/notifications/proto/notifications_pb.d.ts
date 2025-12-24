@@ -1028,6 +1028,654 @@ export namespace DeepLink {
     }
 }
 
+export class MsgTemplate extends jspb.Message { 
+    getId(): string;
+    setId(value: string): MsgTemplate;
+    getName(): string;
+    setName(value: string): MsgTemplate;
+    getLanguageCode(): string;
+    setLanguageCode(value: string): MsgTemplate;
+    getIconName(): string;
+    setIconName(value: string): MsgTemplate;
+    getTitle(): string;
+    setTitle(value: string): MsgTemplate;
+    getBody(): string;
+    setBody(value: string): MsgTemplate;
+    getShouldSendPush(): boolean;
+    setShouldSendPush(value: boolean): MsgTemplate;
+    getShouldAddToHistory(): boolean;
+    setShouldAddToHistory(value: boolean): MsgTemplate;
+    getShouldAddToBulletin(): boolean;
+    setShouldAddToBulletin(value: boolean): MsgTemplate;
+
+    hasDeeplinkAction(): boolean;
+    clearDeeplinkAction(): void;
+    getDeeplinkAction(): string | undefined;
+    setDeeplinkAction(value: string): MsgTemplate;
+
+    hasDeeplinkScreen(): boolean;
+    clearDeeplinkScreen(): void;
+    getDeeplinkScreen(): string | undefined;
+    setDeeplinkScreen(value: string): MsgTemplate;
+
+    hasExternalUrl(): boolean;
+    clearExternalUrl(): void;
+    getExternalUrl(): string | undefined;
+    setExternalUrl(value: string): MsgTemplate;
+
+    hasStatus(): boolean;
+    clearStatus(): void;
+    getStatus(): string | undefined;
+    setStatus(value: string): MsgTemplate;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): MsgTemplate.AsObject;
+    static toObject(includeInstance: boolean, msg: MsgTemplate): MsgTemplate.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: MsgTemplate, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): MsgTemplate;
+    static deserializeBinaryFromReader(message: MsgTemplate, reader: jspb.BinaryReader): MsgTemplate;
+}
+
+export namespace MsgTemplate {
+    export type AsObject = {
+        id: string,
+        name: string,
+        languageCode: string,
+        iconName: string,
+        title: string,
+        body: string,
+        shouldSendPush: boolean,
+        shouldAddToHistory: boolean,
+        shouldAddToBulletin: boolean,
+        deeplinkAction?: string,
+        deeplinkScreen?: string,
+        externalUrl?: string,
+        status?: string,
+    }
+}
+
+export class MsgMessage extends jspb.Message { 
+    getId(): string;
+    setId(value: string): MsgMessage;
+    getUsername(): string;
+    setUsername(value: string): MsgMessage;
+    getStatus(): string;
+    setStatus(value: string): MsgMessage;
+    getSentBy(): string;
+    setSentBy(value: string): MsgMessage;
+
+    hasTemplateId(): boolean;
+    clearTemplateId(): void;
+    getTemplateId(): string | undefined;
+    setTemplateId(value: string): MsgMessage;
+    getUpdatedAt(): number;
+    setUpdatedAt(value: number): MsgMessage;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): MsgMessage.AsObject;
+    static toObject(includeInstance: boolean, msg: MsgMessage): MsgMessage.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: MsgMessage, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): MsgMessage;
+    static deserializeBinaryFromReader(message: MsgMessage, reader: jspb.BinaryReader): MsgMessage;
+}
+
+export namespace MsgMessage {
+    export type AsObject = {
+        id: string,
+        username: string,
+        status: string,
+        sentBy: string,
+        templateId?: string,
+        updatedAt: number,
+    }
+}
+
+export class MsgTemplateCreateRequest extends jspb.Message { 
+    getName(): string;
+    setName(value: string): MsgTemplateCreateRequest;
+    getLanguageCode(): string;
+    setLanguageCode(value: string): MsgTemplateCreateRequest;
+    getIconName(): string;
+    setIconName(value: string): MsgTemplateCreateRequest;
+    getTitle(): string;
+    setTitle(value: string): MsgTemplateCreateRequest;
+    getBody(): string;
+    setBody(value: string): MsgTemplateCreateRequest;
+    getShouldSendPush(): boolean;
+    setShouldSendPush(value: boolean): MsgTemplateCreateRequest;
+    getShouldAddToHistory(): boolean;
+    setShouldAddToHistory(value: boolean): MsgTemplateCreateRequest;
+    getShouldAddToBulletin(): boolean;
+    setShouldAddToBulletin(value: boolean): MsgTemplateCreateRequest;
+
+    hasDeeplinkAction(): boolean;
+    clearDeeplinkAction(): void;
+    getDeeplinkAction(): string | undefined;
+    setDeeplinkAction(value: string): MsgTemplateCreateRequest;
+
+    hasDeeplinkScreen(): boolean;
+    clearDeeplinkScreen(): void;
+    getDeeplinkScreen(): string | undefined;
+    setDeeplinkScreen(value: string): MsgTemplateCreateRequest;
+
+    hasExternalUrl(): boolean;
+    clearExternalUrl(): void;
+    getExternalUrl(): string | undefined;
+    setExternalUrl(value: string): MsgTemplateCreateRequest;
+
+    hasStatus(): boolean;
+    clearStatus(): void;
+    getStatus(): string | undefined;
+    setStatus(value: string): MsgTemplateCreateRequest;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): MsgTemplateCreateRequest.AsObject;
+    static toObject(includeInstance: boolean, msg: MsgTemplateCreateRequest): MsgTemplateCreateRequest.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: MsgTemplateCreateRequest, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): MsgTemplateCreateRequest;
+    static deserializeBinaryFromReader(message: MsgTemplateCreateRequest, reader: jspb.BinaryReader): MsgTemplateCreateRequest;
+}
+
+export namespace MsgTemplateCreateRequest {
+    export type AsObject = {
+        name: string,
+        languageCode: string,
+        iconName: string,
+        title: string,
+        body: string,
+        shouldSendPush: boolean,
+        shouldAddToHistory: boolean,
+        shouldAddToBulletin: boolean,
+        deeplinkAction?: string,
+        deeplinkScreen?: string,
+        externalUrl?: string,
+        status?: string,
+    }
+}
+
+export class MsgTemplateCreateResponse extends jspb.Message { 
+
+    hasTemplate(): boolean;
+    clearTemplate(): void;
+    getTemplate(): MsgTemplate | undefined;
+    setTemplate(value?: MsgTemplate): MsgTemplateCreateResponse;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): MsgTemplateCreateResponse.AsObject;
+    static toObject(includeInstance: boolean, msg: MsgTemplateCreateResponse): MsgTemplateCreateResponse.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: MsgTemplateCreateResponse, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): MsgTemplateCreateResponse;
+    static deserializeBinaryFromReader(message: MsgTemplateCreateResponse, reader: jspb.BinaryReader): MsgTemplateCreateResponse;
+}
+
+export namespace MsgTemplateCreateResponse {
+    export type AsObject = {
+        template?: MsgTemplate.AsObject,
+    }
+}
+
+export class MsgTemplateUpdateRequest extends jspb.Message { 
+    getId(): string;
+    setId(value: string): MsgTemplateUpdateRequest;
+    getName(): string;
+    setName(value: string): MsgTemplateUpdateRequest;
+    getLanguageCode(): string;
+    setLanguageCode(value: string): MsgTemplateUpdateRequest;
+    getIconName(): string;
+    setIconName(value: string): MsgTemplateUpdateRequest;
+    getTitle(): string;
+    setTitle(value: string): MsgTemplateUpdateRequest;
+    getBody(): string;
+    setBody(value: string): MsgTemplateUpdateRequest;
+    getShouldSendPush(): boolean;
+    setShouldSendPush(value: boolean): MsgTemplateUpdateRequest;
+    getShouldAddToHistory(): boolean;
+    setShouldAddToHistory(value: boolean): MsgTemplateUpdateRequest;
+    getShouldAddToBulletin(): boolean;
+    setShouldAddToBulletin(value: boolean): MsgTemplateUpdateRequest;
+
+    hasDeeplinkAction(): boolean;
+    clearDeeplinkAction(): void;
+    getDeeplinkAction(): string | undefined;
+    setDeeplinkAction(value: string): MsgTemplateUpdateRequest;
+
+    hasDeeplinkScreen(): boolean;
+    clearDeeplinkScreen(): void;
+    getDeeplinkScreen(): string | undefined;
+    setDeeplinkScreen(value: string): MsgTemplateUpdateRequest;
+
+    hasExternalUrl(): boolean;
+    clearExternalUrl(): void;
+    getExternalUrl(): string | undefined;
+    setExternalUrl(value: string): MsgTemplateUpdateRequest;
+
+    hasStatus(): boolean;
+    clearStatus(): void;
+    getStatus(): string | undefined;
+    setStatus(value: string): MsgTemplateUpdateRequest;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): MsgTemplateUpdateRequest.AsObject;
+    static toObject(includeInstance: boolean, msg: MsgTemplateUpdateRequest): MsgTemplateUpdateRequest.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: MsgTemplateUpdateRequest, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): MsgTemplateUpdateRequest;
+    static deserializeBinaryFromReader(message: MsgTemplateUpdateRequest, reader: jspb.BinaryReader): MsgTemplateUpdateRequest;
+}
+
+export namespace MsgTemplateUpdateRequest {
+    export type AsObject = {
+        id: string,
+        name: string,
+        languageCode: string,
+        iconName: string,
+        title: string,
+        body: string,
+        shouldSendPush: boolean,
+        shouldAddToHistory: boolean,
+        shouldAddToBulletin: boolean,
+        deeplinkAction?: string,
+        deeplinkScreen?: string,
+        externalUrl?: string,
+        status?: string,
+    }
+}
+
+export class MsgTemplateUpdateResponse extends jspb.Message { 
+
+    hasTemplate(): boolean;
+    clearTemplate(): void;
+    getTemplate(): MsgTemplate | undefined;
+    setTemplate(value?: MsgTemplate): MsgTemplateUpdateResponse;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): MsgTemplateUpdateResponse.AsObject;
+    static toObject(includeInstance: boolean, msg: MsgTemplateUpdateResponse): MsgTemplateUpdateResponse.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: MsgTemplateUpdateResponse, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): MsgTemplateUpdateResponse;
+    static deserializeBinaryFromReader(message: MsgTemplateUpdateResponse, reader: jspb.BinaryReader): MsgTemplateUpdateResponse;
+}
+
+export namespace MsgTemplateUpdateResponse {
+    export type AsObject = {
+        template?: MsgTemplate.AsObject,
+    }
+}
+
+export class MsgTemplateDeleteRequest extends jspb.Message { 
+    getId(): string;
+    setId(value: string): MsgTemplateDeleteRequest;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): MsgTemplateDeleteRequest.AsObject;
+    static toObject(includeInstance: boolean, msg: MsgTemplateDeleteRequest): MsgTemplateDeleteRequest.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: MsgTemplateDeleteRequest, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): MsgTemplateDeleteRequest;
+    static deserializeBinaryFromReader(message: MsgTemplateDeleteRequest, reader: jspb.BinaryReader): MsgTemplateDeleteRequest;
+}
+
+export namespace MsgTemplateDeleteRequest {
+    export type AsObject = {
+        id: string,
+    }
+}
+
+export class MsgTemplateDeleteResponse extends jspb.Message { 
+    getId(): string;
+    setId(value: string): MsgTemplateDeleteResponse;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): MsgTemplateDeleteResponse.AsObject;
+    static toObject(includeInstance: boolean, msg: MsgTemplateDeleteResponse): MsgTemplateDeleteResponse.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: MsgTemplateDeleteResponse, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): MsgTemplateDeleteResponse;
+    static deserializeBinaryFromReader(message: MsgTemplateDeleteResponse, reader: jspb.BinaryReader): MsgTemplateDeleteResponse;
+}
+
+export namespace MsgTemplateDeleteResponse {
+    export type AsObject = {
+        id: string,
+    }
+}
+
+export class MsgTemplatesListRequest extends jspb.Message { 
+    getLanguageCode(): string;
+    setLanguageCode(value: string): MsgTemplatesListRequest;
+    getLimit(): number;
+    setLimit(value: number): MsgTemplatesListRequest;
+    getOffset(): number;
+    setOffset(value: number): MsgTemplatesListRequest;
+    getStatus(): string;
+    setStatus(value: string): MsgTemplatesListRequest;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): MsgTemplatesListRequest.AsObject;
+    static toObject(includeInstance: boolean, msg: MsgTemplatesListRequest): MsgTemplatesListRequest.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: MsgTemplatesListRequest, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): MsgTemplatesListRequest;
+    static deserializeBinaryFromReader(message: MsgTemplatesListRequest, reader: jspb.BinaryReader): MsgTemplatesListRequest;
+}
+
+export namespace MsgTemplatesListRequest {
+    export type AsObject = {
+        languageCode: string,
+        limit: number,
+        offset: number,
+        status: string,
+    }
+}
+
+export class MsgTemplatesListResponse extends jspb.Message { 
+    clearTemplatesList(): void;
+    getTemplatesList(): Array<MsgTemplate>;
+    setTemplatesList(value: Array<MsgTemplate>): MsgTemplatesListResponse;
+    addTemplates(value?: MsgTemplate, index?: number): MsgTemplate;
+    getTotal(): number;
+    setTotal(value: number): MsgTemplatesListResponse;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): MsgTemplatesListResponse.AsObject;
+    static toObject(includeInstance: boolean, msg: MsgTemplatesListResponse): MsgTemplatesListResponse.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: MsgTemplatesListResponse, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): MsgTemplatesListResponse;
+    static deserializeBinaryFromReader(message: MsgTemplatesListResponse, reader: jspb.BinaryReader): MsgTemplatesListResponse;
+}
+
+export namespace MsgTemplatesListResponse {
+    export type AsObject = {
+        templatesList: Array<MsgTemplate.AsObject>,
+        total: number,
+    }
+}
+
+export class MsgMessageCreateRequest extends jspb.Message { 
+    getUsername(): string;
+    setUsername(value: string): MsgMessageCreateRequest;
+    getStatus(): string;
+    setStatus(value: string): MsgMessageCreateRequest;
+    getSentBy(): string;
+    setSentBy(value: string): MsgMessageCreateRequest;
+    getTemplateId(): string;
+    setTemplateId(value: string): MsgMessageCreateRequest;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): MsgMessageCreateRequest.AsObject;
+    static toObject(includeInstance: boolean, msg: MsgMessageCreateRequest): MsgMessageCreateRequest.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: MsgMessageCreateRequest, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): MsgMessageCreateRequest;
+    static deserializeBinaryFromReader(message: MsgMessageCreateRequest, reader: jspb.BinaryReader): MsgMessageCreateRequest;
+}
+
+export namespace MsgMessageCreateRequest {
+    export type AsObject = {
+        username: string,
+        status: string,
+        sentBy: string,
+        templateId: string,
+    }
+}
+
+export class MsgMessageCreateResponse extends jspb.Message { 
+
+    hasMessage(): boolean;
+    clearMessage(): void;
+    getMessage(): MsgMessage | undefined;
+    setMessage(value?: MsgMessage): MsgMessageCreateResponse;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): MsgMessageCreateResponse.AsObject;
+    static toObject(includeInstance: boolean, msg: MsgMessageCreateResponse): MsgMessageCreateResponse.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: MsgMessageCreateResponse, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): MsgMessageCreateResponse;
+    static deserializeBinaryFromReader(message: MsgMessageCreateResponse, reader: jspb.BinaryReader): MsgMessageCreateResponse;
+}
+
+export namespace MsgMessageCreateResponse {
+    export type AsObject = {
+        message?: MsgMessage.AsObject,
+    }
+}
+
+export class MsgMessageUpdateStatusRequest extends jspb.Message { 
+    getId(): string;
+    setId(value: string): MsgMessageUpdateStatusRequest;
+    getStatus(): string;
+    setStatus(value: string): MsgMessageUpdateStatusRequest;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): MsgMessageUpdateStatusRequest.AsObject;
+    static toObject(includeInstance: boolean, msg: MsgMessageUpdateStatusRequest): MsgMessageUpdateStatusRequest.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: MsgMessageUpdateStatusRequest, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): MsgMessageUpdateStatusRequest;
+    static deserializeBinaryFromReader(message: MsgMessageUpdateStatusRequest, reader: jspb.BinaryReader): MsgMessageUpdateStatusRequest;
+}
+
+export namespace MsgMessageUpdateStatusRequest {
+    export type AsObject = {
+        id: string,
+        status: string,
+    }
+}
+
+export class MsgMessageUpdateStatusResponse extends jspb.Message { 
+
+    hasMessage(): boolean;
+    clearMessage(): void;
+    getMessage(): MsgMessage | undefined;
+    setMessage(value?: MsgMessage): MsgMessageUpdateStatusResponse;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): MsgMessageUpdateStatusResponse.AsObject;
+    static toObject(includeInstance: boolean, msg: MsgMessageUpdateStatusResponse): MsgMessageUpdateStatusResponse.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: MsgMessageUpdateStatusResponse, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): MsgMessageUpdateStatusResponse;
+    static deserializeBinaryFromReader(message: MsgMessageUpdateStatusResponse, reader: jspb.BinaryReader): MsgMessageUpdateStatusResponse;
+}
+
+export namespace MsgMessageUpdateStatusResponse {
+    export type AsObject = {
+        message?: MsgMessage.AsObject,
+    }
+}
+
+export class MsgMessagesListRequest extends jspb.Message { 
+    getUsername(): string;
+    setUsername(value: string): MsgMessagesListRequest;
+    getStatus(): string;
+    setStatus(value: string): MsgMessagesListRequest;
+    getUpdatedAtFrom(): number;
+    setUpdatedAtFrom(value: number): MsgMessagesListRequest;
+    getUpdatedAtTo(): number;
+    setUpdatedAtTo(value: number): MsgMessagesListRequest;
+    getLimit(): number;
+    setLimit(value: number): MsgMessagesListRequest;
+    getOffset(): number;
+    setOffset(value: number): MsgMessagesListRequest;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): MsgMessagesListRequest.AsObject;
+    static toObject(includeInstance: boolean, msg: MsgMessagesListRequest): MsgMessagesListRequest.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: MsgMessagesListRequest, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): MsgMessagesListRequest;
+    static deserializeBinaryFromReader(message: MsgMessagesListRequest, reader: jspb.BinaryReader): MsgMessagesListRequest;
+}
+
+export namespace MsgMessagesListRequest {
+    export type AsObject = {
+        username: string,
+        status: string,
+        updatedAtFrom: number,
+        updatedAtTo: number,
+        limit: number,
+        offset: number,
+    }
+}
+
+export class MsgMessagesListResponse extends jspb.Message { 
+    clearMessagesList(): void;
+    getMessagesList(): Array<MsgMessage>;
+    setMessagesList(value: Array<MsgMessage>): MsgMessagesListResponse;
+    addMessages(value?: MsgMessage, index?: number): MsgMessage;
+    getTotal(): number;
+    setTotal(value: number): MsgMessagesListResponse;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): MsgMessagesListResponse.AsObject;
+    static toObject(includeInstance: boolean, msg: MsgMessagesListResponse): MsgMessagesListResponse.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: MsgMessagesListResponse, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): MsgMessagesListResponse;
+    static deserializeBinaryFromReader(message: MsgMessagesListResponse, reader: jspb.BinaryReader): MsgMessagesListResponse;
+}
+
+export namespace MsgMessagesListResponse {
+    export type AsObject = {
+        messagesList: Array<MsgMessage.AsObject>,
+        total: number,
+    }
+}
+
+export class MsgMessageHistoryListRequest extends jspb.Message { 
+    getId(): string;
+    setId(value: string): MsgMessageHistoryListRequest;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): MsgMessageHistoryListRequest.AsObject;
+    static toObject(includeInstance: boolean, msg: MsgMessageHistoryListRequest): MsgMessageHistoryListRequest.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: MsgMessageHistoryListRequest, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): MsgMessageHistoryListRequest;
+    static deserializeBinaryFromReader(message: MsgMessageHistoryListRequest, reader: jspb.BinaryReader): MsgMessageHistoryListRequest;
+}
+
+export namespace MsgMessageHistoryListRequest {
+    export type AsObject = {
+        id: string,
+    }
+}
+
+export class MsgMessageHistoryItem extends jspb.Message { 
+    getId(): string;
+    setId(value: string): MsgMessageHistoryItem;
+    getStatus(): string;
+    setStatus(value: string): MsgMessageHistoryItem;
+    getCreatedAt(): number;
+    setCreatedAt(value: number): MsgMessageHistoryItem;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): MsgMessageHistoryItem.AsObject;
+    static toObject(includeInstance: boolean, msg: MsgMessageHistoryItem): MsgMessageHistoryItem.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: MsgMessageHistoryItem, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): MsgMessageHistoryItem;
+    static deserializeBinaryFromReader(message: MsgMessageHistoryItem, reader: jspb.BinaryReader): MsgMessageHistoryItem;
+}
+
+export namespace MsgMessageHistoryItem {
+    export type AsObject = {
+        id: string,
+        status: string,
+        createdAt: number,
+    }
+}
+
+export class MsgMessageHistoryListResponse extends jspb.Message { 
+    clearHistoryList(): void;
+    getHistoryList(): Array<MsgMessageHistoryItem>;
+    setHistoryList(value: Array<MsgMessageHistoryItem>): MsgMessageHistoryListResponse;
+    addHistory(value?: MsgMessageHistoryItem, index?: number): MsgMessageHistoryItem;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): MsgMessageHistoryListResponse.AsObject;
+    static toObject(includeInstance: boolean, msg: MsgMessageHistoryListResponse): MsgMessageHistoryListResponse.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: MsgMessageHistoryListResponse, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): MsgMessageHistoryListResponse;
+    static deserializeBinaryFromReader(message: MsgMessageHistoryListResponse, reader: jspb.BinaryReader): MsgMessageHistoryListResponse;
+}
+
+export namespace MsgMessageHistoryListResponse {
+    export type AsObject = {
+        historyList: Array<MsgMessageHistoryItem.AsObject>,
+    }
+}
+
+export class MsgTemplateByIdRequest extends jspb.Message { 
+    getId(): string;
+    setId(value: string): MsgTemplateByIdRequest;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): MsgTemplateByIdRequest.AsObject;
+    static toObject(includeInstance: boolean, msg: MsgTemplateByIdRequest): MsgTemplateByIdRequest.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: MsgTemplateByIdRequest, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): MsgTemplateByIdRequest;
+    static deserializeBinaryFromReader(message: MsgTemplateByIdRequest, reader: jspb.BinaryReader): MsgTemplateByIdRequest;
+}
+
+export namespace MsgTemplateByIdRequest {
+    export type AsObject = {
+        id: string,
+    }
+}
+
+export class MsgTemplateByIdResponse extends jspb.Message { 
+
+    hasTemplate(): boolean;
+    clearTemplate(): void;
+    getTemplate(): MsgTemplate | undefined;
+    setTemplate(value?: MsgTemplate): MsgTemplateByIdResponse;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): MsgTemplateByIdResponse.AsObject;
+    static toObject(includeInstance: boolean, msg: MsgTemplateByIdResponse): MsgTemplateByIdResponse.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: MsgTemplateByIdResponse, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): MsgTemplateByIdResponse;
+    static deserializeBinaryFromReader(message: MsgTemplateByIdResponse, reader: jspb.BinaryReader): MsgTemplateByIdResponse;
+}
+
+export namespace MsgTemplateByIdResponse {
+    export type AsObject = {
+        template?: MsgTemplate.AsObject,
+    }
+}
+
 export enum NotificationChannel {
     PUSH = 0,
 }
@@ -1096,6 +1744,10 @@ export enum DeepLinkScreen {
     SETTINGSTXLIMITS = 18,
     SETTINGSNOTIFICATIONS = 19,
     SETTINGSEMAIL = 20,
+    WELCOMECARD = 21,
+    LOADINGCARD = 22,
+    VISACARD = 23,
+    CREDITCARDLIMIT = 24,
 }
 
 export enum DeepLinkAction {
@@ -1156,4 +1808,17 @@ export enum Icon {
     PAYMENTERROR = 48,
     BELL = 49,
     REFRESH = 50,
+}
+
+export enum MsgMessageStatus {
+    INVITED = 0,
+    BANNER_CLICKED = 1,
+    INVITATION_INFO_COMPLETED = 2,
+    KYC_INITIATED = 3,
+    KYC_PASSED = 4,
+    CARD_INFO_SUBMITTED = 5,
+    CARD_APPROVED = 6,
+    INVITE_WITHDRAWN = 7,
+    KYC_FAILED = 8,
+    CARD_DENIED = 9,
 }

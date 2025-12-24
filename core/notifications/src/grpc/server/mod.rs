@@ -8,8 +8,10 @@ pub mod proto {
 
 use std::collections::{HashMap, HashSet};
 
+use chrono::{TimeZone, Utc};
 use tonic::{transport::Server, Request, Response, Status};
 use tracing::{grpc, instrument};
+use uuid::Uuid;
 
 use self::proto::{notifications_service_server::NotificationsService, *};
 
@@ -26,6 +28,14 @@ use crate::{
 
 pub struct Notifications {
     app: NotificationsApp,
+}
+
+fn normalize_msg_message_status_input(status: String) -> String {
+    if status.is_empty() {
+        "invited".to_string()
+    } else {
+        status
+    }
 }
 
 #[tonic::async_trait]
@@ -95,6 +105,310 @@ impl NotificationsService for Notifications {
         Ok(Response::new(EnableNotificationCategoryResponse {
             notification_settings: Some(notification_settings.into()),
         }))
+    }
+
+    #[instrument(name = "notifications.msg_template_create", skip_all, err)]
+    async fn msg_template_create(
+        &self,
+        request: Request<MsgTemplateCreateRequest>,
+    ) -> Result<Response<MsgTemplateCreateResponse>, Status> {
+        grpc::extract_tracing(&request);
+        let request = request.into_inner();
+
+        let status = request.status.and_then(|s| (!s.is_empty()).then_some(s));
+
+        let template = self
+            .app
+            .msg_template_create(
+                request.name,
+                request.language_code,
+                request.icon_name,
+                request.title,
+                request.body,
+                request.should_send_push,
+                request.should_add_to_history,
+                request.should_add_to_bulletin,
+                request.deeplink_action,
+                request.deeplink_screen,
+                request.external_url,
+                status,
+            )
+            .await
+            .map_err(Status::from)?;
+
+        let response = MsgTemplateCreateResponse {
+            template: Some(MsgTemplate::from(template)),
+        };
+
+        Ok(Response::new(response))
+    }
+
+    #[instrument(name = "notifications.msg_template_update", skip_all, err)]
+    async fn msg_template_update(
+        &self,
+        request: Request<MsgTemplateUpdateRequest>,
+    ) -> Result<Response<MsgTemplateUpdateResponse>, Status> {
+        grpc::extract_tracing(&request);
+        let request = request.into_inner();
+
+        let id = Uuid::parse_str(&request.id)
+            .map_err(|_| Status::invalid_argument("invalid template id"))?;
+
+        let status = request.status.and_then(|s| (!s.is_empty()).then_some(s));
+
+        let template = self
+            .app
+            .msg_template_update(
+                id,
+                request.name,
+                request.language_code,
+                request.icon_name,
+                request.title,
+                request.body,
+                request.should_send_push,
+                request.should_add_to_history,
+                request.should_add_to_bulletin,
+                request.deeplink_action,
+                request.deeplink_screen,
+                request.external_url,
+                status,
+            )
+            .await
+            .map_err(Status::from)?;
+
+        let response = MsgTemplateUpdateResponse {
+            template: Some(MsgTemplate::from(template)),
+        };
+
+        Ok(Response::new(response))
+    }
+
+    #[instrument(name = "notifications.msg_template_delete", skip_all, err)]
+    async fn msg_template_delete(
+        &self,
+        request: Request<MsgTemplateDeleteRequest>,
+    ) -> Result<Response<MsgTemplateDeleteResponse>, Status> {
+        grpc::extract_tracing(&request);
+        let request = request.into_inner();
+
+        let id = Uuid::parse_str(&request.id)
+            .map_err(|_| Status::invalid_argument("invalid template id"))?;
+
+        let deleted_id = self
+            .app
+            .msg_template_delete(id)
+            .await
+            .map_err(Status::from)?;
+
+        let response = MsgTemplateDeleteResponse {
+            id: deleted_id.to_string(),
+        };
+
+        Ok(Response::new(response))
+    }
+
+    #[instrument(name = "notifications.msg_template_by_id", skip_all, err)]
+    async fn msg_template_by_id(
+        &self,
+        request: Request<MsgTemplateByIdRequest>,
+    ) -> Result<Response<MsgTemplateByIdResponse>, Status> {
+        grpc::extract_tracing(&request);
+        let request = request.into_inner();
+
+        if request.id.is_empty() {
+            return Err(Status::invalid_argument("id is required"));
+        }
+
+        let id = Uuid::parse_str(&request.id)
+            .map_err(|_| Status::invalid_argument("invalid template id"))?;
+
+        let template = self
+            .app
+            .msg_template_by_id(id)
+            .await
+            .map_err(Status::from)?;
+
+        let response = MsgTemplateByIdResponse {
+            template: template.map(MsgTemplate::from),
+        };
+
+        Ok(Response::new(response))
+    }
+
+    #[instrument(name = "notifications.msg_templates_list", skip_all, err)]
+    async fn msg_templates_list(
+        &self,
+        request: Request<MsgTemplatesListRequest>,
+    ) -> Result<Response<MsgTemplatesListResponse>, Status> {
+        grpc::extract_tracing(&request);
+        let request = request.into_inner();
+
+        let language_code = if request.language_code.is_empty() {
+            None
+        } else {
+            Some(request.language_code)
+        };
+
+        let status = if request.status.is_empty() {
+            None
+        } else {
+            Some(request.status)
+        };
+
+        let limit = (request.limit > 0).then_some(request.limit);
+        let offset = (request.offset > 0).then_some(request.offset);
+
+        let (templates, total) = self
+            .app
+            .list_msg_templates(language_code, status, limit, offset)
+            .await
+            .map_err(Status::from)?;
+
+        let templates = templates.into_iter().map(MsgTemplate::from).collect();
+
+        let response = MsgTemplatesListResponse { templates, total };
+
+        Ok(Response::new(response))
+    }
+
+    #[instrument(name = "notifications.msg_message_create", skip_all, err)]
+    async fn msg_message_create(
+        &self,
+        request: Request<MsgMessageCreateRequest>,
+    ) -> Result<Response<MsgMessageCreateResponse>, Status> {
+        grpc::extract_tracing(&request);
+        let request = request.into_inner();
+
+        if request.template_id.is_empty() {
+            return Err(Status::invalid_argument("template_id is required"));
+        }
+
+        let template_id = Uuid::parse_str(&request.template_id)
+            .map_err(|_| Status::invalid_argument("invalid template_id"))?;
+
+        let status = normalize_msg_message_status_input(request.status);
+
+        let message = self
+            .app
+            .msg_message_create(request.username, status, request.sent_by, template_id)
+            .await
+            .map_err(Status::from)?;
+
+        let response = MsgMessageCreateResponse {
+            message: Some(MsgMessage::from(message)),
+        };
+
+        Ok(Response::new(response))
+    }
+
+    #[instrument(name = "notifications.msg_message_update_status", skip_all, err)]
+    async fn msg_message_update_status(
+        &self,
+        request: Request<MsgMessageUpdateStatusRequest>,
+    ) -> Result<Response<MsgMessageUpdateStatusResponse>, Status> {
+        grpc::extract_tracing(&request);
+        let request = request.into_inner();
+
+        let id = Uuid::parse_str(&request.id)
+            .map_err(|_| Status::invalid_argument("invalid message id"))?;
+
+        let status = normalize_msg_message_status_input(request.status);
+
+        let message = self
+            .app
+            .msg_message_update_status(id, status)
+            .await
+            .map_err(Status::from)?;
+
+        let response = MsgMessageUpdateStatusResponse {
+            message: Some(MsgMessage::from(message)),
+        };
+
+        Ok(Response::new(response))
+    }
+
+    #[instrument(name = "notifications.msg_messages_list", skip_all, err)]
+    async fn msg_messages_list(
+        &self,
+        request: Request<MsgMessagesListRequest>,
+    ) -> Result<Response<MsgMessagesListResponse>, Status> {
+        grpc::extract_tracing(&request);
+        let request = request.into_inner();
+
+        let username = (!request.username.is_empty()).then_some(request.username);
+
+        let updated_at_from_ts = (request.updated_at_from > 0).then_some(request.updated_at_from);
+        let updated_at_to_ts = (request.updated_at_to > 0).then_some(request.updated_at_to);
+
+        let updated_at_from = match updated_at_from_ts {
+            Some(ts) => Some(
+                Utc.timestamp_opt(ts, 0)
+                    .single()
+                    .ok_or_else(|| Status::invalid_argument("invalid updated_at_from"))?,
+            ),
+            None => None,
+        };
+
+        let updated_at_to = match updated_at_to_ts {
+            Some(ts) => Some(
+                Utc.timestamp_opt(ts, 0)
+                    .single()
+                    .ok_or_else(|| Status::invalid_argument("invalid updated_at_to"))?,
+            ),
+            None => None,
+        };
+
+        let limit = (request.limit > 0).then_some(request.limit);
+        let offset = (request.offset > 0).then_some(request.offset);
+
+        let status = if request.status.is_empty() {
+            None
+        } else {
+            Some(request.status)
+        };
+
+        let (messages, total) = self
+            .app
+            .list_msg_messages(username, status, updated_at_from, updated_at_to, limit, offset)
+            .await
+            .map_err(Status::from)?;
+
+        let messages = messages.into_iter().map(MsgMessage::from).collect();
+
+        Ok(Response::new(MsgMessagesListResponse { messages, total }))
+    }
+
+    #[instrument(name = "notifications.msg_message_history_list", skip_all, err)]
+    async fn msg_message_history_list(
+        &self,
+        request: Request<MsgMessageHistoryListRequest>,
+    ) -> Result<Response<MsgMessageHistoryListResponse>, Status> {
+        grpc::extract_tracing(&request);
+        let request = request.into_inner();
+
+        if request.id.is_empty() {
+            return Err(Status::invalid_argument("id is required"));
+        }
+
+        let msg_message_id = Uuid::parse_str(&request.id)
+            .map_err(|_| Status::invalid_argument("invalid id"))?;
+
+        let history = self
+            .app
+            .list_msg_message_history_by_message_id(msg_message_id)
+            .await
+            .map_err(Status::from)?;
+
+        let history = history
+            .into_iter()
+            .map(|h| MsgMessageHistoryItem {
+                id: h.id.to_string(),
+                status: h.status,
+                created_at: h.created_at.timestamp(),
+            })
+            .collect();
+
+        Ok(Response::new(MsgMessageHistoryListResponse { history }))
     }
 
     #[instrument(name = "notifications.disable_notification_category", skip_all, err)]

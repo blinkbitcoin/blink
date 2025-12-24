@@ -26,3 +26,10 @@ export class UnknownNotificationsServiceError extends NotificationsError {
 export class InvalidPushNotificationSettingError extends NotificationsError {}
 
 export class InvalidNotificationCategoryError extends NotificationsError {}
+
+export class NotificationTemplateNotFoundError extends NotificationsError {}
+export class InvalidNotificationStatusError extends ValidationError {}
+export class InvalidNotificationIconError extends ValidationError {}
+export class InvalidNotificationDeepLinkScreenError extends ValidationError {}
+export class InvalidNotificationDeepLinkActionError extends ValidationError {}
+export class InvalidNotificationExternalUrlError extends ValidationError {}

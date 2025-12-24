@@ -225,6 +225,18 @@ impl From<proto::DeepLinkScreen> for notification_event::DeepLinkScreen {
             proto::DeepLinkScreen::SettingsEmail => {
                 notification_event::DeepLinkScreen::SettingsEmail
             }
+            proto::DeepLinkScreen::WelcomeCard => {
+                notification_event::DeepLinkScreen::WelcomeCard
+            }
+            proto::DeepLinkScreen::LoadingCard => {
+                notification_event::DeepLinkScreen::LoadingCard
+            }
+            proto::DeepLinkScreen::VisaCard => {
+                notification_event::DeepLinkScreen::VisaCard
+            }
+            proto::DeepLinkScreen::CreditCardLimit => {
+                notification_event::DeepLinkScreen::CreditCardLimit
+            }
         }
     }
 }
@@ -343,6 +355,39 @@ impl From<proto::Icon> for notification_event::Icon {
             proto::Icon::PaymentError => notification_event::Icon::PaymentError,
             proto::Icon::Bell => notification_event::Icon::Bell,
             proto::Icon::Refresh => notification_event::Icon::Refresh,
+        }
+    }
+}
+
+impl From<crate::msg_templates::MsgTemplate> for proto::MsgTemplate {
+    fn from(template: crate::msg_templates::MsgTemplate) -> Self {
+        proto::MsgTemplate {
+            id: template.id.to_string(),
+            name: template.name,
+            language_code: template.language_code,
+            icon_name: template.icon_name,
+            title: template.title,
+            body: template.body,
+            should_send_push: template.should_send_push,
+            should_add_to_history: template.should_add_to_history,
+            should_add_to_bulletin: template.should_add_to_bulletin,
+            deeplink_action: template.deeplink_action,
+            deeplink_screen: template.deeplink_screen,
+            external_url: template.external_url,
+            status: template.status,
+        }
+    }
+}
+
+impl From<crate::msg_messages::MsgMessage> for proto::MsgMessage {
+    fn from(message: crate::msg_messages::MsgMessage) -> Self {
+        proto::MsgMessage {
+            id: message.id.to_string(),
+            username: message.username,
+            status: message.status,
+            sent_by: message.sent_by,
+            template_id: message.template_id.map(|id| id.to_string()),
+            updated_at: message.updated_at.timestamp(),
         }
     }
 }

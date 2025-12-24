@@ -151,12 +151,20 @@ enum DeepLinkAction {
   UPGRADE_ACCOUNT_MODAL
 }
 
+enum DeepLinkActionTemplate {
+  SET_DEFAULT_ACCOUNT_MODAL
+  SET_LN_ADDRESS_MODAL
+  UPGRADE_ACCOUNT_MODAL
+}
+
 enum DeepLinkScreen {
   CHAT
   CIRCLES
   CONVERT
+  CREDIT_CARD_LIMIT
   EARN
   HOME
+  LOADING_CARD
   MAP
   PEOPLE
   PRICE
@@ -173,6 +181,36 @@ enum DeepLinkScreen {
   SETTINGS_SECURITY
   SETTINGS_THEME
   SETTINGS_TX_LIMITS
+  VISA_CARD
+  WELCOME_CARD
+}
+
+enum DeepLinkScreenTemplate {
+  CHAT
+  CIRCLES
+  CONVERT
+  CREDIT_CARD_LIMIT
+  EARN
+  HOME
+  LOADING_CARD
+  MAP
+  PEOPLE
+  PRICE
+  RECEIVE
+  SCAN_QR
+  SETTINGS
+  SETTINGS_2FA
+  SETTINGS_ACCOUNT
+  SETTINGS_DEFAULT_ACCOUNT
+  SETTINGS_DISPLAY_CURRENCY
+  SETTINGS_EMAIL
+  SETTINGS_LANGUAGE
+  SETTINGS_NOTIFICATIONS
+  SETTINGS_SECURITY
+  SETTINGS_THEME
+  SETTINGS_TX_LIMITS
+  VISA_CARD
+  WELCOME_CARD
 }
 
 """Display currency of an account"""
@@ -361,6 +399,12 @@ type Mutation {
   marketingNotificationTrigger(input: MarketingNotificationTriggerInput!): SuccessPayload!
   merchantMapDelete(input: MerchantMapDeleteInput!): MerchantPayload!
   merchantMapValidate(input: MerchantMapValidateInput!): MerchantPayload!
+  notificationMessageCreate(input: NotificationMessageCreateInput!): SuccessPayload!
+  notificationMessageUpdateStatus(input: NotificationMessageUpdateStatusInput!): SuccessPayload!
+  notificationTemplateCreate(input: NotificationTemplateCreateInput!): SuccessPayload!
+  notificationTemplateDelete(input: NotificationTemplateDeleteInput!): SuccessPayload!
+  notificationTemplateUpdate(input: NotificationTemplateUpdateInput!): SuccessPayload!
+  notificationTemplatedTrigger(input: NotificationTemplatedTriggerInput!): SuccessPayload!
   userUpdateEmail(input: UserUpdateEmailInput!): AccountDetailPayload!
   userUpdatePhone(input: UserUpdatePhoneInput!): AccountDetailPayload!
 }
@@ -417,6 +461,113 @@ enum NotificationIcon {
   VIDEO
   WARNING
   WARNING_WITH_BACKGROUND
+}
+
+type NotificationMessage {
+  id: ID!
+  sentBy: String!
+  status: NotificationStatus!
+  templateId: ID!
+  updatedAt: Timestamp!
+  username: String!
+}
+
+input NotificationMessageCreateInput {
+  sentBy: String!
+  status: NotificationStatus
+  templateId: ID!
+  username: String!
+}
+
+type NotificationMessageHistoryItem {
+  createdAt: Int!
+  id: ID!
+  status: NotificationStatus!
+}
+
+input NotificationMessageUpdateStatusInput {
+  id: ID!
+  status: NotificationStatus!
+}
+
+type NotificationMessagesResult {
+  items: [NotificationMessage!]!
+  total: Int!
+}
+
+enum NotificationStatus {
+  BANNER_CLICKED
+  CARD_APPROVED
+  CARD_DENIED
+  CARD_INFO_SUBMITTED
+  INVITATION_INFO_COMPLETED
+  INVITED
+  INVITE_WITHDRAWN
+  KYC_FAILED
+  KYC_INITIATED
+  KYC_PASSED
+}
+
+type NotificationTemplate {
+  body: String!
+  deeplinkAction: String
+  deeplinkScreen: String
+  externalUrl: String
+  iconName: String!
+  id: ID!
+  languageCode: Language!
+  name: String!
+  shouldAddToBulletin: Boolean!
+  shouldAddToHistory: Boolean!
+  shouldSendPush: Boolean!
+  status: NotificationStatus!
+  title: String!
+}
+
+input NotificationTemplateCreateInput {
+  body: String!
+  deeplinkAction: DeepLinkActionTemplate
+  deeplinkScreen: DeepLinkScreenTemplate
+  externalUrl: ExternalUrl
+  iconName: String!
+  languageCode: Language!
+  name: String!
+  shouldAddToBulletin: Boolean!
+  shouldAddToHistory: Boolean!
+  shouldSendPush: Boolean!
+  status: NotificationStatus
+  title: String!
+}
+
+input NotificationTemplateDeleteInput {
+  id: ID!
+}
+
+input NotificationTemplateUpdateInput {
+  body: String!
+  deeplinkAction: DeepLinkActionTemplate
+  deeplinkScreen: DeepLinkScreenTemplate
+  externalUrl: ExternalUrl
+  iconName: String!
+  id: ID!
+  languageCode: Language!
+  name: String!
+  shouldAddToBulletin: Boolean!
+  shouldAddToHistory: Boolean!
+  shouldSendPush: Boolean!
+  status: NotificationStatus
+  title: String!
+}
+
+input NotificationTemplatedTriggerInput {
+  handle: String!
+  language: String
+  status: NotificationStatus!
+}
+
+type NotificationTemplatesResult {
+  items: [NotificationTemplate!]!
+  total: Int!
 }
 
 """An address for an on-chain bitcoin destination"""
@@ -481,6 +632,10 @@ type Query {
   lightningInvoice(hash: PaymentHash!): LightningInvoice!
   lightningPayment(hash: PaymentHash!): LightningPayment!
   merchantsPendingApproval: [Merchant!]!
+  notificationByTemplateId(id: ID!): NotificationTemplate
+  notificationMessageHistory(id: ID!): [NotificationMessageHistoryItem!]!
+  notificationMessages(limit: Int, offset: Int, status: NotificationStatus, updatedAtFrom: Int, updatedAtTo: Int, username: String): NotificationMessagesResult!
+  notificationTemplates(languageCode: Language, limit: Int, offset: Int, status: NotificationStatus): NotificationTemplatesResult!
   transactionById(id: ID!): Transaction
   transactionsByHash(hash: PaymentHash!): [Transaction]
   transactionsByPaymentRequest(paymentRequest: LnPaymentRequest!): [Transaction]

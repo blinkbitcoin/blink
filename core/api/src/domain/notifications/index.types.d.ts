@@ -80,6 +80,50 @@ type LocalizedNotificationContent = {
   body: LocalizedNotificationBody
   language: UserLanguage
 }
+
+type MsgMessageStatus =
+  | "invited"
+  | "banner_clicked"
+  | "invitation_info_completed"
+  | "kyc_initiated"
+  | "kyc_passed"
+  | "card_info_submitted"
+  | "card_approved"
+  | "invite_withdrawn"
+  | "kyc_failed"
+  | "card_denied"
+
+type MsgTemplate = {
+  id: string
+  name: string
+  languageCode: string
+  iconName: string
+  title: string
+  body: string
+  status?: string
+  shouldSendPush: boolean
+  shouldAddToHistory: boolean
+  shouldAddToBulletin: boolean
+  deeplinkAction?: string
+  deeplinkScreen?: string
+  externalUrl?: string
+}
+
+type MsgMessage = {
+  id: string
+  username: string
+  templateId?: string
+  status: MsgMessageStatus
+  sentBy: string
+  updatedAt: number
+}
+
+type MsgMessageHistoryItem = {
+  id: string
+  status: MsgMessageStatus
+  createdAt: number
+}
+
 interface INotificationsService {
   sendTransaction: (
     args: NotificatioSendTransactionArgs,
@@ -137,24 +181,142 @@ interface INotificationsService {
   triggerMarketingNotification(
     args: TriggerMarketingNotificationArgs,
   ): Promise<true | NotificationsServiceError>
+
+  msgTemplateCreate(args: {
+    name: string
+    languageCode: string
+    iconName: string
+    title: string
+    body: string
+    status: string
+    shouldSendPush?: boolean
+    shouldAddToHistory?: boolean
+    shouldAddToBulletin?: boolean
+    deeplinkAction?: string
+    deeplinkScreen?: string
+    externalUrl?: string
+  }): Promise<true | NotificationsServiceError>
+
+  msgTemplateUpdate(args: {
+    id: string
+    name: string
+    languageCode: string
+    iconName: string
+    title: string
+    body: string
+    status: string
+    shouldSendPush?: boolean
+    shouldAddToHistory?: boolean
+    shouldAddToBulletin?: boolean
+    deeplinkAction?: string
+    deeplinkScreen?: string
+    externalUrl?: string
+  }): Promise<true | NotificationsServiceError>
+
+  msgTemplateDelete(args: { id: string }): Promise<true | NotificationsServiceError>
+
+  msgTemplatesList(args: {
+    languageCode?: string
+    status?: string
+    limit?: number
+    offset?: number
+  }): Promise<{ total: number; items: MsgTemplate[] } | NotificationsServiceError>
+
+  msgTemplateById(args: {
+    id: string
+  }): Promise<MsgTemplate | null | NotificationsServiceError>
+
+  msgMessageCreate(args: {
+    username: string
+    status?: MsgMessageStatus
+    sentBy: string
+    templateId: string
+  }): Promise<true | NotificationsServiceError>
+
+  msgMessageUpdateStatus(args: {
+    id: string
+    status: MsgMessageStatus
+  }): Promise<true | NotificationsServiceError>
+
+  msgMessagesList(args: {
+    username?: string
+    status?: MsgMessageStatus
+    updatedAtFrom?: number
+    updatedAtTo?: number
+    limit?: number
+    offset?: number
+  }): Promise<{ total: number; items: MsgMessage[] } | NotificationsServiceError>
+
+  msgMessageHistoryList(args: {
+    id: string
+  }): Promise<MsgMessageHistoryItem[] | NotificationsServiceError>
+}
+
+type OpenDeepLink = {
+  screen: DeepLinkScreen | undefined
+  action: DeepLinkAction | undefined
+}
+
+type OpenExternalUrl = {
+  url: string
 }
 
 type TriggerMarketingNotificationArgs = {
   userIds: UserId[]
-  openDeepLink:
-    | {
-        screen: DeepLinkScreen | undefined
-        action: DeepLinkAction | undefined
-      }
-    | undefined
-  openExternalUrl:
-    | {
-        url: string
-      }
-    | undefined
+  openDeepLink: OpenDeepLink | undefined
+  openExternalUrl: OpenExternalUrl | undefined
   shouldSendPush: boolean
   shouldAddToHistory: boolean
   shouldAddToBulletin: boolean
   icon?: Icon
   localizedContents: Map<UserLanguage, LocalizedNotificationContent>
+}
+
+type BaseMsgTemplateArgs = {
+  name: string
+  languageCode: string
+  iconName: string
+  title: string
+  body: string
+  status: string
+  shouldSendPush?: boolean
+  shouldAddToHistory?: boolean
+  shouldAddToBulletin?: boolean
+  deeplinkAction?: string
+  deeplinkScreen?: string
+  externalUrl?: string
+}
+
+type MsgTemplateCreateArgs = BaseMsgTemplateArgs
+
+type MsgTemplateUpdateArgs = BaseMsgTemplateArgs & {
+  id: string
+}
+
+type MsgTemplatesListArgs = {
+  languageCode?: string
+  status?: string
+  limit?: number
+  offset?: number
+}
+
+type MsgMessageCreateArgs = {
+  username: string
+  status?: MsgMessageStatus
+  sentBy: string
+  templateId: string
+}
+
+type MsgMessageUpdateStatusArgs = {
+  id: string
+  status: MsgMessageStatus
+}
+
+type MsgMessagesListArgs = {
+  username?: string
+  status?: MsgMessageStatus
+  updatedAtFrom?: number
+  updatedAtTo?: number
+  limit?: number
+  offset?: number
 }
