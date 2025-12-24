@@ -64,7 +64,7 @@
     "@prelude.so/sdk": "^0.7.0",
     "@t3-oss/env-core": "^0.7.3",
     "ajv": "^8.17.1",
-    "axios": "^1.11.0",
+    "axios": "^1.13.2",
     "axios-retry": "^4.5.0",
     "basic-auth": "^2.0.1",
     "bignumber.js": "^9.3.1",
