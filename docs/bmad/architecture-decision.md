@@ -134,11 +134,98 @@ When external services are unavailable, UI must show explicit fallback states:
 
 **Note:** Neither branch has the KYC status integration or background job infrastructure we need. This is net-new development.
 
+## Repository Strategy Decision
+
+### Constraint: Public/Private Repo Boundary
+
+**Problem:** The blink repository is public, but the invitation dashboard requires e2e testing with blink-card (private repo). Exposing blink-card's Docker image to the public repo is not acceptable.
+
+**Decision: Separate Private Repository**
+
+Create a new private repository (`invitation-dashboard`) that:
+- Replicates admin-panel authentication code
+- Contains only invitation-specific functionality
+- Has full access to blink-card for e2e testing
+
+| Aspect | Original Plan | Updated Plan |
+|--------|---------------|--------------|
+| Repository | `blink/apps/admin-panel/` | New private `invitation-dashboard` repo |
+| Scope | Extension to admin-panel | Standalone CEO-only tool |
+| User base | All admins | CEO only |
+| e2e testing | Limited (no blink-card access) | Full (private repo can access blink-card) |
+
+### Rationale
+
+1. **Single user (CEO)** - No UX fragmentation concern; CEO uses this tool, other admins use main panel
+2. **Different purpose** - Not duplicating admin-panel, building a specialized invitation tool
+3. **Minimal scope** - Auth + invitation CRUD + status polling only
+4. **Private repo** - Full access to blink-card for comprehensive e2e testing
+
+### Vendored Dependencies
+
+Since the invitation-dashboard is a separate repo, certain dependencies must be vendored:
+
+| Dependency | Source | Method |
+|------------|--------|--------|
+| GraphQL Admin Schema | `core/api/src/graphql/admin/schema.graphql` | Vendir or manual copy |
+| Proto files | blink-card repo | Copy to `protos/` directory |
+| ESLint config | `@galoy/eslint-config` | Use standard ESLint preset |
+
+### Oathkeeper Integration
+
+**Decision: Separate Route Pattern (Option 2)**
+
+Add a new oathkeeper access rule for the invitation dashboard:
+
+```yaml
+# Existing rule for admin-panel
+- id: admin-backend
+  match:
+    url: "<(http|https)>://<.*>/admin/<.*>"
+  upstream:
+    url: http://graphql-admin:4001
+    strip_path: /admin
+  authenticators:
+    - handler: cookie_session
+      config:
+        check_session_url: "http://admin-panel:3000/api/auth/session"
+
+# NEW rule for invitation-dashboard
+- id: invitation-admin-backend
+  match:
+    url: "<(http|https)>://<.*>/invitation-admin/<.*>"
+  upstream:
+    url: http://graphql-admin:4001
+    strip_path: /invitation-admin
+  authenticators:
+    - handler: cookie_session
+      config:
+        check_session_url: "http://invitation-dashboard:3000/api/auth/session"
+```
+
+**Key points:**
+- Both routes forward to the **same backend** (`graphql-admin:4001`)
+- URL pattern determines which session endpoint validates the request
+- Invitation dashboard uses its own NextAuth session for cookie validation
+- No shared `NEXTAUTH_SECRET` required between apps
+
+### Secrets Management
+
+All secrets stored in Concourse vault and accessible during CI/CD:
+
+| Secret | Purpose | Shared With |
+|--------|---------|-------------|
+| `INVITATION_TOKEN_SECRET` | AES-256-GCM encryption key | blink-card |
+| `CARD_PROGRAM_SOURCE_KEY` | Card program identifier | blink-card |
+| `NEXTAUTH_SECRET` | JWT session encryption | Isolated to invitation-dashboard |
+| `GOOGLE_CLIENT_ID` | OAuth authentication | New OAuth app for invitation-dashboard |
+| `GOOGLE_CLIENT_SECRET` | OAuth authentication | New OAuth app for invitation-dashboard |
+
 ## Starter Template Evaluation
 
 ### Brownfield Project - Existing Stack
 
-This is a brownfield extension project. No starter template selection required.
+This is a brownfield-inspired project in a new private repository. We replicate proven patterns from admin-panel.
 
 **Existing Technology Constraints:**
 
@@ -596,17 +683,22 @@ components/invitations/
 
 ## Project Structure & Boundaries
 
-### New Files & Directories for Invitation Feature
+### Project Structure (Private Repository)
 
 ```
-apps/admin-panel/
-├── prisma/                              # NEW - Database infrastructure
+invitation-dashboard/                    # NEW private repository
+├── prisma/
 │   ├── schema.prisma                    # Prisma schema with Invitation model
-│   └── migrations/                      # Migration files
+│   └── migrations/
 │       └── 20241218_create_invitations/
 │
 ├── app/
-│   ├── invitations/                     # NEW - Invitation feature routes
+│   ├── page.tsx                         # Redirect to /invitations
+│   ├── layout.tsx                       # Root layout with sidebar
+│   ├── api/auth/[...nextauth]/          # NextAuth.js (copied from admin-panel)
+│   │   ├── route.ts
+│   │   └── options.ts
+│   ├── invitations/
 │   │   ├── page.tsx                     # List view (FR1, FR2)
 │   │   ├── [id]/
 │   │   │   └── page.tsx                 # Detail view (FR3)
@@ -615,28 +707,52 @@ apps/admin-panel/
 │   │   ├── actions.ts                   # Server actions (CRUD operations)
 │   │   └── types.ts                     # TypeScript types
 │   │
-│   └── jobs/                            # NEW - Background job infrastructure
-│       ├── cron.ts                      # Cron scheduler initialization
-│       └── invitation-status-poller.ts  # KYC polling job (FR21-24)
+│   ├── jobs/
+│   │   ├── cron.ts                      # Cron scheduler initialization
+│   │   └── invitation-status-poller.ts  # KYC polling job (FR21-24)
+│   │
+│   ├── env.ts                           # Environment validation (T3 env)
+│   ├── graphql-rsc.tsx                  # Apollo client setup
+│   └── middleware.ts                    # NextAuth middleware
 │
 ├── components/
-│   └── invitations/                     # NEW - Invitation UI components
-│       ├── invitation-list.tsx          # List table with filters
-│       ├── invitation-detail.tsx        # Detail card
-│       ├── invitation-form.tsx          # Create form with user search
-│       ├── status-badge.tsx             # Status indicator
-│       ├── template-uploader.tsx        # YAML template upload (FR25-28)
-│       └── index.ts                     # Re-exports
+│   ├── invitations/
+│   │   ├── invitation-list.tsx
+│   │   ├── invitation-detail.tsx
+│   │   ├── invitation-form.tsx
+│   │   ├── status-badge.tsx
+│   │   ├── template-uploader.tsx
+│   │   └── index.ts
+│   └── side-bar.tsx                     # Simplified navigation
 │
 ├── lib/
-│   ├── prisma.ts                        # NEW - Prisma client singleton
-│   ├── invitation-service.ts            # NEW - Business logic
-│   ├── template-parser.ts               # NEW - YAML template validation
-│   ├── invitation-code.ts               # NEW - HMAC token generation
-│   └── blink-card-client.ts             # NEW - gRPC client for blink-card
+│   ├── prisma.ts                        # Prisma client singleton
+│   ├── invitation-service.ts            # Business logic
+│   ├── template-parser.ts               # YAML template validation
+│   ├── invitation-code.ts               # AES-256-GCM token generation
+│   └── blink-card-client.ts             # gRPC client for blink-card
 │
-└── graphql.gql                          # EXISTING - No changes needed
+├── protos/
+│   └── invitation_service.proto         # Vendored from blink-card
+│
+├── graphql.gql                          # Invitation-specific queries only
+├── codegen.yml                          # GraphQL codegen config
+├── generated.ts                         # Auto-generated GraphQL types
+│
+├── next.config.js
+├── tailwind.config.ts
+├── tsconfig.json
+├── package.json
+├── Dockerfile
+└── .env.example                         # Environment template
 ```
+
+**Key differences from admin-panel:**
+- Standalone repo (not in blink monorepo)
+- Only invitation-related pages (no accounts, transactions, merchants)
+- Vendored proto files in `protos/` directory
+- Simplified sidebar with invitation-only navigation
+- Own OAuth credentials and deployment pipeline
 
 ### Requirements to Structure Mapping
 
@@ -685,29 +801,71 @@ apps/admin-panel/
 |-----|---------|---------|
 | `GetApplicationStatuses` | blink-card | Batch query card KYC status for multiple invited users |
 
-### Dev Environment Changes
+### Dev Environment (Private Repository)
 
-**New Container (admin-panel-db):**
+The invitation-dashboard has its own dev environment separate from the main blink stack:
+
+**docker-compose.yml:**
 
 ```yaml
-admin-panel-db:
-  image: postgres:15
-  environment:
-    POSTGRES_DB: admin_panel
-    POSTGRES_USER: admin
-    POSTGRES_PASSWORD: admin
-  ports:
-    - "5433:5432"
+version: '3.8'
+services:
+  invitation-dashboard:
+    build: .
+    ports:
+      - "3004:3000"
+    environment:
+      - DATABASE_URL=postgresql://admin:admin@db:5432/invitation_dashboard
+      - ADMIN_CORE_API=http://host.docker.internal:4455/invitation-admin/graphql
+      - BLINK_CARD_GRPC_URL=host.docker.internal:50051
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: invitation_dashboard
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
 ```
 
-**New Environment Variables:**
+**Required Environment Variables (.env.example):**
 
+```bash
+# Database
+DATABASE_URL="postgresql://admin:admin@localhost:5434/invitation_dashboard"
+
+# Authentication (new OAuth app for invitation-dashboard)
+GOOGLE_CLIENT_ID="<from-google-cloud-console>"
+GOOGLE_CLIENT_SECRET="<from-google-cloud-console>"
+NEXTAUTH_URL="http://localhost:3004"
+NEXTAUTH_SECRET="<random-32-char-string>"
+AUTHORIZED_EMAILS="ceo@blink.sv"
+
+# External Services
+ADMIN_CORE_API="http://localhost:4455/invitation-admin/graphql"
+BLINK_CARD_GRPC_URL="localhost:50051"
+
+# Invitation Token Security (shared with blink-card)
+INVITATION_TOKEN_SECRET="<32-byte-hex-from-vault>"
+CARD_PROGRAM_SOURCE_KEY="<string-from-vault>"
+
+# Optional: Tracing
+OTEL_EXPORTER_OTLP_ENDPOINT=""
+TRACING_SERVICE_NAME="invitation-dashboard"
 ```
-DATABASE_URL="postgresql://admin:admin@localhost:5433/admin_panel"
-INVITATION_TOKEN_SECRET="<32-byte-hex-key-from-vault>"  # AES key shared with blink-card
-CARD_PROGRAM_SOURCE_KEY="<string-from-vault>"  # Card program identifier shared with blink-card
-BLINK_CARD_GRPC_URL="localhost:50051"  # blink-card gRPC endpoint
-```
+
+**Local Development with blink stack:**
+- Run `buck2 run dev:up` in blink repo to start core services
+- Run `docker-compose up` in invitation-dashboard repo
+- Invitation-dashboard connects to blink services via `host.docker.internal`
 
 ### gRPC Infrastructure
 
@@ -975,13 +1133,32 @@ model Invitation {
 This architecture document is your complete guide for implementing the Program Invitation System. Follow all decisions, patterns, and structures exactly as documented.
 
 **Development Sequence:**
-1. Add Prisma + PostgreSQL infrastructure to admin-panel
-2. Create database schema and run initial migration
-3. Implement server actions for invitation CRUD
-4. Build UI pages (list, detail, new invitation)
-5. Add background job with node-cron
-6. Integrate notification service calls
-7. Coordinate with mobile team for DeepLinkScreen values
+
+**Phase 0: Repository Setup**
+1. Create new private GitHub repository (`invitation-dashboard`)
+2. Copy authentication code from admin-panel (`api/auth/`, `middleware.ts`, `env.ts`)
+3. Set up new Google OAuth credentials in Google Cloud Console
+4. Configure Terraform module for invitation-dashboard deployment
+5. Add oathkeeper access rule for `/invitation-admin/*` route
+
+**Phase 1: Core Infrastructure**
+1. Set up Next.js 14 project with TypeScript, Tailwind CSS
+2. Add Prisma + PostgreSQL with docker-compose
+3. Create database schema and run initial migration
+4. Vendor GraphQL schema and run codegen
+5. Vendor proto files from blink-card
+
+**Phase 2: Feature Implementation**
+1. Implement server actions for invitation CRUD
+2. Build UI pages (list, detail, new invitation)
+3. Add gRPC client for blink-card integration
+4. Add background job with node-cron
+5. Integrate notification service calls
+
+**Phase 3: External Coordination**
+1. Coordinate with mobile team for DeepLinkScreen values
+2. Coordinate with blink-card team for `GetApplicationStatuses` RPC
+3. Coordinate with DevOps for secrets provisioning
 
 ### Quality Assurance Checklist
 

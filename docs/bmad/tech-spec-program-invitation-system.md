@@ -8,9 +8,9 @@ reviewers: []
 
 # Technical Specification: Program Invitation System
 
-**Version:** 1.1
+**Version:** 1.2
 **Status:** Draft - Ready for Peer Review
-**Last Updated:** 2025-12-19
+**Last Updated:** 2025-12-24
 
 ---
 
@@ -39,7 +39,15 @@ The Program Invitation System enables Blink's CEO to personally invite select VI
 - **Automatic Flow 2 triggering** when KYC completes
 - **Manual retry capabilities** for failed notifications
 
-This is a brownfield extension to the existing admin-panel, adding Prisma/PostgreSQL database infrastructure and a background polling job.
+### Repository Strategy
+
+This is implemented as a **standalone private repository** (`invitation-dashboard`), not an extension to the existing admin-panel. This decision was made because:
+
+- **Public/Private boundary**: blink repo is public; blink-card is private
+- **e2e testing**: Private repo can access blink-card Docker image for comprehensive testing
+- **CEO-only scope**: Single-user tool with minimal features; no need to share codebase with general admin-panel
+
+The invitation-dashboard replicates admin-panel's authentication patterns while containing only invitation-specific functionality.
 
 ---
 
@@ -76,7 +84,7 @@ This is a brownfield extension to the existing admin-panel, adding Prisma/Postgr
 
 ```mermaid
 flowchart TB
-    subgraph AdminPanel["Admin Panel (Next.js 14)"]
+    subgraph InvDashboard["Invitation Dashboard (Next.js 14 - Private Repo)"]
         Pages["/invitations Pages"]
         Actions["Server Actions"]
         Prisma["Prisma ORM"]
@@ -85,7 +93,7 @@ flowchart TB
         GrpcClient["blink-card-client.ts"]
     end
 
-    subgraph Database["Admin Panel Database"]
+    subgraph Database["Invitation Dashboard Database"]
         InvTable[("invitations table")]
     end
 
@@ -125,20 +133,23 @@ flowchart TB
 ```
 
 **Key points:**
-- Admin panel queries L2 status and sends notifications via **Main API (GraphQL)**
-- Admin panel queries card KYC status via **blink-card (gRPC)** - not GraphQL
+- Invitation dashboard queries L2 status and sends notifications via **Main API (GraphQL)** through `/invitation-admin/*` route
+- Invitation dashboard queries card KYC status via **blink-card (gRPC)** - not GraphQL
 - gRPC chosen over GraphQL federation because blink-card already has gRPC services; adding GraphQL would require supergraph infrastructure
+- Oathkeeper validates invitation-dashboard sessions separately from admin-panel sessions
 
 ### Key Design Decisions
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| Database | Prisma + PostgreSQL (new) | Admin-panel has no DB; Prisma provides type-safe access |
+| Repository | Separate private repo | Public blink repo can't access private blink-card for e2e testing |
+| Database | Prisma + PostgreSQL (new) | Standalone database for invitation-dashboard |
 | Background Job | `node-cron` embedded | Simple, no external dependencies, MVP-appropriate |
 | KYC Status | Cache-on-poll | Eliminates timeout cascade risk on page load |
 | Card KYC API | gRPC | blink-card has existing gRPC interface; extending admin GraphQL would require federation infrastructure |
 | Template Storage | YAML upload (not DB) | Lean approach; avoids over-engineering |
 | Notification | Fire-and-forget | Cannot confirm FCM delivery; track "triggered" not "sent" |
+| Oathkeeper Route | `/invitation-admin/*` | Separate route pattern with own session validation |
 
 ### Cache-on-Poll Pattern
 
@@ -151,26 +162,52 @@ Rather than fetching KYC status on every page load (which causes timeout cascade
 
 ### New Infrastructure Required
 
-**Admin Panel Database Container:**
+**Invitation Dashboard docker-compose.yml:**
 
 ```yaml
-admin-panel-db:
-  image: postgres:15
-  environment:
-    POSTGRES_DB: admin_panel
-    POSTGRES_USER: admin
-    POSTGRES_PASSWORD: admin
-  ports:
-    - "5433:5432"
+version: '3.8'
+services:
+  invitation-dashboard:
+    build: .
+    ports:
+      - "3004:3000"
+    environment:
+      - DATABASE_URL=postgresql://admin:admin@db:5432/invitation_dashboard
+      - ADMIN_CORE_API=http://host.docker.internal:4455/invitation-admin/graphql
+      - BLINK_CARD_GRPC_URL=host.docker.internal:50051
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: invitation_dashboard
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "5434:5432"
 ```
 
-**New Environment Variables:**
+**Required Environment Variables (.env.example):**
 
-```
-DATABASE_URL="postgresql://admin:admin@localhost:5433/admin_panel"
-INVITATION_TOKEN_SECRET="<32-byte-hex-key-from-vault>"
-CARD_PROGRAM_SOURCE_KEY="<string-from-vault>"
+```bash
+# Database
+DATABASE_URL="postgresql://admin:admin@localhost:5434/invitation_dashboard"
+
+# Authentication (separate OAuth app from admin-panel)
+GOOGLE_CLIENT_ID="<from-google-cloud-console>"
+GOOGLE_CLIENT_SECRET="<from-google-cloud-console>"
+NEXTAUTH_URL="http://localhost:3004"
+NEXTAUTH_SECRET="<random-32-char-string>"
+AUTHORIZED_EMAILS="ceo@blink.sv"
+
+# External Services (via oathkeeper /invitation-admin/* route)
+ADMIN_CORE_API="http://localhost:4455/invitation-admin/graphql"
 BLINK_CARD_GRPC_URL="localhost:50051"
+
+# Invitation Token Security (shared with blink-card, from Concourse vault)
+INVITATION_TOKEN_SECRET="<32-byte-hex-from-vault>"
+CARD_PROGRAM_SOURCE_KEY="<string-from-vault>"
 ```
 
 ---
@@ -704,40 +741,55 @@ export function generateInvitationCode(accountId: string): string {
 ### File Organization
 
 ```
-apps/admin-panel/
+invitation-dashboard/                # Private repository
 ├── prisma/
 │   ├── schema.prisma
 │   └── migrations/
 │
 ├── app/
+│   ├── page.tsx                     # Redirect to /invitations
+│   ├── layout.tsx                   # Root layout
+│   ├── middleware.ts                # NextAuth middleware
+│   ├── env.ts                       # Environment validation
+│   ├── graphql-rsc.tsx              # Apollo client
+│   ├── api/auth/[...nextauth]/      # Auth (replicated from admin-panel)
+│   │   ├── route.ts
+│   │   └── options.ts
 │   ├── invitations/
-│   │   ├── page.tsx            # List view
-│   │   ├── [id]/page.tsx       # Detail view
-│   │   ├── new/page.tsx        # Create form
-│   │   ├── actions.ts          # Server actions
+│   │   ├── page.tsx                 # List view
+│   │   ├── [id]/page.tsx            # Detail view
+│   │   ├── new/page.tsx             # Create form
+│   │   ├── actions.ts               # Server actions
 │   │   └── types.ts
 │   │
 │   └── jobs/
-│       ├── cron.ts             # Scheduler init
+│       ├── cron.ts                  # Scheduler init
 │       └── invitation-status-poller.ts
 │
-├── components/invitations/
-│   ├── invitation-list.tsx
-│   ├── invitation-detail.tsx
-│   ├── invitation-form.tsx
-│   ├── status-badge.tsx
-│   ├── template-uploader.tsx
-│   └── index.ts
+├── components/
+│   ├── invitations/
+│   │   ├── invitation-list.tsx
+│   │   ├── invitation-detail.tsx
+│   │   ├── invitation-form.tsx
+│   │   ├── status-badge.tsx
+│   │   ├── template-uploader.tsx
+│   │   └── index.ts
+│   └── side-bar.tsx                 # Simplified navigation
 │
 ├── lib/
-│   ├── prisma.ts               # Client singleton
-│   ├── invitation-service.ts   # Business logic
-│   ├── template-parser.ts      # YAML validation
-│   ├── invitation-code.ts      # AES-256-GCM token generation
-│   └── blink-card-client.ts    # gRPC client for card KYC status
+│   ├── prisma.ts                    # Client singleton
+│   ├── invitation-service.ts        # Business logic
+│   ├── template-parser.ts           # YAML validation
+│   ├── invitation-code.ts           # AES-256-GCM token generation
+│   └── blink-card-client.ts         # gRPC client for card KYC status
 │
-└── protos/
-    └── invitation_service.proto  # blink-card proto definition
+├── protos/
+│   └── invitation_service.proto     # Vendored from blink-card
+│
+├── graphql.gql                      # Invitation-specific queries
+├── codegen.yml                      # GraphQL codegen (vendored schema)
+├── docker-compose.yml               # Local dev environment
+└── .env.example                     # Environment template
 ```
 
 ### Naming Conventions

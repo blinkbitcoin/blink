@@ -1,24 +1,44 @@
 ---
 project_name: 'Blink - Program Invitation System'
 user_name: 'hn'
-date: '2025-12-18'
+date: '2025-12-24'
 sections_completed: ['technology_stack', 'language_rules', 'framework_rules', 'testing_rules', 'code_quality', 'workflow_rules', 'critical_rules']
 ---
 
 # Project Context for AI Agents
 
-_Critical rules and patterns for implementing the Program Invitation System in admin-panel._
+_Critical rules and patterns for implementing the Program Invitation System in a standalone private repository._
+
+---
+
+## Repository Strategy
+
+**Decision:** Separate private repository (`invitation-dashboard`)
+
+**Rationale:**
+- blink is public; blink-card is private
+- e2e testing requires blink-card Docker image
+- CEO-only tool with minimal scope
+- Full e2e testing capability in private repo
+
+**Key Differences from admin-panel:**
+- Standalone repo (not in blink monorepo)
+- Vendored dependencies (GraphQL schema, proto files)
+- Own Google OAuth credentials
+- Own Terraform deployment module
+- Oathkeeper route: `/invitation-admin/*` (not `/admin/*`)
 
 ---
 
 ## Technology Stack & Versions
 
-**Core (Existing):**
+**Core (Replicated from admin-panel):**
 - Next.js 14 (App Router)
 - TypeScript (strict mode)
 - React 18
 - Tailwind CSS
 - Apollo Client (GraphQL)
+- NextAuth.js 4.x (JWT sessions)
 
 **New (Adding for this feature):**
 - Prisma ORM
@@ -109,25 +129,39 @@ The `card_kyc_status` column stores granular Rain status for UI sub-text display
 ## File Organization
 
 ```
-apps/admin-panel/
-├── prisma/schema.prisma           # Invitation model
-├── app/invitations/
-│   ├── page.tsx                   # List view
-│   ├── [id]/page.tsx              # Detail view
-│   ├── new/page.tsx               # Create form
-│   ├── actions.ts                 # Server actions
-│   └── types.ts                   # TypeScript types
-├── app/jobs/
-│   └── invitation-status-poller.ts
-├── components/invitations/
-│   ├── invitation-list.tsx
-│   ├── status-badge.tsx
-│   └── template-uploader.tsx
-└── lib/
-    ├── prisma.ts                  # Prisma client singleton
-    ├── template-parser.ts         # YAML validation
-    ├── invitation-code.ts         # HMAC token generation
-    └── blink-card-client.ts       # gRPC client for card KYC status
+invitation-dashboard/                # Private repository
+├── prisma/schema.prisma             # Invitation model
+├── app/
+│   ├── page.tsx                     # Redirect to /invitations
+│   ├── layout.tsx                   # Root layout
+│   ├── middleware.ts                # NextAuth middleware
+│   ├── env.ts                       # Environment validation
+│   ├── graphql-rsc.tsx              # Apollo client
+│   ├── api/auth/[...nextauth]/      # Auth (copied from admin-panel)
+│   ├── invitations/
+│   │   ├── page.tsx                 # List view
+│   │   ├── [id]/page.tsx            # Detail view
+│   │   ├── new/page.tsx             # Create form
+│   │   ├── actions.ts               # Server actions
+│   │   └── types.ts                 # TypeScript types
+│   └── jobs/
+│       └── invitation-status-poller.ts
+├── components/
+│   ├── invitations/
+│   │   ├── invitation-list.tsx
+│   │   ├── status-badge.tsx
+│   │   └── template-uploader.tsx
+│   └── side-bar.tsx                 # Simplified navigation
+├── lib/
+│   ├── prisma.ts                    # Prisma client singleton
+│   ├── template-parser.ts           # YAML validation
+│   ├── invitation-code.ts           # AES-256-GCM token generation
+│   └── blink-card-client.ts         # gRPC client for card KYC status
+├── protos/
+│   └── invitation_service.proto     # Vendored from blink-card
+├── graphql.gql                      # Invitation-specific queries
+├── codegen.yml                      # GraphQL codegen (vendored schema)
+└── docker-compose.yml               # Local dev environment
 ```
 
 ---
@@ -160,14 +194,35 @@ Final Token = Base64(iv || ciphertext)
 - Nonce ensures uniqueness (replay protection)
 
 **Flow:**
-1. Admin-panel encrypts payload using `INVITATION_TOKEN_SECRET`
+1. Invitation-dashboard encrypts payload using `INVITATION_TOKEN_SECRET`
 2. Code included in deep link: `blink://kyc?code=<token>`
 3. Mobile passes code to blink-card mutation
 4. blink-card decrypts and validates: source_key + account_id match + expiration check
 
-**New file:** `lib/invitation-code.ts`
+**Implementation:** `lib/invitation-code.ts`
 
 **Schema:** Add `invitationCode` field to Invitation model
+
+---
+
+## Oathkeeper Integration
+
+**Route pattern:** `/invitation-admin/*` → validates with invitation-dashboard session
+
+```yaml
+- id: invitation-admin-backend
+  match:
+    url: "<(http|https)>://<.*>/invitation-admin/<.*>"
+  upstream:
+    url: http://graphql-admin:4001
+    strip_path: /invitation-admin
+  authenticators:
+    - handler: cookie_session
+      config:
+        check_session_url: "http://invitation-dashboard:3000/api/auth/session"
+```
+
+**Key insight:** Both `/admin/*` and `/invitation-admin/*` forward to the same backend (`graphql-admin:4001`), but use different session validation endpoints.
 
 ---
 
