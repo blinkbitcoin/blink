@@ -1104,8 +1104,8 @@ importers:
         specifier: ^0.7.15
         version: 0.7.15
       '@ip1sms/disposable-phone-numbers':
-        specifier: ^2.1.1389
-        version: 2.1.1389
+        specifier: ^2.1.1394
+        version: 2.1.1394
       '@merqva/telegram-passport':
         specifier: ^1.0.2
         version: 1.0.2
@@ -7238,8 +7238,8 @@ packages:
     resolution: {integrity: sha512-Sx1pU8EM64o2BrqNpEO1CNLtKQwyhuXuqyfH7oGKCk+1a33d2r5saW8zNwm3j6BTExtjrv2BxTgzzkMwts6vGg==}
     dev: false
 
-  /@ip1sms/disposable-phone-numbers@2.1.1389:
-    resolution: {integrity: sha512-bhzqzTRa9EydlYLbJWwgzvgaXlIVYoG4BAyAsqYM95OmoB7EtgNIOi4qyW9Q7ObWx2yXfOcOGU25sfGVhVPgtg==}
+  /@ip1sms/disposable-phone-numbers@2.1.1394:
+    resolution: {integrity: sha512-ftt9/f4hN2hVdffHA9gHvza4ejFf3RsTr7rwMHlSDs3D9ZBdQ+etdtm3ElqwTrBuJRIreBrMHVcN5RqJGx7QPA==}
     dev: false
 
   /@isaacs/cliui@8.0.2:
@@ -30978,6 +30978,14 @@ packages:
       graceful-fs: 4.2.11
     dev: true
 
+  /watchpack@2.5.0:
+    resolution: {integrity: sha512-e6vZvY6xboSwLz2GD36c16+O/2Z6fKvIf4pOXptw2rY9MVwE/TXc6RGqxD3I3x0a28lwBY7DE+76uTPSsBrrCA==}
+    engines: {node: '>=10.13.0'}
+    dependencies:
+      glob-to-regexp: 0.4.1
+      graceful-fs: 4.2.11
+    dev: true
+
   /wcwidth@1.0.1:
     resolution: {integrity: sha512-XHPEwS0q6TaxcvG85+8EYkbiCux2XtWG2mkc47Ng2A77BQu9+DqIOJldST4HgPkuea7dvKSj5VgX3P1d4rW8Tg==}
     dependencies:
@@ -31110,7 +31118,7 @@ packages:
       schema-utils: 4.3.3
       tapable: 2.3.0
       terser-webpack-plugin: 5.3.16(webpack@5.104.1)
-      watchpack: 2.4.4
+      watchpack: 2.5.0
       webpack-sources: 3.3.3
     transitivePeerDependencies:
       - '@swc/core'
