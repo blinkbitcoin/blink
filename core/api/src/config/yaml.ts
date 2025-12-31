@@ -38,7 +38,7 @@ try {
 
 // TODO: fix errors
 // const ajv = new Ajv({ allErrors: true, strict: "log" })
-const ajv = new Ajv({ useDefaults: true, discriminator: true })
+const ajv = new Ajv({ useDefaults: true, discriminator: true, $data: true })
 
 const defaultConfig = {}
 const validate = ajv.compile<YamlSchema>(configSchema)
