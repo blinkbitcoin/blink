@@ -1,0 +1,12 @@
+mutation apiKeyRemoveMonthlyLimit($input: ApiKeyRemoveLimitInput!) {
+  apiKeyRemoveMonthlyLimit(input: $input) {
+    apiKey {
+      id
+      name
+      limits {
+        monthlyLimitSats
+        spentLast30DSats
+      }
+    }
+  }
+}

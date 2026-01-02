@@ -25,6 +25,7 @@ import * as WalletInvoiceErrors from "@/domain/wallet-invoices/errors"
 import * as SupportError from "@/domain/support/errors"
 import * as OathkeeperError from "@/domain/oathkeeper/errors"
 import * as KratosErrors from "@/domain/kratos/errors"
+import * as ApiKeysErrors from "@/domain/api-keys/errors"
 
 import * as LedgerFacadeErrors from "@/services/ledger/domain/errors"
 import * as BriaEventErrors from "@/services/bria/errors"
@@ -58,6 +59,7 @@ export const ApplicationErrors = {
   ...SupportError,
   ...OathkeeperError,
   ...KratosErrors,
+  ...ApiKeysErrors,
 
   ...LedgerFacadeErrors,
   ...BriaEventErrors,
