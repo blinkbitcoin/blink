@@ -53,6 +53,17 @@ export const requestPhoneCodeWithCaptcha = async ({
   const testAccountsCaptcha = getTestAccountsCaptcha()
   const skipCaptcha = testAccountsCaptcha.includes(phone)
 
+  if (skipCaptcha) {
+    baseLogger.info(
+      { phone, ip, captchaSkipped: true, reason: "test_accounts_captcha" },
+      "requestPhoneCodeWithCaptcha - skipping CAPTCHA validation for test account phone",
+    )
+    addAttributesToCurrentSpan({
+      "auth.captcha.skipped": "true",
+      "auth.captcha.skip_reason": "test_accounts_captcha",
+    })
+  }
+
   if (!skipCaptcha) {
     const geeTestConfig = getGeetestConfig()
     const geetest = Geetest(geeTestConfig)
