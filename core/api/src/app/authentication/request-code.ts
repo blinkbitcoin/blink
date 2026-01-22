@@ -4,6 +4,7 @@ import {
   getAccountsOnboardConfig,
   getGeetestConfig,
   getTestAccounts,
+  getTestAccountsCaptcha,
 } from "@/config"
 import { ErrorLevel } from "@/domain/shared"
 import { ChannelType, checkedToChannel } from "@/domain/phone-provider"
@@ -49,15 +50,31 @@ export const requestPhoneCodeWithCaptcha = async ({
   ip: IpAddress
   channel: string
 }): Promise<true | ApplicationError> => {
-  const geeTestConfig = getGeetestConfig()
-  const geetest = Geetest(geeTestConfig)
+  const testAccountsCaptcha = getTestAccountsCaptcha()
+  const skipCaptcha = testAccountsCaptcha.includes(phone)
 
-  const verifySuccess = await geetest.validate(
-    geetestChallenge,
-    geetestValidate,
-    geetestSeccode,
-  )
-  if (verifySuccess instanceof Error) return verifySuccess
+  if (skipCaptcha) {
+    baseLogger.info(
+      { phone, ip, captchaSkipped: true, reason: "test_accounts_captcha" },
+      "requestPhoneCodeWithCaptcha - skipping CAPTCHA validation for test account phone",
+    )
+    addAttributesToCurrentSpan({
+      "auth.captcha.skipped": "true",
+      "auth.captcha.skip_reason": "test_accounts_captcha",
+    })
+  }
+
+  if (!skipCaptcha) {
+    const geeTestConfig = getGeetestConfig()
+    const geetest = Geetest(geeTestConfig)
+
+    const verifySuccess = await geetest.validate(
+      geetestChallenge,
+      geetestValidate,
+      geetestSeccode,
+    )
+    if (verifySuccess instanceof Error) return verifySuccess
+  }
 
   {
     const limitOk = await checkRequestCodeAttemptPerIpLimits(ip)
