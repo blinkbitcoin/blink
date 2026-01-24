@@ -287,7 +287,8 @@ const handleCommonErrors = (error: Error | string | unknown) => {
 }
 
 export const KnownPreludeErrorMessages = {
-  InvalidPhoneNumber: /invalid phone number|invalid target/i,
+  InvalidPhoneNumber:
+    /invalid phone number|invalid target|does not belong to a valid.*number range/i,
   RestrictedRegion: /region.*not.*supported|country.*blocked/i,
   UnsubscribedRecipient: /unsubscribed|opted.*out/i,
   BadConnection: /timeout|connection.*error|network.*error/i,
