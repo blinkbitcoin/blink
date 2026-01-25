@@ -964,11 +964,17 @@ const lockedPaymentViaLnSteps = async ({
   }
 
   if (!(payResult instanceof LnAlreadyPaidError)) {
-    await LnPaymentsRepository().persistNew({
+    const persistedLnPayment = await LnPaymentsRepository().persistNew({
       paymentHash: decodedInvoice.paymentHash,
       paymentRequest: decodedInvoice.paymentRequest,
       sentFromPubkey: outgoingNodePubkey || lndService.defaultPubkey(),
     })
+    if (persistedLnPayment instanceof Error) {
+      recordExceptionInCurrentSpan({
+        error: persistedLnPayment,
+        level: ErrorLevel.Critical,
+      })
+    }
 
     if (!(payResult instanceof Error))
       await LedgerFacade.updateMetadataByHash({
