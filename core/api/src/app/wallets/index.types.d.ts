@@ -103,6 +103,7 @@ type PaymentSendArgs = {
 type PayInvoiceByWalletIdArgs = PaymentSendArgs & {
   uncheckedPaymentRequest: string
   senderAccount: Account
+  lnurlSuccessAction?: LnurlSuccessAction | null
 }
 
 type PayNoAmountInvoiceByWalletIdArgs = PaymentSendArgs & {

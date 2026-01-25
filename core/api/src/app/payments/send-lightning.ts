@@ -85,6 +85,7 @@ export const payInvoiceByWalletId = async ({
   memo,
   senderWalletId: uncheckedSenderWalletId,
   senderAccount,
+  lnurlSuccessAction,
 }: PayInvoiceByWalletIdArgs): Promise<PaymentSendResult | ApplicationError> => {
   addAttributesToCurrentSpan({
     "payment.initiation_method": PaymentInitiationMethod.Lightning,
@@ -121,6 +122,7 @@ export const payInvoiceByWalletId = async ({
       paymentFlow,
       senderAccount,
       memo,
+      lnurlSuccessAction,
     })
   }
 
@@ -727,11 +729,13 @@ const executePaymentViaLn = async ({
   paymentFlow,
   senderAccount,
   memo,
+  lnurlSuccessAction,
 }: {
   decodedInvoice: LnInvoice
   paymentFlow: PaymentFlow<WalletCurrency, WalletCurrency>
   senderAccount: Account
   memo: string | null
+  lnurlSuccessAction?: LnurlSuccessAction | null
 }): Promise<PaymentSendResult | ApplicationError> => {
   addAttributesToCurrentSpan({
     "payment.settlement_method": SettlementMethod.Lightning,
@@ -778,6 +782,7 @@ const executePaymentViaLn = async ({
         memo,
 
         walletIds,
+        lnurlSuccessAction,
       }),
   )
   if (paymentSendAttemptResult instanceof Error) return paymentSendAttemptResult
@@ -829,6 +834,7 @@ const lockedPaymentViaLnSteps = async ({
   memo,
 
   walletIds,
+  lnurlSuccessAction,
 }: {
   signal: WalletIdAbortSignal
 
@@ -838,6 +844,7 @@ const lockedPaymentViaLnSteps = async ({
   memo: string | null
 
   walletIds: WalletId[]
+  lnurlSuccessAction?: LnurlSuccessAction | null
 }): Promise<LnSendAttemptResult> => {
   const { paymentHash } = decodedInvoice
   const { rawRoute, outgoingNodePubkey } = paymentFlow.routeDetails()
@@ -968,6 +975,7 @@ const lockedPaymentViaLnSteps = async ({
       paymentHash: decodedInvoice.paymentHash,
       paymentRequest: decodedInvoice.paymentRequest,
       sentFromPubkey: outgoingNodePubkey || lndService.defaultPubkey(),
+      lnurlSuccessAction: lnurlSuccessAction ?? null,
     })
 
     if (!(payResult instanceof Error))
