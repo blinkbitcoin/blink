@@ -1,3 +1,5 @@
+This repo is now read only. some updates can be found at [blinkbitcoin/blink](https://github.com/blinkbitcoin/blink)
+
 # Galoy
 
 [![Mattermost](https://img.shields.io/badge/chat-on%20mattermost-blue?style=social&logo=mattermost)](https://chat.blink.sv)
