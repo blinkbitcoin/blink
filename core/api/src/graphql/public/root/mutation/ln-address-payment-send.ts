@@ -43,7 +43,7 @@ const LnAddressPaymentSendMutation = GT.Field<
   args: {
     input: { type: GT.NonNull(LnAddressPaymentSendInput) },
   },
-  resolve: async (_, args, { domainAccount }) => {
+  resolve: async (_, args, { domainAccount, apiKeyId }) => {
     const { walletId, amount, lnAddress } = args.input
     if (lnAddress instanceof Error) {
       return { errors: [{ message: lnAddress.message }] }
@@ -62,6 +62,7 @@ const LnAddressPaymentSendMutation = GT.Field<
       amount,
       senderWalletId: walletId,
       senderAccount: domainAccount,
+      apiKeyId,
     })
 
     if (result instanceof Error) {
