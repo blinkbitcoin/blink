@@ -1,5 +1,6 @@
 import { utils, requestInvoice } from "lnurl-pay"
 
+import { baseLogger } from "@/services/logger"
 import { wrapAsyncFunctionsToRunInSpan } from "../tracing"
 
 import { toSats } from "@/domain/bitcoin"
@@ -32,8 +33,11 @@ export const LnurlPayService = (): ILnurlPayService => {
 
       const successAction = checkedToLnurlSuccessAction(response.successAction)
       if (successAction instanceof Error) {
-        // Log the error but don't fail the payment - successAction is optional
-        // The payment can still proceed without successAction
+        // Log the validation error but don't fail the payment - successAction is optional
+        baseLogger.error(
+          { err: successAction, lnAddressOrLnurl },
+          "Invalid LNURL successAction received, proceeding without it",
+        )
         return {
           invoice: response.invoice,
           successAction: null,

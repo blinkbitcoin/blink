@@ -72,12 +72,11 @@ const SettlementViaLn = GT.Object({
     successAction: {
       type: LnurlSuccessAction,
       description: "LNURL success action returned after payment (LUD-09/10)",
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      resolve: async (source: any) => {
+      resolve: async (source: SettlementViaLn & { parent?: { id: string; initiationVia: { type: string; paymentHash: PaymentHash } } }) => {
         if (source.parent?.initiationVia?.type !== "lightning") {
           return null
         }
-        const paymentHash = source.parent.initiationVia.paymentHash as PaymentHash
+        const paymentHash = source.parent.initiationVia.paymentHash
         const lnPayment = await LnPaymentsRepository().findByPaymentHash(paymentHash)
         if (lnPayment instanceof Error) {
           recordExceptionInCurrentSpan({
