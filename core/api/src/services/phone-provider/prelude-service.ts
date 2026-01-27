@@ -188,6 +188,7 @@ const handleCommonErrors = (error: Error | string | unknown) => {
       case "impossible_code":
         return new PhoneCodeInvalidError()
       case "invalid_phone_number":
+      case "unassigned_phone_number":
         return new InvalidPhoneNumberPhoneProviderError(errMsg)
       case "invalid_line_type":
       case "invalid_phone_line": // legacy, keeping for backwards compatibility
