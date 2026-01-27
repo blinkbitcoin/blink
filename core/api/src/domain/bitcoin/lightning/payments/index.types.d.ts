@@ -2,6 +2,7 @@ type LnPaymentPartial = {
   readonly paymentHash: PaymentHash
   readonly paymentRequest: EncodedPaymentRequest | undefined
   readonly sentFromPubkey: Pubkey
+  readonly lnurlSuccessAction?: LnurlSuccessAction | null
 }
 
 // Makes all properties non-readonly except the properties passed in as K
@@ -12,6 +13,7 @@ type Writeable<T, K extends keyof T> = Pick<T, K> & {
 type PersistedLnPaymentLookup = Writeable<LnPaymentLookup, "paymentHash"> & {
   readonly sentFromPubkey: Pubkey
   isCompleteRecord: boolean
+  readonly lnurlSuccessAction?: LnurlSuccessAction | null
 }
 
 interface ILnPaymentsRepository {
