@@ -3,6 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+    nixpkgs-node.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     concourse-shared.url = "github:galoymoney/concourse-shared";
 
@@ -18,14 +19,18 @@
   outputs = {
     self,
     nixpkgs,
+    nixpkgs-node,
     flake-utils,
     concourse-shared,
     rust-overlay,
   }:
     flake-utils.lib.eachDefaultSystem (system: let
+      nodePkgs = import nixpkgs-node {inherit system;};
+      # CVE: DoS via stack overflow in async_hooks - require nodejs 20.20.0+
+      expectedNodeVersion = "20.20.0";
       overlays = [
         (self: super: {
-          nodejs = super.nodejs_20;
+          nodejs = assert nodePkgs.nodejs_20.version == expectedNodeVersion; nodePkgs.nodejs_20;
           pnpm = super.nodePackages.pnpm;
         })
         (import rust-overlay)
