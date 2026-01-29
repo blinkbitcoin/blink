@@ -173,6 +173,22 @@ impl Currency {
         }
     }
 
+    /// Checks if a currency has ISO 4217 exponent 0 but the system tracks amounts
+    /// with 2 decimal places internally. These currencies need special handling
+    /// when converting from minor units.
+    ///
+    /// Examples:
+    /// - HUF (Hungarian Forint): ISO exponent 0, but system uses fillér (1/100 HUF)
+    fn uses_internal_decimal_places(&self) -> bool {
+        match self {
+            Currency::Iso(c) => {
+                // Currencies with exponent 0 where the system tracks sub-units
+                matches!(c.iso_alpha_code, "HUF")
+            }
+            Currency::Crypto(_) => false,
+        }
+    }
+
     pub fn format_minor_units(
         &self,
         f: &mut std::fmt::Formatter<'_>,
@@ -181,11 +197,24 @@ impl Currency {
     ) -> std::fmt::Result {
         match self {
             Currency::Iso(c) => {
+                // For currencies like HUF where ISO exponent is 0 but the system
+                // internally tracks amounts with 2 decimal places, we need to
+                // manually divide by 100 before formatting.
+                if self.uses_internal_decimal_places() && c.exponent == 0 {
+                    // System sends e.g. 366519 fillér, we need 3665.19 HUF
+                    // Since rusty_money won't divide (exponent 0), we do it manually
+                    // Format: "3665.19Ft" to match transaction history display
+                    let major = minor_units / 100;
+                    let cents = minor_units % 100;
+                    return write!(f, "{}.{:02}{}", major, cents, c.symbol);
+                }
+                let adjusted_units = minor_units;
+
                 let money = if round_to_major {
-                    rusty_money::Money::from_minor(minor_units as i64, *c)
+                    rusty_money::Money::from_minor(adjusted_units as i64, *c)
                         .round(0, rusty_money::Round::HalfUp)
                 } else {
-                    rusty_money::Money::from_minor(minor_units as i64, *c)
+                    rusty_money::Money::from_minor(adjusted_units as i64, *c)
                 };
 
                 write!(f, "{money}")
