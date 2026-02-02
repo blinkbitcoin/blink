@@ -57,7 +57,10 @@ const checkAndDeletePaymentForHash = async ({
               : { paymentRequest: undefined, confirmedDetails: undefined }
 
           // only record exception when payment is not a rebalance
-          if (confirmedDetails && !lndService.isLocal(confirmedDetails.destination)) {
+          if (
+            confirmedDetails &&
+            !lndService.isLocalOrHistorical(confirmedDetails.destination)
+          ) {
             recordExceptionInCurrentSpan({ error: lnPayment, level: ErrorLevel.Critical })
           }
 

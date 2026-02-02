@@ -289,6 +289,7 @@ paymentNetworks:
       skipFeeProbe:
         pubkeys: []
         chanIds: []
+    historicalPubkeys: []
   intraledger:
     receive:
       feeStrategies:

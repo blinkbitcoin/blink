@@ -139,6 +139,7 @@ type LightningNetworkInput = {
   channels: LightningChannelsInput
   receive: LightningReceiveInput
   send: LightningSendInput
+  historicalPubkeys: string[]
 }
 
 type IntraledgerDirectionInput = {
