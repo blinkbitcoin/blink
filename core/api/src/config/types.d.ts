@@ -112,6 +112,7 @@ type LightningNetworkConfig = {
       chanIds: ChanId[]
     }
   }
+  historicalPubkeys: Pubkey[]
 }
 
 type IntraledgerNetworkConfig = {

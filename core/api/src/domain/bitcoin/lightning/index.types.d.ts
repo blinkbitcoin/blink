@@ -160,6 +160,7 @@ type ListLnInvoicesArgs = {
 
 interface ILightningService {
   isLocal(pubkey: Pubkey): boolean
+  isLocalOrHistorical(pubkey: Pubkey): boolean
 
   defaultPubkey(): Pubkey
 

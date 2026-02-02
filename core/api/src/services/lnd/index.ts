@@ -43,7 +43,7 @@ import { checkAllLndHealth } from "./health"
 
 import { KnownLndErrorDetails } from "./errors"
 
-import { NETWORK, SECS_PER_5_MINS } from "@/config"
+import { NETWORK, SECS_PER_5_MINS, getHistoricalLndPubkeys } from "@/config"
 
 import {
   BadPaymentDataError,
@@ -108,6 +108,11 @@ export const LndService = (): ILightningService | LightningServiceError => {
 
   const isLocal = (pubkey: Pubkey): boolean =>
     getLnds({ type: "offchain" }).some((item) => item.pubkey === pubkey)
+
+  const isLocalOrHistorical = (pubkey: Pubkey): boolean => {
+    if (isLocal(pubkey)) return true
+    return getHistoricalLndPubkeys().includes(pubkey)
+  }
 
   const listActivePubkeys = (): Pubkey[] =>
     getLnds({ active: true, type: "offchain" }).map((lndAuth) => lndAuth.pubkey as Pubkey)
@@ -937,6 +942,7 @@ export const LndService = (): ILightningService | LightningServiceError => {
     namespace: "services.lnd.offchain",
     fns: {
       isLocal,
+      isLocalOrHistorical,
       defaultPubkey: (): Pubkey => defaultPubkey,
       listActivePubkeys,
       listAllPubkeys,

@@ -376,6 +376,12 @@ const paymentNetworksSchema = {
           required: ["feeStrategies", "skipFeeProbe"],
           additionalProperties: false,
         },
+        historicalPubkeys: {
+          type: "array",
+          items: { type: "string", maxLength: 66, minLength: 66 },
+          uniqueItems: true,
+          default: [],
+        },
       },
       required: ["channels", "receive", "send"],
       additionalProperties: false,
@@ -480,6 +486,7 @@ const paymentNetworksSchema = {
           chanIds: [],
         },
       },
+      historicalPubkeys: [],
     },
     intraledger: {
       receive: {

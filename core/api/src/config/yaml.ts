@@ -438,7 +438,12 @@ export const getLightningNetworkConfig = (): LightningNetworkConfig => {
         chanIds: (lightning.send.skipFeeProbe.chanIds || []) as ChanId[],
       },
     },
+    historicalPubkeys: (lightning.historicalPubkeys || []) as Pubkey[],
   }
+}
+
+export const getHistoricalLndPubkeys = (): Pubkey[] => {
+  return (yamlConfig.paymentNetworks.lightning.historicalPubkeys || []) as Pubkey[]
 }
 
 export const getIntraledgerNetworkConfig = (): IntraledgerNetworkConfig => {
