@@ -16,8 +16,9 @@ jobs:
       - name: Maximize build space
         uses: easimon/maximize-build-space@master
         with:
-          root-reserve-mb: 12288
+          root-reserve-mb: 15360
           temp-reserve-mb: 12288
+          remove-dotnet: "true"
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v14
       - name: Run the Magic Nix Cache
