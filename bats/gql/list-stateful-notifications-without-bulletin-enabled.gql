@@ -14,6 +14,18 @@ query listStatefulNotificationsWithoutBulletinEnabled($first: Int = 2, $after: S
         acknowledgedAt
         createdAt
         bulletinEnabled
+        action {
+          ... on OpenDeepLinkAction {
+            deepLink
+          }
+          ... on OpenExternalLinkAction {
+            url
+          }
+        }
+        bulletinButton {
+          label
+        }
+        icon
       }
     }
   }

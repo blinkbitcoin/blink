@@ -14,6 +14,18 @@ query listStatefulNotifications($first: Int = 2, $after: String = null) {
         acknowledgedAt
         createdAt
         bulletinEnabled
+        action {
+          ... on OpenDeepLinkAction {
+            deepLink
+          }
+          ... on OpenExternalLinkAction {
+            url
+          }
+        }
+        bulletinButton {
+          label
+        }
+        icon
       }
     }
   }
