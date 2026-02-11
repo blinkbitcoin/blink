@@ -116,6 +116,11 @@ pub enum DeepLinkAction {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct BulletinButton {
+    pub label: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Action {
     OpenDeepLink(DeepLink),
     OpenExternalUrl(ExternalUrl),
@@ -205,6 +210,10 @@ pub trait NotificationEvent: std::fmt::Debug + Send + Sync {
     }
 
     fn action(&self) -> Option<Action> {
+        None
+    }
+
+    fn bulletin_button(&self) -> Option<BulletinButton> {
         None
     }
 

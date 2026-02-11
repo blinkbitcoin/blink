@@ -915,6 +915,11 @@ export class MarketingNotificationTriggered extends jspb.Message {
     getIcon(): Icon | undefined;
     setIcon(value: Icon): MarketingNotificationTriggered;
 
+    hasBulletinButton(): boolean;
+    clearBulletinButton(): void;
+    getBulletinButton(): BulletinButton | undefined;
+    setBulletinButton(value?: BulletinButton): MarketingNotificationTriggered;
+
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): MarketingNotificationTriggered.AsObject;
     static toObject(includeInstance: boolean, msg: MarketingNotificationTriggered): MarketingNotificationTriggered.AsObject;
@@ -935,6 +940,7 @@ export namespace MarketingNotificationTriggered {
         shouldAddToBulletin: boolean,
         action?: Action.AsObject,
         icon?: Icon,
+        bulletinButton?: BulletinButton.AsObject,
     }
 }
 
@@ -958,6 +964,26 @@ export namespace LocalizedContent {
     export type AsObject = {
         title: string,
         body: string,
+    }
+}
+
+export class BulletinButton extends jspb.Message { 
+    getLabel(): string;
+    setLabel(value: string): BulletinButton;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): BulletinButton.AsObject;
+    static toObject(includeInstance: boolean, msg: BulletinButton): BulletinButton.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: BulletinButton, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): BulletinButton;
+    static deserializeBinaryFromReader(message: BulletinButton, reader: jspb.BinaryReader): BulletinButton;
+}
+
+export namespace BulletinButton {
+    export type AsObject = {
+        label: string,
     }
 }
 

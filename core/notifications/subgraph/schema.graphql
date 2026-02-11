@@ -1,3 +1,9 @@
+type BulletinButton {
+	label: String!
+}
+
+
+
 enum Icon {
 	ARROW_RIGHT
 	ARROW_LEFT
@@ -96,6 +102,7 @@ type StatefulNotification {
 	body: String!
 	deepLink: String
 	action: NotificationAction
+	bulletinButton: BulletinButton
 	createdAt: Timestamp!
 	acknowledgedAt: Timestamp
 	bulletinEnabled: Boolean!
