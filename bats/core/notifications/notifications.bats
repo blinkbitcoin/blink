@@ -262,11 +262,20 @@ setup_file() {
 }
 
 @test "notifications: enable a default-disabled category" {
+  create_user 'charlie'
+
+  # Verify defaults first
+  exec_graphql 'charlie' 'user-notification-settings'
+  disabled_categories=$(graphql_output '.data.me.notificationSettings.push.disabledCategories')
+  n_disabled=$(echo "$disabled_categories" | jq 'length')
+  [[ $n_disabled -eq 4 ]] || exit 1
+
+  # Enable Marketing
   variables=$(
     jq -n \
     '{input: {channel: "PUSH", category: "Marketing"}}'
   )
-  exec_graphql 'bob' 'account-enable-notification-category' "$variables"
+  exec_graphql 'charlie' 'account-enable-notification-category' "$variables"
   disabled_categories=$(graphql_output '.data.accountEnableNotificationCategory.account.notificationSettings.push.disabledCategories')
 
   # Marketing should no longer be in disabled list
@@ -276,16 +285,22 @@ setup_file() {
 }
 
 @test "notifications: disable an enabled category" {
+  create_user 'dave'
+
+  # Disable Payments (which is enabled by default)
   variables=$(
     jq -n \
     '{input: {channel: "PUSH", category: "Payments"}}'
   )
-  exec_graphql 'bob' 'account-disable-notification-category' "$variables"
+  exec_graphql 'dave' 'account-disable-notification-category' "$variables"
   disabled_categories=$(graphql_output '.data.accountDisableNotificationCategory.account.notificationSettings.push.disabledCategories')
 
-  # Payments should now be in disabled list, Marketing still enabled (from previous test)
+  # Payments should now be in disabled list along with the 4 defaults
   n_disabled=$(echo "$disabled_categories" | jq 'length')
-  [[ $n_disabled -eq 4 ]] || exit 1
+  [[ $n_disabled -eq 5 ]] || exit 1
   echo "$disabled_categories" | jq -e 'index("Payments")' || exit 1
-  echo "$disabled_categories" | jq -e 'index("Marketing")' && exit 1 || true
+  echo "$disabled_categories" | jq -e 'index("Circles")' || exit 1
+  echo "$disabled_categories" | jq -e 'index("AdminNotification")' || exit 1
+  echo "$disabled_categories" | jq -e 'index("Marketing")' || exit 1
+  echo "$disabled_categories" | jq -e 'index("Price")' || exit 1
 }
