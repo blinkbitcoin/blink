@@ -57,6 +57,10 @@ type Mutation {
 	statefulNotificationAcknowledge(input: StatefulNotificationAcknowledgeInput!): StatefulNotificationAcknowledgePayload!
 }
 
+type BulletinButton {
+	label: String!
+}
+
 union NotificationAction = OpenDeepLinkAction | OpenExternalLinkAction
 
 type OpenDeepLinkAction {
@@ -96,6 +100,7 @@ type StatefulNotification {
 	body: String!
 	deepLink: String
 	action: NotificationAction
+	bulletinButton: BulletinButton
 	createdAt: Timestamp!
 	acknowledgedAt: Timestamp
 	bulletinEnabled: Boolean!
