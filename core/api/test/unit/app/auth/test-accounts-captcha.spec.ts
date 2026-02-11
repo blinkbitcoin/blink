@@ -3,18 +3,12 @@ import { getTestAccountsCaptcha } from "@/config/yaml"
 describe("getTestAccountsCaptcha", () => {
   it("returns phone numbers from config", () => {
     const config = {
-      test_accounts_captcha: [
-        { phone: "+16505551234" },
-        { phone: "+16505555678" },
-      ],
+      test_accounts_captcha: [{ phone: "+16505551234" }, { phone: "+16505555678" }],
     } as unknown as YamlSchema
 
     const result = getTestAccountsCaptcha(config)
 
-    expect(result).toEqual([
-      { phone: "+16505551234" },
-      { phone: "+16505555678" },
-    ])
+    expect(result).toEqual([{ phone: "+16505551234" }, { phone: "+16505555678" }])
     expect(result).toHaveLength(2)
   })
 
