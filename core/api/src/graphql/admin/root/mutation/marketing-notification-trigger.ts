@@ -45,6 +45,15 @@ const OpenExternalUrlInput = GT.Input({
   }),
 })
 
+const BulletinButtonInput = GT.Input({
+  name: "BulletinButtonInput",
+  fields: () => ({
+    label: {
+      type: GT.NonNull(GT.String),
+    },
+  }),
+})
+
 const MarketingNotificationTriggerInput = GT.Input({
   name: "MarketingNotificationTriggerInput",
   fields: () => ({
@@ -68,6 +77,9 @@ const MarketingNotificationTriggerInput = GT.Input({
     },
     openExternalUrl: {
       type: OpenExternalUrlInput,
+    },
+    bulletinButton: {
+      type: BulletinButtonInput,
     },
     icon: {
       type: NotificationIcon,
@@ -96,6 +108,7 @@ const MarketingNotificationTriggerMutation = GT.Field<
           }
         | undefined
       openExternalUrl: { url: string | Error } | undefined
+      bulletinButton: { label: string } | undefined
       localizedNotificationContents: {
         title: string
         body: string
@@ -121,6 +134,7 @@ const MarketingNotificationTriggerMutation = GT.Field<
       icon,
       openDeepLink,
       openExternalUrl,
+      bulletinButton,
       localizedNotificationContents,
     } = args.input
 
@@ -192,6 +206,7 @@ const MarketingNotificationTriggerMutation = GT.Field<
       phoneCountryCodesFilter: nonErrorPhoneCountryCodesFilter,
       openDeepLink: nonErrorOpenDeepLink,
       openExternalUrl: nonErrorOpenExternalUrl,
+      bulletinButton,
       shouldSendPush,
       shouldAddToHistory,
       shouldAddToBulletin,
