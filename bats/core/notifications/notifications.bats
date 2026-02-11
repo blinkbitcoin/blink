@@ -239,3 +239,53 @@ setup_file() {
   count=$(graphql_output '.data.me.unacknowledgedStatefulNotificationsWithoutBulletinEnabledCount')
   [[ $count -eq 2 ]] || exit 1
 }
+
+@test "notifications: default notification settings have non-payment categories disabled" {
+  # Create a fresh user to verify default notification settings
+  create_user 'bob'
+
+  exec_graphql 'bob' 'user-notification-settings'
+  disabled_categories=$(graphql_output '.data.me.notificationSettings.push.disabledCategories')
+  push_enabled=$(graphql_output '.data.me.notificationSettings.push.enabled')
+
+  # Push notifications should be enabled by default
+  [[ "$push_enabled" = "true" ]] || exit 1
+
+  # Circles, AdminNotification, Marketing, and Price should be disabled by default
+  n_disabled=$(echo "$disabled_categories" | jq 'length')
+  [[ $n_disabled -eq 4 ]] || exit 1
+
+  echo "$disabled_categories" | jq -e 'index("Circles")' || exit 1
+  echo "$disabled_categories" | jq -e 'index("AdminNotification")' || exit 1
+  echo "$disabled_categories" | jq -e 'index("Marketing")' || exit 1
+  echo "$disabled_categories" | jq -e 'index("Price")' || exit 1
+}
+
+@test "notifications: enable a default-disabled category" {
+  variables=$(
+    jq -n \
+    '{input: {channel: "PUSH", category: "Marketing"}}'
+  )
+  exec_graphql 'bob' 'account-enable-notification-category' "$variables"
+  disabled_categories=$(graphql_output '.data.accountEnableNotificationCategory.account.notificationSettings.push.disabledCategories')
+
+  # Marketing should no longer be in disabled list
+  n_disabled=$(echo "$disabled_categories" | jq 'length')
+  [[ $n_disabled -eq 3 ]] || exit 1
+  echo "$disabled_categories" | jq -e 'index("Marketing")' && exit 1 || true
+}
+
+@test "notifications: disable an enabled category" {
+  variables=$(
+    jq -n \
+    '{input: {channel: "PUSH", category: "Payments"}}'
+  )
+  exec_graphql 'bob' 'account-disable-notification-category' "$variables"
+  disabled_categories=$(graphql_output '.data.accountDisableNotificationCategory.account.notificationSettings.push.disabledCategories')
+
+  # Payments should now be in disabled list, Marketing still enabled (from previous test)
+  n_disabled=$(echo "$disabled_categories" | jq 'length')
+  [[ $n_disabled -eq 4 ]] || exit 1
+  echo "$disabled_categories" | jq -e 'index("Payments")' || exit 1
+  echo "$disabled_categories" | jq -e 'index("Marketing")' && exit 1 || true
+}

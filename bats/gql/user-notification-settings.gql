@@ -4,6 +4,7 @@ query userNotificationSettings {
     notificationSettings {
       push {
         enabled
+        disabledCategories
       }
     }
   }
