@@ -313,6 +313,7 @@ input LocalizedNotificationContentInput {
 input MarketingNotificationTriggerInput {
   icon: NotificationIcon
   localizedNotificationContents: [LocalizedNotificationContentInput!]!
+  bulletinButton: BulletinButtonInput
   openDeepLink: OpenDeepLinkInput
   openExternalUrl: OpenExternalUrlInput
   phoneCountryCodesFilter: [CountryCode!]
@@ -423,6 +424,10 @@ enum NotificationIcon {
 scalar OnChainAddress
 
 scalar OnChainTxHash
+
+input BulletinButtonInput {
+  label: String!
+}
 
 input OpenDeepLinkInput {
   action: DeepLinkAction
