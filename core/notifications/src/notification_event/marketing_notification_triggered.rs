@@ -69,6 +69,7 @@ impl NotificationEvent for MarketingNotificationTriggered {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::notification_event::{DeepLink, ExternalUrl};
 
     fn default_event() -> MarketingNotificationTriggered {
         let default_content = LocalizedStatefulMessage {
