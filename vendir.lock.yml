@@ -1,0 +1,27 @@
+apiVersion: vendir.k14s.io/v1alpha1
+directories:
+- contents:
+  - git:
+      commitTitle: 'buck2: glossary: snake casing nit...'
+      sha: 7f091ff001f6e1da2ce2d6fdefa940f07d7dc9d0
+      tags:
+      - "2024-03-15"
+    path: .
+  path: prelude
+- contents:
+  - git:
+      commitTitle: 'buck2: glossary: snake casing nit...'
+      sha: 7f091ff001f6e1da2ce2d6fdefa940f07d7dc9d0
+      tags:
+      - "2024-03-15"
+    path: .
+  path: third-party/macros
+- contents:
+  - git:
+      commitTitle: 'client: Fix "ctrl-c was pressed" bug...'
+      sha: f3c685667ef22d0130687003012b6960abec6b3b
+      tags:
+      - 2023-10-15-425-gf3c685667
+    path: .
+  path: third-party/rust/fixups/ring/include
+kind: LockConfig

@@ -1,20 +1,44 @@
-name: "E2E test"
+name: "E2e test"
 
 on:
   pull_request:
-    branches: [ main ]
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  integration:
-    name: End2End tests
+  tests:
+    name: execute via bats
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-node@v2
-    - run: yarn install
-    - name: Run e2e tests
-      run: |
-        make e2e-in-ci
-        container_id=$(docker ps -q -f status=exited -f name="${PWD##*/}-e2e-tests-")
-        exit $(docker inspect $container_id --format='{{.State.ExitCode}}')
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@master
+        with:
+          root-reserve-mb: 15360
+          temp-reserve-mb: 12288
+
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v14
+
+      - name: Run the Magic Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+
+      - name: Run bats tests
+        run: |
+          nix develop -c ./bats/ci_run.sh
+
+      - name: Rename Tilt log
+        if: always()
+        run: mv bats/.e2e-tilt.log bats/e2e-tilt.log
+
+      - name: Upload Tilt log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tilt log
+          path: bats/e2e-tilt.log

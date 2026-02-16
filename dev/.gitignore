@@ -1,1 +1,3 @@
-*.macaroon
+.*.json
+.*.env
+.envs

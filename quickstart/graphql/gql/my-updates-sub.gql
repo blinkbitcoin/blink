@@ -1,0 +1,64 @@
+subscription myUpdates {
+  myUpdates {
+    errors {
+      message
+    }
+    me {
+      id
+      defaultAccount {
+        id
+        wallets {
+          id
+          walletCurrency
+          balance
+        }
+      }
+    }
+    update {
+      type: __typename
+      ... on Price {
+        base
+        offset
+        currencyUnit
+        formattedAmount
+      }
+      ... on RealtimePrice {
+        id
+        timestamp
+        denominatorCurrencyDetails {
+          flag
+          fractionDigits
+          id
+          name
+          symbol
+        }
+        denominatorCurrency
+        btcSatPrice {
+          base
+          offset
+          currencyUnit
+        }
+        usdCentPrice {
+          base
+          offset
+          currencyUnit
+        }
+      }
+      ... on LnUpdate {
+        paymentHash
+        status
+      }
+      ... on OnChainUpdate {
+        txNotificationType
+        txHash
+        amount
+        usdPerSat
+      }
+      ... on IntraLedgerUpdate {
+        txNotificationType
+        amount
+        usdPerSat
+      }
+    }
+  }
+}

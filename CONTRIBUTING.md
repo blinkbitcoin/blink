@@ -1,6 +1,6 @@
 # Contributing
 
-This repo is built and maintained by the Galoy team. We welcome and appreciate new contributions and encourage you to check out the repo and [join our community Slack](https://join.slack.com/t/galoymoney-workspace/shared_invite/zt-rvnhsdb5-72AZCD_jzw6_Q05aCs0SgA) to get started.
+This repo is built and maintained by the Blink team. We welcome and appreciate new contributions and encourage you to check out the repo and [join our community](https://chat.blink.sv/) to get started.
 
 To help get you started, we will explain a bit about how we've laid out the code here and some of the practices we use. Our layout details fall mostly into two categories:
 - [Working with Types](#working-with-types)
@@ -11,7 +11,7 @@ To help get you started, we will explain a bit about how we've laid out the code
 ## Working with Types
 This codebase is implemented using a well-typed approach where we rely on Typescript for catching & enforcing certain kinds of checks we would like to perform.
 
-This approach helps to strenghthen guarantees that bugs/issues don't get to runtime unhandled if our types are implemented properly.
+This approach helps to strengthen guarantees that bugs/issues don't get to runtime unhandled if our types are implemented properly.
 
 ### Our Approach
 We define all our types in declaration files (`*.d.ts`) where typescript automatically adds any types to the context without needing to explicitly import. Declaration files have limitations on what can be imported & instantiated within them, so in the few cases where types derive from instances of things we would usually have to use special tricks to derive them.
@@ -21,7 +21,7 @@ The majority of our types are defined in the `domain` layer (see Architecture se
 #### Symbol types
 These are unique types that are alternatives to generically typing things as Typescript's primitive types (e.g. `string`, `number`, `boolean`). Doing this helps us to add context to primitive types that we pass around and it allows the type checked to distinguish between different kinds of primitives throughout the code.
 
-For example, an onchain address and a lightning network payment request are both strings, but they aren't interchangeable as a data type. Instead of using `string` type for these types we would define as follows using a "unique symbol":
+For example, an onchain address and a lightning network payment request are both strings, but they aren't interchangeable as data types. Instead of using `string` type for these types we would define as follows using a "unique symbol":
 
 ```
 type EncodedPaymentRequest = string & { readonly brand: unique symbol }
@@ -49,7 +49,7 @@ type LightningError = import("./errors").LightningError
 
 #### Imported Library types
 
-In the places where we would like to work with types defined in imported libraries, we have two options. When we would like to use them directly, we can simply import them. If we would like to re-use a type to create our own types, we would re-import to get those types into our declaration files.
+In the places where we would like to work with types defined in imported libraries, we have two options. When we would like to use them directly, we can simply import them. If we would like to reuse a type to create our own types, we would re-import to get those types into our declaration files.
 
 For example, for a result type from the `lightning` library, we would import and re-use it like:
 ```
@@ -100,7 +100,7 @@ const myFunction = async ({
 ```
 
 #### Defining objects with methods
-We use functional constructors to define certain types of objects that we can call method on. The intention here is to instantiate the object first and then call methods on that object with method-specific args to execute some functionality.
+We use functional constructors to define certain types of objects that we can call methods on. The intention here is to instantiate the object first and then call methods on that object with method-specific args to execute some functionality.
 
 For objects like these, the interface for the object is defined using a `type` declaration and methods are typed at this point.
 
@@ -108,19 +108,25 @@ For example, our fee calculator is typed as follows:
 ```ts
 // In '.d.ts' file
 type DepositFeeCalculator = {
-  onChainDepositFee({ amount, ratio }: onChainDepositFeeArgs): Satoshis
-  lnDepositFee(): Satoshis
+  onChainDepositFee({
+    amount,
+    ratio,
+  }: OnChainDepositFeeArgs): BtcPaymentAmount | ValidationError
+  lnDepositFee(): BtcPaymentAmount
 }
+
 
 // In implementation file
 export const DepositFeeCalculator = (): DepositFeeCalculator => {
   const onChainDepositFee = ({ amount, ratio }: onChainDepositFeeArgs) => {
-    return toSats(Math.round(amount * ratio))
+    return ratio === 0
+      ? ZERO_SATS
+      : checkedToBtcPaymentAmount(Math.round(Number(amount.amount) * ratio))
   }
 
   return {
     onChainDepositFee,
-    lnDepositFee: () => toSats(0),
+    lnDepositFee: () => ZERO_SATS, // TODO: implement
   }
 }
 ```
@@ -161,7 +167,7 @@ Defines the models and business logic with related interfaces.
 
 #### Responsibility
 - Define all data types
-- Implement operations on the data types that depends on conditionals or data transformations
+- Implement operations on the data types that depend on conditionals or data transformations
 - Define interfaces of external services
 
 #### Dependencies
@@ -176,8 +182,8 @@ Implements all the adapters (specific implementations of the interfaces defined 
 - Implement interfaces defined in domain layer
 
 #### Examples
-- Access to external resources (database, redis, bitcoind, lnd)
-- Consumption of external services/APIs (twilio, geetest, price, hedging)
+- Access to external resources (database, Redis, Bitcoin, lnd)
+- Consumption of external services/APIs (Twilio, geetest, price, hedging)
 
 #### Dependencies
 - Internal: Domain Layer
@@ -210,12 +216,12 @@ This layer will have the entry points used by the infrastructure (pods).
 
 #### Examples
 - Cron jobs
-- Http servers: Middleware related logic (JWT, graphql, …)
+- Http servers: Middleware-related logic (JWT, GraphQL, …)
 - Triggers
 
 #### Dependencies
 - Internal: Domain Layer, Application Layer and Services Layer. (_AR `TODO`: Confirm that this is not just Application layer_)
-- External: all required dependencies required to expose the application (expressjs, apollo server, …)
+- External: all required dependencies required to expose the application (expressJS, Apollo server, …)
 
 
 

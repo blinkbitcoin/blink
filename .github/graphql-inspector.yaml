@@ -1,0 +1,2 @@
+branch: main
+schema: src/graphql/public/schema.graphql

@@ -1,0 +1,70 @@
+name: Check Code & Unit Test
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, labeled, unlabeled]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: execute via buck2
+    runs-on: ubuntu-latest
+    steps:
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@master
+        with:
+          root-reserve-mb: 12288
+          temp-reserve-mb: 12288
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v14
+      - name: Run the Magic Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+      - uses: actions/checkout@v3
+      - name: Prepare buck2 test args from labels
+        id: prepare_args
+        run: |
+          ARGS=""
+          BUILD_ARGS=""
+
+          cat <<EOF > labels.json
+          ${{ toJSON(github.event.pull_request.labels.*.name) }}
+          EOF
+
+          DEFAULT_LABELS=("dashboard" "consent" "pay" "core" "api-keys" "notifications" "admin-panel" "map" "voucher")
+          LABELS=($(jq -r '.[]' < labels.json))
+          if [ ${#LABELS[@]} -eq 0 ]; then
+              LABELS=("${DEFAULT_LABELS[@]}")
+          elif [ ${#LABELS[@]} -eq 1 ] && [ "${LABELS[0]}" = "ci" ]; then
+              LABELS=("${DEFAULT_LABELS[@]}")
+          fi
+
+          for LABEL in "${LABELS[@]}"; do
+            case "$LABEL" in
+              dashboard|consent|pay|admin-panel|map|voucher)
+                ARGS+=" //apps/$LABEL:test"
+                BUILD_ARGS+=" //apps/$LABEL:node_modules"
+                ;;
+              core)
+                ARGS+=" //core/api:test"
+                BUILD_ARGS+=" //core/api:prod_build"
+                ;;
+              api-keys|notifications)
+                ARGS+=" //core/$LABEL:$LABEL"
+                BUILD_ARGS+=" //core/$LABEL:$LABEL"
+                ;;
+            esac
+          done
+
+          echo "Prepared args: $ARGS"
+          echo "Prepared build_args: $BUILD_ARGS"
+          echo "args=$ARGS" >> "$GITHUB_OUTPUT"
+          echo "build_args=$BUILD_ARGS" >> "$GITHUB_OUTPUT"
+      - name: Build via buck2
+        if: steps.prepare_args.outputs.args != ''
+        run: nix develop -c buck2 build ${{ steps.prepare_args.outputs.build_args }}
+      - name: Run checks and tests via buck2
+        if: steps.prepare_args.outputs.args != ''
+        run: nix develop -c buck2 test ${{ steps.prepare_args.outputs.args }}

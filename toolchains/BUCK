@@ -1,0 +1,68 @@
+load(
+  "@prelude//toolchains:python.bzl",
+  "system_python_bootstrap_toolchain",
+  "system_python_toolchain"
+)
+load("@prelude//toolchains:genrule.bzl", "system_genrule_toolchain")
+load("@prelude//toolchains:cxx.bzl", "system_cxx_toolchain")
+load("@prelude//toolchains:rust.bzl", "system_rust_toolchain")
+load("@prelude//toolchains:remote_test_execution.bzl", "remote_test_execution_toolchain")
+
+remote_test_execution_toolchain(
+    name = "remote_test_execution",
+    visibility = ["PUBLIC"],
+)
+
+system_python_bootstrap_toolchain(
+    name = "python_bootstrap",
+    visibility = ["PUBLIC"],
+)
+
+system_python_toolchain(
+    name = "python",
+    visibility = ["PUBLIC"],
+)
+
+system_cxx_toolchain(
+    name = "cxx",
+    visibility = ["PUBLIC"],
+)
+
+system_genrule_toolchain(
+    name = "genrule",
+    visibility = ["PUBLIC"],
+)
+
+system_rust_toolchain(
+    name = "rust",
+    default_edition = "2021",
+    visibility = ["PUBLIC"],
+)
+
+load("@toolchains//simple-pnpm:toolchain.bzl", "simple_pnpm_toolchain")
+
+simple_pnpm_toolchain(
+  name = "simple_pnpm",
+  visibility = ["PUBLIC"],
+)
+
+load("@toolchains//workspace-pnpm:toolchain.bzl", "workspace_pnpm_toolchain")
+
+workspace_pnpm_toolchain(
+  name = "workspace_pnpm",
+  visibility = ["PUBLIC"],
+)
+
+load("@toolchains//rover:toolchain.bzl", "rover_toolchain")
+
+rover_toolchain(
+  name = "rover",
+  visibility = ["PUBLIC"],
+)
+
+load("@toolchains//rust:toolchain.bzl", "galoy_rust_toolchain")
+
+galoy_rust_toolchain(
+  name = "galoy_rust",
+  visibility = ["PUBLIC"],
+)

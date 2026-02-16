@@ -1,0 +1,25 @@
+apiVersion: vendir.k14s.io/v1alpha1
+directories:
+- contents:
+  - git:
+      commitTitle: 'fix: next build to copy public and static folders (#4836)'
+      sha: 41666a505897940b1782a7f2efdf918dadbde246
+      tags:
+      - 0.21.40-2-g41666a505
+    path: .
+  path: dev
+- contents:
+  - git:
+      commitTitle: 'fix: next build to copy public and static folders (#4836)'
+      sha: 41666a505897940b1782a7f2efdf918dadbde246
+      tags:
+      - 0.21.40-2-g41666a505
+    path: schemas
+  - git:
+      commitTitle: 'fix: next build to copy public and static folders (#4836)'
+      sha: 41666a505897940b1782a7f2efdf918dadbde246
+      tags:
+      - 0.21.40-2-g41666a505
+    path: gql
+  path: graphql
+kind: LockConfig

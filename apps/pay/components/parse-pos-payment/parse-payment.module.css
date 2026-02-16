@@ -1,0 +1,283 @@
+.digitsContainer {
+  width: 100%;
+  padding: 1em;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.digitsGrid {
+  display: grid;
+  place-content: center;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(4, 6.5rem);
+  width: 100%;
+}
+
+.digitsGrid > button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  border-radius: 0.5em;
+  border: none;
+  outline: none;
+  font-size: 2.5rem;
+  font-weight: 400;
+  color: rgba(17, 25, 40, 1);
+  border: 1px solid rgb(255, 255, 255);
+}
+
+@media (max-width: 600px) {
+  .digitsGrid {
+    display: grid;
+    place-content: center;
+    grid-template-columns: repeat(3, 33.33%);
+    grid-template-rows: repeat(4, 14dvh);
+  }
+  .digitsContainer {
+    height: calc(100dvh - 5.5rem);
+    width: 100%;
+    padding: 0;
+  }
+  .digitsGrid > button {
+    font-size: 250%;
+  }
+  .digitsGrid > button:active {
+    background-color: rgba(233, 233, 236, 0.3); /* Light touch feedback */
+  }
+  .secondaryBtn {
+    width: 80%;
+    max-width: 380px;
+  }
+}
+
+.digitsGrid > button:active {
+  border: 1px solid rgb(233, 233, 236);
+}
+
+.payBtnContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  column-gap: 0.5rem;
+  width: 100%;
+}
+
+.payBtn,
+.payNewBtn {
+  background: var(--primary3);
+  color: #fff;
+  font-weight: 600;
+  width: 80%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: none;
+  outline: none;
+  padding: 0.9em 2em;
+  border-radius: 10em;
+  order: 2;
+  margin-top: 1em;
+}
+
+.secondaryBtn {
+  background: var(--lighterGrey);
+  color: #000000;
+  font-weight: 600;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: none;
+  outline: none;
+  padding: 0.9em 3em;
+  border-radius: 10em;
+  gap: 0.5em;
+  cursor: pointer;
+}
+
+.invoiceContainer {
+  display: grid;
+  place-items: center;
+}
+
+@keyframes timer {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+.timerContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 300px;
+  column-gap: 15px;
+  font-size: 16px;
+  font-weight: 300;
+  margin-bottom: 5px;
+}
+
+.timerContainer > p {
+  margin: 0;
+}
+
+.timer {
+  background-color: rgb(233, 233, 236);
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  width: 100%;
+  height: 5px;
+  border-radius: 10px;
+  overflow: hidden;
+  transition: all 0.5s ease;
+}
+
+.timer > span {
+  height: 100%;
+  transition: width 0.5s ease;
+}
+
+.modalHeader {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.modalItemWrapper {
+  display: grid;
+  gap: 16px;
+  grid-template-rows: 1fr;
+  grid-template-columns: 64px repeat(auto-fill, 64px);
+
+  margin: 8px 0px;
+}
+.modalItem {
+  height: 64px;
+  width: 64px;
+  border-radius: 20px;
+  background-color: #fff;
+  box-shadow: rgba(0, 0, 0, 0.25) 0px 0.0625em 0.0625em,
+    rgba(0, 0, 0, 0.25) 0px 0.125em 0.5em, rgba(255, 255, 255, 0.1) 0px 0px 0px 1px inset;
+}
+
+.useBbwButton {
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1)),
+    linear-gradient(268.08deg, #fb5607 8.75%, #ffbe0b 98.45%);
+  color: #fff;
+  font-weight: 600;
+  width: 100%;
+  border: none;
+  outline: none;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.qrClipboard {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: 1fr 1fr;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.3em 1em;
+}
+
+.qrClipboard > button {
+  width: fit-content;
+  background-color: transparent;
+  color: rgba(145, 155, 186, 1);
+  font-weight: 500;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  outline: none;
+  column-gap: 5px;
+  cursor: pointer;
+}
+
+.qrClipboard > button:first-child {
+  cursor: copy;
+}
+
+.qrClipboard > button:first-child:hover {
+  color: green;
+}
+
+.qrClipboard .shareBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  column-gap: 5px;
+}
+
+.loading,
+.error {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: green;
+  padding: 30% 1rem;
+  margin-top: 2rem;
+  outline: 1px dashed rgba(0, 128, 0, 0.35);
+}
+
+.error {
+  flex-direction: column;
+  padding: 15% 1rem;
+}
+
+.error > p {
+  text-align: center;
+}
+
+@media (min-width: 760px) {
+  .loading {
+    padding: 1rem 0;
+    outline: none;
+  }
+}
+
+.loader {
+  border: 8px solid #f4570e;
+  border-top: 5px solid rgb(242, 170, 83);
+  border-radius: 50%;
+  width: 100px;
+  height: 100px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.error {
+  color: red;
+  outline: 1px dashed rgba(255, 0, 0, 0.35);
+}
+
+.spinner {
+  display: inline-block;
+  border-radius: 50%;
+  border: 2px solid #ccc;
+  border-top-color: #555;
+  animation: spinKeyFrame 1s infinite linear;
+}
+
+@keyframes spinKeyFrame {
+  to {
+    transform: rotate(360deg);
+  }
+}

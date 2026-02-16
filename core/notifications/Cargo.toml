@@ -1,0 +1,54 @@
+[package]
+name = "notifications"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "lib_notifications"
+
+[[bin]]
+name = "write_sdl"
+path = "src/bin/write_sdl.rs"
+
+[features]
+
+fail-on-warnings = []
+
+[dependencies]
+job-executor = { path = "../../lib/job-executor-rs" }
+tracing = { path = "../../lib/tracing-rs" }
+es-entity = { path = "../../lib/es-entity-rs" }
+
+anyhow = { workspace = true }
+async-graphql = { workspace = true }
+async-graphql-axum = { workspace = true }
+axum = { workspace = true }
+axum-extra = { workspace = true }
+base64 = { workspace = true }
+jsonwebtoken = { workspace = true }
+clap = { workspace = true }
+derive_builder = { workspace = true }
+tokio = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+thiserror = { workspace = true }
+chrono = { workspace = true }
+futures = { workspace = true }
+sqlx = { workspace = true }
+sqlxmq = { workspace = true }
+rand = { workspace = true }
+uuid = { workspace = true }
+serde_with = { workspace = true }
+tonic = { workspace = true }
+tonic-health = { workspace = true }
+prost = { workspace = true }
+rust-i18n = { workspace = true }
+google-fcm1 = { workspace = true }
+lettre = { workspace = true }
+handlebars = { workspace = true }
+rusty-money = { workspace = true }
+
+[build-dependencies]
+tonic-build = { workspace = true }

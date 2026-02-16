@@ -1,0 +1,118 @@
+load("@toolchains//rover:macros.bzl", "supergraph", "diff_check", "dev_update_file")
+load( ":tilt.bzl", "tilt",)
+
+# Bring up the full set of services for development
+tilt(
+    name = "up",
+    subcmd = "up",
+)
+
+# Bring down any remaining/running services
+tilt(
+    name = "down",
+    subcmd = "down",
+)
+
+# This should eventually be removed by refactoring config setup in core/api
+export_file(
+    name = "dummy_env",
+    src = "core-bundle/dummy-env.json",
+    visibility = ["PUBLIC"],
+)
+
+export_file(
+    name = "serve_env",
+    src = "core-bundle/serve-env.json",
+    visibility = ["PUBLIC"],
+)
+
+export_file(
+    name = "integration_env",
+    src = "core-bundle/integration-env.json",
+    visibility = ["PUBLIC"],
+)
+
+python_bootstrap_binary(
+    name = "healthcheck",
+    main = "healthcheck.py",
+    visibility = ["PUBLIC"],
+)
+
+supergraph(
+  name = "supergraph",
+  config = "config/apollo-federation/supergraph-config.yaml",
+  subgraphs = {
+    "API_KEYS_SCHEMA": "//core/api-keys:sdl",
+    "NOTIFICATIONS_SCHEMA": "//core/notifications:sdl",
+    "PUBLIC_SCHEMA": "//core/api:public-sdl",
+  },
+  visibility = ["PUBLIC"],
+)
+
+diff_check(
+  name = "supergraph-diff",
+  original = "config/apollo-federation/supergraph.graphql",
+  new = ":supergraph"
+)
+
+test_suite(
+    name = "check-sdls",
+    tests = [
+        ":supergraph-diff",
+        "//core/api:public-schema-diff",
+        "//core/api:admin-schema-diff",
+        "//core/api-keys:schema-diff",
+        "//core/notifications:schema-diff",
+    ],
+)
+
+dev_update_file(
+  name = "update-supergraph",
+  generated = ":supergraph",
+  out = "config/apollo-federation/supergraph.graphql"
+)
+
+sh_binary(
+  name = "update-schemas",
+  main = "bin/update-schemas.sh",
+)
+
+sh_binary(
+  name = "init-onchain",
+  main = "bin/init-onchain.sh",
+)
+
+sh_binary(
+  name = "init-lightning",
+  main = "bin/init-lightning.sh",
+)
+
+sh_binary(
+  name = "init-test-user",
+  main = "bin/init-test-user.sh",
+)
+
+sh_binary(
+  name = "setup-hydra-client",
+  main = "bin/setup-hydra-client.sh",
+)
+
+sh_binary(
+  name = "stoppable-trigger",
+  main = "bin/run-stoppable-trigger.sh",
+)
+
+sh_binary(
+  name = "add-test-users-with-usernames",
+  main = "bin/add-test-users-with-usernames.sh",
+)
+
+sh_binary(
+  name = "fund-user",
+  main = "bin/fund-user.sh",
+)
+
+sh_binary(
+  name = "setup-voucher-escrow",
+  main = "bin/setup-voucher-escrow.sh",
+)

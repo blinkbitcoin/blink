@@ -14,13 +14,16 @@ Kubernetes comes with some overhead, and while we have not tried to run on low-c
 
 https://twitter.com/memenetes/status/1366826625531342856?s=20
 
+![Overall diagram](https://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/GaloyMoney/galoy/main/architecture.iuml)
+
+
 ### Deps
 
 Galoy relies on lnd to process transactions. The dependency of lnd, and bitcoind as the backend, can be installed conveniently from the following [helm chart](https://github.com/GaloyMoney/charts)
 
 Currently Galoy relies on a single lnd instance, but the goal is to be able to manage several lnd instances at the same time, so that lnd can be recycled when needed, and also provide reliability when downtime is needed, or to provide multi-region redundancy.
 
-Lnd itself is also adding etcd as another backend option to bring more resilicency; this will be another option when available that will bring more resiliency to Galoy
+Lnd itself is also adding etcd as another backend option to bring more resiliency; this will be another option when available that will bring more resiliency to Galoy
 
 ### Main pods
 

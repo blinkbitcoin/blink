@@ -1,0 +1,104 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  background-color: #fff;
+  width: 100%;
+  padding: 0 1rem;
+}
+
+.container > div:first-child {
+  display: grid;
+  place-items: center;
+  row-gap: 1rem;
+  margin-bottom: 1em;
+  max-width: 293px;
+}
+
+.text {
+  color: rgba(17, 25, 40, 1);
+  font-weight: 400;
+  font-size: 24px;
+  line-height: 32px;
+  text-align: center;
+}
+
+.backBtn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--primary3);
+  border-radius: 10em;
+  border: none;
+  outline: none;
+  padding: 0.6rem;
+  font-size: 1rem;
+  line-height: 24px;
+  width: 7rem;
+  color: #fff;
+  cursor: pointer;
+}
+
+.receipt {
+  background-color: transparent;
+  border: none;
+  outline: none;
+  font-size: 16px;
+  font-weight: 400;
+  cursor: pointer;
+  padding: 0.5rem;
+  margin-top: 1rem;
+}
+
+.receipt:hover,
+.receipt:focus,
+.receipt:focus-visible {
+  background-color: rgb(252, 249, 249);
+  border: 10px;
+  padding: 0.5rem;
+}
+
+.payNewBtn {
+  background-color: var(--lighterGrey);
+  border-radius: 10em;
+  margin-bottom: 1rem;
+  padding: 1em;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.reference {
+  word-break: break-all;
+  width: 270px;
+  margin: auto;
+}
+
+.backdrop {
+  opacity: 1 !important;
+  background-color: rgba(255, 255, 255, 1);
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+}
+
+.link:hover {
+  text-decoration: none;
+}
+
+/* make the receipt hidden on render but still accessible in the DOM */
+.hideReceipt {
+  position: absolute;
+  left: -9999px;
+  visibility: hidden;
+}

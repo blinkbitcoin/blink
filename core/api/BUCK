@@ -1,0 +1,318 @@
+load(
+  "@toolchains//workspace-pnpm:macros.bzl",
+  "dev_pnpm_task_binary",
+  "dev_pnpm_task_test",
+  "build_node_modules",
+  "tsc_build",
+  "prod_tsc_build",
+  "prod_tsc_build_bin",
+  "audit",
+  "eslint",
+  "typescript_check",
+  "yaml_check",
+  "madge_check",
+  "jest_test",
+  "npm_bin",
+  "migrate_mongo_build_bin",
+)
+load("@toolchains//rover:macros.bzl", "sdl", "diff_check", "dev_update_file")
+
+# Temporarily disabled due to ESLint 9 compatibility issues
+# dev_deps_srcs = {
+#  "lib/eslint-config": "//lib/eslint-config:src",
+# }
+dev_deps_srcs = {}
+
+dev_pnpm_task_binary(
+  name = "fix-lint",
+  command = "eslint-fix",
+  deps = ["//:node_modules"],
+)
+
+export_file(
+  name = "package.json",
+  visibility = ["PUBLIC"],
+)
+
+build_node_modules(
+  name = "node_modules",
+)
+
+build_node_modules(
+  name = "node_modules_prod",
+  prod_only = True,
+)
+
+filegroup(
+    name = "src",
+    srcs = glob([
+        "src/**",
+        "tsconfig.json",
+        "tsconfig-build.json",
+    ]),
+)
+
+filegroup(
+    name = "test_src",
+    srcs = glob([
+        "test/**",
+    ]),
+)
+
+filegroup(
+  name = "protos",
+  srcs = glob([
+    "src/services/**/protos/**",
+    "src/services/**/proto/**"
+  ])
+)
+
+prod_deps_srcs = {
+  "lib/gt3-server-node-express-sdk": "//lib/gt3-server-node-express-sdk:src",
+}
+
+npm_bin(
+    name = "migrate_mongo_bin",
+    bin_name = "migrate-mongo",
+)
+
+migrate_mongo_build_bin(
+    name = "migrate-mongo-up",
+    srcs = [":src"],
+    subcmd = "up",
+    config_file = "src/migrations/migrate-mongo-config.js",
+)
+
+migrate_mongo_build_bin(
+    name = "migrate-mongo-status",
+    srcs = [":src"],
+    subcmd = "status",
+    config_file = "src/migrations/migrate-mongo-config.js",
+)
+
+tsc_build(
+  name = "build",
+  tsconfig = "tsconfig-build.json",
+  srcs = [":src"],
+  additional_dist_files = [":protos"],
+  prod_deps_srcs = prod_deps_srcs,
+)
+
+prod_tsc_build(
+  name = "prod_build",
+  prod_deps_srcs = prod_deps_srcs,
+  visibility = ["PUBLIC"],
+)
+
+prod_tsc_build_bin(
+  name = "api",
+  preload_file = "services/tracing.js",
+  run_file = "servers/graphql-main-server.js",
+)
+
+prod_tsc_build_bin(
+  name = "write-sdl",
+  run_file = "servers/write-sdl.js",
+)
+
+sdl(
+  name = "public-sdl",
+  generator = ":write-sdl",
+  args = ["public"],
+  deps_srcs = [":src"],
+  visibility = ["PUBLIC"],
+)
+
+diff_check(
+  name = "public-schema-diff",
+  original = "src/graphql/public/schema.graphql",
+  new = ":public-sdl"
+)
+
+dev_update_file(
+  name = "update-public-schema",
+  generated = ":public-sdl",
+  out = "src/graphql/public/schema.graphql"
+)
+
+sdl(
+  name = "admin-sdl",
+  generator = ":write-sdl",
+  args = ["admin"],
+  deps_srcs = [":src"],
+  visibility = ["PUBLIC"],
+)
+
+diff_check(
+  name = "admin-schema-diff",
+  original = "src/graphql/admin/schema.graphql",
+  new = ":admin-sdl"
+)
+
+dev_update_file(
+  name = "update-admin-schema",
+  generated = ":admin-sdl",
+  out = "src/graphql/admin/schema.graphql"
+)
+
+audit(
+    name = "audit",
+    level = "critical",
+)
+
+# Temporarily disabled due to ESLint 9 compatibility issues
+# eslint(
+#     name = "check-lint",
+#     srcs = [":src"] + [":test_src"] + glob([".eslint*"]),
+#     extensions = [".ts"],
+#     allow_warnings = True,
+#     dev_deps_srcs = dev_deps_srcs,
+# )
+
+dev_pnpm_task_test(
+    name = "check-lint",
+    command = "eslint-check",
+    deps = ["//:node_modules"],
+)
+
+dev_pnpm_task_test(
+  name = "dev-check-lint",
+  command = "eslint-check",
+  deps = ["//:node_modules"],
+)
+
+typescript_check(
+    name = "check-type",
+    srcs = [":src"] + [":test_src"],
+)
+
+dev_pnpm_task_test(
+  name = "dev-check-type",
+  command = "tsc-check",
+  deps = ["//:node_modules"],
+)
+
+yaml_check(
+    name = "check-yaml",
+    srcs = glob([
+        ".prettier*",
+        "prettier*",
+        "*.yml",
+        "*.yaml",
+    ]),
+)
+
+madge_check(
+    name = "check-circular-dependencies",
+    srcs = [":src"],
+)
+
+dev_pnpm_task_test(
+  name = "dev-check-circular-dependencies",
+  command = "circular-deps-check",
+  deps = ["//:node_modules"],
+)
+
+jest_test(
+    name = "unit-tests",
+    srcs = [":src"] + [":test_src"] + glob(["galoy.yaml"]),
+    config_file = "test/unit/jest.config.js",
+    env_json = "//dev:dummy_env",
+    env = {
+        "LOGLEVEL": "warn",
+    }
+)
+
+jest_test(
+    name = "test-integration",
+    srcs = [":src"] + [":test_src"] + glob(["galoy.yaml"]),
+    prod_deps_srcs = prod_deps_srcs,
+    config_file = "test/integration/jest.config.js",
+    run_serially = True,
+    env_json = "//dev:integration_env",
+    env = {
+        "LOGLEVEL": "warn",
+    }
+)
+
+test_suite(
+    name = "test",
+    tests = [
+        ":audit",
+        ":check-lint",
+        ":check-type",
+        ":check-yaml",
+        ":check-circular-dependencies",
+        ":unit-tests",
+    ],
+)
+
+test_suite(
+    name = "dev-check-code",
+    tests = [
+        ":dev-check-lint",
+        ":dev-check-type",
+        ":dev-check-circular-dependencies",
+    ],
+)
+
+dev_pnpm_task_binary(
+  name = "dev",
+  command = "dev:api",
+  srcs = [":src"],
+  deps = ["//:node_modules"],
+)
+
+dev_pnpm_task_binary(
+  name = "dev-trigger",
+  command = "dev:api-trigger",
+  srcs = [":src"],
+  deps = ["//:node_modules"],
+  visibility = ["PUBLIC"],
+)
+
+dev_pnpm_task_binary(
+  name = "dev-exporter",
+  command = "dev:api-exporter",
+  srcs = [":src"],
+  deps = ["//:node_modules"],
+  visibility = ["PUBLIC"],
+)
+
+dev_pnpm_task_binary(
+  name = "dev-ws-server",
+  command = "dev:api-ws-server",
+  srcs = [":src"],
+  deps = ["//:node_modules"],
+  visibility = ["PUBLIC"],
+)
+
+dev_pnpm_task_binary(
+  name = "dev-cron",
+  command = "dev:cron",
+  srcs = [":src"],
+  deps = ["//:node_modules"],
+  visibility = ["PUBLIC"],
+  env_json = "//dev:serve_env",
+)
+
+dev_pnpm_task_binary(
+  name = "watch-compile",
+  command = "watch:compile",
+  srcs = [":src"] + [":test_src"],
+  deps = ["//:node_modules"],
+)
+
+dev_pnpm_task_binary(
+  name = "watch-unit",
+  command = "test:watch-unit",
+  deps = ["//:node_modules"],
+  env_json = "//dev:dummy_env",
+)
+
+dev_pnpm_task_binary(
+  name = "mongodb-migrate",
+  command = "mongodb-migrate",
+  srcs = [":src"],
+  deps = ["//:node_modules"],
+)

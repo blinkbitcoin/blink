@@ -1,0 +1,20 @@
+load(
+  "@toolchains//workspace-pnpm:macros.bzl",
+  "prod_tsc_build_bin",
+)
+
+alias(
+    name = "prod_build",
+    actual = "//core/api:prod_build",
+)
+
+prod_tsc_build_bin(
+  name = "api-ws-server",
+  preload_file = "services/tracing.js",
+  run_file = "servers/ws-server.js",
+)
+
+alias(
+  name = "dev",
+  actual = "//core/api:dev-ws-server",
+)

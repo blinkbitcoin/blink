@@ -1,5 +1,5 @@
 ## Compiled JavaScript files
-lib/**/*.js
+dist/**/*.js
 **/*.js.map
 
 # Typescript v1 declaration files
@@ -17,6 +17,8 @@ src/tool/records.csv
 src/tool/users_balance.csv
 src/tool/record_transactions_*.csv
 
+.nvmrc
+
 .vscode
 *.DS_Store
 
@@ -24,5 +26,40 @@ public/*
 !public/logo.png
 
 coverage
-lib
 artifacts
+
+generated.gql
+.swc
+
+.envrc.secrets
+.envrc.local
+
+# bats e2e tests
+-
+.e2e-*.log
+.*_pid
+
+junit.xml
+
+.next
+
+.env.local
+
+# Buck
+/buck-out/
+
+# Nix builds
+/result
+
+# direnv
+.direnv
+
+# rust
+target
+
+# vendir
+/.vendir-tmp/
+
+#pnpm
+.pnpm-store
+.novu-api-key

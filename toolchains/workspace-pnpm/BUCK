@@ -1,0 +1,64 @@
+export_file(
+  name = "build_node_modules.py",
+  visibility = ["PUBLIC"],
+)
+
+export_file(
+  name = "build_workspace_node_modules.py",
+  visibility = ["PUBLIC"],
+)
+
+export_file(
+  name = "build_npm_bin.py",
+  visibility = ["PUBLIC"],
+)
+
+export_file(
+  name = "migrate_mongo_build_bin.py",
+  visibility = ["PUBLIC"],
+)
+
+export_file(
+  name = "prepare_package_context.py",
+  visibility = ["PUBLIC"],
+)
+
+export_file(
+  name = "compile_typescript.py",
+  visibility = ["PUBLIC"],
+)
+
+export_file(
+  name = "package_prod_tsc_build.py",
+  visibility = ["PUBLIC"],
+)
+
+export_file(
+  name = "package_prod_tsc_build_bin.py",
+  visibility = ["PUBLIC"],
+)
+
+export_file(
+  name = "build_next_build.py",
+  visibility = ["PUBLIC"],
+)
+
+export_file(
+  name = "package_next_bin.py",
+  visibility = ["PUBLIC"],
+)
+
+export_file(
+  name = "run_npm_test.py",
+  visibility = ["PUBLIC"],
+)
+
+export_file(
+  name = "run_audit.py",
+  visibility = ["PUBLIC"],
+)
+
+export_file(
+  name = "graphql_codegen.py",
+  visibility = ["PUBLIC"],
+)
