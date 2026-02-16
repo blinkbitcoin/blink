@@ -1,3 +1,8 @@
+quotes:
+  - { code: "USD", symbol: "$", name: "US Dollar", flag: "🇺🇸" }
+  - { code: "EUR", symbol: "€", name: "Euro", flag: "🇪🇺" }
+  - { code: "MYR", symbol: "RM", name: "Malaysian Ringgit", flag: "🇲🇾" }
+
 exchanges:
   - provider: "dev-mock"
     base: "BTC"
@@ -8,6 +13,7 @@ exchanges:
         BTC:
           EUR: 17500
           USD: 20000
+          MYR: 78000
     # Following require dummy values
     name: ""
     cron: "*/5 * * * * *"
