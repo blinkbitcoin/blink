@@ -2,27 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix(core): prevent false alerts for rebalances between historical
-        nodes (#440)...'
-      sha: 21a85cef08faecda62870d07e6b5242768d9aa51
+      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1441
+        (#459)...'
+      sha: 0d5454fd944fd0bf32f52cbd5165e38b2d233e7d
       tags:
-      - 0.21.134-2-g21a85cef0
+      - 0.21.135-2-g0d5454fd9
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'fix(core): prevent false alerts for rebalances between historical
-        nodes (#440)...'
-      sha: 21a85cef08faecda62870d07e6b5242768d9aa51
+      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1441
+        (#459)...'
+      sha: 0d5454fd944fd0bf32f52cbd5165e38b2d233e7d
       tags:
-      - 0.21.134-2-g21a85cef0
+      - 0.21.135-2-g0d5454fd9
     path: schemas
   - git:
-      commitTitle: 'fix(core): prevent false alerts for rebalances between historical
-        nodes (#440)...'
-      sha: 21a85cef08faecda62870d07e6b5242768d9aa51
+      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1441
+        (#459)...'
+      sha: 0d5454fd944fd0bf32f52cbd5165e38b2d233e7d
       tags:
-      - 0.21.135
+      - 0.21.136
     path: gql
   path: graphql
 kind: LockConfig
