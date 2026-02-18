@@ -1,0 +1,12 @@
+mutation apiKeySetWeeklyLimit($input: ApiKeySetWeeklyLimitInput!) {
+  apiKeySetWeeklyLimit(input: $input) {
+    apiKey {
+      id
+      name
+      limits {
+        weeklyLimitSats
+        spentLast7DSats
+      }
+    }
+  }
+}
