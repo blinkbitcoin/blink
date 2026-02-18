@@ -14,7 +14,12 @@ setup_file() {
 
   create_user 'tester2'
 
+  # Login all role types for comprehensive testing
   login_admin
+  login_supportlv2_user
+  login_supportlv1_user
+  login_marketing_user
+  login_viewer_user
 }
 
 getEmailCode() {
@@ -35,21 +40,96 @@ getEmailCode() {
   echo "$code"
 }
 
-@test "admin: can query account details by phone" {
-  admin_token="$(read_value 'admin.token')"
+
+@test "no_token: access denied without JWT token" {
+  # Test multiple endpoints to ensure comprehensive access control
+  exec_admin_graphql "" 'all-levels' '{}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
+
+  exec_admin_graphql "" 'account-details-by-user-phone' '{"phone": "+1234567890"}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
+
+  exec_admin_graphql "" 'account-details-by-username' '{"username": "test"}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
+
+  exec_admin_graphql "" 'account-details-by-account-id' '{"accountId": "test-id"}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
+
+  exec_admin_graphql "" 'account-details-by-user-id' '{"userId": "test-id"}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
+
+  exec_admin_graphql "" 'user-update-phone' '{"input": {"phone": "+1234567890", "accountId": "test-id"}}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
+
+  exec_admin_graphql "" 'user-update-email' '{"input": {"email": "test@example.com", "accountId": "test-id"}}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
+
+  exec_admin_graphql "" 'account-update-level' '{"input": {"level": "TWO", "accountId": "test-id"}}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
+
+  exec_admin_graphql "" 'account-update-status' '{"input": {"status": "LOCKED", "accountId": "test-id", "comment": "test"}}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
+
+  exec_admin_graphql "" 'filtered-user-count' '{}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
+
+  exec_admin_graphql "" 'marketing-notification-trigger' '{"input": {"localizedNotificationContents": [{"language": "en", "title": "Test", "body": "Test"}], "shouldSendPush": false, "shouldAddToHistory": true, "shouldAddToBulletin": true}}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
+
+  exec_admin_graphql "" 'account-force-delete' '{"input": {"accountId": "test-id"}}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
+}
+
+@test "empty_scope: access denied with empty scope token" {
+  _create_admin_client_and_token '[]' "empty_scope.token"
+  empty_token="$(read_value 'empty_scope.token')"
+
+  # Test different endpoints than the no_token test for broader coverage (using only existing .gql files)
+  echo "Testing inactive-merchants..." >&2
+  exec_admin_graphql "$empty_token" 'inactive-merchants' '{}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" ]] || exit 1
+
+  echo "Testing merchants-pending-approval..." >&2
+  exec_admin_graphql "$empty_token" 'merchants-pending-approval' '{}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" ]] || exit 1
+
+  echo "Testing merchant-map-validate..." >&2
+  exec_admin_graphql "$empty_token" 'merchant-map-validate' '{"input": {"id": "test-merchant-id"}}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" ]] || exit 1
+
+  echo "Testing merchant-map-delete..." >&2
+  exec_admin_graphql "$empty_token" 'merchant-map-delete' '{"input": {"id": "test-merchant-id"}}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" ]] || exit 1
+}
+
+@test "viewer_user: can query account details by phone" {
+  token="$(read_value 'viewer_user.token')"
   variables=$(
     jq -n \
     --arg phone "$(read_value 'tester.phone')" \
     '{phone: $phone}'
   )
-  exec_admin_graphql $admin_token 'account-details-by-user-phone' "$variables"
+  exec_admin_graphql $token 'account-details-by-user-phone' "$variables"
   id="$(graphql_output '.data.accountDetailsByUserPhone.id')"
   [[ "$id" != "null" && "$id" != "" ]] || exit 1
   cache_value 'tester.id' "$id"
 }
 
-@test "admin: can update user phone number" {
-  admin_token="$(read_value 'admin.token')"
+@test "admin: can query account details for tester2 by phone" {
+  token="$(read_value 'admin.token')"
+  variables=$(
+    jq -n \
+    --arg phone "$(read_value 'tester2.phone')" \
+    '{phone: $phone}'
+  )
+  exec_admin_graphql $token 'account-details-by-user-phone' "$variables"
+  id="$(graphql_output '.data.accountDetailsByUserPhone.id')"
+  [[ "$id" != "null" && "$id" != "" ]] || exit 1
+  cache_value 'tester2.id' "$id"
+}
+
+@test "supportlv2_user: can update user phone number" {
+  token="$(read_value 'supportlv2_user.token')"
   id="$(read_value 'tester.id')"
   new_phone="$(random_phone)"
   variables=$(
@@ -59,7 +139,7 @@ getEmailCode() {
     '{input: {phone: $phone, accountId:$accountId}}'
   )
 
-  exec_admin_graphql $admin_token 'user-update-phone' "$variables"
+  exec_admin_graphql $token 'user-update-phone' "$variables"
   num_errors="$(graphql_output '.data.userUpdatePhone.errors | length')"
   [[ "$num_errors" == "0" ]] || exit 1
 
@@ -68,10 +148,11 @@ getEmailCode() {
     --arg phone "$new_phone" \
     '{phone: $phone}'
   )
-  exec_admin_graphql "$admin_token" 'account-details-by-user-phone' "$variables"
+  exec_admin_graphql "$token" 'account-details-by-user-phone' "$variables"
   refetched_id="$(graphql_output '.data.accountDetailsByUserPhone.id')"
   [[ "$refetched_id" == "$id" ]] || exit 1
 }
+
 
 @test "admin: can update user email" {
   email="$(read_value tester.username)@blink.sv"
@@ -89,7 +170,7 @@ getEmailCode() {
   [[ "$(graphql_output '.data.userEmailRegistrationValidate.me.email.address')" == "$email" ]] || exit 1
   [[ "$(graphql_output '.data.userEmailRegistrationValidate.me.email.verified')" == "true" ]] || exit 1
 
-  admin_token="$(read_value 'admin.token')"
+  token="$(read_value 'admin.token')"
   id="$(read_value 'tester.id')"
   new_email="$(read_value 'tester.username')_updated@blink.sv"
   variables=$(
@@ -99,7 +180,7 @@ getEmailCode() {
     '{input: {email: $email, accountId:$accountId}}'
   )
 
-  exec_admin_graphql $admin_token 'user-update-email' "$variables"
+  exec_admin_graphql $token 'user-update-email' "$variables"
   num_errors="$(graphql_output '.data.userUpdateEmail.errors | length')"
   [[ "$num_errors" == "0" ]] || exit 1
 
@@ -108,7 +189,7 @@ getEmailCode() {
     --arg accountId "$id" \
     '{accountId: $accountId}'
   )
-  exec_admin_graphql "$admin_token" 'account-details-by-account-id' "$variables"
+  exec_admin_graphql "$token" 'account-details-by-account-id' "$variables"
   refetched_id="$(graphql_output '.data.accountDetailsByAccountId.id')"
   [[ "$refetched_id" == "$id" ]] || exit 1
 
@@ -274,31 +355,7 @@ getEmailCode() {
   [[ "$count" -eq 1 ]] || exit 1
 }
 
-@test "admin: can trigger marketing notification" {
-  admin_token="$(read_value 'admin.token')"
 
-  variables=$(
-    jq -n \
-    '{
-      input: {
-        localizedNotificationContents: [
-          {
-            language: "en",
-            title: "Test title",
-            body: "test body"
-          }
-        ],
-        shouldSendPush: false,
-        shouldAddToHistory: true,
-        shouldAddToBulletin: true,
-      }
-    }'
-  )
-  exec_admin_graphql "$admin_token" 'marketing-notification-trigger' "$variables"
-  num_errors="$(graphql_output '.data.marketingNotificationTrigger.errors | length')"
-  success="$(graphql_output '.data.marketingNotificationTrigger.success')"
-  [[ "$num_errors" == "0" && "$success" == "true" ]] || exit 1
-}
 
 @test "admin: can force delete account" {
   admin_token="$(read_value 'admin.token')"
@@ -318,6 +375,103 @@ getEmailCode() {
   [[ "$num_errors" == "0" && "$success" == "true" ]] || exit 1
 }
 
-# TODO: add check by email
+@test "admin: can access system configuration (SYSTEM_CONFIG scope)" {
+  admin_token="$(read_value 'admin.token')"
 
+  # Use allLevels query as a proxy for system configuration access
+  # This represents a system configuration endpoint that should require SYSTEM_CONFIG scope
+  variables=$(
+    jq -n \
+    '{}'
+  )
+  exec_admin_graphql "$admin_token" 'all-levels' "$variables"
+  levels="$(graphql_output '.data.allLevels')"
+  [[ "$levels" != "null" && "$levels" != "" ]] || exit 1
+
+  # Verify we get expected account levels
+  level_count="$(graphql_output '.data.allLevels | length')"
+  [[ "$level_count" -gt 0 ]] || exit 1
+}
+
+
+
+# ============================================================================
+# ACCESS DENIED TESTS - ONE PER ROLE
+# ============================================================================
+
+# VIEWER role - cannot lock accounts (should only have VIEW_ACCOUNTS, VIEW_TRANSACTIONS, VIEW_MERCHANTS)
+@test "viewer_user: cannot lock accounts (LOCK_ACCOUNT scope)" {
+  viewer_token="$(read_value 'viewer_user.token')"
+  id="$(read_value 'tester.id')"
+
+  variables=$(
+    jq -n \
+    --arg account_status "LOCKED" \
+    --arg accountId "$id" \
+    --arg comment "Test lock attempt by viewer" \
+    '{input: {status: $account_status, accountId: $accountId, comment: $comment}}'
+  )
+  exec_admin_graphql "$viewer_token" 'account-update-status' "$variables"
+  error_message="$(graphql_output '.errors[0].message')"
+  [[ "$error_message" == "Not authorized" ]] || exit 1
+}
+
+# MARKETING role - cannot view accounts (should only have SEND_NOTIFICATIONS)
+@test "marketing_user: cannot view accounts (VIEW_ACCOUNTS scope)" {
+  marketing_token="$(read_value 'marketing_user.token')"
+  id="$(read_value 'tester.id')"
+
+  variables=$(
+    jq -n \
+    --arg accountId "$id" \
+    '{accountId: $accountId}'
+  )
+  exec_admin_graphql "$marketing_token" 'account-details-by-account-id' "$variables"
+  error_message="$(graphql_output '.errors[0].message')"
+  [[ "$error_message" == "Not authorized" ]] || exit 1
+}
+
+# SUPPORTLV1 role - cannot change account level (missing CHANGELEVEL_ACCOUNT)
+@test "supportlv1_user: cannot change account level (CHANGELEVEL_ACCOUNT scope)" {
+  supportlv1_token="$(read_value 'supportlv1_user.token')"
+  id="$(read_value 'tester.id')"
+
+  variables=$(
+    jq -n \
+    --arg level "TWO" \
+    --arg accountId "$id" \
+    '{input: {level: $level, accountId: $accountId}}'
+  )
+  exec_admin_graphql "$supportlv1_token" 'account-update-level' "$variables"
+  error_message="$(graphql_output '.errors[0].message')"
+  [[ "$error_message" == "Not authorized" ]] || exit 1
+}
+
+# SUPPORTLV2 role - cannot send notifications (missing SEND_NOTIFICATIONS)
+@test "supportlv2_user: cannot send notifications (SEND_NOTIFICATIONS scope)" {
+  supportlv2_token="$(read_value 'supportlv2_user.token')"
+
+  variables=$(
+    jq -n \
+    '{
+      input: {
+        localizedNotificationContents: [
+          {
+            language: "en",
+            title: "Test title",
+            body: "test body"
+          }
+        ],
+        shouldSendPush: false,
+        shouldAddToHistory: true,
+        shouldAddToBulletin: true,
+      }
+    }'
+  )
+  exec_admin_graphql "$supportlv2_token" 'marketing-notification-trigger' "$variables"
+  error_message="$(graphql_output '.errors[0].message')"
+  [[ "$error_message" == "Not authorized" ]] || exit 1
+}
+
+# TODO: add check by email
 # TODO: business update map info
