@@ -75,8 +75,6 @@ export type Scalars = {
   SignedAmount: { input: number; output: number; }
   /** A string amount (of a currency) that can be negative (e.g. in a transaction) */
   SignedDisplayMajorAmount: { input: string; output: string; }
-  /** Nonce provided by Telegram Passport to validate the login/upgrade flow */
-  TelegramPassportNonce: { input: string; output: string; }
   /** Timestamp field, serialized as Unix time (the number of seconds since the Unix epoch) */
   Timestamp: { input: number; output: number; }
   /** A time-based one-time password */
@@ -233,6 +231,7 @@ export type ApiKey = {
   readonly expiresAt?: Maybe<Scalars['Timestamp']['output']>;
   readonly id: Scalars['ID']['output'];
   readonly lastUsedAt?: Maybe<Scalars['Timestamp']['output']>;
+  readonly limits: ApiKeyLimits;
   readonly name: Scalars['String']['output'];
   readonly readOnly: Scalars['Boolean']['output'];
   readonly revoked: Scalars['Boolean']['output'];
@@ -251,6 +250,22 @@ export type ApiKeyCreatePayload = {
   readonly apiKeySecret: Scalars['String']['output'];
 };
 
+export type ApiKeyLimits = {
+  readonly __typename: 'ApiKeyLimits';
+  readonly annualLimitSats?: Maybe<Scalars['Int']['output']>;
+  readonly dailyLimitSats?: Maybe<Scalars['Int']['output']>;
+  readonly monthlyLimitSats?: Maybe<Scalars['Int']['output']>;
+  readonly spentLast7DSats: Scalars['Int']['output'];
+  readonly spentLast24HSats: Scalars['Int']['output'];
+  readonly spentLast30DSats: Scalars['Int']['output'];
+  readonly spentLast365DSats: Scalars['Int']['output'];
+  readonly weeklyLimitSats?: Maybe<Scalars['Int']['output']>;
+};
+
+export type ApiKeyRemoveLimitInput = {
+  readonly id: Scalars['ID']['input'];
+};
+
 export type ApiKeyRevokeInput = {
   readonly id: Scalars['ID']['input'];
 };
@@ -258,6 +273,31 @@ export type ApiKeyRevokeInput = {
 export type ApiKeyRevokePayload = {
   readonly __typename: 'ApiKeyRevokePayload';
   readonly apiKey: ApiKey;
+};
+
+export type ApiKeySetAnnualLimitInput = {
+  readonly annualLimitSats: Scalars['Int']['input'];
+  readonly id: Scalars['ID']['input'];
+};
+
+export type ApiKeySetDailyLimitInput = {
+  readonly dailyLimitSats: Scalars['Int']['input'];
+  readonly id: Scalars['ID']['input'];
+};
+
+export type ApiKeySetLimitPayload = {
+  readonly __typename: 'ApiKeySetLimitPayload';
+  readonly apiKey: ApiKey;
+};
+
+export type ApiKeySetMonthlyLimitInput = {
+  readonly id: Scalars['ID']['input'];
+  readonly monthlyLimitSats: Scalars['Int']['input'];
+};
+
+export type ApiKeySetWeeklyLimitInput = {
+  readonly id: Scalars['ID']['input'];
+  readonly weeklyLimitSats: Scalars['Int']['input'];
 };
 
 export type AuthTokenPayload = {
@@ -351,12 +391,6 @@ export type BtcWalletTransactionsByPaymentHashArgs = {
 /** A wallet belonging to an account which contains a BTC balance and a list of transactions. */
 export type BtcWalletTransactionsByPaymentRequestArgs = {
   paymentRequest: Scalars['LnPaymentRequest']['input'];
-};
-
-export type BlockInfo = {
-  readonly __typename: 'BlockInfo';
-  readonly blockHash?: Maybe<Scalars['String']['output']>;
-  readonly blockHeight?: Maybe<Scalars['Int']['output']>;
 };
 
 export type BuildInformation = {
@@ -581,8 +615,6 @@ export type FeesInformation = {
 /** Provides global settings for the application which might have an impact for the user. */
 export type Globals = {
   readonly __typename: 'Globals';
-  /** Current block height and block hash */
-  readonly blockInfo?: Maybe<BlockInfo>;
   readonly buildInformation: BuildInformation;
   readonly feesInformation: FeesInformation;
   /** The domain name for lightning addresses accepted by this Galoy instance */
@@ -1042,7 +1074,15 @@ export type Mutation = {
   readonly accountUpdateDefaultWalletId: AccountUpdateDefaultWalletIdPayload;
   readonly accountUpdateDisplayCurrency: AccountUpdateDisplayCurrencyPayload;
   readonly apiKeyCreate: ApiKeyCreatePayload;
+  readonly apiKeyRemoveAnnualLimit: ApiKeySetLimitPayload;
+  readonly apiKeyRemoveDailyLimit: ApiKeySetLimitPayload;
+  readonly apiKeyRemoveMonthlyLimit: ApiKeySetLimitPayload;
+  readonly apiKeyRemoveWeeklyLimit: ApiKeySetLimitPayload;
   readonly apiKeyRevoke: ApiKeyRevokePayload;
+  readonly apiKeySetAnnualLimit: ApiKeySetLimitPayload;
+  readonly apiKeySetDailyLimit: ApiKeySetLimitPayload;
+  readonly apiKeySetMonthlyLimit: ApiKeySetLimitPayload;
+  readonly apiKeySetWeeklyLimit: ApiKeySetLimitPayload;
   readonly callbackEndpointAdd: CallbackEndpointAddPayload;
   readonly callbackEndpointDelete: SuccessPayload;
   readonly captchaCreateChallenge: CaptchaCreateChallengePayload;
@@ -1153,7 +1193,6 @@ export type Mutation = {
   readonly userEmailRegistrationValidate: UserEmailRegistrationValidatePayload;
   readonly userLogin: AuthTokenPayload;
   readonly userLoginUpgrade: UpgradePayload;
-  readonly userLoginUpgradeTelegram: UpgradePayload;
   readonly userLogout: SuccessPayload;
   readonly userPhoneDelete: UserPhoneDeletePayload;
   readonly userPhoneRegistrationInitiate: SuccessPayload;
@@ -1202,8 +1241,48 @@ export type MutationApiKeyCreateArgs = {
 };
 
 
+export type MutationApiKeyRemoveAnnualLimitArgs = {
+  input: ApiKeyRemoveLimitInput;
+};
+
+
+export type MutationApiKeyRemoveDailyLimitArgs = {
+  input: ApiKeyRemoveLimitInput;
+};
+
+
+export type MutationApiKeyRemoveMonthlyLimitArgs = {
+  input: ApiKeyRemoveLimitInput;
+};
+
+
+export type MutationApiKeyRemoveWeeklyLimitArgs = {
+  input: ApiKeyRemoveLimitInput;
+};
+
+
 export type MutationApiKeyRevokeArgs = {
   input: ApiKeyRevokeInput;
+};
+
+
+export type MutationApiKeySetAnnualLimitArgs = {
+  input: ApiKeySetAnnualLimitInput;
+};
+
+
+export type MutationApiKeySetDailyLimitArgs = {
+  input: ApiKeySetDailyLimitInput;
+};
+
+
+export type MutationApiKeySetMonthlyLimitArgs = {
+  input: ApiKeySetMonthlyLimitInput;
+};
+
+
+export type MutationApiKeySetWeeklyLimitArgs = {
+  input: ApiKeySetWeeklyLimitInput;
 };
 
 
@@ -1404,11 +1483,6 @@ export type MutationUserLoginArgs = {
 
 export type MutationUserLoginUpgradeArgs = {
   input: UserLoginUpgradeInput;
-};
-
-
-export type MutationUserLoginUpgradeTelegramArgs = {
-  input: UserLoginUpgradeTelegramInput;
 };
 
 
@@ -2283,11 +2357,6 @@ export type UserLoginUpgradeInput = {
   readonly phone: Scalars['Phone']['input'];
 };
 
-export type UserLoginUpgradeTelegramInput = {
-  readonly nonce: Scalars['TelegramPassportNonce']['input'];
-  readonly phone: Scalars['Phone']['input'];
-};
-
 export type UserLogoutInput = {
   readonly deviceToken: Scalars['String']['input'];
 };
@@ -2485,7 +2554,7 @@ export type ApiKeyCreateMutationVariables = Exact<{
 }>;
 
 
-export type ApiKeyCreateMutation = { readonly __typename: 'Mutation', readonly apiKeyCreate: { readonly __typename: 'ApiKeyCreatePayload', readonly apiKeySecret: string, readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly createdAt: number, readonly revoked: boolean, readonly expired: boolean, readonly lastUsedAt?: number | null, readonly expiresAt?: number | null, readonly scopes: ReadonlyArray<Scope> } } };
+export type ApiKeyCreateMutation = { readonly __typename: 'Mutation', readonly apiKeyCreate: { readonly __typename: 'ApiKeyCreatePayload', readonly apiKeySecret: string, readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly createdAt: number, readonly revoked: boolean, readonly expired: boolean, readonly lastUsedAt?: number | null, readonly expiresAt?: number | null, readonly scopes: ReadonlyArray<Scope>, readonly limits: { readonly __typename: 'ApiKeyLimits', readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly spentLast24HSats: number, readonly spentLast7DSats: number, readonly spentLast30DSats: number, readonly spentLast365DSats: number } } } };
 
 export type ApiKeyRevokeMutationVariables = Exact<{
   input: ApiKeyRevokeInput;
@@ -2493,6 +2562,62 @@ export type ApiKeyRevokeMutationVariables = Exact<{
 
 
 export type ApiKeyRevokeMutation = { readonly __typename: 'Mutation', readonly apiKeyRevoke: { readonly __typename: 'ApiKeyRevokePayload', readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly createdAt: number, readonly revoked: boolean, readonly expired: boolean, readonly lastUsedAt?: number | null, readonly expiresAt?: number | null, readonly scopes: ReadonlyArray<Scope> } } };
+
+export type ApiKeySetDailyLimitMutationVariables = Exact<{
+  input: ApiKeySetDailyLimitInput;
+}>;
+
+
+export type ApiKeySetDailyLimitMutation = { readonly __typename: 'Mutation', readonly apiKeySetDailyLimit: { readonly __typename: 'ApiKeySetLimitPayload', readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly limits: { readonly __typename: 'ApiKeyLimits', readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly spentLast24HSats: number, readonly spentLast7DSats: number, readonly spentLast30DSats: number, readonly spentLast365DSats: number } } } };
+
+export type ApiKeyRemoveDailyLimitMutationVariables = Exact<{
+  input: ApiKeyRemoveLimitInput;
+}>;
+
+
+export type ApiKeyRemoveDailyLimitMutation = { readonly __typename: 'Mutation', readonly apiKeyRemoveDailyLimit: { readonly __typename: 'ApiKeySetLimitPayload', readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly limits: { readonly __typename: 'ApiKeyLimits', readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly spentLast24HSats: number, readonly spentLast7DSats: number, readonly spentLast30DSats: number, readonly spentLast365DSats: number } } } };
+
+export type ApiKeySetWeeklyLimitMutationVariables = Exact<{
+  input: ApiKeySetWeeklyLimitInput;
+}>;
+
+
+export type ApiKeySetWeeklyLimitMutation = { readonly __typename: 'Mutation', readonly apiKeySetWeeklyLimit: { readonly __typename: 'ApiKeySetLimitPayload', readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly limits: { readonly __typename: 'ApiKeyLimits', readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly spentLast24HSats: number, readonly spentLast7DSats: number, readonly spentLast30DSats: number, readonly spentLast365DSats: number } } } };
+
+export type ApiKeyRemoveWeeklyLimitMutationVariables = Exact<{
+  input: ApiKeyRemoveLimitInput;
+}>;
+
+
+export type ApiKeyRemoveWeeklyLimitMutation = { readonly __typename: 'Mutation', readonly apiKeyRemoveWeeklyLimit: { readonly __typename: 'ApiKeySetLimitPayload', readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly limits: { readonly __typename: 'ApiKeyLimits', readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly spentLast24HSats: number, readonly spentLast7DSats: number, readonly spentLast30DSats: number, readonly spentLast365DSats: number } } } };
+
+export type ApiKeySetMonthlyLimitMutationVariables = Exact<{
+  input: ApiKeySetMonthlyLimitInput;
+}>;
+
+
+export type ApiKeySetMonthlyLimitMutation = { readonly __typename: 'Mutation', readonly apiKeySetMonthlyLimit: { readonly __typename: 'ApiKeySetLimitPayload', readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly limits: { readonly __typename: 'ApiKeyLimits', readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly spentLast24HSats: number, readonly spentLast7DSats: number, readonly spentLast30DSats: number, readonly spentLast365DSats: number } } } };
+
+export type ApiKeyRemoveMonthlyLimitMutationVariables = Exact<{
+  input: ApiKeyRemoveLimitInput;
+}>;
+
+
+export type ApiKeyRemoveMonthlyLimitMutation = { readonly __typename: 'Mutation', readonly apiKeyRemoveMonthlyLimit: { readonly __typename: 'ApiKeySetLimitPayload', readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly limits: { readonly __typename: 'ApiKeyLimits', readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly spentLast24HSats: number, readonly spentLast7DSats: number, readonly spentLast30DSats: number, readonly spentLast365DSats: number } } } };
+
+export type ApiKeySetAnnualLimitMutationVariables = Exact<{
+  input: ApiKeySetAnnualLimitInput;
+}>;
+
+
+export type ApiKeySetAnnualLimitMutation = { readonly __typename: 'Mutation', readonly apiKeySetAnnualLimit: { readonly __typename: 'ApiKeySetLimitPayload', readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly limits: { readonly __typename: 'ApiKeyLimits', readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly spentLast24HSats: number, readonly spentLast7DSats: number, readonly spentLast30DSats: number, readonly spentLast365DSats: number } } } };
+
+export type ApiKeyRemoveAnnualLimitMutationVariables = Exact<{
+  input: ApiKeyRemoveLimitInput;
+}>;
+
+
+export type ApiKeyRemoveAnnualLimitMutation = { readonly __typename: 'Mutation', readonly apiKeyRemoveAnnualLimit: { readonly __typename: 'ApiKeySetLimitPayload', readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly limits: { readonly __typename: 'ApiKeyLimits', readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly spentLast24HSats: number, readonly spentLast7DSats: number, readonly spentLast30DSats: number, readonly spentLast365DSats: number } } } };
 
 export type CallbackEndpointAddMutationVariables = Exact<{
   input: CallbackEndpointAddInput;
@@ -2561,7 +2686,7 @@ export type UserTotpRegistrationValidateMutation = { readonly __typename: 'Mutat
 export type ApiKeysQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type ApiKeysQuery = { readonly __typename: 'Query', readonly me?: { readonly __typename: 'User', readonly apiKeys: ReadonlyArray<{ readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly createdAt: number, readonly revoked: boolean, readonly expired: boolean, readonly lastUsedAt?: number | null, readonly expiresAt?: number | null, readonly readOnly: boolean, readonly scopes: ReadonlyArray<Scope> }> } | null };
+export type ApiKeysQuery = { readonly __typename: 'Query', readonly me?: { readonly __typename: 'User', readonly apiKeys: ReadonlyArray<{ readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly createdAt: number, readonly revoked: boolean, readonly expired: boolean, readonly lastUsedAt?: number | null, readonly expiresAt?: number | null, readonly readOnly: boolean, readonly scopes: ReadonlyArray<Scope>, readonly limits: { readonly __typename: 'ApiKeyLimits', readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly spentLast24HSats: number, readonly spentLast7DSats: number, readonly spentLast30DSats: number, readonly spentLast365DSats: number } }> } | null };
 
 export type CallbackEndpointsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -2616,6 +2741,16 @@ export const ApiKeyCreateDocument = gql`
       lastUsedAt
       expiresAt
       scopes
+      limits {
+        dailyLimitSats
+        weeklyLimitSats
+        monthlyLimitSats
+        annualLimitSats
+        spentLast24HSats
+        spentLast7DSats
+        spentLast30DSats
+        spentLast365DSats
+      }
     }
     apiKeySecret
   }
@@ -2689,6 +2824,374 @@ export function useApiKeyRevokeMutation(baseOptions?: Apollo.MutationHookOptions
 export type ApiKeyRevokeMutationHookResult = ReturnType<typeof useApiKeyRevokeMutation>;
 export type ApiKeyRevokeMutationResult = Apollo.MutationResult<ApiKeyRevokeMutation>;
 export type ApiKeyRevokeMutationOptions = Apollo.BaseMutationOptions<ApiKeyRevokeMutation, ApiKeyRevokeMutationVariables>;
+export const ApiKeySetDailyLimitDocument = gql`
+    mutation ApiKeySetDailyLimit($input: ApiKeySetDailyLimitInput!) {
+  apiKeySetDailyLimit(input: $input) {
+    apiKey {
+      id
+      name
+      limits {
+        dailyLimitSats
+        weeklyLimitSats
+        monthlyLimitSats
+        annualLimitSats
+        spentLast24HSats
+        spentLast7DSats
+        spentLast30DSats
+        spentLast365DSats
+      }
+    }
+  }
+}
+    `;
+export type ApiKeySetDailyLimitMutationFn = Apollo.MutationFunction<ApiKeySetDailyLimitMutation, ApiKeySetDailyLimitMutationVariables>;
+
+/**
+ * __useApiKeySetDailyLimitMutation__
+ *
+ * To run a mutation, you first call `useApiKeySetDailyLimitMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useApiKeySetDailyLimitMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [apiKeySetDailyLimitMutation, { data, loading, error }] = useApiKeySetDailyLimitMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useApiKeySetDailyLimitMutation(baseOptions?: Apollo.MutationHookOptions<ApiKeySetDailyLimitMutation, ApiKeySetDailyLimitMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ApiKeySetDailyLimitMutation, ApiKeySetDailyLimitMutationVariables>(ApiKeySetDailyLimitDocument, options);
+      }
+export type ApiKeySetDailyLimitMutationHookResult = ReturnType<typeof useApiKeySetDailyLimitMutation>;
+export type ApiKeySetDailyLimitMutationResult = Apollo.MutationResult<ApiKeySetDailyLimitMutation>;
+export type ApiKeySetDailyLimitMutationOptions = Apollo.BaseMutationOptions<ApiKeySetDailyLimitMutation, ApiKeySetDailyLimitMutationVariables>;
+export const ApiKeyRemoveDailyLimitDocument = gql`
+    mutation ApiKeyRemoveDailyLimit($input: ApiKeyRemoveLimitInput!) {
+  apiKeyRemoveDailyLimit(input: $input) {
+    apiKey {
+      id
+      name
+      limits {
+        dailyLimitSats
+        weeklyLimitSats
+        monthlyLimitSats
+        annualLimitSats
+        spentLast24HSats
+        spentLast7DSats
+        spentLast30DSats
+        spentLast365DSats
+      }
+    }
+  }
+}
+    `;
+export type ApiKeyRemoveDailyLimitMutationFn = Apollo.MutationFunction<ApiKeyRemoveDailyLimitMutation, ApiKeyRemoveDailyLimitMutationVariables>;
+
+/**
+ * __useApiKeyRemoveDailyLimitMutation__
+ *
+ * To run a mutation, you first call `useApiKeyRemoveDailyLimitMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useApiKeyRemoveDailyLimitMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [apiKeyRemoveDailyLimitMutation, { data, loading, error }] = useApiKeyRemoveDailyLimitMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useApiKeyRemoveDailyLimitMutation(baseOptions?: Apollo.MutationHookOptions<ApiKeyRemoveDailyLimitMutation, ApiKeyRemoveDailyLimitMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ApiKeyRemoveDailyLimitMutation, ApiKeyRemoveDailyLimitMutationVariables>(ApiKeyRemoveDailyLimitDocument, options);
+      }
+export type ApiKeyRemoveDailyLimitMutationHookResult = ReturnType<typeof useApiKeyRemoveDailyLimitMutation>;
+export type ApiKeyRemoveDailyLimitMutationResult = Apollo.MutationResult<ApiKeyRemoveDailyLimitMutation>;
+export type ApiKeyRemoveDailyLimitMutationOptions = Apollo.BaseMutationOptions<ApiKeyRemoveDailyLimitMutation, ApiKeyRemoveDailyLimitMutationVariables>;
+export const ApiKeySetWeeklyLimitDocument = gql`
+    mutation ApiKeySetWeeklyLimit($input: ApiKeySetWeeklyLimitInput!) {
+  apiKeySetWeeklyLimit(input: $input) {
+    apiKey {
+      id
+      name
+      limits {
+        dailyLimitSats
+        weeklyLimitSats
+        monthlyLimitSats
+        annualLimitSats
+        spentLast24HSats
+        spentLast7DSats
+        spentLast30DSats
+        spentLast365DSats
+      }
+    }
+  }
+}
+    `;
+export type ApiKeySetWeeklyLimitMutationFn = Apollo.MutationFunction<ApiKeySetWeeklyLimitMutation, ApiKeySetWeeklyLimitMutationVariables>;
+
+/**
+ * __useApiKeySetWeeklyLimitMutation__
+ *
+ * To run a mutation, you first call `useApiKeySetWeeklyLimitMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useApiKeySetWeeklyLimitMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [apiKeySetWeeklyLimitMutation, { data, loading, error }] = useApiKeySetWeeklyLimitMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useApiKeySetWeeklyLimitMutation(baseOptions?: Apollo.MutationHookOptions<ApiKeySetWeeklyLimitMutation, ApiKeySetWeeklyLimitMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ApiKeySetWeeklyLimitMutation, ApiKeySetWeeklyLimitMutationVariables>(ApiKeySetWeeklyLimitDocument, options);
+      }
+export type ApiKeySetWeeklyLimitMutationHookResult = ReturnType<typeof useApiKeySetWeeklyLimitMutation>;
+export type ApiKeySetWeeklyLimitMutationResult = Apollo.MutationResult<ApiKeySetWeeklyLimitMutation>;
+export type ApiKeySetWeeklyLimitMutationOptions = Apollo.BaseMutationOptions<ApiKeySetWeeklyLimitMutation, ApiKeySetWeeklyLimitMutationVariables>;
+export const ApiKeyRemoveWeeklyLimitDocument = gql`
+    mutation ApiKeyRemoveWeeklyLimit($input: ApiKeyRemoveLimitInput!) {
+  apiKeyRemoveWeeklyLimit(input: $input) {
+    apiKey {
+      id
+      name
+      limits {
+        dailyLimitSats
+        weeklyLimitSats
+        monthlyLimitSats
+        annualLimitSats
+        spentLast24HSats
+        spentLast7DSats
+        spentLast30DSats
+        spentLast365DSats
+      }
+    }
+  }
+}
+    `;
+export type ApiKeyRemoveWeeklyLimitMutationFn = Apollo.MutationFunction<ApiKeyRemoveWeeklyLimitMutation, ApiKeyRemoveWeeklyLimitMutationVariables>;
+
+/**
+ * __useApiKeyRemoveWeeklyLimitMutation__
+ *
+ * To run a mutation, you first call `useApiKeyRemoveWeeklyLimitMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useApiKeyRemoveWeeklyLimitMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [apiKeyRemoveWeeklyLimitMutation, { data, loading, error }] = useApiKeyRemoveWeeklyLimitMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useApiKeyRemoveWeeklyLimitMutation(baseOptions?: Apollo.MutationHookOptions<ApiKeyRemoveWeeklyLimitMutation, ApiKeyRemoveWeeklyLimitMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ApiKeyRemoveWeeklyLimitMutation, ApiKeyRemoveWeeklyLimitMutationVariables>(ApiKeyRemoveWeeklyLimitDocument, options);
+      }
+export type ApiKeyRemoveWeeklyLimitMutationHookResult = ReturnType<typeof useApiKeyRemoveWeeklyLimitMutation>;
+export type ApiKeyRemoveWeeklyLimitMutationResult = Apollo.MutationResult<ApiKeyRemoveWeeklyLimitMutation>;
+export type ApiKeyRemoveWeeklyLimitMutationOptions = Apollo.BaseMutationOptions<ApiKeyRemoveWeeklyLimitMutation, ApiKeyRemoveWeeklyLimitMutationVariables>;
+export const ApiKeySetMonthlyLimitDocument = gql`
+    mutation ApiKeySetMonthlyLimit($input: ApiKeySetMonthlyLimitInput!) {
+  apiKeySetMonthlyLimit(input: $input) {
+    apiKey {
+      id
+      name
+      limits {
+        dailyLimitSats
+        weeklyLimitSats
+        monthlyLimitSats
+        annualLimitSats
+        spentLast24HSats
+        spentLast7DSats
+        spentLast30DSats
+        spentLast365DSats
+      }
+    }
+  }
+}
+    `;
+export type ApiKeySetMonthlyLimitMutationFn = Apollo.MutationFunction<ApiKeySetMonthlyLimitMutation, ApiKeySetMonthlyLimitMutationVariables>;
+
+/**
+ * __useApiKeySetMonthlyLimitMutation__
+ *
+ * To run a mutation, you first call `useApiKeySetMonthlyLimitMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useApiKeySetMonthlyLimitMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [apiKeySetMonthlyLimitMutation, { data, loading, error }] = useApiKeySetMonthlyLimitMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useApiKeySetMonthlyLimitMutation(baseOptions?: Apollo.MutationHookOptions<ApiKeySetMonthlyLimitMutation, ApiKeySetMonthlyLimitMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ApiKeySetMonthlyLimitMutation, ApiKeySetMonthlyLimitMutationVariables>(ApiKeySetMonthlyLimitDocument, options);
+      }
+export type ApiKeySetMonthlyLimitMutationHookResult = ReturnType<typeof useApiKeySetMonthlyLimitMutation>;
+export type ApiKeySetMonthlyLimitMutationResult = Apollo.MutationResult<ApiKeySetMonthlyLimitMutation>;
+export type ApiKeySetMonthlyLimitMutationOptions = Apollo.BaseMutationOptions<ApiKeySetMonthlyLimitMutation, ApiKeySetMonthlyLimitMutationVariables>;
+export const ApiKeyRemoveMonthlyLimitDocument = gql`
+    mutation ApiKeyRemoveMonthlyLimit($input: ApiKeyRemoveLimitInput!) {
+  apiKeyRemoveMonthlyLimit(input: $input) {
+    apiKey {
+      id
+      name
+      limits {
+        dailyLimitSats
+        weeklyLimitSats
+        monthlyLimitSats
+        annualLimitSats
+        spentLast24HSats
+        spentLast7DSats
+        spentLast30DSats
+        spentLast365DSats
+      }
+    }
+  }
+}
+    `;
+export type ApiKeyRemoveMonthlyLimitMutationFn = Apollo.MutationFunction<ApiKeyRemoveMonthlyLimitMutation, ApiKeyRemoveMonthlyLimitMutationVariables>;
+
+/**
+ * __useApiKeyRemoveMonthlyLimitMutation__
+ *
+ * To run a mutation, you first call `useApiKeyRemoveMonthlyLimitMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useApiKeyRemoveMonthlyLimitMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [apiKeyRemoveMonthlyLimitMutation, { data, loading, error }] = useApiKeyRemoveMonthlyLimitMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useApiKeyRemoveMonthlyLimitMutation(baseOptions?: Apollo.MutationHookOptions<ApiKeyRemoveMonthlyLimitMutation, ApiKeyRemoveMonthlyLimitMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ApiKeyRemoveMonthlyLimitMutation, ApiKeyRemoveMonthlyLimitMutationVariables>(ApiKeyRemoveMonthlyLimitDocument, options);
+      }
+export type ApiKeyRemoveMonthlyLimitMutationHookResult = ReturnType<typeof useApiKeyRemoveMonthlyLimitMutation>;
+export type ApiKeyRemoveMonthlyLimitMutationResult = Apollo.MutationResult<ApiKeyRemoveMonthlyLimitMutation>;
+export type ApiKeyRemoveMonthlyLimitMutationOptions = Apollo.BaseMutationOptions<ApiKeyRemoveMonthlyLimitMutation, ApiKeyRemoveMonthlyLimitMutationVariables>;
+export const ApiKeySetAnnualLimitDocument = gql`
+    mutation ApiKeySetAnnualLimit($input: ApiKeySetAnnualLimitInput!) {
+  apiKeySetAnnualLimit(input: $input) {
+    apiKey {
+      id
+      name
+      limits {
+        dailyLimitSats
+        weeklyLimitSats
+        monthlyLimitSats
+        annualLimitSats
+        spentLast24HSats
+        spentLast7DSats
+        spentLast30DSats
+        spentLast365DSats
+      }
+    }
+  }
+}
+    `;
+export type ApiKeySetAnnualLimitMutationFn = Apollo.MutationFunction<ApiKeySetAnnualLimitMutation, ApiKeySetAnnualLimitMutationVariables>;
+
+/**
+ * __useApiKeySetAnnualLimitMutation__
+ *
+ * To run a mutation, you first call `useApiKeySetAnnualLimitMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useApiKeySetAnnualLimitMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [apiKeySetAnnualLimitMutation, { data, loading, error }] = useApiKeySetAnnualLimitMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useApiKeySetAnnualLimitMutation(baseOptions?: Apollo.MutationHookOptions<ApiKeySetAnnualLimitMutation, ApiKeySetAnnualLimitMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ApiKeySetAnnualLimitMutation, ApiKeySetAnnualLimitMutationVariables>(ApiKeySetAnnualLimitDocument, options);
+      }
+export type ApiKeySetAnnualLimitMutationHookResult = ReturnType<typeof useApiKeySetAnnualLimitMutation>;
+export type ApiKeySetAnnualLimitMutationResult = Apollo.MutationResult<ApiKeySetAnnualLimitMutation>;
+export type ApiKeySetAnnualLimitMutationOptions = Apollo.BaseMutationOptions<ApiKeySetAnnualLimitMutation, ApiKeySetAnnualLimitMutationVariables>;
+export const ApiKeyRemoveAnnualLimitDocument = gql`
+    mutation ApiKeyRemoveAnnualLimit($input: ApiKeyRemoveLimitInput!) {
+  apiKeyRemoveAnnualLimit(input: $input) {
+    apiKey {
+      id
+      name
+      limits {
+        dailyLimitSats
+        weeklyLimitSats
+        monthlyLimitSats
+        annualLimitSats
+        spentLast24HSats
+        spentLast7DSats
+        spentLast30DSats
+        spentLast365DSats
+      }
+    }
+  }
+}
+    `;
+export type ApiKeyRemoveAnnualLimitMutationFn = Apollo.MutationFunction<ApiKeyRemoveAnnualLimitMutation, ApiKeyRemoveAnnualLimitMutationVariables>;
+
+/**
+ * __useApiKeyRemoveAnnualLimitMutation__
+ *
+ * To run a mutation, you first call `useApiKeyRemoveAnnualLimitMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useApiKeyRemoveAnnualLimitMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [apiKeyRemoveAnnualLimitMutation, { data, loading, error }] = useApiKeyRemoveAnnualLimitMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useApiKeyRemoveAnnualLimitMutation(baseOptions?: Apollo.MutationHookOptions<ApiKeyRemoveAnnualLimitMutation, ApiKeyRemoveAnnualLimitMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ApiKeyRemoveAnnualLimitMutation, ApiKeyRemoveAnnualLimitMutationVariables>(ApiKeyRemoveAnnualLimitDocument, options);
+      }
+export type ApiKeyRemoveAnnualLimitMutationHookResult = ReturnType<typeof useApiKeyRemoveAnnualLimitMutation>;
+export type ApiKeyRemoveAnnualLimitMutationResult = Apollo.MutationResult<ApiKeyRemoveAnnualLimitMutation>;
+export type ApiKeyRemoveAnnualLimitMutationOptions = Apollo.BaseMutationOptions<ApiKeyRemoveAnnualLimitMutation, ApiKeyRemoveAnnualLimitMutationVariables>;
 export const CallbackEndpointAddDocument = gql`
     mutation CallbackEndpointAdd($input: CallbackEndpointAddInput!) {
   callbackEndpointAdd(input: $input) {
@@ -3072,6 +3575,16 @@ export const ApiKeysDocument = gql`
       expiresAt
       readOnly
       scopes
+      limits {
+        dailyLimitSats
+        weeklyLimitSats
+        monthlyLimitSats
+        annualLimitSats
+        spentLast24HSats
+        spentLast7DSats
+        spentLast30DSats
+        spentLast365DSats
+      }
     }
   }
 }
@@ -3613,13 +4126,19 @@ export type ResolversTypes = {
   ApiKey: ResolverTypeWrapper<ApiKey>;
   ApiKeyCreateInput: ApiKeyCreateInput;
   ApiKeyCreatePayload: ResolverTypeWrapper<ApiKeyCreatePayload>;
+  ApiKeyLimits: ResolverTypeWrapper<ApiKeyLimits>;
+  ApiKeyRemoveLimitInput: ApiKeyRemoveLimitInput;
   ApiKeyRevokeInput: ApiKeyRevokeInput;
   ApiKeyRevokePayload: ResolverTypeWrapper<ApiKeyRevokePayload>;
+  ApiKeySetAnnualLimitInput: ApiKeySetAnnualLimitInput;
+  ApiKeySetDailyLimitInput: ApiKeySetDailyLimitInput;
+  ApiKeySetLimitPayload: ResolverTypeWrapper<ApiKeySetLimitPayload>;
+  ApiKeySetMonthlyLimitInput: ApiKeySetMonthlyLimitInput;
+  ApiKeySetWeeklyLimitInput: ApiKeySetWeeklyLimitInput;
   AuthToken: ResolverTypeWrapper<Scalars['AuthToken']['output']>;
   AuthTokenPayload: ResolverTypeWrapper<Omit<AuthTokenPayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
   Authorization: ResolverTypeWrapper<Authorization>;
   BTCWallet: ResolverTypeWrapper<Omit<BtcWallet, 'invoiceByPaymentHash' | 'invoices' | 'pendingIncomingTransactions' | 'pendingIncomingTransactionsByAddress' | 'transactionById' | 'transactions' | 'transactionsByAddress' | 'transactionsByPaymentHash' | 'transactionsByPaymentRequest'> & { invoiceByPaymentHash: ResolversTypes['Invoice'], invoices?: Maybe<ResolversTypes['InvoiceConnection']>, pendingIncomingTransactions: ReadonlyArray<ResolversTypes['Transaction']>, pendingIncomingTransactionsByAddress: ReadonlyArray<ResolversTypes['Transaction']>, transactionById: ResolversTypes['Transaction'], transactions?: Maybe<ResolversTypes['TransactionConnection']>, transactionsByAddress?: Maybe<ResolversTypes['TransactionConnection']>, transactionsByPaymentHash: ReadonlyArray<ResolversTypes['Transaction']>, transactionsByPaymentRequest: ReadonlyArray<ResolversTypes['Transaction']> }>;
-  BlockInfo: ResolverTypeWrapper<BlockInfo>;
   BuildInformation: ResolverTypeWrapper<BuildInformation>;
   CallbackEndpoint: ResolverTypeWrapper<CallbackEndpoint>;
   CallbackEndpointAddInput: CallbackEndpointAddInput;
@@ -3783,7 +4302,6 @@ export type ResolversTypes = {
   SupportChatMessageAddPayload: ResolverTypeWrapper<Omit<SupportChatMessageAddPayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
   SupportMessage: ResolverTypeWrapper<SupportMessage>;
   SupportRole: SupportRole;
-  TelegramPassportNonce: ResolverTypeWrapper<Scalars['TelegramPassportNonce']['output']>;
   Timestamp: ResolverTypeWrapper<Scalars['Timestamp']['output']>;
   TotpCode: ResolverTypeWrapper<Scalars['TotpCode']['output']>;
   TotpRegistrationId: ResolverTypeWrapper<Scalars['TotpRegistrationId']['output']>;
@@ -3808,7 +4326,6 @@ export type ResolversTypes = {
   UserEmailRegistrationValidatePayload: ResolverTypeWrapper<Omit<UserEmailRegistrationValidatePayload, 'errors' | 'me'> & { errors: ReadonlyArray<ResolversTypes['Error']>, me?: Maybe<ResolversTypes['User']> }>;
   UserLoginInput: UserLoginInput;
   UserLoginUpgradeInput: UserLoginUpgradeInput;
-  UserLoginUpgradeTelegramInput: UserLoginUpgradeTelegramInput;
   UserLogoutInput: UserLogoutInput;
   UserPhoneDeletePayload: ResolverTypeWrapper<Omit<UserPhoneDeletePayload, 'errors' | 'me'> & { errors: ReadonlyArray<ResolversTypes['Error']>, me?: Maybe<ResolversTypes['User']> }>;
   UserPhoneRegistrationInitiateInput: UserPhoneRegistrationInitiateInput;
@@ -3855,13 +4372,19 @@ export type ResolversParentTypes = {
   ApiKey: ApiKey;
   ApiKeyCreateInput: ApiKeyCreateInput;
   ApiKeyCreatePayload: ApiKeyCreatePayload;
+  ApiKeyLimits: ApiKeyLimits;
+  ApiKeyRemoveLimitInput: ApiKeyRemoveLimitInput;
   ApiKeyRevokeInput: ApiKeyRevokeInput;
   ApiKeyRevokePayload: ApiKeyRevokePayload;
+  ApiKeySetAnnualLimitInput: ApiKeySetAnnualLimitInput;
+  ApiKeySetDailyLimitInput: ApiKeySetDailyLimitInput;
+  ApiKeySetLimitPayload: ApiKeySetLimitPayload;
+  ApiKeySetMonthlyLimitInput: ApiKeySetMonthlyLimitInput;
+  ApiKeySetWeeklyLimitInput: ApiKeySetWeeklyLimitInput;
   AuthToken: Scalars['AuthToken']['output'];
   AuthTokenPayload: Omit<AuthTokenPayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
   Authorization: Authorization;
   BTCWallet: Omit<BtcWallet, 'invoiceByPaymentHash' | 'invoices' | 'pendingIncomingTransactions' | 'pendingIncomingTransactionsByAddress' | 'transactionById' | 'transactions' | 'transactionsByAddress' | 'transactionsByPaymentHash' | 'transactionsByPaymentRequest'> & { invoiceByPaymentHash: ResolversParentTypes['Invoice'], invoices?: Maybe<ResolversParentTypes['InvoiceConnection']>, pendingIncomingTransactions: ReadonlyArray<ResolversParentTypes['Transaction']>, pendingIncomingTransactionsByAddress: ReadonlyArray<ResolversParentTypes['Transaction']>, transactionById: ResolversParentTypes['Transaction'], transactions?: Maybe<ResolversParentTypes['TransactionConnection']>, transactionsByAddress?: Maybe<ResolversParentTypes['TransactionConnection']>, transactionsByPaymentHash: ReadonlyArray<ResolversParentTypes['Transaction']>, transactionsByPaymentRequest: ReadonlyArray<ResolversParentTypes['Transaction']> };
-  BlockInfo: BlockInfo;
   BuildInformation: BuildInformation;
   CallbackEndpoint: CallbackEndpoint;
   CallbackEndpointAddInput: CallbackEndpointAddInput;
@@ -4013,7 +4536,6 @@ export type ResolversParentTypes = {
   SupportChatMessageAddInput: SupportChatMessageAddInput;
   SupportChatMessageAddPayload: Omit<SupportChatMessageAddPayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
   SupportMessage: SupportMessage;
-  TelegramPassportNonce: Scalars['TelegramPassportNonce']['output'];
   Timestamp: Scalars['Timestamp']['output'];
   TotpCode: Scalars['TotpCode']['output'];
   TotpRegistrationId: Scalars['TotpRegistrationId']['output'];
@@ -4035,7 +4557,6 @@ export type ResolversParentTypes = {
   UserEmailRegistrationValidatePayload: Omit<UserEmailRegistrationValidatePayload, 'errors' | 'me'> & { errors: ReadonlyArray<ResolversParentTypes['Error']>, me?: Maybe<ResolversParentTypes['User']> };
   UserLoginInput: UserLoginInput;
   UserLoginUpgradeInput: UserLoginUpgradeInput;
-  UserLoginUpgradeTelegramInput: UserLoginUpgradeTelegramInput;
   UserLogoutInput: UserLogoutInput;
   UserPhoneDeletePayload: Omit<UserPhoneDeletePayload, 'errors' | 'me'> & { errors: ReadonlyArray<ResolversParentTypes['Error']>, me?: Maybe<ResolversParentTypes['User']> };
   UserPhoneRegistrationInitiateInput: UserPhoneRegistrationInitiateInput;
@@ -4179,6 +4700,7 @@ export type ApiKeyResolvers<ContextType = any, ParentType extends ResolversParen
   expiresAt?: Resolver<Maybe<ResolversTypes['Timestamp']>, ParentType, ContextType>;
   id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
   lastUsedAt?: Resolver<Maybe<ResolversTypes['Timestamp']>, ParentType, ContextType>;
+  limits?: Resolver<ResolversTypes['ApiKeyLimits'], ParentType, ContextType>;
   name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   readOnly?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   revoked?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
@@ -4192,7 +4714,24 @@ export type ApiKeyCreatePayloadResolvers<ContextType = any, ParentType extends R
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
+export type ApiKeyLimitsResolvers<ContextType = any, ParentType extends ResolversParentTypes['ApiKeyLimits'] = ResolversParentTypes['ApiKeyLimits']> = {
+  annualLimitSats?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  dailyLimitSats?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  monthlyLimitSats?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  spentLast7DSats?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  spentLast24HSats?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  spentLast30DSats?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  spentLast365DSats?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  weeklyLimitSats?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
 export type ApiKeyRevokePayloadResolvers<ContextType = any, ParentType extends ResolversParentTypes['ApiKeyRevokePayload'] = ResolversParentTypes['ApiKeyRevokePayload']> = {
+  apiKey?: Resolver<ResolversTypes['ApiKey'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
+export type ApiKeySetLimitPayloadResolvers<ContextType = any, ParentType extends ResolversParentTypes['ApiKeySetLimitPayload'] = ResolversParentTypes['ApiKeySetLimitPayload']> = {
   apiKey?: Resolver<ResolversTypes['ApiKey'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
@@ -4228,12 +4767,6 @@ export type BtcWalletResolvers<ContextType = any, ParentType extends ResolversPa
   transactionsByPaymentHash?: Resolver<ReadonlyArray<ResolversTypes['Transaction']>, ParentType, ContextType, RequireFields<BtcWalletTransactionsByPaymentHashArgs, 'paymentHash'>>;
   transactionsByPaymentRequest?: Resolver<ReadonlyArray<ResolversTypes['Transaction']>, ParentType, ContextType, RequireFields<BtcWalletTransactionsByPaymentRequestArgs, 'paymentRequest'>>;
   walletCurrency?: Resolver<ResolversTypes['WalletCurrency'], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
-};
-
-export type BlockInfoResolvers<ContextType = any, ParentType extends ResolversParentTypes['BlockInfo'] = ResolversParentTypes['BlockInfo']> = {
-  blockHash?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
-  blockHeight?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
@@ -4415,7 +4948,6 @@ export type FeesInformationResolvers<ContextType = any, ParentType extends Resol
 };
 
 export type GlobalsResolvers<ContextType = any, ParentType extends ResolversParentTypes['Globals'] = ResolversParentTypes['Globals']> = {
-  blockInfo?: Resolver<Maybe<ResolversTypes['BlockInfo']>, ParentType, ContextType>;
   buildInformation?: Resolver<ResolversTypes['BuildInformation'], ParentType, ContextType>;
   feesInformation?: Resolver<ResolversTypes['FeesInformation'], ParentType, ContextType>;
   lightningAddressDomain?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -4616,7 +5148,15 @@ export type MutationResolvers<ContextType = any, ParentType extends ResolversPar
   accountUpdateDefaultWalletId?: Resolver<ResolversTypes['AccountUpdateDefaultWalletIdPayload'], ParentType, ContextType, RequireFields<MutationAccountUpdateDefaultWalletIdArgs, 'input'>>;
   accountUpdateDisplayCurrency?: Resolver<ResolversTypes['AccountUpdateDisplayCurrencyPayload'], ParentType, ContextType, RequireFields<MutationAccountUpdateDisplayCurrencyArgs, 'input'>>;
   apiKeyCreate?: Resolver<ResolversTypes['ApiKeyCreatePayload'], ParentType, ContextType, RequireFields<MutationApiKeyCreateArgs, 'input'>>;
+  apiKeyRemoveAnnualLimit?: Resolver<ResolversTypes['ApiKeySetLimitPayload'], ParentType, ContextType, RequireFields<MutationApiKeyRemoveAnnualLimitArgs, 'input'>>;
+  apiKeyRemoveDailyLimit?: Resolver<ResolversTypes['ApiKeySetLimitPayload'], ParentType, ContextType, RequireFields<MutationApiKeyRemoveDailyLimitArgs, 'input'>>;
+  apiKeyRemoveMonthlyLimit?: Resolver<ResolversTypes['ApiKeySetLimitPayload'], ParentType, ContextType, RequireFields<MutationApiKeyRemoveMonthlyLimitArgs, 'input'>>;
+  apiKeyRemoveWeeklyLimit?: Resolver<ResolversTypes['ApiKeySetLimitPayload'], ParentType, ContextType, RequireFields<MutationApiKeyRemoveWeeklyLimitArgs, 'input'>>;
   apiKeyRevoke?: Resolver<ResolversTypes['ApiKeyRevokePayload'], ParentType, ContextType, RequireFields<MutationApiKeyRevokeArgs, 'input'>>;
+  apiKeySetAnnualLimit?: Resolver<ResolversTypes['ApiKeySetLimitPayload'], ParentType, ContextType, RequireFields<MutationApiKeySetAnnualLimitArgs, 'input'>>;
+  apiKeySetDailyLimit?: Resolver<ResolversTypes['ApiKeySetLimitPayload'], ParentType, ContextType, RequireFields<MutationApiKeySetDailyLimitArgs, 'input'>>;
+  apiKeySetMonthlyLimit?: Resolver<ResolversTypes['ApiKeySetLimitPayload'], ParentType, ContextType, RequireFields<MutationApiKeySetMonthlyLimitArgs, 'input'>>;
+  apiKeySetWeeklyLimit?: Resolver<ResolversTypes['ApiKeySetLimitPayload'], ParentType, ContextType, RequireFields<MutationApiKeySetWeeklyLimitArgs, 'input'>>;
   callbackEndpointAdd?: Resolver<ResolversTypes['CallbackEndpointAddPayload'], ParentType, ContextType, RequireFields<MutationCallbackEndpointAddArgs, 'input'>>;
   callbackEndpointDelete?: Resolver<ResolversTypes['SuccessPayload'], ParentType, ContextType, RequireFields<MutationCallbackEndpointDeleteArgs, 'input'>>;
   captchaCreateChallenge?: Resolver<ResolversTypes['CaptchaCreateChallengePayload'], ParentType, ContextType>;
@@ -4660,7 +5200,6 @@ export type MutationResolvers<ContextType = any, ParentType extends ResolversPar
   userEmailRegistrationValidate?: Resolver<ResolversTypes['UserEmailRegistrationValidatePayload'], ParentType, ContextType, RequireFields<MutationUserEmailRegistrationValidateArgs, 'input'>>;
   userLogin?: Resolver<ResolversTypes['AuthTokenPayload'], ParentType, ContextType, RequireFields<MutationUserLoginArgs, 'input'>>;
   userLoginUpgrade?: Resolver<ResolversTypes['UpgradePayload'], ParentType, ContextType, RequireFields<MutationUserLoginUpgradeArgs, 'input'>>;
-  userLoginUpgradeTelegram?: Resolver<ResolversTypes['UpgradePayload'], ParentType, ContextType, RequireFields<MutationUserLoginUpgradeTelegramArgs, 'input'>>;
   userLogout?: Resolver<ResolversTypes['SuccessPayload'], ParentType, ContextType, Partial<MutationUserLogoutArgs>>;
   userPhoneDelete?: Resolver<ResolversTypes['UserPhoneDeletePayload'], ParentType, ContextType>;
   userPhoneRegistrationInitiate?: Resolver<ResolversTypes['SuccessPayload'], ParentType, ContextType, RequireFields<MutationUserPhoneRegistrationInitiateArgs, 'input'>>;
@@ -5002,10 +5541,6 @@ export type SupportMessageResolvers<ContextType = any, ParentType extends Resolv
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
-export interface TelegramPassportNonceScalarConfig extends GraphQLScalarTypeConfig<ResolversTypes['TelegramPassportNonce'], any> {
-  name: 'TelegramPassportNonce';
-}
-
 export interface TimestampScalarConfig extends GraphQLScalarTypeConfig<ResolversTypes['Timestamp'], any> {
   name: 'Timestamp';
 }
@@ -5228,12 +5763,13 @@ export type Resolvers<ContextType = any> = {
   AccountUpdateNotificationSettingsPayload?: AccountUpdateNotificationSettingsPayloadResolvers<ContextType>;
   ApiKey?: ApiKeyResolvers<ContextType>;
   ApiKeyCreatePayload?: ApiKeyCreatePayloadResolvers<ContextType>;
+  ApiKeyLimits?: ApiKeyLimitsResolvers<ContextType>;
   ApiKeyRevokePayload?: ApiKeyRevokePayloadResolvers<ContextType>;
+  ApiKeySetLimitPayload?: ApiKeySetLimitPayloadResolvers<ContextType>;
   AuthToken?: GraphQLScalarType;
   AuthTokenPayload?: AuthTokenPayloadResolvers<ContextType>;
   Authorization?: AuthorizationResolvers<ContextType>;
   BTCWallet?: BtcWalletResolvers<ContextType>;
-  BlockInfo?: BlockInfoResolvers<ContextType>;
   BuildInformation?: BuildInformationResolvers<ContextType>;
   CallbackEndpoint?: CallbackEndpointResolvers<ContextType>;
   CallbackEndpointAddPayload?: CallbackEndpointAddPayloadResolvers<ContextType>;
@@ -5344,7 +5880,6 @@ export type Resolvers<ContextType = any> = {
   SuccessPayload?: SuccessPayloadResolvers<ContextType>;
   SupportChatMessageAddPayload?: SupportChatMessageAddPayloadResolvers<ContextType>;
   SupportMessage?: SupportMessageResolvers<ContextType>;
-  TelegramPassportNonce?: GraphQLScalarType;
   Timestamp?: GraphQLScalarType;
   TotpCode?: GraphQLScalarType;
   TotpRegistrationId?: GraphQLScalarType;
