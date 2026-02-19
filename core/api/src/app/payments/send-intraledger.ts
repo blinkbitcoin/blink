@@ -44,8 +44,11 @@ import {
   WalletsRepository,
 } from "@/services/mongoose"
 import { NotificationsService } from "@/services/notifications"
+import { ApiKeysService } from "@/services/api-keys"
+import { validateSpendingLimit } from "@/domain/api-keys"
 
 const dealer = DealerPriceService()
+const apiKeys = ApiKeysService()
 
 const intraledgerPaymentSendWalletId = async ({
   recipientWalletId: uncheckedRecipientWalletId,
@@ -53,6 +56,7 @@ const intraledgerPaymentSendWalletId = async ({
   amount: uncheckedAmount,
   memo,
   senderWalletId: uncheckedSenderWalletId,
+  apiKeyId,
 }: IntraLedgerPaymentSendWalletIdArgs): Promise<PaymentSendResult | ApplicationError> => {
   const validatedPaymentInputs = await validateIntraledgerPaymentInputs({
     uncheckedSenderWalletId,
@@ -128,6 +132,7 @@ const intraledgerPaymentSendWalletId = async ({
     recipientUser,
     senderUser,
     memo,
+    apiKeyId,
   })
   if (paymentSendResult instanceof Error) return paymentSendResult
 
@@ -231,6 +236,7 @@ const executePaymentViaIntraledger = async <
   recipientUser,
   senderUser,
   memo,
+  apiKeyId,
 }: {
   paymentFlow: PaymentFlow<S, R>
   senderAccount: Account
@@ -239,6 +245,7 @@ const executePaymentViaIntraledger = async <
   recipientUser: User
   senderUser: User
   memo: string | null
+  apiKeyId?: string
 }): Promise<PaymentSendResult | ApplicationError> => {
   addAttributesToCurrentSpan({
     "payment.settlement_method": SettlementMethod.IntraLedger,
@@ -246,6 +253,20 @@ const executePaymentViaIntraledger = async <
 
   const priceRatioForLimits = await getPriceRatioForLimits(paymentFlow.paymentAmounts())
   if (priceRatioForLimits instanceof Error) return priceRatioForLimits
+
+  if (apiKeyId) {
+    const amountSats = Number(paymentFlow.btcPaymentAmount.amount)
+    const limits = await apiKeys.getSpendingLimits({
+      apiKeyId,
+      amountSats,
+    })
+    if (limits instanceof Error) return limits
+
+    const validation = validateSpendingLimit({ amountSats, limits })
+    if (!validation.allowed) {
+      return validation.error
+    }
+  }
 
   const checkLimits =
     senderAccount.id === recipientAccount.id
@@ -317,6 +338,17 @@ const executePaymentViaIntraledger = async <
     recipient: senderAsNotificationRecipient,
     transaction: senderWalletTransaction,
   })
+
+  // Record API key spending after successful payment
+  if (apiKeyId) {
+    const amountSats = Number(paymentFlow.btcPaymentAmount.amount)
+    const recordResult = await apiKeys.recordSpending({
+      apiKeyId,
+      amountSats,
+      transactionId: journalId,
+    })
+    if (recordResult instanceof Error) return recordResult
+  }
 
   return {
     status: PaymentSendStatus.Success,

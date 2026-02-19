@@ -84,6 +84,9 @@ export const getCallbackServiceConfig = (): SvixConfig => {
 
 export const getBriaConfig = getBriaPartialConfigFromYaml
 
+export const API_KEYS_HOST = env.API_KEYS_HOST
+export const API_KEYS_PORT = env.API_KEYS_PORT
+
 export const isTelegramPassportEnabled = () =>
   !!env.TELEGRAM_BOT_API_TOKEN && !!env.TELEGRAM_PASSPORT_PRIVATE_KEY
 
@@ -160,7 +163,6 @@ export const TWILIO_AUTH_TOKEN = env.TWILIO_AUTH_TOKEN
 export const TWILIO_VERIFY_SERVICE_ID = env.TWILIO_VERIFY_SERVICE_ID
 export const TWILIO_MESSAGING_SERVICE_ID = env.TWILIO_MESSAGING_SERVICE_ID
 export const TWILIO_WELCOME_CONTENT_SID = env.TWILIO_WELCOME_CONTENT_SID
-export const PRELUDE_API_KEY = env.PRELUDE_API_KEY
 export const KRATOS_PUBLIC_API = env.KRATOS_PUBLIC_API
 export const KRATOS_ADMIN_API = env.KRATOS_ADMIN_API
 export const KRATOS_MASTER_USER_PASSWORD = env.KRATOS_MASTER_USER_PASSWORD

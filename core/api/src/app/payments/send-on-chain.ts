@@ -52,9 +52,12 @@ import {
 } from "@/services/mongoose"
 import { NotificationsService } from "@/services/notifications"
 import { addAttributesToCurrentSpan } from "@/services/tracing"
+import { ApiKeysService } from "@/services/api-keys"
+import { validateSpendingLimit } from "@/domain/api-keys"
 
 const { dustThreshold } = getOnChainWalletConfig()
 const dealer = DealerPriceService()
+const apiKeys = ApiKeysService()
 
 const payOnChainByWalletId = async ({
   senderAccount,
@@ -65,6 +68,7 @@ const payOnChainByWalletId = async ({
   speed,
   memo,
   sendAll,
+  apiKeyId,
 }: PayOnChainByWalletIdArgs): Promise<PaymentSendResult | ApplicationError> => {
   const latestAccountState = await AccountsRepository().findById(senderAccount.id)
   if (latestAccountState instanceof Error) return latestAccountState
@@ -178,6 +182,7 @@ const payOnChainByWalletId = async ({
       senderAccount,
       memo,
       sendAll,
+      apiKeyId,
     })
   }
 
@@ -193,6 +198,7 @@ const payOnChainByWalletId = async ({
     memo,
     sendAll,
     logger: onchainLogger,
+    apiKeyId,
   })
 }
 
@@ -248,11 +254,13 @@ const executePaymentViaIntraledger = async <
   senderAccount,
   memo,
   sendAll,
+  apiKeyId,
 }: {
   builder: OPFBWithConversion<S, R> | OPFBWithError
   senderAccount: Account
   memo: string | null
   sendAll: boolean
+  apiKeyId?: string
 }): Promise<PaymentSendResult | ApplicationError> => {
   const paymentFlow = await builder.withoutMinerFee()
   if (paymentFlow instanceof Error) return paymentFlow
@@ -288,6 +296,20 @@ const executePaymentViaIntraledger = async <
   // Limit check
   const priceRatioForLimits = await getPriceRatioForLimits(paymentFlow.paymentAmounts())
   if (priceRatioForLimits instanceof Error) return priceRatioForLimits
+
+  if (apiKeyId) {
+    const amountSats = Number(paymentFlow.btcPaymentAmount.amount)
+    const limits = await apiKeys.getSpendingLimits({
+      apiKeyId,
+      amountSats,
+    })
+    if (limits instanceof Error) return limits
+
+    const validation = validateSpendingLimit({ amountSats, limits })
+    if (!validation.allowed) {
+      return validation.error
+    }
+  }
 
   const checkLimits =
     senderAccount.id === recipientAccount.id
@@ -356,6 +378,17 @@ const executePaymentViaIntraledger = async <
     recipient: senderAsNotificationRecipient,
     transaction: senderWalletTransaction,
   })
+
+  // Record API key spending after successful payment
+  if (apiKeyId) {
+    const amountSats = Number(paymentFlow.btcPaymentAmount.amount)
+    const recordResult = await apiKeys.recordSpending({
+      apiKeyId,
+      amountSats,
+      transactionId: journalId,
+    })
+    if (recordResult instanceof Error) return recordResult
+  }
 
   return {
     status: PaymentSendStatus.Success,
@@ -523,6 +556,7 @@ const executePaymentViaOnChain = async <
   memo,
   sendAll,
   logger,
+  apiKeyId,
 }: {
   builder: OPFBWithConversion<S, R> | OPFBWithError
   senderDisplayCurrency: DisplayCurrency
@@ -530,6 +564,7 @@ const executePaymentViaOnChain = async <
   memo: string | null
   sendAll: boolean
   logger: Logger
+  apiKeyId?: string
 }): Promise<PaymentSendResult | ApplicationError> => {
   const senderWalletDescriptor = await builder.senderWalletDescriptor()
   if (senderWalletDescriptor instanceof Error) return senderWalletDescriptor
@@ -540,6 +575,20 @@ const executePaymentViaOnChain = async <
 
   const priceRatioForLimits = await getPriceRatioForLimits(proposedAmounts)
   if (priceRatioForLimits instanceof Error) return priceRatioForLimits
+
+  if (apiKeyId) {
+    const amountSats = Number(proposedAmounts.btc.amount)
+    const limits = await apiKeys.getSpendingLimits({
+      apiKeyId,
+      amountSats,
+    })
+    if (limits instanceof Error) return limits
+
+    const validation = validateSpendingLimit({ amountSats, limits })
+    if (!validation.allowed) {
+      return validation.error
+    }
+  }
 
   const limitCheck = await checkWithdrawalLimits({
     amount: proposedAmounts.usd,
@@ -571,6 +620,20 @@ const executePaymentViaOnChain = async <
     journalId,
   })
   if (walletTransaction instanceof Error) return walletTransaction
+
+  // Record API key spending after successful payment
+  if (apiKeyId) {
+    const paymentFlow = await builder.proposedAmounts()
+    if (!(paymentFlow instanceof Error)) {
+      const amountSats = Number(paymentFlow.btc.amount)
+      const recordResult = await apiKeys.recordSpending({
+        apiKeyId,
+        amountSats,
+        transactionId: journalId,
+      })
+      if (recordResult instanceof Error) return recordResult
+    }
+  }
 
   return { status: PaymentSendStatus.Success, transaction: walletTransaction }
 }
