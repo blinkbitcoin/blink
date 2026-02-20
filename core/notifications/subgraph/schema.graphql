@@ -2,6 +2,8 @@ type BulletinButton {
 	label: String!
 }
 
+
+
 enum Icon {
 	ARROW_RIGHT
 	ARROW_LEFT
