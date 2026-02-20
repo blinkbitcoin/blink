@@ -20,4 +20,6 @@ jobs:
         uses: DeterminateSystems/magic-nix-cache-action@v8
       - uses: actions/checkout@v4
       - name: Run clean mongodb migration
+        env:
+          DOCKER_API_VERSION: "1.44"
         run: nix develop -c ./dev/bin/tilt-ci.sh mongodb-migrate

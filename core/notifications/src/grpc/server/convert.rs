@@ -287,6 +287,14 @@ impl TryFrom<proto::Action> for notification_event::Action {
     }
 }
 
+impl From<proto::BulletinButton> for notification_event::BulletinButton {
+    fn from(button: proto::BulletinButton) -> Self {
+        Self {
+            label: button.label,
+        }
+    }
+}
+
 impl From<proto::Icon> for notification_event::Icon {
     fn from(icon: proto::Icon) -> Self {
         match icon {

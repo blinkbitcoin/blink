@@ -137,6 +137,10 @@ type BTCWallet implements Wallet {
   walletCurrency: WalletCurrency!
 }
 
+input BulletinButtonInput {
+  label: String!
+}
+
 type Coordinates {
   latitude: Float!
   longitude: Float!
@@ -311,6 +315,7 @@ input LocalizedNotificationContentInput {
 }
 
 input MarketingNotificationTriggerInput {
+  bulletinButton: BulletinButtonInput
   icon: NotificationIcon
   localizedNotificationContents: [LocalizedNotificationContentInput!]!
   openDeepLink: OpenDeepLinkInput

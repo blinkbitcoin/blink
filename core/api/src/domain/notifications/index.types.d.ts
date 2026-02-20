@@ -152,6 +152,11 @@ type TriggerMarketingNotificationArgs = {
         url: string
       }
     | undefined
+  bulletinButton:
+    | {
+        label: string
+      }
+    | undefined
   shouldSendPush: boolean
   shouldAddToHistory: boolean
   shouldAddToBulletin: boolean

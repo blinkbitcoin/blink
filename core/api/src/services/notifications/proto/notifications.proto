@@ -243,11 +243,16 @@ message MarketingNotificationTriggered {
   bool should_add_to_bulletin = 5;
   optional Action action = 6;
   optional Icon icon = 7;
+  optional BulletinButton bulletin_button = 8;
 }
 
 message LocalizedContent {
   string title = 1;
   string body = 2;
+}
+
+message BulletinButton {
+  string label = 1;
 }
 
 message Action {

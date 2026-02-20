@@ -30,6 +30,9 @@ impl From<history::StatefulNotification> for types::StatefulNotification {
                     },
                 ),
             }),
+            bulletin_button: notification
+                .bulletin_button()
+                .map(|b| types::BulletinButton { label: b.label }),
             icon: notification.icon().map(Into::into),
         }
     }
