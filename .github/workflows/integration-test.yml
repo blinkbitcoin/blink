@@ -95,6 +95,8 @@ jobs:
       - name: Build via buck2
         run: nix develop -c buck2 build ${{ matrix.build_args }}
       - name: Start deps and run tests via tilt
+        env:
+          DOCKER_API_VERSION: "1.44"
         run: nix develop -c xvfb-run ./dev/bin/tilt-ci.sh ${{ matrix.component }}
       - name: Prepare Tilt log
         id: prepare_tilt_log
