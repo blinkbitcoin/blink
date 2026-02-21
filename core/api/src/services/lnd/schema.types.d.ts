@@ -10,4 +10,5 @@ interface LnPaymentType {
   confirmedDetails: LnPaymentConfirmedDetails | undefined
   attempts: LnPaymentAttempt[]
   isCompleteRecord: boolean
+  lnurlSuccessAction: LnurlSuccessAction | null | undefined
 }
