@@ -2,24 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'revert: remove custom phone number validation (#452)'
-      sha: 00fd5199640a1c46aaa895863d3f30d17220cbc9
+      commitTitle: 'chore(ci): update disposable phone number action build space (#466)'
+      sha: 1350343bee59f48a18e7de247678d52bced05a84
       tags:
-      - 0.21.136-2-g00fd51996
+      - 0.21.137-2-g1350343be
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'revert: remove custom phone number validation (#452)'
-      sha: 00fd5199640a1c46aaa895863d3f30d17220cbc9
+      commitTitle: 'chore(ci): update disposable phone number action build space (#466)'
+      sha: 1350343bee59f48a18e7de247678d52bced05a84
       tags:
-      - 0.21.136-2-g00fd51996
+      - 0.21.137-2-g1350343be
     path: schemas
   - git:
-      commitTitle: 'revert: remove custom phone number validation (#452)'
-      sha: 00fd5199640a1c46aaa895863d3f30d17220cbc9
+      commitTitle: 'chore(ci): update disposable phone number action build space (#466)'
+      sha: 1350343bee59f48a18e7de247678d52bced05a84
       tags:
-      - 0.21.136-2-g00fd51996
+      - 0.21.137-2-g1350343be
     path: gql
   path: graphql
 kind: LockConfig
