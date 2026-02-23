@@ -39,9 +39,9 @@
   },
   "dependencies": {
     "@apollo/server": "^4.12.2",
-    "@aws-sdk/client-s3": "^3.850.0",
+    "@aws-sdk/client-s3": "^3.995.0",
     "@galoy/gt3-server-node-express-sdk": "workspace:^",
-    "@google-cloud/storage": "^7.16.0",
+    "@google-cloud/storage": "^7.19.0",
     "@grpc/grpc-js": "^1.13.4",
     "@grpc/proto-loader": "^0.7.15",
     "@ip1sms/disposable-phone-numbers": "^2.1.1452",
