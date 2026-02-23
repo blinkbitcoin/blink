@@ -2,24 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'chore(ci): update disposable phone number action build space (#466)'
-      sha: 1350343bee59f48a18e7de247678d52bced05a84
+      commitTitle: 'chore(deps): bumps aws + could storage deps (#468)'
+      sha: 7e32e315f1a216edcd12ecc6b6e0b76ff3b9ed01
       tags:
-      - 0.21.137-2-g1350343be
+      - 0.21.137-5-g7e32e315f
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'chore(ci): update disposable phone number action build space (#466)'
-      sha: 1350343bee59f48a18e7de247678d52bced05a84
+      commitTitle: 'chore(deps): bumps aws + could storage deps (#468)'
+      sha: 7e32e315f1a216edcd12ecc6b6e0b76ff3b9ed01
       tags:
-      - 0.21.137-2-g1350343be
+      - 0.21.137-5-g7e32e315f
     path: schemas
   - git:
-      commitTitle: 'chore(ci): update disposable phone number action build space (#466)'
-      sha: 1350343bee59f48a18e7de247678d52bced05a84
+      commitTitle: 'chore(deps): bumps aws + could storage deps (#468)'
+      sha: 7e32e315f1a216edcd12ecc6b6e0b76ff3b9ed01
       tags:
-      - 0.21.137-2-g1350343be
+      - 0.21.137-5-g7e32e315f
     path: gql
   path: graphql
 kind: LockConfig
