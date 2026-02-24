@@ -2309,6 +2309,7 @@ export type LnInvoiceCreateOnBehalfOfRecipientMutationVariables = Exact<{
   walletId: Scalars['WalletId']['input'];
   amount: Scalars['SatAmount']['input'];
   descriptionHash: Scalars['Hex32Bytes']['input'];
+  memo?: InputMaybe<Scalars['Memo']['input']>;
 }>;
 
 
@@ -2607,9 +2608,9 @@ export type MeLazyQueryHookResult = ReturnType<typeof useMeLazyQuery>;
 export type MeSuspenseQueryHookResult = ReturnType<typeof useMeSuspenseQuery>;
 export type MeQueryResult = Apollo.QueryResult<MeQuery, MeQueryVariables>;
 export const LnInvoiceCreateOnBehalfOfRecipientDocument = gql`
-    mutation lnInvoiceCreateOnBehalfOfRecipient($walletId: WalletId!, $amount: SatAmount!, $descriptionHash: Hex32Bytes!) {
+    mutation lnInvoiceCreateOnBehalfOfRecipient($walletId: WalletId!, $amount: SatAmount!, $descriptionHash: Hex32Bytes!, $memo: Memo) {
   mutationData: lnInvoiceCreateOnBehalfOfRecipient(
-    input: {recipientWalletId: $walletId, amount: $amount, descriptionHash: $descriptionHash}
+    input: {recipientWalletId: $walletId, amount: $amount, descriptionHash: $descriptionHash, memo: $memo}
   ) {
     errors {
       message
@@ -2639,6 +2640,7 @@ export type LnInvoiceCreateOnBehalfOfRecipientMutationFn = Apollo.MutationFuncti
  *      walletId: // value for 'walletId'
  *      amount: // value for 'amount'
  *      descriptionHash: // value for 'descriptionHash'
+ *      memo: // value for 'memo'
  *   },
  * });
  */
