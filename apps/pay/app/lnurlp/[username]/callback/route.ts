@@ -23,12 +23,14 @@ gql`
     $walletId: WalletId!
     $amount: SatAmount!
     $descriptionHash: Hex32Bytes!
+    $memo: Memo
   ) {
     mutationData: lnInvoiceCreateOnBehalfOfRecipient(
       input: {
         recipientWalletId: $walletId
         amount: $amount
         descriptionHash: $descriptionHash
+        memo: $memo
       }
     ) {
       errors {
@@ -41,6 +43,8 @@ gql`
     }
   }
 `
+
+const COMMENT_SIZE = 500
 
 const nostrEnabled = !!env.NOSTR_PUBKEY
 
@@ -84,11 +88,19 @@ export async function GET(
   // this is part of the lnurl spec
   const amount = searchParams.get("amount")
   const nostr = searchParams.get("nostr")
+  const comment = searchParams.get("comment")
 
   if (!amount || !username) {
     return NextResponse.json({
       status: "ERROR",
       reason: "Invalid request",
+    })
+  }
+
+  if (comment && comment.length > COMMENT_SIZE) {
+    return NextResponse.json({
+      status: "ERROR",
+      reason: `Comment too long. Maximum ${COMMENT_SIZE} characters allowed.`,
     })
   }
 
@@ -150,6 +162,7 @@ export async function GET(
         walletId,
         amount: amountSats,
         descriptionHash,
+        ...(comment ? { memo: comment } : {}),
       },
     })
 
