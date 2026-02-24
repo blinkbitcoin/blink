@@ -5,6 +5,7 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     nixpkgs-node.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     nixpkgs-docker.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+    nixpkgs-tilt.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     concourse-shared.url = "github:blinkbitcoin/concourse-shared";
 
@@ -22,6 +23,7 @@
     nixpkgs,
     nixpkgs-node,
     nixpkgs-docker,
+    nixpkgs-tilt,
     flake-utils,
     concourse-shared,
     rust-overlay,
@@ -29,6 +31,7 @@
     flake-utils.lib.eachDefaultSystem (system: let
       nodePkgs = import nixpkgs-node {inherit system;};
       dockerPkgs = import nixpkgs-docker {inherit system;};
+      tiltPkgs = import nixpkgs-tilt {inherit system;};
       # CVE: DoS via stack overflow in async_hooks - require nodejs 20.20.0+
       expectedNodeVersion = "20.20.0";
       overlays = [
@@ -61,7 +64,7 @@
         [
           envsubst
           nodejs
-          tilt
+          tiltPkgs.tilt
           typescript
           bats
           postgresql
