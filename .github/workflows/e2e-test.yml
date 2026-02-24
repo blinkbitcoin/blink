@@ -28,8 +28,6 @@ jobs:
         uses: DeterminateSystems/magic-nix-cache-action@v8
 
       - name: Run bats tests
-        env:
-          DOCKER_API_VERSION: "1.44"
         run: |
           nix develop -c ./bats/ci_run.sh
 
