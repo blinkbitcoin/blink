@@ -1,11 +1,12 @@
 {
-  description = "Galoy dev environment";
+  description = "Blink dev environment";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     nixpkgs-node.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+    nixpkgs-docker.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    concourse-shared.url = "github:galoymoney/concourse-shared";
+    concourse-shared.url = "github:blinkbitcoin/concourse-shared";
 
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
@@ -20,12 +21,14 @@
     self,
     nixpkgs,
     nixpkgs-node,
+    nixpkgs-docker,
     flake-utils,
     concourse-shared,
     rust-overlay,
   }:
     flake-utils.lib.eachDefaultSystem (system: let
       nodePkgs = import nixpkgs-node {inherit system;};
+      dockerPkgs = import nixpkgs-docker {inherit system;};
       # CVE: DoS via stack overflow in async_hooks - require nodejs 20.20.0+
       expectedNodeVersion = "20.20.0";
       overlays = [
@@ -64,8 +67,8 @@
           postgresql
           alejandra
           gnumake
-          docker
-          docker-compose
+          dockerPkgs.docker
+          dockerPkgs.docker-compose
           shellcheck
           shfmt
           vendir
