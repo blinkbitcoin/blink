@@ -2,24 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'chore(deps): bumps aws + could storage deps (#468)'
-      sha: 7e32e315f1a216edcd12ecc6b6e0b76ff3b9ed01
+      commitTitle: 'chore(deps): update nix flake inputs for Docker Engine 29 compat
+        (#473)...'
+      sha: 0a5847fe2ce14fec0da6b743599e2dbffbc03e1f
       tags:
-      - 0.21.137-5-g7e32e315f
+      - 0.21.138-3-g0a5847fe2
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'chore(deps): bumps aws + could storage deps (#468)'
-      sha: 7e32e315f1a216edcd12ecc6b6e0b76ff3b9ed01
+      commitTitle: 'chore(deps): update nix flake inputs for Docker Engine 29 compat
+        (#473)...'
+      sha: 0a5847fe2ce14fec0da6b743599e2dbffbc03e1f
       tags:
-      - 0.21.137-5-g7e32e315f
+      - 0.21.138-3-g0a5847fe2
     path: schemas
   - git:
-      commitTitle: 'chore(deps): bumps aws + could storage deps (#468)'
-      sha: 7e32e315f1a216edcd12ecc6b6e0b76ff3b9ed01
+      commitTitle: 'chore(deps): update nix flake inputs for Docker Engine 29 compat
+        (#473)...'
+      sha: 0a5847fe2ce14fec0da6b743599e2dbffbc03e1f
       tags:
-      - 0.21.137-5-g7e32e315f
+      - 0.21.138-3-g0a5847fe2
     path: gql
   path: graphql
 kind: LockConfig
