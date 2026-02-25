@@ -21,6 +21,8 @@ const ipForwardingMiddleware = new ApolloLink((operation, forward) => {
   return forward(operation)
 })
 
+export const COMMENT_SIZE = 500
+
 export const client = new ApolloClient({
   link: concat(
     ipForwardingMiddleware,
