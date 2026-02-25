@@ -95,7 +95,7 @@
     "jsonwebtoken": "^9.0.2",
     "jwks-rsa": "^3.2.0",
     "knex": "^3.1.0",
-    "libphonenumber-js": "^1.12.10",
+    "libphonenumber-js": "^1.12.37",
     "lightning": "^10.26.1",
     "ln-service": "^57.26.1",
     "lnurl-pay": "^4.0.0",
