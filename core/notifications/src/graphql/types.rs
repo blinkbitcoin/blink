@@ -41,11 +41,13 @@ impl ScalarType for Timestamp {
 #[derive(SimpleObject)]
 pub(super) struct OpenDeepLinkAction {
     pub deep_link: String,
+    pub label: Option<String>,
 }
 
 #[derive(SimpleObject)]
 pub(super) struct OpenExternalLinkAction {
     pub url: String,
+    pub label: Option<String>,
 }
 
 #[derive(Union)]

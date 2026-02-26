@@ -249,6 +249,8 @@ impl TryFrom<proto::Action> for notification_event::Action {
     type Error = tonic::Status;
 
     fn try_from(action: proto::Action) -> Result<Self, Self::Error> {
+        let label = action.label;
+
         match action.data {
             Some(proto::action::Data::DeepLink(deep_link)) => {
                 let screen = if let Some(screen) = deep_link.screen {
@@ -271,13 +273,17 @@ impl TryFrom<proto::Action> for notification_event::Action {
                     None
                 };
 
-                let dl = notification_event::DeepLink { screen, action };
+                let dl = notification_event::DeepLink {
+                    screen,
+                    action,
+                    label,
+                };
                 Ok(notification_event::Action::OpenDeepLink(dl))
             }
             Some(proto::action::Data::ExternalUrl(url)) => {
-                Ok(notification_event::Action::OpenExternalUrl(
-                    notification_event::ExternalUrl::from(url),
-                ))
+                let mut external_url = notification_event::ExternalUrl::from(url);
+                external_url.label = label;
+                Ok(notification_event::Action::OpenExternalUrl(external_url))
             }
             None => Err(tonic::Status::new(
                 tonic::Code::InvalidArgument,

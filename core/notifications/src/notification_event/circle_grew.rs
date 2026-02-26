@@ -20,6 +20,7 @@ impl NotificationEvent for CircleGrew {
         Some(Action::OpenDeepLink(DeepLink {
             screen: Some(DeepLinkScreen::Circles),
             action: None,
+            label: None,
         }))
     }
 

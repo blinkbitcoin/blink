@@ -239,3 +239,172 @@ setup_file() {
   count=$(graphql_output '.data.me.unacknowledgedStatefulNotificationsWithoutBulletinEnabledCount')
   [[ $count -eq 2 ]] || exit 1
 }
+
+@test "notifications: bulletin with label and external url action" {
+  admin_token="$(read_value 'admin.token')"
+
+  variables=$(
+    jq -n \
+    '{
+      input: {
+        localizedNotificationContents: [
+          {
+            language: "en",
+            title: "New feature available",
+            body: "Check out our latest update"
+          }
+        ],
+        shouldSendPush: false,
+        shouldAddToHistory: true,
+        shouldAddToBulletin: true,
+        openExternalUrl: {
+          url: "https://example.com/update",
+          label: "Learn more"
+        },
+        icon: "BELL"
+      }
+    }'
+  )
+
+  exec_admin_graphql "$admin_token" 'marketing-notification-trigger' "$variables"
+
+  local action_label
+  local action_url
+  local icon
+  for i in {1..10}; do
+    exec_graphql 'alice' 'list-unacknowledged-stateful-notifications-with-bulletin-enabled'
+    action_label=$(graphql_output '.data.me.unacknowledgedStatefulNotificationsWithBulletinEnabled.nodes[0].action.label')
+    [[ "$action_label" = "Learn more" ]] && break;
+    sleep 1
+  done
+  [[ "$action_label" = "Learn more" ]] || exit 1
+
+  action_url=$(graphql_output '.data.me.unacknowledgedStatefulNotificationsWithBulletinEnabled.nodes[0].action.url')
+  [[ "$action_url" = "https://example.com/update" ]] || exit 1
+
+  icon=$(graphql_output '.data.me.unacknowledgedStatefulNotificationsWithBulletinEnabled.nodes[0].icon')
+  [[ "$icon" = "BELL" ]] || exit 1
+}
+
+@test "notifications: bulletin without label has null action label" {
+  admin_token="$(read_value 'admin.token')"
+
+  variables=$(
+    jq -n \
+    '{
+      input: {
+        localizedNotificationContents: [
+          {
+            language: "en",
+            title: "Simple notification",
+            body: "No label here"
+          }
+        ],
+        shouldSendPush: false,
+        shouldAddToHistory: true,
+        shouldAddToBulletin: true,
+      }
+    }'
+  )
+
+  exec_admin_graphql "$admin_token" 'marketing-notification-trigger' "$variables"
+
+  local action
+  local title
+  for i in {1..10}; do
+    exec_graphql 'alice' 'list-stateful-notifications' '{"first": 1}'
+    title=$(graphql_output '.data.me.statefulNotifications.nodes[0].title')
+    [[ "$title" = "Simple notification" ]] && break;
+    sleep 1
+  done
+  [[ "$title" = "Simple notification" ]] || exit 1
+
+  action=$(graphql_output '.data.me.statefulNotifications.nodes[0].action')
+  [[ "$action" = "null" ]] || exit 1
+}
+
+@test "notifications: bulletin with label and deep link action" {
+  admin_token="$(read_value 'admin.token')"
+
+  variables=$(
+    jq -n \
+    '{
+      input: {
+        localizedNotificationContents: [
+          {
+            language: "en",
+            title: "Complete your profile",
+            body: "Set up your account to get started"
+          }
+        ],
+        shouldSendPush: false,
+        shouldAddToHistory: true,
+        shouldAddToBulletin: true,
+        openDeepLink: {
+          screen: "SETTINGS",
+          label: "Go to settings"
+        }
+      }
+    }'
+  )
+
+  exec_admin_graphql "$admin_token" 'marketing-notification-trigger' "$variables"
+
+  local action_label
+  local deep_link
+  for i in {1..10}; do
+    exec_graphql 'alice' 'list-unacknowledged-stateful-notifications-with-bulletin-enabled'
+    action_label=$(graphql_output '.data.me.unacknowledgedStatefulNotificationsWithBulletinEnabled.nodes[0].action.label')
+    [[ "$action_label" = "Go to settings" ]] && break;
+    sleep 1
+  done
+  [[ "$action_label" = "Go to settings" ]] || exit 1
+
+  deep_link=$(graphql_output '.data.me.unacknowledgedStatefulNotificationsWithBulletinEnabled.nodes[0].action.deepLink')
+  [[ "$deep_link" = "/settings" ]] || exit 1
+}
+
+@test "notifications: bulletin with label on both deep link and external url uses deep link" {
+  admin_token="$(read_value 'admin.token')"
+
+  variables=$(
+    jq -n \
+    '{
+      input: {
+        localizedNotificationContents: [
+          {
+            language: "en",
+            title: "Both actions label",
+            body: "Deep link label should take priority"
+          }
+        ],
+        shouldSendPush: false,
+        shouldAddToHistory: true,
+        shouldAddToBulletin: true,
+        openDeepLink: {
+          screen: "SETTINGS",
+          label: "Deep link label"
+        },
+        openExternalUrl: {
+          url: "https://example.com/fallback",
+          label: "External label"
+        }
+      }
+    }'
+  )
+
+  exec_admin_graphql "$admin_token" 'marketing-notification-trigger' "$variables"
+
+  local action_label
+  local action_url
+  for i in {1..10}; do
+    exec_graphql 'alice' 'list-unacknowledged-stateful-notifications-with-bulletin-enabled'
+    action_label=$(graphql_output '.data.me.unacknowledgedStatefulNotificationsWithBulletinEnabled.nodes[0].action.label')
+    [[ "$action_label" = "External label" ]] && break;
+    sleep 1
+  done
+  [[ "$action_label" = "External label" ]] || exit 1
+
+  action_url=$(graphql_output '.data.me.unacknowledgedStatefulNotificationsWithBulletinEnabled.nodes[0].action.url')
+  [[ "$action_url" = "https://example.com/fallback" ]] || exit 1
+}

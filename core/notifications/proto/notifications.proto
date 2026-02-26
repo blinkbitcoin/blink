@@ -255,6 +255,7 @@ message Action {
     DeepLink deep_link = 1;
     string external_url = 2;
   }
+  optional string label = 3;
 }
 
 message DeepLink {

@@ -13,6 +13,17 @@ query listUnacknowledgedStatefulNotificationsWithBulletinEnabled($first: Int = 2
         deepLink
         acknowledgedAt
         createdAt
+        action {
+          ... on OpenDeepLinkAction {
+            deepLink
+            label
+          }
+          ... on OpenExternalLinkAction {
+            url
+            label
+          }
+        }
+        icon
       }
     }
   }
