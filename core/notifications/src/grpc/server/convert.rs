@@ -281,9 +281,9 @@ impl TryFrom<proto::Action> for notification_event::Action {
                 Ok(notification_event::Action::OpenDeepLink(dl))
             }
             Some(proto::action::Data::ExternalUrl(url)) => {
-                let mut eu = notification_event::ExternalUrl::from(url);
-                eu.label = label;
-                Ok(notification_event::Action::OpenExternalUrl(eu))
+                let mut external_url = notification_event::ExternalUrl::from(url);
+                external_url.label = label;
+                Ok(notification_event::Action::OpenExternalUrl(external_url))
             }
             None => Err(tonic::Status::new(
                 tonic::Code::InvalidArgument,
