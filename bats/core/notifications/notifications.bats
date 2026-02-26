@@ -240,7 +240,7 @@ setup_file() {
   [[ $count -eq 2 ]] || exit 1
 }
 
-@test "notifications: bulletin with button and external url action" {
+@test "notifications: bulletin with label and external url action" {
   admin_token="$(read_value 'admin.token')"
 
   variables=$(
@@ -257,11 +257,9 @@ setup_file() {
         shouldSendPush: false,
         shouldAddToHistory: true,
         shouldAddToBulletin: true,
-        bulletinButton: {
-          label: "Learn more"
-        },
         openExternalUrl: {
-          url: "https://example.com/update"
+          url: "https://example.com/update",
+          label: "Learn more"
         },
         icon: "BELL"
       }
@@ -270,16 +268,16 @@ setup_file() {
 
   exec_admin_graphql "$admin_token" 'marketing-notification-trigger' "$variables"
 
-  local button_label
+  local action_label
   local action_url
   local icon
   for i in {1..10}; do
     exec_graphql 'alice' 'list-unacknowledged-stateful-notifications-with-bulletin-enabled'
-    button_label=$(graphql_output '.data.me.unacknowledgedStatefulNotificationsWithBulletinEnabled.nodes[0].bulletinButton.label')
-    [[ "$button_label" = "Learn more" ]] && break;
+    action_label=$(graphql_output '.data.me.unacknowledgedStatefulNotificationsWithBulletinEnabled.nodes[0].action.label')
+    [[ "$action_label" = "Learn more" ]] && break;
     sleep 1
   done
-  [[ "$button_label" = "Learn more" ]] || exit 1
+  [[ "$action_label" = "Learn more" ]] || exit 1
 
   action_url=$(graphql_output '.data.me.unacknowledgedStatefulNotificationsWithBulletinEnabled.nodes[0].action.url')
   [[ "$action_url" = "https://example.com/update" ]] || exit 1
@@ -288,7 +286,7 @@ setup_file() {
   [[ "$icon" = "BELL" ]] || exit 1
 }
 
-@test "notifications: bulletin without button has null bulletinButton" {
+@test "notifications: bulletin without label has null action label" {
   admin_token="$(read_value 'admin.token')"
 
   variables=$(
@@ -299,7 +297,7 @@ setup_file() {
           {
             language: "en",
             title: "Simple notification",
-            body: "No button here"
+            body: "No label here"
           }
         ],
         shouldSendPush: false,
@@ -311,7 +309,7 @@ setup_file() {
 
   exec_admin_graphql "$admin_token" 'marketing-notification-trigger' "$variables"
 
-  local button
+  local action
   local title
   for i in {1..10}; do
     exec_graphql 'alice' 'list-stateful-notifications' '{"first": 1}'
@@ -321,11 +319,11 @@ setup_file() {
   done
   [[ "$title" = "Simple notification" ]] || exit 1
 
-  button=$(graphql_output '.data.me.statefulNotifications.nodes[0].bulletinButton')
-  [[ "$button" = "null" ]] || exit 1
+  action=$(graphql_output '.data.me.statefulNotifications.nodes[0].action')
+  [[ "$action" = "null" ]] || exit 1
 }
 
-@test "notifications: bulletin with button and deep link action" {
+@test "notifications: bulletin with label and deep link action" {
   admin_token="$(read_value 'admin.token')"
 
   variables=$(
@@ -342,11 +340,9 @@ setup_file() {
         shouldSendPush: false,
         shouldAddToHistory: true,
         shouldAddToBulletin: true,
-        bulletinButton: {
-          label: "Go to settings"
-        },
         openDeepLink: {
-          screen: "SETTINGS"
+          screen: "SETTINGS",
+          label: "Go to settings"
         }
       }
     }'
@@ -354,15 +350,15 @@ setup_file() {
 
   exec_admin_graphql "$admin_token" 'marketing-notification-trigger' "$variables"
 
-  local button_label
+  local action_label
   local deep_link
   for i in {1..10}; do
     exec_graphql 'alice' 'list-unacknowledged-stateful-notifications-with-bulletin-enabled'
-    button_label=$(graphql_output '.data.me.unacknowledgedStatefulNotificationsWithBulletinEnabled.nodes[0].bulletinButton.label')
-    [[ "$button_label" = "Go to settings" ]] && break;
+    action_label=$(graphql_output '.data.me.unacknowledgedStatefulNotificationsWithBulletinEnabled.nodes[0].action.label')
+    [[ "$action_label" = "Go to settings" ]] && break;
     sleep 1
   done
-  [[ "$button_label" = "Go to settings" ]] || exit 1
+  [[ "$action_label" = "Go to settings" ]] || exit 1
 
   deep_link=$(graphql_output '.data.me.unacknowledgedStatefulNotificationsWithBulletinEnabled.nodes[0].action.deepLink')
   [[ "$deep_link" = "/settings" ]] || exit 1

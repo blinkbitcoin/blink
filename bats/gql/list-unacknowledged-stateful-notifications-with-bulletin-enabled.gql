@@ -16,13 +16,12 @@ query listUnacknowledgedStatefulNotificationsWithBulletinEnabled($first: Int = 2
         action {
           ... on OpenDeepLinkAction {
             deepLink
+            label
           }
           ... on OpenExternalLinkAction {
             url
+            label
           }
-        }
-        bulletinButton {
-          label
         }
         icon
       }
