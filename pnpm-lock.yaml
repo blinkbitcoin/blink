@@ -196,8 +196,8 @@ importers:
         specifier: ^0.7.1
         version: 0.7.3(typescript@5.3.3)(zod@3.25.67)
       axios:
-        specifier: ^1.11.0
-        version: 1.11.0
+        specifier: ^1.13.5
+        version: 1.13.5
       dotenv:
         specifier: ^16.3.1
         version: 16.6.1
@@ -1164,11 +1164,11 @@ importers:
         specifier: ^8.17.1
         version: 8.17.1
       axios:
-        specifier: ^1.11.0
-        version: 1.11.0
+        specifier: ^1.13.5
+        version: 1.13.5
       axios-retry:
         specifier: ^4.5.0
-        version: 4.5.0(axios@1.11.0)
+        version: 4.5.0(axios@1.13.5)
       basic-auth:
         specifier: ^2.0.1
         version: 2.0.1
@@ -1469,7 +1469,7 @@ importers:
         version: 0.1.4
       axios-mock-adapter:
         specifier: ^2.1.0
-        version: 2.1.0(axios@1.11.0)
+        version: 2.1.0(axios@1.13.5)
       eslint:
         specifier: ^9.30.1
         version: 9.30.1
@@ -1703,8 +1703,8 @@ importers:
   lib/gt3-server-node-express-sdk:
     dependencies:
       axios:
-        specifier: ^1.11.0
-        version: 1.11.0
+        specifier: ^1.13.5
+        version: 1.13.5
       qs:
         specifier: ^6.11.2
         version: 6.14.0
@@ -4517,7 +4517,7 @@ packages:
       combined-stream: 1.0.8
       extend: 3.0.2
       forever-agent: 0.6.1
-      form-data: 4.0.4
+      form-data: 4.0.5
       http-signature: 1.4.0
       is-typedarray: 1.0.0
       isstream: 0.1.2
@@ -8748,7 +8748,7 @@ packages:
   /@ory/client@1.20.22:
     resolution: {integrity: sha512-N0UixgrJ7Xi0O5bttaFbJrtQhZAi61z69d9p/3tn71/nfBPOVTb8mOJIOlPhQIECj/11A65ttzI2R0QhEIeQEw==}
     dependencies:
-      axios: 1.11.0
+      axios: 1.13.5
     transitivePeerDependencies:
       - debug
     dev: false
@@ -8756,7 +8756,7 @@ packages:
   /@ory/hydra-client@2.2.1:
     resolution: {integrity: sha512-Hb6GQuRwPyxt44Cvd3AMFKw/UtvGCHeXO7kIDfv95C/8kErWukCA3WBDWeVfZuIjY+HVPeZFZkBRVC+Ub8UEVg==}
     dependencies:
-      axios: 1.11.0
+      axios: 1.13.5
     transitivePeerDependencies:
       - debug
     dev: false
@@ -13425,7 +13425,7 @@ packages:
     resolution: {integrity: sha512-8nneRWKCg3rMtF69nLQJnOYUcbafYeFSjqkw3jCRLsqkWFlHaoQrr5mXmofFGOx3DKn7UfmBMyov8ySvLRVldA==}
     dependencies:
       '@types/node': 20.11.24
-      form-data: 4.0.4
+      form-data: 4.0.5
 
   /@types/node-jose@1.1.13:
     resolution: {integrity: sha512-QjMd4yhwy1EvSToQn0YI3cD29YhyfxFwj7NecuymjLys2/P0FwxWnkgBlFxCai6Y3aBCe7rbwmqwJJawxlgcXw==}
@@ -13620,7 +13620,7 @@ packages:
       '@types/caseless': 0.12.5
       '@types/node': 22.16.0
       '@types/tough-cookie': 4.0.5
-      form-data: 4.0.4
+      form-data: 4.0.5
     dev: false
 
   /@types/request@2.48.13:
@@ -15940,30 +15940,30 @@ packages:
     resolution: {integrity: sha512-Xm7bpRXnDSX2YE2YFfBk2FnF0ep6tmG7xPh8iHee8MIcrgq762Nkce856dYtJYLkuIoYZvGfTs/PbZhideTcEg==}
     engines: {node: '>=4'}
 
-  /axios-mock-adapter@2.1.0(axios@1.11.0):
+  /axios-mock-adapter@2.1.0(axios@1.13.5):
     resolution: {integrity: sha512-AZUe4OjECGCNNssH8SOdtneiQELsqTsat3SQQCWLPjN436/H+L9AjWfV7bF+Zg/YL9cgbhrz5671hoh+Tbn98w==}
     peerDependencies:
       axios: '>= 0.17.0'
     dependencies:
-      axios: 1.11.0
+      axios: 1.13.5
       fast-deep-equal: 3.1.3
       is-buffer: 2.0.5
     dev: true
 
-  /axios-retry@4.5.0(axios@1.11.0):
+  /axios-retry@4.5.0(axios@1.13.5):
     resolution: {integrity: sha512-aR99oXhpEDGo0UuAlYcn2iGRds30k366Zfa05XWScR9QaQD4JYiP3/1Qt1u7YlefUOK+cn0CcwoL1oefavQUlQ==}
     peerDependencies:
       axios: 0.x || 1.x
     dependencies:
-      axios: 1.11.0
+      axios: 1.13.5
       is-retry-allowed: 2.2.0
     dev: false
 
-  /axios@1.11.0:
-    resolution: {integrity: sha512-1Lx3WLFQWm3ooKDYZD1eXmoGO9fxYQjrycfHFC8P0sCfQVXyROp0p9PFWBehewBOdCwHc+f/b8I0fMto5eSfwA==}
+  /axios@1.13.5:
+    resolution: {integrity: sha512-cz4ur7Vb0xS4/KUN0tPWe44eqxrIu31me+fbang3ijiNscE129POzipJJA6zniq2C/Z6sJCjMimjS8Lc/GAs8Q==}
     dependencies:
-      follow-redirects: 1.15.9
-      form-data: 4.0.4
+      follow-redirects: 1.15.11
+      form-data: 4.0.5
       proxy-from-env: 1.1.0
     transitivePeerDependencies:
       - debug
@@ -16991,7 +16991,7 @@ packages:
     requiresBuild: true
     dependencies:
       '@testim/chrome-version': 1.1.4
-      axios: 1.11.0
+      axios: 1.13.5
       compare-versions: 6.1.1
       extract-zip: 2.0.1(supports-color@8.1.1)
       proxy-agent: 6.5.0
@@ -20791,8 +20791,8 @@ packages:
     engines: {node: '>=8'}
     dev: true
 
-  /follow-redirects@1.15.9:
-    resolution: {integrity: sha512-gew4GsXizNgdoRyqmyfMHyAmXsZDk6mHkSxZFCzW9gwlbtOW44CDtYavM+y+72qD/Vq2l550kMF52DT8fOLJqQ==}
+  /follow-redirects@1.15.11:
+    resolution: {integrity: sha512-deG2P0JfjrTxl50XGCDyfI97ZGVCxIpfKYmfyrQ54n5FO/0gfIES8C/Psl6kWVDolizcaaxZJnTS0QSMxvnsBQ==}
     engines: {node: '>=4.0'}
     peerDependencies:
       debug: '*'
@@ -20888,16 +20888,6 @@ packages:
     resolution: {integrity: sha512-qfqtYan3rxrnCk1VYaA4H+Ms9xdpPqvLZa6xmMgFvhO32x7/3J/ExcTd6qpxM0vH2GdMI+poehyBZvqfMTto8A==}
     dev: false
 
-  /form-data@4.0.4:
-    resolution: {integrity: sha512-KrGhL9Q4zjj0kiUt5OO4Mr/A/jlI2jDYs5eHBpYHPcBEVSiipAvn2Ko2HnPe20rmcuuvMHNdZFp+4IlGTMF0Ow==}
-    engines: {node: '>= 6'}
-    dependencies:
-      asynckit: 0.4.0
-      combined-stream: 1.0.8
-      es-set-tostringtag: 2.1.0
-      hasown: 2.0.2
-      mime-types: 2.1.35
-
   /form-data@4.0.5:
     resolution: {integrity: sha512-8RipRLol37bNs2bhoV67fiTEvdTrbMUYcFTiy3+wuuOnUog2QBHCZWXDRijWQfAkhBj2Uf5UnVaiWwA5vdd82w==}
     engines: {node: '>= 6'}
@@ -20907,7 +20897,6 @@ packages:
       es-set-tostringtag: 2.1.0
       hasown: 2.0.2
       mime-types: 2.1.35
-    dev: false
 
   /formdata-node@4.4.1:
     resolution: {integrity: sha512-0iirZp3uVDjVGt9p49aTaqjk84TrglENEDuqfdlZQ1roC9CWlPk6Avf8EEnZNcAqPonwkG35x4n3ww/1THYAeQ==}
@@ -22277,7 +22266,7 @@ packages:
     engines: {node: '>=8.0.0'}
     dependencies:
       eventemitter3: 4.0.7
-      follow-redirects: 1.15.9
+      follow-redirects: 1.15.11
       requires-port: 1.0.0
     transitivePeerDependencies:
       - debug
@@ -23880,7 +23869,7 @@ packages:
       decimal.js: 10.5.0
       domexception: 4.0.0
       escodegen: 2.1.0
-      form-data: 4.0.4
+      form-data: 4.0.5
       html-encoding-sniffer: 3.0.0
       http-proxy-agent: 5.0.0
       https-proxy-agent: 5.0.1
@@ -24319,7 +24308,7 @@ packages:
       '@aws-crypto/sha256-js': 5.2.0
       aes-js: 3.1.2
       assert: 2.1.0
-      axios: 1.11.0
+      axios: 1.13.5
       base64-js: 1.5.1
       bech32: 2.0.0
       bolt11: 1.4.1
@@ -29796,7 +29785,7 @@ packages:
       '@types/qs': 6.14.0
       caseless: 0.12.0
       concat-stream: 1.6.2
-      form-data: 4.0.4
+      form-data: 4.0.5
       http-basic: 8.1.3
       http-response-object: 3.0.2
       promise: 8.3.0
@@ -30397,7 +30386,7 @@ packages:
     resolution: {integrity: sha512-aJLBvI7ODLmFHI7ZYLBiMZKIdHuF9PrPeRM/GBMDg/AAzGXs4V8gEnNPHyTVThK0/8J48YHSqXMlQ+WJR5nxoQ==}
     engines: {node: '>=14.0'}
     dependencies:
-      axios: 1.11.0
+      axios: 1.13.5
       dayjs: 1.11.13
       https-proxy-agent: 5.0.1
       jsonwebtoken: 9.0.2
