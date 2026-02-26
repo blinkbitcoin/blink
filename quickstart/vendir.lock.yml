@@ -2,24 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'chore(deps): bump chromedriver v145.0.6 (#478)...'
-      sha: eab1d54e5e2c40cbc97af058f589c03381e7c32d
+      commitTitle: 'feat(notifications): add label to action types for bulletin button
+        (#458)...'
+      sha: 85afd7fc1fc02ebdd78980775cadf833ac8d2ef6
       tags:
-      - 0.21.139-3-geab1d54e5
+      - 0.21.140-1-g85afd7fc1
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'chore(deps): bump chromedriver v145.0.6 (#478)...'
-      sha: eab1d54e5e2c40cbc97af058f589c03381e7c32d
+      commitTitle: 'feat(notifications): add label to action types for bulletin button
+        (#458)...'
+      sha: 85afd7fc1fc02ebdd78980775cadf833ac8d2ef6
       tags:
-      - 0.21.139-3-geab1d54e5
+      - 0.21.140-1-g85afd7fc1
     path: schemas
   - git:
-      commitTitle: 'chore(deps): bump chromedriver v145.0.6 (#478)...'
-      sha: eab1d54e5e2c40cbc97af058f589c03381e7c32d
+      commitTitle: 'feat(notifications): add label to action types for bulletin button
+        (#458)...'
+      sha: 85afd7fc1fc02ebdd78980775cadf833ac8d2ef6
       tags:
-      - 0.21.139-3-geab1d54e5
+      - 0.21.140-1-g85afd7fc1
     path: gql
   path: graphql
 kind: LockConfig
