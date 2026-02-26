@@ -15,7 +15,7 @@ import {
   LnInvoiceCreateOnBehalfOfRecipientDocument,
   LnInvoiceCreateOnBehalfOfRecipientMutation,
 } from "@/lib/graphql/generated"
-import { client } from "@/app/lnurlp/[username]/graphql"
+import { client, COMMENT_SIZE } from "@/app/lnurlp/[username]/graphql"
 import { getOriginalRequestInfo } from "@/lib/utils"
 
 gql`
@@ -23,12 +23,14 @@ gql`
     $walletId: WalletId!
     $amount: SatAmount!
     $descriptionHash: Hex32Bytes!
+    $memo: Memo
   ) {
     mutationData: lnInvoiceCreateOnBehalfOfRecipient(
       input: {
         recipientWalletId: $walletId
         amount: $amount
         descriptionHash: $descriptionHash
+        memo: $memo
       }
     ) {
       errors {
@@ -84,11 +86,23 @@ export async function GET(
   // this is part of the lnurl spec
   const amount = searchParams.get("amount")
   const nostr = searchParams.get("nostr")
+  const rawComment = searchParams.get("comment")
+  // Trim whitespace and strip ASCII control characters (NULL, backspace, DEL, etc.)
+  // while preserving tab (\x09), newline (\x0A), and carriage return (\x0D)
+  // eslint-disable-next-line no-control-regex
+  const comment = rawComment?.trim().replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "").trim() || null
 
   if (!amount || !username) {
     return NextResponse.json({
       status: "ERROR",
       reason: "Invalid request",
+    })
+  }
+
+  if (comment && comment.length > COMMENT_SIZE) {
+    return NextResponse.json({
+      status: "ERROR",
+      reason: `Comment too long. Maximum ${COMMENT_SIZE} characters allowed.`,
     })
   }
 
@@ -150,6 +164,7 @@ export async function GET(
         walletId,
         amount: amountSats,
         descriptionHash,
+        ...(comment ? { memo: comment } : {}),
       },
     })
 
