@@ -21,18 +21,20 @@ impl From<history::StatefulNotification> for types::StatefulNotification {
             action: notification.action().map(|a| match a {
                 Action::OpenDeepLink(deep_link) => {
                     types::NotificationAction::OpenDeepLinkAction(types::OpenDeepLinkAction {
+                        label: deep_link.label.clone(),
                         deep_link: deep_link.to_link_string(),
                     })
                 }
-                Action::OpenExternalUrl(url) => types::NotificationAction::OpenExternalLinkAction(
-                    types::OpenExternalLinkAction {
-                        url: url.into_inner(),
-                    },
-                ),
+                Action::OpenExternalUrl(url) => {
+                    let label = url.label.clone();
+                    types::NotificationAction::OpenExternalLinkAction(
+                        types::OpenExternalLinkAction {
+                            url: url.into_inner(),
+                            label,
+                        },
+                    )
+                }
             }),
-            bulletin_button: notification
-                .bulletin_button()
-                .map(|b| types::BulletinButton { label: b.label }),
             icon: notification.icon().map(Into::into),
         }
     }

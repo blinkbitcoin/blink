@@ -81,6 +81,8 @@ pub enum Icon {
 pub struct DeepLink {
     pub screen: Option<DeepLinkScreen>,
     pub action: Option<DeepLinkAction>,
+    #[serde(default)]
+    pub label: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -116,28 +118,62 @@ pub enum DeepLinkAction {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct BulletinButton {
-    pub label: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Action {
     OpenDeepLink(DeepLink),
     OpenExternalUrl(ExternalUrl),
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct ExternalUrl(String);
+impl Action {
+    pub fn label(&self) -> Option<&str> {
+        match self {
+            Action::OpenDeepLink(dl) => dl.label.as_deref(),
+            Action::OpenExternalUrl(eu) => eu.label.as_deref(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct ExternalUrl {
+    url: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+}
 
 impl ExternalUrl {
     pub fn into_inner(self) -> String {
-        self.0
+        self.url
     }
 }
 
 impl From<String> for ExternalUrl {
     fn from(s: String) -> Self {
-        Self(s)
+        Self {
+            url: s,
+            label: None,
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for ExternalUrl {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum ExternalUrlRepr {
+            Simple(String),
+            Struct {
+                url: String,
+                #[serde(default)]
+                label: Option<String>,
+            },
+        }
+
+        match ExternalUrlRepr::deserialize(deserializer)? {
+            ExternalUrlRepr::Simple(url) => Ok(ExternalUrl { url, label: None }),
+            ExternalUrlRepr::Struct { url, label } => Ok(ExternalUrl { url, label }),
+        }
     }
 }
 
@@ -210,10 +246,6 @@ pub trait NotificationEvent: std::fmt::Debug + Send + Sync {
     }
 
     fn action(&self) -> Option<Action> {
-        None
-    }
-
-    fn bulletin_button(&self) -> Option<BulletinButton> {
         None
     }
 

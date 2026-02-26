@@ -243,7 +243,6 @@ message MarketingNotificationTriggered {
   bool should_add_to_bulletin = 5;
   optional Action action = 6;
   optional Icon icon = 7;
-  optional BulletinButton bulletin_button = 8;
 }
 
 message LocalizedContent {
@@ -251,15 +250,12 @@ message LocalizedContent {
   string body = 2;
 }
 
-message BulletinButton {
-  string label = 1;
-}
-
 message Action {
   oneof data {
     DeepLink deep_link = 1;
     string external_url = 2;
   }
+  optional string label = 3;
 }
 
 message DeepLink {

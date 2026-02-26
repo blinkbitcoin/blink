@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use super::{Action, BulletinButton, Icon, NotificationEvent};
+use super::{Action, Icon, NotificationEvent};
 use crate::{messages::*, primitives::*};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -15,8 +15,6 @@ pub struct MarketingNotificationTriggered {
     #[serde(default)]
     pub action: Option<Action>,
     #[serde(default)]
-    pub bulletin_button: Option<BulletinButton>,
-    #[serde(default)]
     pub icon: Option<Icon>,
 }
 
@@ -27,10 +25,6 @@ impl NotificationEvent for MarketingNotificationTriggered {
 
     fn action(&self) -> Option<Action> {
         self.action.clone()
-    }
-
-    fn bulletin_button(&self) -> Option<BulletinButton> {
-        self.bulletin_button.clone()
     }
 
     fn should_send_push(&self) -> bool {
@@ -84,46 +78,45 @@ mod tests {
             should_add_to_history: true,
             should_add_to_bulletin: true,
             action: None,
-            bulletin_button: None,
             icon: None,
         }
     }
 
     #[test]
-    fn bulletin_button_returns_some_when_set() {
-        let mut event = default_event();
-        event.bulletin_button = Some(BulletinButton {
-            label: "Deposit".to_string(),
-        });
-
-        let button = event
-            .bulletin_button()
-            .expect("should return bulletin button");
-        assert_eq!(button.label, "Deposit");
-    }
-
-    #[test]
-    fn bulletin_button_returns_none_when_not_set() {
-        let event = default_event();
-        assert!(event.bulletin_button().is_none());
-    }
-
-    #[test]
-    fn action_and_bulletin_button_coexist() {
+    fn action_label_returns_some_when_set_on_deep_link() {
         let mut event = default_event();
         event.action = Some(Action::OpenDeepLink(DeepLink {
             screen: None,
             action: None,
+            label: Some("Deposit".to_string()),
         }));
-        event.bulletin_button = Some(BulletinButton {
-            label: "Click me".to_string(),
-        });
 
-        assert!(event.action().is_some());
-        let button = event
-            .bulletin_button()
-            .expect("should return bulletin button");
-        assert_eq!(button.label, "Click me");
+        let action = event.action().expect("should return action");
+        assert_eq!(action.label(), Some("Deposit"));
+    }
+
+    #[test]
+    fn action_label_returns_none_when_not_set() {
+        let mut event = default_event();
+        event.action = Some(Action::OpenDeepLink(DeepLink {
+            screen: None,
+            action: None,
+            label: None,
+        }));
+
+        let action = event.action().expect("should return action");
+        assert_eq!(action.label(), None);
+    }
+
+    #[test]
+    fn action_label_on_external_url() {
+        let mut event = default_event();
+        event.action = Some(Action::OpenExternalUrl(ExternalUrl::from(
+            "https://example.com".to_string(),
+        )));
+
+        let action = event.action().expect("should return action");
+        assert_eq!(action.label(), None);
     }
 
     #[test]
@@ -153,34 +146,30 @@ mod tests {
     }
 
     #[test]
-    fn serde_roundtrip_with_bulletin_button() {
+    fn serde_roundtrip_with_action_label() {
         let mut event = default_event();
-        event.bulletin_button = Some(BulletinButton {
-            label: "See more".to_string(),
-        });
-        event.action = Some(Action::OpenExternalUrl(ExternalUrl::from(
-            "https://example.com".to_string(),
-        )));
+        event.action = Some(Action::OpenDeepLink(DeepLink {
+            screen: None,
+            action: None,
+            label: Some("See more".to_string()),
+        }));
 
         let json = serde_json::to_string(&event).expect("should serialize");
         let deserialized: MarketingNotificationTriggered =
             serde_json::from_str(&json).expect("should deserialize");
 
-        let button = deserialized
-            .bulletin_button()
-            .expect("should have bulletin button");
-        assert_eq!(button.label, "See more");
-        assert!(deserialized.action().is_some());
+        let action = deserialized.action().expect("should have action");
+        assert_eq!(action.label(), Some("See more"));
     }
 
     #[test]
-    fn serde_backward_compat_without_bulletin_button() {
+    fn serde_backward_compat_without_label() {
         let json = r#"{
             "content": {},
             "default_content": {
                 "locale": "en",
                 "title": "Old notification",
-                "body": "No bulletin button field"
+                "body": "No label field"
             },
             "should_send_push": false,
             "should_add_to_history": true,
@@ -188,10 +177,30 @@ mod tests {
         }"#;
 
         let event: MarketingNotificationTriggered =
-            serde_json::from_str(json).expect("should deserialize without bulletin_button");
-        assert!(event.bulletin_button().is_none());
+            serde_json::from_str(json).expect("should deserialize without label");
         assert!(event.action().is_none());
         assert!(event.icon().is_none());
+    }
+
+    #[test]
+    fn serde_backward_compat_external_url_as_string() {
+        let json = r#"{
+            "content": {},
+            "default_content": {
+                "locale": "en",
+                "title": "Test",
+                "body": "Test"
+            },
+            "should_send_push": true,
+            "should_add_to_history": true,
+            "should_add_to_bulletin": false,
+            "action": { "OpenExternalUrl": "https://example.com" }
+        }"#;
+
+        let event: MarketingNotificationTriggered =
+            serde_json::from_str(json).expect("should deserialize old ExternalUrl format");
+        let action = event.action().expect("should have action");
+        assert_eq!(action.label(), None);
     }
 
     #[test]

@@ -410,7 +410,6 @@ impl NotificationsService for Notifications {
                             user_ids,
                             action,
                             icon,
-                            bulletin_button,
                         },
                     )),
             }) => {
@@ -442,8 +441,6 @@ impl NotificationsService for Notifications {
                     .map(notification_event::Action::try_from)
                     .transpose()?;
 
-                let bulletin_button = bulletin_button.map(notification_event::BulletinButton::from);
-
                 let icon = if let Some(icon) = icon {
                     Some(
                         proto::Icon::try_from(icon)
@@ -464,7 +461,6 @@ impl NotificationsService for Notifications {
                             should_add_to_history,
                             should_send_push,
                             action,
-                            bulletin_button,
                             icon,
                         },
                     )

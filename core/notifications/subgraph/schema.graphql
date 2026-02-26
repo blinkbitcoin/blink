@@ -1,9 +1,3 @@
-type BulletinButton {
-	label: String!
-}
-
-
-
 enum Icon {
 	ARROW_RIGHT
 	ARROW_LEFT
@@ -67,10 +61,12 @@ union NotificationAction = OpenDeepLinkAction | OpenExternalLinkAction
 
 type OpenDeepLinkAction {
 	deepLink: String!
+	label: String
 }
 
 type OpenExternalLinkAction {
 	url: String!
+	label: String
 }
 
 """
@@ -102,7 +98,6 @@ type StatefulNotification {
 	body: String!
 	deepLink: String
 	action: NotificationAction
-	bulletinButton: BulletinButton
 	createdAt: Timestamp!
 	acknowledgedAt: Timestamp
 	bulletinEnabled: Boolean!

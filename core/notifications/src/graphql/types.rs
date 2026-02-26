@@ -39,18 +39,15 @@ impl ScalarType for Timestamp {
 }
 
 #[derive(SimpleObject)]
-pub(super) struct BulletinButton {
-    pub label: String,
-}
-
-#[derive(SimpleObject)]
 pub(super) struct OpenDeepLinkAction {
     pub deep_link: String,
+    pub label: Option<String>,
 }
 
 #[derive(SimpleObject)]
 pub(super) struct OpenExternalLinkAction {
     pub url: String,
+    pub label: Option<String>,
 }
 
 #[derive(Union)]
@@ -66,7 +63,6 @@ pub(super) struct StatefulNotification {
     pub body: String,
     pub deep_link: Option<String>,
     pub action: Option<NotificationAction>,
-    pub bulletin_button: Option<BulletinButton>,
     pub created_at: Timestamp,
     pub acknowledged_at: Option<Timestamp>,
     pub bulletin_enabled: bool,

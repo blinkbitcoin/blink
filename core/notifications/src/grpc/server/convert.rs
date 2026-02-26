@@ -249,6 +249,8 @@ impl TryFrom<proto::Action> for notification_event::Action {
     type Error = tonic::Status;
 
     fn try_from(action: proto::Action) -> Result<Self, Self::Error> {
+        let label = action.label;
+
         match action.data {
             Some(proto::action::Data::DeepLink(deep_link)) => {
                 let screen = if let Some(screen) = deep_link.screen {
@@ -271,26 +273,22 @@ impl TryFrom<proto::Action> for notification_event::Action {
                     None
                 };
 
-                let dl = notification_event::DeepLink { screen, action };
+                let dl = notification_event::DeepLink {
+                    screen,
+                    action,
+                    label,
+                };
                 Ok(notification_event::Action::OpenDeepLink(dl))
             }
             Some(proto::action::Data::ExternalUrl(url)) => {
-                Ok(notification_event::Action::OpenExternalUrl(
-                    notification_event::ExternalUrl::from(url),
-                ))
+                let mut eu = notification_event::ExternalUrl::from(url);
+                eu.label = label;
+                Ok(notification_event::Action::OpenExternalUrl(eu))
             }
             None => Err(tonic::Status::new(
                 tonic::Code::InvalidArgument,
                 "missing action data",
             )),
-        }
-    }
-}
-
-impl From<proto::BulletinButton> for notification_event::BulletinButton {
-    fn from(button: proto::BulletinButton) -> Self {
-        Self {
-            label: button.label,
         }
     }
 }
