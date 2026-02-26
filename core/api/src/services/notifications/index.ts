@@ -662,7 +662,7 @@ export const NotificationsService = (): INotificationsService => {
         if (externalUrl !== undefined) action.setExternalUrl(externalUrl)
       }
 
-      const label = openDeepLink?.label || openExternalUrl?.label
+      const label = openExternalUrl?.label || openDeepLink?.label
       if (action && typeof label === "string" && label.trim()) {
         action.setLabel(label)
       }
