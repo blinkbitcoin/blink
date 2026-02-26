@@ -2,27 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'chore(deps): update nix flake inputs for Docker Engine 29 compat
-        (#473)...'
-      sha: 0a5847fe2ce14fec0da6b743599e2dbffbc03e1f
+      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1456
+        (#477)...'
+      sha: 24e276cc18f233ef8b5cefe498d51389e6a98771
       tags:
-      - 0.21.138-3-g0a5847fe2
+      - 0.21.139-1-g24e276cc1
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'chore(deps): update nix flake inputs for Docker Engine 29 compat
-        (#473)...'
-      sha: 0a5847fe2ce14fec0da6b743599e2dbffbc03e1f
+      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1456
+        (#477)...'
+      sha: 24e276cc18f233ef8b5cefe498d51389e6a98771
       tags:
-      - 0.21.138-3-g0a5847fe2
+      - 0.21.139-1-g24e276cc1
     path: schemas
   - git:
-      commitTitle: 'chore(deps): update nix flake inputs for Docker Engine 29 compat
-        (#473)...'
-      sha: 0a5847fe2ce14fec0da6b743599e2dbffbc03e1f
+      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1456
+        (#477)...'
+      sha: 24e276cc18f233ef8b5cefe498d51389e6a98771
       tags:
-      - 0.21.138-3-g0a5847fe2
+      - 0.21.139-1-g24e276cc1
     path: gql
   path: graphql
 kind: LockConfig
