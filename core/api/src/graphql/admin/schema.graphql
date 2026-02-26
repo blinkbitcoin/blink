@@ -137,10 +137,6 @@ type BTCWallet implements Wallet {
   walletCurrency: WalletCurrency!
 }
 
-input BulletinButtonInput {
-  label: String!
-}
-
 type Coordinates {
   latitude: Float!
   longitude: Float!
@@ -315,7 +311,6 @@ input LocalizedNotificationContentInput {
 }
 
 input MarketingNotificationTriggerInput {
-  bulletinButton: BulletinButtonInput
   icon: NotificationIcon
   localizedNotificationContents: [LocalizedNotificationContentInput!]!
   openDeepLink: OpenDeepLinkInput
@@ -431,10 +426,12 @@ scalar OnChainTxHash
 
 input OpenDeepLinkInput {
   action: DeepLinkAction
+  label: String
   screen: DeepLinkScreen
 }
 
 input OpenExternalUrlInput {
+  label: String
   url: ExternalUrl!
 }
 

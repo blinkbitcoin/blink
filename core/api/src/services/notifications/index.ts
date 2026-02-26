@@ -28,7 +28,6 @@ import {
   DeepLink as ProtoDeepLink,
   HandleNotificationEventResponse,
   Action,
-  BulletinButton,
 } from "./proto/notifications_pb"
 
 import * as notificationsGrpc from "./grpc-client"
@@ -639,7 +638,6 @@ export const NotificationsService = (): INotificationsService => {
     localizedContents: localizedPushContents,
     openDeepLink,
     openExternalUrl,
-    bulletinButton,
     shouldSendPush,
     shouldAddToHistory,
     shouldAddToBulletin,
@@ -657,17 +655,16 @@ export const NotificationsService = (): INotificationsService => {
 
       const externalUrl = openExternalUrl?.url
 
-      let protoBulletinButton: BulletinButton | undefined = undefined
-      if (bulletinButton) {
-        protoBulletinButton = new BulletinButton()
-        protoBulletinButton.setLabel(bulletinButton.label)
-      }
-
       let action: Action | undefined = undefined
       if (deepLink !== undefined || externalUrl !== undefined) {
         action = new Action()
         if (deepLink !== undefined) action.setDeepLink(deepLink)
         if (externalUrl !== undefined) action.setExternalUrl(externalUrl)
+      }
+
+      const label = openDeepLink?.label || openExternalUrl?.label
+      if (action !== undefined && label !== undefined) {
+        action.setLabel(label)
       }
 
       const protoIcon = icon ? iconToGrpcIcon(icon) : undefined
@@ -685,8 +682,6 @@ export const NotificationsService = (): INotificationsService => {
           marketingNotification.getLocalizedContentMap().set(language, localizedContent)
         })
         if (action !== undefined) marketingNotification.setAction(action)
-        if (protoBulletinButton !== undefined)
-          marketingNotification.setBulletinButton(protoBulletinButton)
         if (protoIcon !== undefined) marketingNotification.setIcon(protoIcon)
 
         marketingNotification.setShouldSendPush(shouldSendPush)

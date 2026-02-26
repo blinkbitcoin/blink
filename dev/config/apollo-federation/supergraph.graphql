@@ -319,12 +319,6 @@ type BuildInformation
   helmRevision: Int
 }
 
-type BulletinButton
-  @join__type(graph: NOTIFICATIONS)
-{
-  label: String!
-}
-
 type CallbackEndpoint
   @join__type(graph: PUBLIC)
 {
@@ -1592,12 +1586,14 @@ type OpenDeepLinkAction
   @join__type(graph: NOTIFICATIONS)
 {
   deepLink: String!
+  label: String
 }
 
 type OpenExternalLinkAction
   @join__type(graph: NOTIFICATIONS)
 {
   url: String!
+  label: String
 }
 
 """Information about pagination in a connection"""
@@ -1944,7 +1940,6 @@ type StatefulNotification
   body: String!
   deepLink: String
   action: NotificationAction
-  bulletinButton: BulletinButton
   createdAt: Timestamp!
   acknowledgedAt: Timestamp
   bulletinEnabled: Boolean!

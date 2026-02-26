@@ -33,6 +33,9 @@ const OpenDeepLinkInput = GT.Input({
     action: {
       type: DeepLinkAction,
     },
+    label: {
+      type: GT.String,
+    },
   }),
 })
 
@@ -42,14 +45,8 @@ const OpenExternalUrlInput = GT.Input({
     url: {
       type: GT.NonNull(ExternalUrl),
     },
-  }),
-})
-
-const BulletinButtonInput = GT.Input({
-  name: "BulletinButtonInput",
-  fields: () => ({
     label: {
-      type: GT.NonNull(GT.String),
+      type: GT.String,
     },
   }),
 })
@@ -78,9 +75,6 @@ const MarketingNotificationTriggerInput = GT.Input({
     openExternalUrl: {
       type: OpenExternalUrlInput,
     },
-    bulletinButton: {
-      type: BulletinButtonInput,
-    },
     icon: {
       type: NotificationIcon,
     },
@@ -105,10 +99,10 @@ const MarketingNotificationTriggerMutation = GT.Field<
         | {
             screen: DeepLinkScreen | Error | undefined
             action: DeepLinkAction | Error | undefined
+            label: string | undefined
           }
         | undefined
-      openExternalUrl: { url: string | Error } | undefined
-      bulletinButton: { label: string } | undefined
+      openExternalUrl: { url: string | Error; label: string | undefined } | undefined
       localizedNotificationContents: {
         title: string
         body: string
@@ -134,7 +128,6 @@ const MarketingNotificationTriggerMutation = GT.Field<
       icon,
       openDeepLink,
       openExternalUrl,
-      bulletinButton,
       localizedNotificationContents,
     } = args.input
 
@@ -159,6 +152,7 @@ const MarketingNotificationTriggerMutation = GT.Field<
       nonErrorOpenDeepLink = {
         screen: openDeepLink.screen,
         action: openDeepLink.action,
+        label: openDeepLink.label,
       }
     }
 
@@ -173,6 +167,7 @@ const MarketingNotificationTriggerMutation = GT.Field<
       }
       nonErrorOpenExternalUrl = {
         url: openExternalUrl.url,
+        label: openExternalUrl.label,
       }
     }
 
@@ -206,7 +201,6 @@ const MarketingNotificationTriggerMutation = GT.Field<
       phoneCountryCodesFilter: nonErrorPhoneCountryCodesFilter,
       openDeepLink: nonErrorOpenDeepLink,
       openExternalUrl: nonErrorOpenExternalUrl,
-      bulletinButton,
       shouldSendPush,
       shouldAddToHistory,
       shouldAddToBulletin,
