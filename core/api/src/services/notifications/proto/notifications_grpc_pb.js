@@ -371,4 +371,4 @@ var NotificationsServiceService = exports.NotificationsServiceService = {
   },
 };
 
-exports.NotificationsServiceClient = grpc.makeGenericClientConstructor(NotificationsServiceService);
+exports.NotificationsServiceClient = grpc.makeGenericClientConstructor(NotificationsServiceService, 'NotificationsService');

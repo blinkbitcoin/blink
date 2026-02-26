@@ -973,6 +973,11 @@ export class Action extends jspb.Message {
     getExternalUrl(): string;
     setExternalUrl(value: string): Action;
 
+    hasLabel(): boolean;
+    clearLabel(): void;
+    getLabel(): string | undefined;
+    setLabel(value: string): Action;
+
     getDataCase(): Action.DataCase;
 
     serializeBinary(): Uint8Array;
@@ -989,6 +994,7 @@ export namespace Action {
     export type AsObject = {
         deepLink?: DeepLink.AsObject,
         externalUrl: string,
+        label?: string,
     }
 
     export enum DataCase {

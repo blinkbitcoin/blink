@@ -145,11 +145,13 @@ type TriggerMarketingNotificationArgs = {
     | {
         screen: DeepLinkScreen | undefined
         action: DeepLinkAction | undefined
+        label: string | undefined
       }
     | undefined
   openExternalUrl:
     | {
         url: string
+        label: string | undefined
       }
     | undefined
   shouldSendPush: boolean

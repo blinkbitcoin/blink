@@ -662,6 +662,11 @@ export const NotificationsService = (): INotificationsService => {
         if (externalUrl !== undefined) action.setExternalUrl(externalUrl)
       }
 
+      const label = openExternalUrl?.label || openDeepLink?.label
+      if (action && typeof label === "string" && label.trim()) {
+        action.setLabel(label)
+      }
+
       const protoIcon = icon ? iconToGrpcIcon(icon) : undefined
 
       const marketingNotificationRequests: Promise<HandleNotificationEventResponse>[] = []

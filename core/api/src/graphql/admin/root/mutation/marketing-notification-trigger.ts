@@ -33,6 +33,9 @@ const OpenDeepLinkInput = GT.Input({
     action: {
       type: DeepLinkAction,
     },
+    label: {
+      type: GT.String,
+    },
   }),
 })
 
@@ -41,6 +44,9 @@ const OpenExternalUrlInput = GT.Input({
   fields: () => ({
     url: {
       type: GT.NonNull(ExternalUrl),
+    },
+    label: {
+      type: GT.String,
     },
   }),
 })
@@ -93,9 +99,10 @@ const MarketingNotificationTriggerMutation = GT.Field<
         | {
             screen: DeepLinkScreen | Error | undefined
             action: DeepLinkAction | Error | undefined
+            label: string | undefined
           }
         | undefined
-      openExternalUrl: { url: string | Error } | undefined
+      openExternalUrl: { url: string | Error; label: string | undefined } | undefined
       localizedNotificationContents: {
         title: string
         body: string
@@ -145,6 +152,7 @@ const MarketingNotificationTriggerMutation = GT.Field<
       nonErrorOpenDeepLink = {
         screen: openDeepLink.screen,
         action: openDeepLink.action,
+        label: openDeepLink.label,
       }
     }
 
@@ -159,6 +167,7 @@ const MarketingNotificationTriggerMutation = GT.Field<
       }
       nonErrorOpenExternalUrl = {
         url: openExternalUrl.url,
+        label: openExternalUrl.label,
       }
     }
 

@@ -426,10 +426,12 @@ scalar OnChainTxHash
 
 input OpenDeepLinkInput {
   action: DeepLinkAction
+  label: String
   screen: DeepLinkScreen
 }
 
 input OpenExternalUrlInput {
+  label: String
   url: ExternalUrl!
 }
 
