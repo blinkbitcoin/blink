@@ -146,7 +146,7 @@ mod tests {
     }
 
     #[test]
-    fn serde_roundtrip_with_action_label() {
+    fn serialize_roundtrip_with_action_label() {
         let mut event = default_event();
         event.action = Some(Action::OpenDeepLink(DeepLink {
             screen: None,
@@ -163,7 +163,7 @@ mod tests {
     }
 
     #[test]
-    fn serde_backward_compat_without_label() {
+    fn deserialize_backward_compat_without_label() {
         let json = r#"{
             "content": {},
             "default_content": {
@@ -183,7 +183,7 @@ mod tests {
     }
 
     #[test]
-    fn serde_backward_compat_external_url_as_string() {
+    fn deserialize_backward_compat_external_url_as_string() {
         let json = r#"{
             "content": {},
             "default_content": {
