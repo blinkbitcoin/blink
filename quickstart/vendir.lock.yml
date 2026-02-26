@@ -2,27 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1456
-        (#477)...'
-      sha: 24e276cc18f233ef8b5cefe498d51389e6a98771
+      commitTitle: 'chore(deps): bump chromedriver v145.0.6 (#478)...'
+      sha: eab1d54e5e2c40cbc97af058f589c03381e7c32d
       tags:
-      - 0.21.139-1-g24e276cc1
+      - 0.21.139-3-geab1d54e5
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1456
-        (#477)...'
-      sha: 24e276cc18f233ef8b5cefe498d51389e6a98771
+      commitTitle: 'chore(deps): bump chromedriver v145.0.6 (#478)...'
+      sha: eab1d54e5e2c40cbc97af058f589c03381e7c32d
       tags:
-      - 0.21.139-1-g24e276cc1
+      - 0.21.139-3-geab1d54e5
     path: schemas
   - git:
-      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1456
-        (#477)...'
-      sha: 24e276cc18f233ef8b5cefe498d51389e6a98771
+      commitTitle: 'chore(deps): bump chromedriver v145.0.6 (#478)...'
+      sha: eab1d54e5e2c40cbc97af058f589c03381e7c32d
       tags:
-      - 0.21.139-1-g24e276cc1
+      - 0.21.139-3-geab1d54e5
     path: gql
   path: graphql
 kind: LockConfig
