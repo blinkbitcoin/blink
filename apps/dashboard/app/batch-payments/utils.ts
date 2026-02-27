@@ -21,6 +21,11 @@ const HEADERS = {
   MEMO: "memo",
 } as const
 
+const ERROR_MESSAGES = {
+  INVALID_USERNAMES_PREFIX: "Invalid username(s) found:",
+  NO_WALLET_FOUND: "No wallet found for this user",
+} as const
+
 export function validateCSV({
   fileContent,
   defaultWallet,
@@ -145,6 +150,7 @@ export const processRecords = async ({
   records: CSVRecord[]
 }): Promise<ProcessedRecords[] | Error> => {
   const processedRecords: ProcessedRecords[] = []
+  const validationErrors: string[] = []
 
   for (const record of records) {
     if (Number(record.amount) <= 0) {
@@ -153,11 +159,13 @@ export const processRecords = async ({
 
     const getDefaultWalletID = await getUserDetailsAction({ username: record.username })
     if (getDefaultWalletID.error) {
-      return new Error(getDefaultWalletID.message)
+      validationErrors.push(`${record.username}: ${getDefaultWalletID.message}`)
+      continue
     }
 
     if (!getDefaultWalletID.responsePayload) {
-      return new Error(`No wallet found for the user ${record.username}`)
+      validationErrors.push(`${record.username}: ${ERROR_MESSAGES.NO_WALLET_FOUND}`)
+      continue
     }
 
     processedRecords.push({
@@ -173,6 +181,13 @@ export const processRecords = async ({
       },
     })
   }
+
+  if (validationErrors.length > 0) {
+    const count = validationErrors.length
+    const errorMessage = `${count} ${ERROR_MESSAGES.INVALID_USERNAMES_PREFIX}\n\n${validationErrors.join("\n")}`
+    return new Error(errorMessage)
+  }
+
   return processedRecords
 }
 
