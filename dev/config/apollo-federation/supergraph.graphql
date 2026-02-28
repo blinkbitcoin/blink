@@ -185,6 +185,7 @@ type ApiKey
   expiresAt: Timestamp
   readOnly: Boolean!
   scopes: [Scope!]!
+  limits: ApiKeyLimits!
 }
 
 input ApiKeyCreateInput
@@ -202,6 +203,25 @@ type ApiKeyCreatePayload
   apiKeySecret: String!
 }
 
+type ApiKeyLimits
+  @join__type(graph: API_KEYS)
+{
+  dailyLimitSats: Int
+  weeklyLimitSats: Int
+  monthlyLimitSats: Int
+  annualLimitSats: Int
+  spentLast24HSats: Int!
+  spentLast7DSats: Int!
+  spentLast30DSats: Int!
+  spentLast365DSats: Int!
+}
+
+input ApiKeyRemoveLimitInput
+  @join__type(graph: API_KEYS)
+{
+  id: ID!
+}
+
 input ApiKeyRevokeInput
   @join__type(graph: API_KEYS)
 {
@@ -212,6 +232,40 @@ type ApiKeyRevokePayload
   @join__type(graph: API_KEYS)
 {
   apiKey: ApiKey!
+}
+
+input ApiKeySetAnnualLimitInput
+  @join__type(graph: API_KEYS)
+{
+  id: ID!
+  annualLimitSats: Int!
+}
+
+input ApiKeySetDailyLimitInput
+  @join__type(graph: API_KEYS)
+{
+  id: ID!
+  dailyLimitSats: Int!
+}
+
+type ApiKeySetLimitPayload
+  @join__type(graph: API_KEYS)
+{
+  apiKey: ApiKey!
+}
+
+input ApiKeySetMonthlyLimitInput
+  @join__type(graph: API_KEYS)
+{
+  id: ID!
+  monthlyLimitSats: Int!
+}
+
+input ApiKeySetWeeklyLimitInput
+  @join__type(graph: API_KEYS)
+{
+  id: ID!
+  weeklyLimitSats: Int!
 }
 
 type Authorization
@@ -230,13 +284,6 @@ type AuthTokenPayload
   authToken: AuthToken
   errors: [Error!]!
   totpRequired: Boolean
-}
-
-type BlockInfo
-  @join__type(graph: PUBLIC)
-{
-  blockHash: String
-  blockHeight: Int
 }
 
 """
@@ -635,8 +682,6 @@ Provides global settings for the application which might have an impact for the 
 type Globals
   @join__type(graph: PUBLIC)
 {
-  """Current block height and block hash"""
-  blockInfo: BlockInfo
   buildInformation: BuildInformation!
   feesInformation: FeesInformation!
 
@@ -1283,6 +1328,14 @@ type Mutation
 {
   apiKeyCreate(input: ApiKeyCreateInput!): ApiKeyCreatePayload! @join__field(graph: API_KEYS)
   apiKeyRevoke(input: ApiKeyRevokeInput!): ApiKeyRevokePayload! @join__field(graph: API_KEYS)
+  apiKeySetDailyLimit(input: ApiKeySetDailyLimitInput!): ApiKeySetLimitPayload! @join__field(graph: API_KEYS)
+  apiKeySetWeeklyLimit(input: ApiKeySetWeeklyLimitInput!): ApiKeySetLimitPayload! @join__field(graph: API_KEYS)
+  apiKeySetMonthlyLimit(input: ApiKeySetMonthlyLimitInput!): ApiKeySetLimitPayload! @join__field(graph: API_KEYS)
+  apiKeySetAnnualLimit(input: ApiKeySetAnnualLimitInput!): ApiKeySetLimitPayload! @join__field(graph: API_KEYS)
+  apiKeyRemoveDailyLimit(input: ApiKeyRemoveLimitInput!): ApiKeySetLimitPayload! @join__field(graph: API_KEYS)
+  apiKeyRemoveWeeklyLimit(input: ApiKeyRemoveLimitInput!): ApiKeySetLimitPayload! @join__field(graph: API_KEYS)
+  apiKeyRemoveMonthlyLimit(input: ApiKeyRemoveLimitInput!): ApiKeySetLimitPayload! @join__field(graph: API_KEYS)
+  apiKeyRemoveAnnualLimit(input: ApiKeyRemoveLimitInput!): ApiKeySetLimitPayload! @join__field(graph: API_KEYS)
   statefulNotificationAcknowledge(input: StatefulNotificationAcknowledgeInput!): StatefulNotificationAcknowledgePayload! @join__field(graph: NOTIFICATIONS)
   accountDelete: AccountDeletePayload! @join__field(graph: PUBLIC)
   accountDisableNotificationCategory(input: AccountDisableNotificationCategoryInput!): AccountUpdateNotificationSettingsPayload! @join__field(graph: PUBLIC)
@@ -1414,7 +1467,6 @@ type Mutation
   userEmailRegistrationValidate(input: UserEmailRegistrationValidateInput!): UserEmailRegistrationValidatePayload! @join__field(graph: PUBLIC)
   userLogin(input: UserLoginInput!): AuthTokenPayload! @join__field(graph: PUBLIC)
   userLoginUpgrade(input: UserLoginUpgradeInput!): UpgradePayload! @join__field(graph: PUBLIC)
-  userLoginUpgradeTelegram(input: UserLoginUpgradeTelegramInput!): UpgradePayload! @join__field(graph: PUBLIC)
   userLogout(input: UserLogoutInput): SuccessPayload! @join__field(graph: PUBLIC)
   userPhoneDelete: UserPhoneDeletePayload! @join__field(graph: PUBLIC)
   userPhoneRegistrationInitiate(input: UserPhoneRegistrationInitiateInput!): SuccessPayload! @join__field(graph: PUBLIC)
@@ -2031,10 +2083,6 @@ enum SupportRole
   USER @join__enumValue(graph: PUBLIC)
 }
 
-"""Nonce provided by Telegram Passport to validate the login/upgrade flow"""
-scalar TelegramPassportNonce
-  @join__type(graph: PUBLIC)
-
 """
 Timestamp field, serialized as Unix time (the number of seconds since the Unix epoch)
 """
@@ -2362,13 +2410,6 @@ input UserLoginUpgradeInput
   @join__type(graph: PUBLIC)
 {
   code: OneTimeAuthCode!
-  phone: Phone!
-}
-
-input UserLoginUpgradeTelegramInput
-  @join__type(graph: PUBLIC)
-{
-  nonce: TelegramPassportNonce!
   phone: Phone!
 }
 

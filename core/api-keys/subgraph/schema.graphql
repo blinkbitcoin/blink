@@ -8,6 +8,7 @@ type ApiKey {
 	expiresAt: Timestamp
 	readOnly: Boolean!
 	scopes: [Scope!]!
+	limits: ApiKeyLimits!
 }
 
 input ApiKeyCreateInput {
@@ -21,12 +22,51 @@ type ApiKeyCreatePayload {
 	apiKeySecret: String!
 }
 
+type ApiKeyLimits {
+	dailyLimitSats: Int
+	weeklyLimitSats: Int
+	monthlyLimitSats: Int
+	annualLimitSats: Int
+	spentLast24HSats: Int!
+	spentLast7DSats: Int!
+	spentLast30DSats: Int!
+	spentLast365DSats: Int!
+}
+
+input ApiKeyRemoveLimitInput {
+	id: ID!
+}
+
 input ApiKeyRevokeInput {
 	id: ID!
 }
 
 type ApiKeyRevokePayload {
 	apiKey: ApiKey!
+}
+
+input ApiKeySetAnnualLimitInput {
+	id: ID!
+	annualLimitSats: Int!
+}
+
+input ApiKeySetDailyLimitInput {
+	id: ID!
+	dailyLimitSats: Int!
+}
+
+type ApiKeySetLimitPayload {
+	apiKey: ApiKey!
+}
+
+input ApiKeySetMonthlyLimitInput {
+	id: ID!
+	monthlyLimitSats: Int!
+}
+
+input ApiKeySetWeeklyLimitInput {
+	id: ID!
+	weeklyLimitSats: Int!
 }
 
 
@@ -36,6 +76,14 @@ type ApiKeyRevokePayload {
 type Mutation {
 	apiKeyCreate(input: ApiKeyCreateInput!): ApiKeyCreatePayload!
 	apiKeyRevoke(input: ApiKeyRevokeInput!): ApiKeyRevokePayload!
+	apiKeySetDailyLimit(input: ApiKeySetDailyLimitInput!): ApiKeySetLimitPayload!
+	apiKeySetWeeklyLimit(input: ApiKeySetWeeklyLimitInput!): ApiKeySetLimitPayload!
+	apiKeySetMonthlyLimit(input: ApiKeySetMonthlyLimitInput!): ApiKeySetLimitPayload!
+	apiKeySetAnnualLimit(input: ApiKeySetAnnualLimitInput!): ApiKeySetLimitPayload!
+	apiKeyRemoveDailyLimit(input: ApiKeyRemoveLimitInput!): ApiKeySetLimitPayload!
+	apiKeyRemoveWeeklyLimit(input: ApiKeyRemoveLimitInput!): ApiKeySetLimitPayload!
+	apiKeyRemoveMonthlyLimit(input: ApiKeyRemoveLimitInput!): ApiKeySetLimitPayload!
+	apiKeyRemoveAnnualLimit(input: ApiKeyRemoveLimitInput!): ApiKeySetLimitPayload!
 }
 
 

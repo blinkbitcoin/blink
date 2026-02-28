@@ -4,6 +4,8 @@
 pub mod app;
 pub mod cli;
 pub mod graphql;
+pub mod grpc;
 pub mod identity;
+pub mod limits;
 pub mod scope;
 pub mod server;
