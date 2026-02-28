@@ -2,6 +2,7 @@ use axum::http::header::ToStrError;
 use thiserror::Error;
 
 use crate::identity::IdentityError;
+use crate::limits::LimitError;
 
 #[derive(Error, Debug)]
 pub enum ApplicationError {
@@ -15,4 +16,6 @@ pub enum ApplicationError {
     Sqlx(#[from] sqlx::Error),
     #[error("ApplicationError - IdentityError: {0}")]
     Identity(#[from] IdentityError),
+    #[error("ApplicationError - LimitError: {0}")]
+    Limit(#[from] LimitError),
 }

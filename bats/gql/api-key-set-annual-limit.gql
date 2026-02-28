@@ -1,0 +1,12 @@
+mutation apiKeySetAnnualLimit($input: ApiKeySetAnnualLimitInput!) {
+  apiKeySetAnnualLimit(input: $input) {
+    apiKey {
+      id
+      name
+      limits {
+        annualLimitSats
+        spentLast365DSats
+      }
+    }
+  }
+}
