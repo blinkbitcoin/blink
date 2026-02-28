@@ -30,6 +30,19 @@ const confirmedDetailsSchema = new Schema<LnPaymentConfirmedDetails>({
 
 const paymentAttemptSchema = Schema.Types.Mixed
 
+const lnurlSuccessActionSchema = new Schema({
+  tag: {
+    type: String,
+    required: true,
+    enum: ["message", "url", "aes"],
+  },
+  message: String,
+  description: String,
+  url: String,
+  ciphertext: String,
+  iv: String,
+}, { _id: false })
+
 const paymentSchema = new Schema<LnPaymentType>({
   createdAt: {
     type: Date,
@@ -58,6 +71,10 @@ const paymentSchema = new Schema<LnPaymentType>({
   isCompleteRecord: {
     type: Boolean,
     default: false,
+  },
+  lnurlSuccessAction: {
+    type: lnurlSuccessActionSchema,
+    default: null,
   },
 })
 

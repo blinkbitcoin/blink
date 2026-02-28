@@ -3,6 +3,7 @@ import dedent from "dedent"
 import OnChainTxHash from "../scalar/onchain-tx-hash"
 
 import LnPaymentSecret from "../scalar/ln-payment-secret"
+import LnurlSuccessAction from "../object/lnurl-success-action"
 
 import { OnChain, Transactions } from "@/app"
 
@@ -10,6 +11,7 @@ import { ErrorLevel } from "@/domain/shared"
 import { SettlementMethod } from "@/domain/wallets"
 
 import { recordExceptionInCurrentSpan } from "@/services/tracing"
+import { LnPaymentsRepository } from "@/services/mongoose"
 
 import { GT } from "@/graphql/index"
 import Username from "@/graphql/shared/types/scalar/username"
@@ -66,6 +68,26 @@ const SettlementViaLn = GT.Object({
     preImage: {
       type: LnPaymentPreImage,
       resolve: (source) => source.revealedPreImage,
+    },
+    successAction: {
+      type: LnurlSuccessAction,
+      description: "LNURL success action returned after payment (LUD-09/10)",
+      resolve: async (source: SettlementViaLn & { parent?: { id: string; initiationVia: { type: string; paymentHash: PaymentHash } } }) => {
+        if (source.parent?.initiationVia?.type !== "lightning") {
+          return null
+        }
+        const paymentHash = source.parent.initiationVia.paymentHash
+        const lnPayment = await LnPaymentsRepository().findByPaymentHash(paymentHash)
+        if (lnPayment instanceof Error) {
+          recordExceptionInCurrentSpan({
+            error: lnPayment,
+            level: ErrorLevel.Warn,
+            attributes: { ["error.parentId"]: source.parent?.id },
+          })
+          return null
+        }
+        return lnPayment.lnurlSuccessAction ?? null
+      },
     },
   }),
 })

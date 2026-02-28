@@ -93,10 +93,12 @@ const lnPaymentFromRaw = (result: LnPaymentType): PersistedLnPaymentLookup => ({
     : undefined,
   attempts: result.attempts,
   isCompleteRecord: result.isCompleteRecord,
+  lnurlSuccessAction: result.lnurlSuccessAction ?? null,
 })
 
 const lnPaymentPartialFromRaw = (result: LnPaymentType): LnPaymentPartial => ({
   paymentHash: result.paymentHash as PaymentHash,
   paymentRequest: result.paymentRequest as EncodedPaymentRequest,
   sentFromPubkey: result.sentFromPubkey as Pubkey,
+  lnurlSuccessAction: result.lnurlSuccessAction ?? null,
 })
