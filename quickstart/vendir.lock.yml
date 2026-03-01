@@ -2,24 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix(core): block default wallet lookup for inactive accounts (#482)'
-      sha: e20edb7d2c66795d6304b3d6612cd20952a4edb9
+      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1459
+        (#481)...'
+      sha: a97546fd25141d7ceff7eba02a64721ad0f735c4
       tags:
-      - 0.21.141-2-ge20edb7d2
+      - 0.21.142-1-ga97546fd2
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'fix(core): block default wallet lookup for inactive accounts (#482)'
-      sha: e20edb7d2c66795d6304b3d6612cd20952a4edb9
+      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1459
+        (#481)...'
+      sha: a97546fd25141d7ceff7eba02a64721ad0f735c4
       tags:
-      - 0.21.141-2-ge20edb7d2
+      - 0.21.142-1-ga97546fd2
     path: schemas
   - git:
-      commitTitle: 'fix(core): block default wallet lookup for inactive accounts (#482)'
-      sha: e20edb7d2c66795d6304b3d6612cd20952a4edb9
+      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1459
+        (#481)...'
+      sha: a97546fd25141d7ceff7eba02a64721ad0f735c4
       tags:
-      - 0.21.141-2-ge20edb7d2
+      - 0.21.142-1-ga97546fd2
     path: gql
   path: graphql
 kind: LockConfig
