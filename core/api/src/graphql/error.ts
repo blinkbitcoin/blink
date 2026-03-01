@@ -206,6 +206,28 @@ export class DealerOfflineError extends CustomGraphQLError {
   }
 }
 
+export class QuotesError extends CustomGraphQLError {
+  constructor(errData: PartialBy<CustomGraphQLErrorData, "logger" | "forwardToClient">) {
+    super({
+      code: "QUOTES_ERROR",
+      forwardToClient: true,
+      ...errData,
+      logger: baseLogger,
+    })
+  }
+}
+
+export class QuotesOfflineError extends CustomGraphQLError {
+  constructor(errData: PartialBy<CustomGraphQLErrorData, "logger" | "forwardToClient">) {
+    super({
+      code: "QUOTES_OFFLINE",
+      forwardToClient: true,
+      ...errData,
+      logger: baseLogger,
+    })
+  }
+}
+
 export class PriceServiceOfflineError extends CustomGraphQLError {
   constructor(errData: PartialBy<CustomGraphQLErrorData, "logger" | "forwardToClient">) {
     super({
