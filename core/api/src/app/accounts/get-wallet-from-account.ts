@@ -2,12 +2,17 @@ import {
   CouldNotFindDefaultWalletForAccount,
   CouldNotFindWalletForCurrency,
 } from "@/domain/errors"
+import { AccountValidator } from "@/domain/accounts"
+
 import { WalletsRepository } from "@/services/mongoose"
 
 export const getWalletFromAccount = async (
   account: Account,
   walletCurrency?: WalletCurrency,
 ): Promise<Wallet | ApplicationError> => {
+  const accountValidator = AccountValidator(account)
+  if (accountValidator instanceof Error) return accountValidator
+
   const wallets = await WalletsRepository().listByAccountId(account.id)
   if (wallets instanceof Error) return wallets
 
