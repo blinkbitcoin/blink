@@ -40,6 +40,10 @@ import {
   PriceServiceOfflineError,
   OperationRestrictedError,
   AuthorizationError,
+  InvalidIpMetadataError,
+  InvalidPhoneForQuizError,
+  NotEnoughBalanceForQuizError,
+  InvalidQuizQuestionIdError,
 } from "@/graphql/error"
 import { baseLogger } from "@/services/logger"
 
@@ -343,8 +347,8 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       return new TooManyRequestError({ message, logger: baseLogger })
 
     case "InvalidQuizQuestionIdError":
-      message = "Invalid quiz question id was passed."
-      return new ValidationInternalError({ message, logger: baseLogger })
+      message = error.message
+      return new InvalidQuizQuestionIdError({ message, logger: baseLogger })
 
     case "InvalidPushNotificationSettingError":
       message = "Invalid push notification setting was passed."
@@ -359,9 +363,8 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       return new ValidationInternalError({ message, logger: baseLogger })
 
     case "NotEnoughBalanceForQuizError":
-      message =
-        "Quiz wallet temporarily depleted. Please contact support if problem persists."
-      return new ValidationInternalError({ message, logger: baseLogger })
+      message = error.message
+      return new NotEnoughBalanceForQuizError({ message, logger: baseLogger })
 
     case "SubOneCentSatAmountForUsdSelfSendError":
     case "SubOneCentSatAmountForUsdReceiveError":
@@ -369,12 +372,12 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       return new ValidationInternalError({ message, logger: baseLogger })
 
     case "InvalidPhoneForQuizError":
-      message = "Unsupported phone carrier for quiz."
-      return new ValidationInternalError({ message, logger: baseLogger })
+      message = error.message
+      return new InvalidPhoneForQuizError({ message, logger: baseLogger })
 
     case "InvalidIpMetadataError":
-      message = "Unsupported IP."
-      return new ValidationInternalError({ message, logger: baseLogger })
+      message = error.message
+      return new InvalidIpMetadataError({ message, logger: baseLogger })
 
     case "NoConnectionToPriceServiceError":
       message = "Price unavailable, please wait for a while and try again."
