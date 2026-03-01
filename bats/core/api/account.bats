@@ -245,3 +245,38 @@ setup_file() {
   [[ "${error_code}" == "OPERATION_RESTRICTED" ]] || exit 1
   [[ "${error_msg}" == *"we're unable to delete your account automatically"* ]] || exit 1
 }
+
+@test "account: query default wallet fails for inactive account" {
+  local suffix="$RANDOM"
+  local token_name="inactive_wallet_user_$suffix"
+  local phone=$(random_phone)
+  local username_to_set="inactive_$suffix"
+
+  login_user "$token_name" "$phone"
+
+  variables=$(
+    jq -n \
+    --arg username "$username_to_set" \
+    '{input: {username: $username}}'
+  )
+  exec_graphql "$token_name" 'user-update-username' "$variables"
+  num_errors="$(graphql_output '.data.userUpdateUsername.errors | length')"
+  [[ "$num_errors" == "0" ]] || exit 1
+
+  variables=$(
+    jq -n \
+    --arg username "$username_to_set" \
+    '{username: $username}'
+  )
+  exec_graphql 'anon' 'account-default-wallet' "$variables"
+  receiver_wallet_id="$(graphql_output '.data.accountDefaultWallet.id')"
+  [[ -n "$receiver_wallet_id" && "$receiver_wallet_id" != "null" ]] || exit 1
+
+  exec_graphql "$token_name" 'account-delete'
+  delete_success="$(graphql_output '.data.accountDelete.success')"
+  [[ "$delete_success" == "true" ]] || exit 1
+
+  exec_graphql 'anon' 'account-default-wallet' "$variables"
+  error_msg="$(graphql_output '.errors[0].message')"
+  [[ "$error_msg" == "Account is inactive." ]] || exit 1
+}
