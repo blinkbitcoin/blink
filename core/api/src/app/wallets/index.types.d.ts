@@ -98,6 +98,7 @@ type PaymentSendArgs = {
   senderWalletId: WalletId
   senderAccount: Account
   memo: string | null
+  apiKeyId?: string
 }
 
 type PayInvoiceByWalletIdArgs = PaymentSendArgs & {
@@ -127,6 +128,7 @@ type PayAllOnChainByWalletIdArgs = {
   address: string
   speed: PayoutSpeed
   memo: string | null
+  apiKeyId?: string
 }
 
 type PayOnChainByWalletIdWithoutCurrencyArgs = {
@@ -136,6 +138,7 @@ type PayOnChainByWalletIdWithoutCurrencyArgs = {
   address: string
   speed: PayoutSpeed
   memo: string | null
+  apiKeyId?: string
 }
 
 type PayOnChainByWalletIdArgs = PayOnChainByWalletIdWithoutCurrencyArgs & {
@@ -148,6 +151,7 @@ type LnAddressPaymentSendArgs = {
   senderAccount: Account
   lnAddress: string
   amount: number
+  apiKeyId?: string
 }
 
 type LnurlPaymentSendArgs = {
@@ -155,6 +159,7 @@ type LnurlPaymentSendArgs = {
   senderAccount: Account
   lnurl: string
   amount: number
+  apiKeyId?: string
 }
 
 type GetDepositFeeConfigurationResult = {
