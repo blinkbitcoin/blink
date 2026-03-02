@@ -233,6 +233,7 @@ export type ApiKey = {
   readonly expiresAt?: Maybe<Scalars['Timestamp']['output']>;
   readonly id: Scalars['ID']['output'];
   readonly lastUsedAt?: Maybe<Scalars['Timestamp']['output']>;
+  readonly limits: ApiKeyLimits;
   readonly name: Scalars['String']['output'];
   readonly readOnly: Scalars['Boolean']['output'];
   readonly revoked: Scalars['Boolean']['output'];
@@ -251,6 +252,22 @@ export type ApiKeyCreatePayload = {
   readonly apiKeySecret: Scalars['String']['output'];
 };
 
+export type ApiKeyLimits = {
+  readonly __typename: 'ApiKeyLimits';
+  readonly annualLimitSats?: Maybe<Scalars['Int']['output']>;
+  readonly dailyLimitSats?: Maybe<Scalars['Int']['output']>;
+  readonly monthlyLimitSats?: Maybe<Scalars['Int']['output']>;
+  readonly spentLast7DSats: Scalars['Int']['output'];
+  readonly spentLast24HSats: Scalars['Int']['output'];
+  readonly spentLast30DSats: Scalars['Int']['output'];
+  readonly spentLast365DSats: Scalars['Int']['output'];
+  readonly weeklyLimitSats?: Maybe<Scalars['Int']['output']>;
+};
+
+export type ApiKeyRemoveLimitInput = {
+  readonly id: Scalars['ID']['input'];
+};
+
 export type ApiKeyRevokeInput = {
   readonly id: Scalars['ID']['input'];
 };
@@ -258,6 +275,31 @@ export type ApiKeyRevokeInput = {
 export type ApiKeyRevokePayload = {
   readonly __typename: 'ApiKeyRevokePayload';
   readonly apiKey: ApiKey;
+};
+
+export type ApiKeySetAnnualLimitInput = {
+  readonly annualLimitSats: Scalars['Int']['input'];
+  readonly id: Scalars['ID']['input'];
+};
+
+export type ApiKeySetDailyLimitInput = {
+  readonly dailyLimitSats: Scalars['Int']['input'];
+  readonly id: Scalars['ID']['input'];
+};
+
+export type ApiKeySetLimitPayload = {
+  readonly __typename: 'ApiKeySetLimitPayload';
+  readonly apiKey: ApiKey;
+};
+
+export type ApiKeySetMonthlyLimitInput = {
+  readonly id: Scalars['ID']['input'];
+  readonly monthlyLimitSats: Scalars['Int']['input'];
+};
+
+export type ApiKeySetWeeklyLimitInput = {
+  readonly id: Scalars['ID']['input'];
+  readonly weeklyLimitSats: Scalars['Int']['input'];
 };
 
 export type AuthTokenPayload = {
@@ -1042,7 +1084,15 @@ export type Mutation = {
   readonly accountUpdateDefaultWalletId: AccountUpdateDefaultWalletIdPayload;
   readonly accountUpdateDisplayCurrency: AccountUpdateDisplayCurrencyPayload;
   readonly apiKeyCreate: ApiKeyCreatePayload;
+  readonly apiKeyRemoveAnnualLimit: ApiKeySetLimitPayload;
+  readonly apiKeyRemoveDailyLimit: ApiKeySetLimitPayload;
+  readonly apiKeyRemoveMonthlyLimit: ApiKeySetLimitPayload;
+  readonly apiKeyRemoveWeeklyLimit: ApiKeySetLimitPayload;
   readonly apiKeyRevoke: ApiKeyRevokePayload;
+  readonly apiKeySetAnnualLimit: ApiKeySetLimitPayload;
+  readonly apiKeySetDailyLimit: ApiKeySetLimitPayload;
+  readonly apiKeySetMonthlyLimit: ApiKeySetLimitPayload;
+  readonly apiKeySetWeeklyLimit: ApiKeySetLimitPayload;
   readonly callbackEndpointAdd: CallbackEndpointAddPayload;
   readonly callbackEndpointDelete: SuccessPayload;
   readonly captchaCreateChallenge: CaptchaCreateChallengePayload;
@@ -1202,8 +1252,48 @@ export type MutationApiKeyCreateArgs = {
 };
 
 
+export type MutationApiKeyRemoveAnnualLimitArgs = {
+  input: ApiKeyRemoveLimitInput;
+};
+
+
+export type MutationApiKeyRemoveDailyLimitArgs = {
+  input: ApiKeyRemoveLimitInput;
+};
+
+
+export type MutationApiKeyRemoveMonthlyLimitArgs = {
+  input: ApiKeyRemoveLimitInput;
+};
+
+
+export type MutationApiKeyRemoveWeeklyLimitArgs = {
+  input: ApiKeyRemoveLimitInput;
+};
+
+
 export type MutationApiKeyRevokeArgs = {
   input: ApiKeyRevokeInput;
+};
+
+
+export type MutationApiKeySetAnnualLimitArgs = {
+  input: ApiKeySetAnnualLimitInput;
+};
+
+
+export type MutationApiKeySetDailyLimitArgs = {
+  input: ApiKeySetDailyLimitInput;
+};
+
+
+export type MutationApiKeySetMonthlyLimitArgs = {
+  input: ApiKeySetMonthlyLimitInput;
+};
+
+
+export type MutationApiKeySetWeeklyLimitArgs = {
+  input: ApiKeySetWeeklyLimitInput;
 };
 
 
@@ -1558,10 +1648,12 @@ export type OneDayAccountLimit = AccountLimit & {
 export type OpenDeepLinkAction = {
   readonly __typename: 'OpenDeepLinkAction';
   readonly deepLink: Scalars['String']['output'];
+  readonly label?: Maybe<Scalars['String']['output']>;
 };
 
 export type OpenExternalLinkAction = {
   readonly __typename: 'OpenExternalLinkAction';
+  readonly label?: Maybe<Scalars['String']['output']>;
   readonly url: Scalars['String']['output'];
 };
 
@@ -3613,8 +3705,15 @@ export type ResolversTypes = {
   ApiKey: ResolverTypeWrapper<ApiKey>;
   ApiKeyCreateInput: ApiKeyCreateInput;
   ApiKeyCreatePayload: ResolverTypeWrapper<ApiKeyCreatePayload>;
+  ApiKeyLimits: ResolverTypeWrapper<ApiKeyLimits>;
+  ApiKeyRemoveLimitInput: ApiKeyRemoveLimitInput;
   ApiKeyRevokeInput: ApiKeyRevokeInput;
   ApiKeyRevokePayload: ResolverTypeWrapper<ApiKeyRevokePayload>;
+  ApiKeySetAnnualLimitInput: ApiKeySetAnnualLimitInput;
+  ApiKeySetDailyLimitInput: ApiKeySetDailyLimitInput;
+  ApiKeySetLimitPayload: ResolverTypeWrapper<ApiKeySetLimitPayload>;
+  ApiKeySetMonthlyLimitInput: ApiKeySetMonthlyLimitInput;
+  ApiKeySetWeeklyLimitInput: ApiKeySetWeeklyLimitInput;
   AuthToken: ResolverTypeWrapper<Scalars['AuthToken']['output']>;
   AuthTokenPayload: ResolverTypeWrapper<Omit<AuthTokenPayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
   Authorization: ResolverTypeWrapper<Authorization>;
@@ -3855,8 +3954,15 @@ export type ResolversParentTypes = {
   ApiKey: ApiKey;
   ApiKeyCreateInput: ApiKeyCreateInput;
   ApiKeyCreatePayload: ApiKeyCreatePayload;
+  ApiKeyLimits: ApiKeyLimits;
+  ApiKeyRemoveLimitInput: ApiKeyRemoveLimitInput;
   ApiKeyRevokeInput: ApiKeyRevokeInput;
   ApiKeyRevokePayload: ApiKeyRevokePayload;
+  ApiKeySetAnnualLimitInput: ApiKeySetAnnualLimitInput;
+  ApiKeySetDailyLimitInput: ApiKeySetDailyLimitInput;
+  ApiKeySetLimitPayload: ApiKeySetLimitPayload;
+  ApiKeySetMonthlyLimitInput: ApiKeySetMonthlyLimitInput;
+  ApiKeySetWeeklyLimitInput: ApiKeySetWeeklyLimitInput;
   AuthToken: Scalars['AuthToken']['output'];
   AuthTokenPayload: Omit<AuthTokenPayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
   Authorization: Authorization;
@@ -4179,6 +4285,7 @@ export type ApiKeyResolvers<ContextType = any, ParentType extends ResolversParen
   expiresAt?: Resolver<Maybe<ResolversTypes['Timestamp']>, ParentType, ContextType>;
   id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
   lastUsedAt?: Resolver<Maybe<ResolversTypes['Timestamp']>, ParentType, ContextType>;
+  limits?: Resolver<ResolversTypes['ApiKeyLimits'], ParentType, ContextType>;
   name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   readOnly?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   revoked?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
@@ -4192,7 +4299,24 @@ export type ApiKeyCreatePayloadResolvers<ContextType = any, ParentType extends R
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
+export type ApiKeyLimitsResolvers<ContextType = any, ParentType extends ResolversParentTypes['ApiKeyLimits'] = ResolversParentTypes['ApiKeyLimits']> = {
+  annualLimitSats?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  dailyLimitSats?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  monthlyLimitSats?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  spentLast7DSats?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  spentLast24HSats?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  spentLast30DSats?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  spentLast365DSats?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  weeklyLimitSats?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
 export type ApiKeyRevokePayloadResolvers<ContextType = any, ParentType extends ResolversParentTypes['ApiKeyRevokePayload'] = ResolversParentTypes['ApiKeyRevokePayload']> = {
+  apiKey?: Resolver<ResolversTypes['ApiKey'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
+export type ApiKeySetLimitPayloadResolvers<ContextType = any, ParentType extends ResolversParentTypes['ApiKeySetLimitPayload'] = ResolversParentTypes['ApiKeySetLimitPayload']> = {
   apiKey?: Resolver<ResolversTypes['ApiKey'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
@@ -4616,7 +4740,15 @@ export type MutationResolvers<ContextType = any, ParentType extends ResolversPar
   accountUpdateDefaultWalletId?: Resolver<ResolversTypes['AccountUpdateDefaultWalletIdPayload'], ParentType, ContextType, RequireFields<MutationAccountUpdateDefaultWalletIdArgs, 'input'>>;
   accountUpdateDisplayCurrency?: Resolver<ResolversTypes['AccountUpdateDisplayCurrencyPayload'], ParentType, ContextType, RequireFields<MutationAccountUpdateDisplayCurrencyArgs, 'input'>>;
   apiKeyCreate?: Resolver<ResolversTypes['ApiKeyCreatePayload'], ParentType, ContextType, RequireFields<MutationApiKeyCreateArgs, 'input'>>;
+  apiKeyRemoveAnnualLimit?: Resolver<ResolversTypes['ApiKeySetLimitPayload'], ParentType, ContextType, RequireFields<MutationApiKeyRemoveAnnualLimitArgs, 'input'>>;
+  apiKeyRemoveDailyLimit?: Resolver<ResolversTypes['ApiKeySetLimitPayload'], ParentType, ContextType, RequireFields<MutationApiKeyRemoveDailyLimitArgs, 'input'>>;
+  apiKeyRemoveMonthlyLimit?: Resolver<ResolversTypes['ApiKeySetLimitPayload'], ParentType, ContextType, RequireFields<MutationApiKeyRemoveMonthlyLimitArgs, 'input'>>;
+  apiKeyRemoveWeeklyLimit?: Resolver<ResolversTypes['ApiKeySetLimitPayload'], ParentType, ContextType, RequireFields<MutationApiKeyRemoveWeeklyLimitArgs, 'input'>>;
   apiKeyRevoke?: Resolver<ResolversTypes['ApiKeyRevokePayload'], ParentType, ContextType, RequireFields<MutationApiKeyRevokeArgs, 'input'>>;
+  apiKeySetAnnualLimit?: Resolver<ResolversTypes['ApiKeySetLimitPayload'], ParentType, ContextType, RequireFields<MutationApiKeySetAnnualLimitArgs, 'input'>>;
+  apiKeySetDailyLimit?: Resolver<ResolversTypes['ApiKeySetLimitPayload'], ParentType, ContextType, RequireFields<MutationApiKeySetDailyLimitArgs, 'input'>>;
+  apiKeySetMonthlyLimit?: Resolver<ResolversTypes['ApiKeySetLimitPayload'], ParentType, ContextType, RequireFields<MutationApiKeySetMonthlyLimitArgs, 'input'>>;
+  apiKeySetWeeklyLimit?: Resolver<ResolversTypes['ApiKeySetLimitPayload'], ParentType, ContextType, RequireFields<MutationApiKeySetWeeklyLimitArgs, 'input'>>;
   callbackEndpointAdd?: Resolver<ResolversTypes['CallbackEndpointAddPayload'], ParentType, ContextType, RequireFields<MutationCallbackEndpointAddArgs, 'input'>>;
   callbackEndpointDelete?: Resolver<ResolversTypes['SuccessPayload'], ParentType, ContextType, RequireFields<MutationCallbackEndpointDeleteArgs, 'input'>>;
   captchaCreateChallenge?: Resolver<ResolversTypes['CaptchaCreateChallengePayload'], ParentType, ContextType>;
@@ -4746,10 +4878,12 @@ export interface OneTimeAuthCodeScalarConfig extends GraphQLScalarTypeConfig<Res
 
 export type OpenDeepLinkActionResolvers<ContextType = any, ParentType extends ResolversParentTypes['OpenDeepLinkAction'] = ResolversParentTypes['OpenDeepLinkAction']> = {
   deepLink?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  label?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
 export type OpenExternalLinkActionResolvers<ContextType = any, ParentType extends ResolversParentTypes['OpenExternalLinkAction'] = ResolversParentTypes['OpenExternalLinkAction']> = {
+  label?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   url?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
@@ -5228,7 +5362,9 @@ export type Resolvers<ContextType = any> = {
   AccountUpdateNotificationSettingsPayload?: AccountUpdateNotificationSettingsPayloadResolvers<ContextType>;
   ApiKey?: ApiKeyResolvers<ContextType>;
   ApiKeyCreatePayload?: ApiKeyCreatePayloadResolvers<ContextType>;
+  ApiKeyLimits?: ApiKeyLimitsResolvers<ContextType>;
   ApiKeyRevokePayload?: ApiKeyRevokePayloadResolvers<ContextType>;
+  ApiKeySetLimitPayload?: ApiKeySetLimitPayloadResolvers<ContextType>;
   AuthToken?: GraphQLScalarType;
   AuthTokenPayload?: AuthTokenPayloadResolvers<ContextType>;
   Authorization?: AuthorizationResolvers<ContextType>;
