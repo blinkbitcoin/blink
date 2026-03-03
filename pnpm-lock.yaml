@@ -1105,8 +1105,8 @@ importers:
         specifier: ^0.7.15
         version: 0.7.15
       '@ip1sms/disposable-phone-numbers':
-        specifier: ^2.1.1459
-        version: 2.1.1459
+        specifier: ^2.1.1462
+        version: 2.1.1462
       '@merqva/telegram-passport':
         specifier: ^1.0.2
         version: 1.0.2
@@ -7322,8 +7322,8 @@ packages:
     resolution: {integrity: sha512-Sx1pU8EM64o2BrqNpEO1CNLtKQwyhuXuqyfH7oGKCk+1a33d2r5saW8zNwm3j6BTExtjrv2BxTgzzkMwts6vGg==}
     dev: false
 
-  /@ip1sms/disposable-phone-numbers@2.1.1459:
-    resolution: {integrity: sha512-LF/Z9uwxrhg2+Pb7eciJMSVJ5TRcyMAX3I2K/f/ApRNj0q6Ux2QD0QWkffZcmGB5TNvQ7yipAPmYGmBgOrOLcQ==}
+  /@ip1sms/disposable-phone-numbers@2.1.1462:
+    resolution: {integrity: sha512-xHe8eVp1t/nwjCBxlbQocJMs0IZGFUTyUqPvajjt5pXjW4GXJQ5r3EBYSupzvReKx6Gl8ABhCkJ+K+OGKwmiKA==}
     dev: false
 
   /@isaacs/cliui@8.0.2:
@@ -25271,7 +25271,7 @@ packages:
     requiresBuild: true
     dependencies:
       iconv-lite: 0.6.3
-      sax: 1.4.4
+      sax: 1.5.0
     dev: true
     optional: true
 
@@ -28333,8 +28333,8 @@ packages:
       '@parcel/watcher': 2.5.6
     dev: true
 
-  /sax@1.4.4:
-    resolution: {integrity: sha512-1n3r/tGXO6b6VXMdFT54SHzT9ytu9yr7TaELowdYpMqY/Ao7EnlQGmAQ1+RatX7Tkkdm6hONI2owqNx2aZj5Sw==}
+  /sax@1.5.0:
+    resolution: {integrity: sha512-21IYA3Q5cQf089Z6tgaUTr7lDAyzoTPx5HRtbhsME8Udispad8dC/+sziTNugOEx54ilvatQ9YCzl4KQLPcRHA==}
     engines: {node: '>=11.0.0'}
     requiresBuild: true
     dev: true
