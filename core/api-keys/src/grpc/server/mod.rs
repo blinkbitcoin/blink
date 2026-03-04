@@ -44,16 +44,16 @@ impl ApiKeysService for ApiKeys {
 
         let remaining_daily_sats = result
             .daily_limit_sats
-            .map(|limit| limit - result.spent_last_24h_sats);
+            .map(|limit| limit.saturating_sub(result.daily_spent_sats).max(0));
         let remaining_weekly_sats = result
             .weekly_limit_sats
-            .map(|limit| limit - result.spent_last_7d_sats);
+            .map(|limit| limit.saturating_sub(result.weekly_spent_sats).max(0));
         let remaining_monthly_sats = result
             .monthly_limit_sats
-            .map(|limit| limit - result.spent_last_30d_sats);
+            .map(|limit| limit.saturating_sub(result.monthly_spent_sats).max(0));
         let remaining_annual_sats = result
             .annual_limit_sats
-            .map(|limit| limit - result.spent_last_365d_sats);
+            .map(|limit| limit.saturating_sub(result.annual_spent_sats).max(0));
 
         Ok(Response::new(CheckSpendingLimitResponse {
             allowed: result.allowed,
@@ -61,10 +61,10 @@ impl ApiKeysService for ApiKeys {
             weekly_limit_sats: result.weekly_limit_sats,
             monthly_limit_sats: result.monthly_limit_sats,
             annual_limit_sats: result.annual_limit_sats,
-            spent_last_24h_sats: result.spent_last_24h_sats,
-            spent_last_7d_sats: result.spent_last_7d_sats,
-            spent_last_30d_sats: result.spent_last_30d_sats,
-            spent_last_365d_sats: result.spent_last_365d_sats,
+            daily_spent_sats: result.daily_spent_sats,
+            weekly_spent_sats: result.weekly_spent_sats,
+            monthly_spent_sats: result.monthly_spent_sats,
+            annual_spent_sats: result.annual_spent_sats,
             remaining_daily_sats,
             remaining_weekly_sats,
             remaining_monthly_sats,
@@ -93,26 +93,26 @@ impl ApiKeysService for ApiKeys {
 
         let remaining_daily_sats = summary
             .daily_limit_sats
-            .map(|limit| limit - summary.spent_last_24h_sats);
+            .map(|limit| limit.saturating_sub(summary.daily_spent_sats).max(0));
         let remaining_weekly_sats = summary
             .weekly_limit_sats
-            .map(|limit| limit - summary.spent_last_7d_sats);
+            .map(|limit| limit.saturating_sub(summary.weekly_spent_sats).max(0));
         let remaining_monthly_sats = summary
             .monthly_limit_sats
-            .map(|limit| limit - summary.spent_last_30d_sats);
+            .map(|limit| limit.saturating_sub(summary.monthly_spent_sats).max(0));
         let remaining_annual_sats = summary
             .annual_limit_sats
-            .map(|limit| limit - summary.spent_last_365d_sats);
+            .map(|limit| limit.saturating_sub(summary.annual_spent_sats).max(0));
 
         Ok(Response::new(GetSpendingSummaryResponse {
             daily_limit_sats: summary.daily_limit_sats,
             weekly_limit_sats: summary.weekly_limit_sats,
             monthly_limit_sats: summary.monthly_limit_sats,
             annual_limit_sats: summary.annual_limit_sats,
-            spent_last_24h_sats: summary.spent_last_24h_sats,
-            spent_last_7d_sats: summary.spent_last_7d_sats,
-            spent_last_30d_sats: summary.spent_last_30d_sats,
-            spent_last_365d_sats: summary.spent_last_365d_sats,
+            daily_spent_sats: summary.daily_spent_sats,
+            weekly_spent_sats: summary.weekly_spent_sats,
+            monthly_spent_sats: summary.monthly_spent_sats,
+            annual_spent_sats: summary.annual_spent_sats,
             remaining_daily_sats,
             remaining_weekly_sats,
             remaining_monthly_sats,
@@ -174,7 +174,7 @@ pub(crate) async fn start(
     use proto::api_keys_service_server::ApiKeysServiceServer;
 
     let api_keys = ApiKeys { app };
-    println!("Starting grpc server on port {}", server_config.port);
+    tracing::info!("Starting grpc server on port {}", server_config.port);
     let (mut health_reporter, health_service) = tonic_health::server::health_reporter();
     health_reporter
         .set_serving::<ApiKeysServiceServer<ApiKeys>>()
