@@ -2612,7 +2612,7 @@ export type UserTotpRegistrationValidateMutation = { readonly __typename: 'Mutat
 export type ApiKeysQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type ApiKeysQuery = { readonly __typename: 'Query', readonly me?: { readonly __typename: 'User', readonly apiKeys: ReadonlyArray<{ readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly createdAt: number, readonly revoked: boolean, readonly expired: boolean, readonly lastUsedAt?: number | null, readonly expiresAt?: number | null, readonly readOnly: boolean, readonly scopes: ReadonlyArray<Scope> }> } | null };
+export type ApiKeysQuery = { readonly __typename: 'Query', readonly me?: { readonly __typename: 'User', readonly apiKeys: ReadonlyArray<{ readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly createdAt: number, readonly revoked: boolean, readonly expired: boolean, readonly lastUsedAt?: number | null, readonly expiresAt?: number | null, readonly readOnly: boolean, readonly scopes: ReadonlyArray<Scope>, readonly limits: { readonly __typename: 'ApiKeyLimits', readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly dailySpentSats: number, readonly weeklySpentSats: number, readonly monthlySpentSats: number, readonly annualSpentSats: number } }> } | null };
 
 export type CallbackEndpointsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -3123,6 +3123,16 @@ export const ApiKeysDocument = gql`
       expiresAt
       readOnly
       scopes
+      limits {
+        dailyLimitSats
+        weeklyLimitSats
+        monthlyLimitSats
+        annualLimitSats
+        dailySpentSats
+        weeklySpentSats
+        monthlySpentSats
+        annualSpentSats
+      }
     }
   }
 }
