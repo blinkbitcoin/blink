@@ -210,16 +210,17 @@ type ApiKeyLimits
   weeklyLimitSats: Int
   monthlyLimitSats: Int
   annualLimitSats: Int
-  spentLast24HSats: Int!
-  spentLast7DSats: Int!
-  spentLast30DSats: Int!
-  spentLast365DSats: Int!
+  dailySpentSats: Int!
+  weeklySpentSats: Int!
+  monthlySpentSats: Int!
+  annualSpentSats: Int!
 }
 
 input ApiKeyRemoveLimitInput
   @join__type(graph: API_KEYS)
 {
   id: ID!
+  limitTimeWindow: LimitTimeWindow!
 }
 
 input ApiKeyRevokeInput
@@ -234,38 +235,18 @@ type ApiKeyRevokePayload
   apiKey: ApiKey!
 }
 
-input ApiKeySetAnnualLimitInput
+input ApiKeySetLimitInput
   @join__type(graph: API_KEYS)
 {
   id: ID!
-  annualLimitSats: Int!
-}
-
-input ApiKeySetDailyLimitInput
-  @join__type(graph: API_KEYS)
-{
-  id: ID!
-  dailyLimitSats: Int!
+  limitTimeWindow: LimitTimeWindow!
+  limitSats: Int!
 }
 
 type ApiKeySetLimitPayload
   @join__type(graph: API_KEYS)
 {
   apiKey: ApiKey!
-}
-
-input ApiKeySetMonthlyLimitInput
-  @join__type(graph: API_KEYS)
-{
-  id: ID!
-  monthlyLimitSats: Int!
-}
-
-input ApiKeySetWeeklyLimitInput
-  @join__type(graph: API_KEYS)
-{
-  id: ID!
-  weeklyLimitSats: Int!
 }
 
 type Authorization
@@ -917,6 +898,15 @@ enum join__Graph {
 scalar Language
   @join__type(graph: PUBLIC)
 
+enum LimitTimeWindow
+  @join__type(graph: API_KEYS)
+{
+  DAILY @join__enumValue(graph: API_KEYS)
+  WEEKLY @join__enumValue(graph: API_KEYS)
+  MONTHLY @join__enumValue(graph: API_KEYS)
+  ANNUAL @join__enumValue(graph: API_KEYS)
+}
+
 scalar link__Import
 
 enum link__Purpose {
@@ -1337,14 +1327,8 @@ type Mutation
 {
   apiKeyCreate(input: ApiKeyCreateInput!): ApiKeyCreatePayload! @join__field(graph: API_KEYS)
   apiKeyRevoke(input: ApiKeyRevokeInput!): ApiKeyRevokePayload! @join__field(graph: API_KEYS)
-  apiKeySetDailyLimit(input: ApiKeySetDailyLimitInput!): ApiKeySetLimitPayload! @join__field(graph: API_KEYS)
-  apiKeySetWeeklyLimit(input: ApiKeySetWeeklyLimitInput!): ApiKeySetLimitPayload! @join__field(graph: API_KEYS)
-  apiKeySetMonthlyLimit(input: ApiKeySetMonthlyLimitInput!): ApiKeySetLimitPayload! @join__field(graph: API_KEYS)
-  apiKeySetAnnualLimit(input: ApiKeySetAnnualLimitInput!): ApiKeySetLimitPayload! @join__field(graph: API_KEYS)
-  apiKeyRemoveDailyLimit(input: ApiKeyRemoveLimitInput!): ApiKeySetLimitPayload! @join__field(graph: API_KEYS)
-  apiKeyRemoveWeeklyLimit(input: ApiKeyRemoveLimitInput!): ApiKeySetLimitPayload! @join__field(graph: API_KEYS)
-  apiKeyRemoveMonthlyLimit(input: ApiKeyRemoveLimitInput!): ApiKeySetLimitPayload! @join__field(graph: API_KEYS)
-  apiKeyRemoveAnnualLimit(input: ApiKeyRemoveLimitInput!): ApiKeySetLimitPayload! @join__field(graph: API_KEYS)
+  apiKeySetLimit(input: ApiKeySetLimitInput!): ApiKeySetLimitPayload! @join__field(graph: API_KEYS)
+  apiKeyRemoveLimit(input: ApiKeyRemoveLimitInput!): ApiKeySetLimitPayload! @join__field(graph: API_KEYS)
   statefulNotificationAcknowledge(input: StatefulNotificationAcknowledgeInput!): StatefulNotificationAcknowledgePayload! @join__field(graph: NOTIFICATIONS)
   accountDelete: AccountDeletePayload! @join__field(graph: PUBLIC)
   accountDisableNotificationCategory(input: AccountDisableNotificationCategoryInput!): AccountUpdateNotificationSettingsPayload! @join__field(graph: PUBLIC)

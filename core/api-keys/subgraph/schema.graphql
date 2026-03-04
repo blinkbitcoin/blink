@@ -27,14 +27,15 @@ type ApiKeyLimits {
 	weeklyLimitSats: Int
 	monthlyLimitSats: Int
 	annualLimitSats: Int
-	spentLast24HSats: Int!
-	spentLast7DSats: Int!
-	spentLast30DSats: Int!
-	spentLast365DSats: Int!
+	dailySpentSats: Int!
+	weeklySpentSats: Int!
+	monthlySpentSats: Int!
+	annualSpentSats: Int!
 }
 
 input ApiKeyRemoveLimitInput {
 	id: ID!
+	limitTimeWindow: LimitTimeWindow!
 }
 
 input ApiKeyRevokeInput {
@@ -45,45 +46,32 @@ type ApiKeyRevokePayload {
 	apiKey: ApiKey!
 }
 
-input ApiKeySetAnnualLimitInput {
+input ApiKeySetLimitInput {
 	id: ID!
-	annualLimitSats: Int!
-}
-
-input ApiKeySetDailyLimitInput {
-	id: ID!
-	dailyLimitSats: Int!
+	limitTimeWindow: LimitTimeWindow!
+	limitSats: Int!
 }
 
 type ApiKeySetLimitPayload {
 	apiKey: ApiKey!
 }
 
-input ApiKeySetMonthlyLimitInput {
-	id: ID!
-	monthlyLimitSats: Int!
+
+
+
+
+enum LimitTimeWindow {
+	DAILY
+	WEEKLY
+	MONTHLY
+	ANNUAL
 }
-
-input ApiKeySetWeeklyLimitInput {
-	id: ID!
-	weeklyLimitSats: Int!
-}
-
-
-
-
 
 type Mutation {
 	apiKeyCreate(input: ApiKeyCreateInput!): ApiKeyCreatePayload!
 	apiKeyRevoke(input: ApiKeyRevokeInput!): ApiKeyRevokePayload!
-	apiKeySetDailyLimit(input: ApiKeySetDailyLimitInput!): ApiKeySetLimitPayload!
-	apiKeySetWeeklyLimit(input: ApiKeySetWeeklyLimitInput!): ApiKeySetLimitPayload!
-	apiKeySetMonthlyLimit(input: ApiKeySetMonthlyLimitInput!): ApiKeySetLimitPayload!
-	apiKeySetAnnualLimit(input: ApiKeySetAnnualLimitInput!): ApiKeySetLimitPayload!
-	apiKeyRemoveDailyLimit(input: ApiKeyRemoveLimitInput!): ApiKeySetLimitPayload!
-	apiKeyRemoveWeeklyLimit(input: ApiKeyRemoveLimitInput!): ApiKeySetLimitPayload!
-	apiKeyRemoveMonthlyLimit(input: ApiKeyRemoveLimitInput!): ApiKeySetLimitPayload!
-	apiKeyRemoveAnnualLimit(input: ApiKeyRemoveLimitInput!): ApiKeySetLimitPayload!
+	apiKeySetLimit(input: ApiKeySetLimitInput!): ApiKeySetLimitPayload!
+	apiKeyRemoveLimit(input: ApiKeyRemoveLimitInput!): ApiKeySetLimitPayload!
 }
 
 
