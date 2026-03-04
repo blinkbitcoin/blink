@@ -1,10 +1,10 @@
--- Add spending limits feature for API keys (rolling 24-hour window)
+-- Add spending limits feature for API keys (rolling windows: 24-hour, 7-day, 30-day, 365-day)
 -- Limits are optional per API key and measured in satoshis
 -- If no limit is configured for an API key, it has no spending restrictions (unlimited)
 
 -- Table 1: Optional limit configuration per API key
 CREATE TABLE api_key_limits (
-  api_key_id UUID PRIMARY KEY REFERENCES identity_api_keys(id) ON DELETE CASCADE,
+  api_key_id UUID PRIMARY KEY REFERENCES identity_api_keys(id),
   daily_limit_sats BIGINT,
   weekly_limit_sats BIGINT,
   monthly_limit_sats BIGINT,
@@ -15,13 +15,7 @@ CREATE TABLE api_key_limits (
   CONSTRAINT positive_daily_limit CHECK (daily_limit_sats IS NULL OR daily_limit_sats > 0),
   CONSTRAINT positive_weekly_limit CHECK (weekly_limit_sats IS NULL OR weekly_limit_sats > 0),
   CONSTRAINT positive_monthly_limit CHECK (monthly_limit_sats IS NULL OR monthly_limit_sats > 0),
-  CONSTRAINT positive_annual_limit CHECK (annual_limit_sats IS NULL OR annual_limit_sats > 0),
-  CONSTRAINT at_least_one_limit CHECK (
-    daily_limit_sats IS NOT NULL OR
-    weekly_limit_sats IS NOT NULL OR
-    monthly_limit_sats IS NOT NULL OR
-    annual_limit_sats IS NOT NULL
-  )
+  CONSTRAINT positive_annual_limit CHECK (annual_limit_sats IS NULL OR annual_limit_sats > 0)
 );
 
 COMMENT ON TABLE api_key_limits IS 'Optional spending limits per API key (rolling windows, in satoshis). If no row exists for an API key, it has no limit. Each limit is independent.';
@@ -30,12 +24,12 @@ COMMENT ON COLUMN api_key_limits.weekly_limit_sats IS 'Maximum spending per roll
 COMMENT ON COLUMN api_key_limits.monthly_limit_sats IS 'Maximum spending per rolling 30 days in satoshis';
 COMMENT ON COLUMN api_key_limits.annual_limit_sats IS 'Maximum spending per rolling 365 days in satoshis';
 
--- Table 2: Individual transaction records for rolling 24h calculation
+-- Table 2: Individual transaction records for rolling window calculations
 CREATE TABLE api_key_transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  api_key_id UUID NOT NULL REFERENCES identity_api_keys(id) ON DELETE CASCADE,
+  api_key_id UUID NOT NULL REFERENCES identity_api_keys(id),
   amount_sats BIGINT NOT NULL,
-  transaction_id VARCHAR,
+  transaction_id VARCHAR(128) UNIQUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
   CONSTRAINT positive_amount CHECK (amount_sats > 0)
@@ -49,7 +43,7 @@ COMMENT ON COLUMN api_key_transactions.transaction_id IS 'Optional reference to 
 CREATE INDEX idx_api_key_tx_window
   ON api_key_transactions(api_key_id, created_at DESC);
 
--- Index for cleanup job (delete transactions older than 48 hours)
+-- Index for cleanup job (delete transactions older than 400 days)
 -- Simple index on created_at for efficient cleanup queries
 CREATE INDEX idx_api_key_tx_cleanup
   ON api_key_transactions(created_at);
