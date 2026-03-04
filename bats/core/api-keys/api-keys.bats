@@ -244,6 +244,71 @@ new_key_name() {
   [[ ! "$scopes" =~ "RECEIVE" ]] || exit 1
 }
 
+@test "api-keys: can set and query spending limits" {
+  key_name="$(new_key_name)"
+  variables="{\"input\":{\"name\":\"${key_name}\",\"scopes\": [\"READ\",\"WRITE\"]}}"
+
+  exec_graphql 'alice' 'api-key-create' "$variables"
+  key="$(graphql_output '.data.apiKeyCreate.apiKey')"
+  key_id=$(echo "$key" | jq -r '.id')
+
+  # Set daily limit
+  variables=$(jq -n \
+    --arg id "$key_id" \
+    '{input: {id: $id, limitTimeWindow: "DAILY", limitSats: 100000}}'
+  )
+  exec_graphql 'alice' 'api-key-set-limit' "$variables"
+  daily_limit="$(graphql_output '.data.apiKeySetLimit.apiKey.limits.dailyLimitSats')"
+  [[ "${daily_limit}" = "100000" ]] || exit 1
+
+  # Set weekly limit
+  variables=$(jq -n \
+    --arg id "$key_id" \
+    '{input: {id: $id, limitTimeWindow: "WEEKLY", limitSats: 500000}}'
+  )
+  exec_graphql 'alice' 'api-key-set-limit' "$variables"
+  weekly_limit="$(graphql_output '.data.apiKeySetLimit.apiKey.limits.weeklyLimitSats')"
+  [[ "${weekly_limit}" = "500000" ]] || exit 1
+
+  # Verify both limits are visible via query
+  exec_graphql 'alice' 'api-keys'
+  api_key_limits="$(graphql_output '.data.me.apiKeys[] | select(.id == "'${key_id}'") | .limits')"
+  daily="$(echo "$api_key_limits" | jq -r '.dailyLimitSats')"
+  weekly="$(echo "$api_key_limits" | jq -r '.weeklyLimitSats')"
+  daily_spent="$(echo "$api_key_limits" | jq -r '.dailySpentSats')"
+  [[ "${daily}" = "100000" ]] || exit 1
+  [[ "${weekly}" = "500000" ]] || exit 1
+  [[ "${daily_spent}" = "0" ]] || exit 1
+
+  cache_value "limit-test-key-id" "$key_id"
+}
+
+@test "api-keys: can remove spending limits" {
+  key_id=$(read_value "limit-test-key-id")
+
+  # Remove daily limit
+  variables=$(jq -n \
+    --arg id "$key_id" \
+    '{input: {id: $id, limitTimeWindow: "DAILY"}}'
+  )
+  exec_graphql 'alice' 'api-key-remove-limit' "$variables"
+  daily_limit="$(graphql_output '.data.apiKeyRemoveLimit.apiKey.limits.dailyLimitSats')"
+  [[ "${daily_limit}" = "null" ]] || exit 1
+
+  # Weekly limit should still be set
+  weekly_limit="$(graphql_output '.data.apiKeyRemoveLimit.apiKey.limits.weeklyLimitSats')"
+  [[ "${weekly_limit}" = "500000" ]] || exit 1
+
+  # Remove weekly limit
+  variables=$(jq -n \
+    --arg id "$key_id" \
+    '{input: {id: $id, limitTimeWindow: "WEEKLY"}}'
+  )
+  exec_graphql 'alice' 'api-key-remove-limit' "$variables"
+  weekly_limit="$(graphql_output '.data.apiKeyRemoveLimit.apiKey.limits.weeklyLimitSats')"
+  [[ "${weekly_limit}" = "null" ]] || exit 1
+}
+
 @test "api-keys: cannot create key without scopes" {
   key_name="$(new_key_name)"
 
