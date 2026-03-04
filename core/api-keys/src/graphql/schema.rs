@@ -236,9 +236,7 @@ impl Mutation {
         match input.limit_time_window {
             LimitTimeWindow::Daily => app.set_daily_limit(api_key_id, input.limit_sats).await?,
             LimitTimeWindow::Weekly => app.set_weekly_limit(api_key_id, input.limit_sats).await?,
-            LimitTimeWindow::Monthly => {
-                app.set_monthly_limit(api_key_id, input.limit_sats).await?
-            }
+            LimitTimeWindow::Monthly => app.set_monthly_limit(api_key_id, input.limit_sats).await?,
             LimitTimeWindow::Annual => app.set_annual_limit(api_key_id, input.limit_sats).await?,
         }
 
