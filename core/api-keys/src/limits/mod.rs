@@ -6,31 +6,29 @@ use crate::identity::IdentityApiKeyId;
 
 pub use error::*;
 
-// No default limit - API keys without explicit limits are unlimited
-
 #[derive(Debug, Clone)]
 pub struct LimitCheckResult {
     pub allowed: bool,
-    pub daily_limit_sats: Option<i64>, // None if no limit configured
-    pub weekly_limit_sats: Option<i64>, // None if no limit configured
-    pub monthly_limit_sats: Option<i64>, // None if no limit configured
-    pub annual_limit_sats: Option<i64>, // None if no limit configured
-    pub spent_last_24h_sats: i64,
-    pub spent_last_7d_sats: i64,
-    pub spent_last_30d_sats: i64,
-    pub spent_last_365d_sats: i64,
+    pub daily_limit_sats: Option<i64>,
+    pub weekly_limit_sats: Option<i64>,
+    pub monthly_limit_sats: Option<i64>,
+    pub annual_limit_sats: Option<i64>,
+    pub daily_spent_sats: i64,
+    pub weekly_spent_sats: i64,
+    pub monthly_spent_sats: i64,
+    pub annual_spent_sats: i64,
 }
 
 #[derive(Debug, Clone)]
 pub struct SpendingSummary {
-    pub daily_limit_sats: Option<i64>,   // None if no limit configured
-    pub weekly_limit_sats: Option<i64>,  // None if no limit configured
-    pub monthly_limit_sats: Option<i64>, // None if no limit configured
-    pub annual_limit_sats: Option<i64>,  // None if no limit configured
-    pub spent_last_24h_sats: i64,
-    pub spent_last_7d_sats: i64,
-    pub spent_last_30d_sats: i64,
-    pub spent_last_365d_sats: i64,
+    pub daily_limit_sats: Option<i64>,
+    pub weekly_limit_sats: Option<i64>,
+    pub monthly_limit_sats: Option<i64>,
+    pub annual_limit_sats: Option<i64>,
+    pub daily_spent_sats: i64,
+    pub weekly_spent_sats: i64,
+    pub monthly_spent_sats: i64,
+    pub annual_spent_sats: i64,
 }
 
 #[derive(Debug, Clone)]
@@ -39,6 +37,14 @@ struct AllLimits {
     weekly_limit_sats: Option<i64>,
     monthly_limit_sats: Option<i64>,
     annual_limit_sats: Option<i64>,
+}
+
+#[derive(Debug, Clone)]
+struct AllSpending {
+    daily_spent_sats: i64,
+    weekly_spent_sats: i64,
+    monthly_spent_sats: i64,
+    annual_spent_sats: i64,
 }
 
 #[derive(Clone)]
@@ -57,59 +63,23 @@ impl Limits {
         amount_sats: i64,
     ) -> Result<LimitCheckResult, LimitError> {
         if amount_sats < 0 {
-            return Err(LimitError::NegativeAmount);
+            return Err(LimitError::InvalidLimitAmount);
         }
 
         let limits = self.get_all_limits(api_key_id).await?;
+        let spending = self.get_all_spending(api_key_id).await?;
 
-        if limits.daily_limit_sats.is_none()
-            && limits.weekly_limit_sats.is_none()
-            && limits.monthly_limit_sats.is_none()
-            && limits.annual_limit_sats.is_none()
-        {
-            return Ok(LimitCheckResult {
-                allowed: true,
-                daily_limit_sats: None,
-                weekly_limit_sats: None,
-                monthly_limit_sats: None,
-                annual_limit_sats: None,
-                spent_last_24h_sats: 0,
-                spent_last_7d_sats: 0,
-                spent_last_30d_sats: 0,
-                spent_last_365d_sats: 0,
-            });
-        }
-
-        let spent_24h = self.get_spending_last_24h(api_key_id).await?;
-        let spent_7d = self.get_spending_last_7d(api_key_id).await?;
-        let spent_30d = self.get_spending_last_30d(api_key_id).await?;
-        let spent_365d = self.get_spending_last_365d(api_key_id).await?;
-
-        let mut allowed = true;
-
-        if let Some(limit) = limits.daily_limit_sats {
-            if limit - spent_24h < amount_sats {
-                allowed = false;
-            }
-        }
-
-        if let Some(limit) = limits.weekly_limit_sats {
-            if limit - spent_7d < amount_sats {
-                allowed = false;
-            }
-        }
-
-        if let Some(limit) = limits.monthly_limit_sats {
-            if limit - spent_30d < amount_sats {
-                allowed = false;
-            }
-        }
-
-        if let Some(limit) = limits.annual_limit_sats {
-            if limit - spent_365d < amount_sats {
-                allowed = false;
-            }
-        }
+        let allowed = [
+            (limits.daily_limit_sats, spending.daily_spent_sats),
+            (limits.weekly_limit_sats, spending.weekly_spent_sats),
+            (limits.monthly_limit_sats, spending.monthly_spent_sats),
+            (limits.annual_limit_sats, spending.annual_spent_sats),
+        ]
+        .iter()
+        .all(|(limit, spent)| match limit {
+            Some(limit) => spent.saturating_add(amount_sats) <= *limit,
+            None => true,
+        });
 
         Ok(LimitCheckResult {
             allowed,
@@ -117,10 +87,10 @@ impl Limits {
             weekly_limit_sats: limits.weekly_limit_sats,
             monthly_limit_sats: limits.monthly_limit_sats,
             annual_limit_sats: limits.annual_limit_sats,
-            spent_last_24h_sats: spent_24h,
-            spent_last_7d_sats: spent_7d,
-            spent_last_30d_sats: spent_30d,
-            spent_last_365d_sats: spent_365d,
+            daily_spent_sats: spending.daily_spent_sats,
+            weekly_spent_sats: spending.weekly_spent_sats,
+            monthly_spent_sats: spending.monthly_spent_sats,
+            annual_spent_sats: spending.annual_spent_sats,
         })
     }
 
@@ -132,13 +102,14 @@ impl Limits {
         transaction_id: Option<String>,
     ) -> Result<(), LimitError> {
         if amount_sats <= 0 {
-            return Err(LimitError::NonPositiveAmount);
+            return Err(LimitError::InvalidLimitAmount);
         }
 
         sqlx::query(
             r#"
             INSERT INTO api_key_transactions (api_key_id, amount_sats, transaction_id, created_at)
             VALUES ($1, $2, $3, NOW())
+            ON CONFLICT (transaction_id) DO NOTHING
             "#,
         )
         .bind(api_key_id)
@@ -175,20 +146,17 @@ impl Limits {
         api_key_id: IdentityApiKeyId,
     ) -> Result<SpendingSummary, LimitError> {
         let limits = self.get_all_limits(api_key_id).await?;
-        let spent_24h = self.get_spending_last_24h(api_key_id).await?;
-        let spent_7d = self.get_spending_last_7d(api_key_id).await?;
-        let spent_30d = self.get_spending_last_30d(api_key_id).await?;
-        let spent_365d = self.get_spending_last_365d(api_key_id).await?;
+        let spending = self.get_all_spending(api_key_id).await?;
 
         Ok(SpendingSummary {
             daily_limit_sats: limits.daily_limit_sats,
             weekly_limit_sats: limits.weekly_limit_sats,
             monthly_limit_sats: limits.monthly_limit_sats,
             annual_limit_sats: limits.annual_limit_sats,
-            spent_last_24h_sats: spent_24h,
-            spent_last_7d_sats: spent_7d,
-            spent_last_30d_sats: spent_30d,
-            spent_last_365d_sats: spent_365d,
+            daily_spent_sats: spending.daily_spent_sats,
+            weekly_spent_sats: spending.weekly_spent_sats,
+            monthly_spent_sats: spending.monthly_spent_sats,
+            annual_spent_sats: spending.annual_spent_sats,
         })
     }
 
@@ -199,7 +167,7 @@ impl Limits {
         daily_limit_sats: i64,
     ) -> Result<(), LimitError> {
         if daily_limit_sats <= 0 {
-            return Err(LimitError::InvalidLimit);
+            return Err(LimitError::InvalidLimitAmount);
         }
 
         sqlx::query(
@@ -225,7 +193,7 @@ impl Limits {
         weekly_limit_sats: i64,
     ) -> Result<(), LimitError> {
         if weekly_limit_sats <= 0 {
-            return Err(LimitError::InvalidLimit);
+            return Err(LimitError::InvalidLimitAmount);
         }
 
         sqlx::query(
@@ -251,7 +219,7 @@ impl Limits {
         monthly_limit_sats: i64,
     ) -> Result<(), LimitError> {
         if monthly_limit_sats <= 0 {
-            return Err(LimitError::InvalidLimit);
+            return Err(LimitError::InvalidLimitAmount);
         }
 
         sqlx::query(
@@ -277,7 +245,7 @@ impl Limits {
         annual_limit_sats: i64,
     ) -> Result<(), LimitError> {
         if annual_limit_sats <= 0 {
-            return Err(LimitError::InvalidLimit);
+            return Err(LimitError::InvalidLimitAmount);
         }
 
         sqlx::query(
@@ -404,20 +372,19 @@ impl Limits {
         .fetch_optional(&self.pool)
         .await?;
 
-        if let Some(row) = row {
-            Ok(AllLimits {
+        match row {
+            Some(row) => Ok(AllLimits {
                 daily_limit_sats: row.get("daily_limit_sats"),
                 weekly_limit_sats: row.get("weekly_limit_sats"),
                 monthly_limit_sats: row.get("monthly_limit_sats"),
                 annual_limit_sats: row.get("annual_limit_sats"),
-            })
-        } else {
-            Ok(AllLimits {
+            }),
+            None => Ok(AllLimits {
                 daily_limit_sats: None,
                 weekly_limit_sats: None,
                 monthly_limit_sats: None,
                 annual_limit_sats: None,
-            })
+            }),
         }
     }
 
@@ -439,61 +406,17 @@ impl Limits {
         Ok(())
     }
 
-    async fn get_spending_last_24h(&self, api_key_id: IdentityApiKeyId) -> Result<i64, LimitError> {
-        let row = sqlx::query(
-            r#"
-            SELECT COALESCE(SUM(amount_sats), 0)::bigint as spent
-            FROM api_key_transactions
-            WHERE api_key_id = $1
-              AND created_at > NOW() - INTERVAL '24 hours'
-            "#,
-        )
-        .bind(api_key_id)
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(row.get("spent"))
-    }
-
-    async fn get_spending_last_7d(&self, api_key_id: IdentityApiKeyId) -> Result<i64, LimitError> {
-        let row = sqlx::query(
-            r#"
-            SELECT COALESCE(SUM(amount_sats), 0)::bigint as spent
-            FROM api_key_transactions
-            WHERE api_key_id = $1
-              AND created_at > NOW() - INTERVAL '7 days'
-            "#,
-        )
-        .bind(api_key_id)
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(row.get("spent"))
-    }
-
-    async fn get_spending_last_30d(&self, api_key_id: IdentityApiKeyId) -> Result<i64, LimitError> {
-        let row = sqlx::query(
-            r#"
-            SELECT COALESCE(SUM(amount_sats), 0)::bigint as spent
-            FROM api_key_transactions
-            WHERE api_key_id = $1
-              AND created_at > NOW() - INTERVAL '30 days'
-            "#,
-        )
-        .bind(api_key_id)
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(row.get("spent"))
-    }
-
-    async fn get_spending_last_365d(
+    async fn get_all_spending(
         &self,
         api_key_id: IdentityApiKeyId,
-    ) -> Result<i64, LimitError> {
+    ) -> Result<AllSpending, LimitError> {
         let row = sqlx::query(
             r#"
-            SELECT COALESCE(SUM(amount_sats), 0)::bigint as spent
+            SELECT
+                COALESCE(SUM(amount_sats) FILTER (WHERE created_at > NOW() - INTERVAL '24 hours'), 0)::bigint AS daily_spent_sats,
+                COALESCE(SUM(amount_sats) FILTER (WHERE created_at > NOW() - INTERVAL '7 days'), 0)::bigint AS weekly_spent_sats,
+                COALESCE(SUM(amount_sats) FILTER (WHERE created_at > NOW() - INTERVAL '30 days'), 0)::bigint AS monthly_spent_sats,
+                COALESCE(SUM(amount_sats) FILTER (WHERE created_at > NOW() - INTERVAL '365 days'), 0)::bigint AS annual_spent_sats
             FROM api_key_transactions
             WHERE api_key_id = $1
               AND created_at > NOW() - INTERVAL '365 days'
@@ -503,6 +426,11 @@ impl Limits {
         .fetch_one(&self.pool)
         .await?;
 
-        Ok(row.get("spent"))
+        Ok(AllSpending {
+            daily_spent_sats: row.get("daily_spent_sats"),
+            weekly_spent_sats: row.get("weekly_spent_sats"),
+            monthly_spent_sats: row.get("monthly_spent_sats"),
+            annual_spent_sats: row.get("annual_spent_sats"),
+        })
     }
 }
