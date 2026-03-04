@@ -42,6 +42,14 @@ impl ScalarType for Timestamp {
     }
 }
 
+#[derive(Enum, Copy, Clone, Eq, PartialEq)]
+pub enum LimitTimeWindow {
+    Daily,
+    Weekly,
+    Monthly,
+    Annual,
+}
+
 pub struct Query;
 
 #[Object]
@@ -58,10 +66,10 @@ pub(super) struct ApiKeyLimits {
     pub weekly_limit_sats: Option<i64>,
     pub monthly_limit_sats: Option<i64>,
     pub annual_limit_sats: Option<i64>,
-    pub spent_last_24h_sats: i64,
-    pub spent_last_7d_sats: i64,
-    pub spent_last_30d_sats: i64,
-    pub spent_last_365d_sats: i64,
+    pub daily_spent_sats: i64,
+    pub weekly_spent_sats: i64,
+    pub monthly_spent_sats: i64,
+    pub annual_spent_sats: i64,
 }
 
 #[derive(SimpleObject)]
@@ -90,10 +98,10 @@ impl ApiKey {
             weekly_limit_sats: summary.weekly_limit_sats,
             monthly_limit_sats: summary.monthly_limit_sats,
             annual_limit_sats: summary.annual_limit_sats,
-            spent_last_24h_sats: summary.spent_last_24h_sats,
-            spent_last_7d_sats: summary.spent_last_7d_sats,
-            spent_last_30d_sats: summary.spent_last_30d_sats,
-            spent_last_365d_sats: summary.spent_last_365d_sats,
+            daily_spent_sats: summary.daily_spent_sats,
+            weekly_spent_sats: summary.weekly_spent_sats,
+            monthly_spent_sats: summary.monthly_spent_sats,
+            annual_spent_sats: summary.annual_spent_sats,
         })
     }
 }
@@ -130,6 +138,11 @@ pub(super) struct ApiKeyRevokePayload {
     pub api_key: ApiKey,
 }
 
+#[derive(SimpleObject)]
+pub(super) struct ApiKeySetLimitPayload {
+    pub api_key: ApiKey,
+}
+
 pub struct Mutation;
 
 #[derive(InputObject)]
@@ -150,37 +163,28 @@ struct ApiKeyRevokeInput {
 }
 
 #[derive(InputObject)]
-struct ApiKeySetDailyLimitInput {
+struct ApiKeySetLimitInput {
     id: ID,
-    daily_limit_sats: i64,
-}
-
-#[derive(InputObject)]
-struct ApiKeySetWeeklyLimitInput {
-    id: ID,
-    weekly_limit_sats: i64,
-}
-
-#[derive(InputObject)]
-struct ApiKeySetMonthlyLimitInput {
-    id: ID,
-    monthly_limit_sats: i64,
-}
-
-#[derive(InputObject)]
-struct ApiKeySetAnnualLimitInput {
-    id: ID,
-    annual_limit_sats: i64,
-}
-
-#[derive(SimpleObject)]
-pub(super) struct ApiKeySetLimitPayload {
-    pub api_key: ApiKey,
+    limit_time_window: LimitTimeWindow,
+    limit_sats: i64,
 }
 
 #[derive(InputObject)]
 struct ApiKeyRemoveLimitInput {
     id: ID,
+    limit_time_window: LimitTimeWindow,
+}
+
+async fn find_owned_api_key(
+    app: &ApiKeysApp,
+    subject: &AuthSubject,
+    api_key_id: IdentityApiKeyId,
+) -> async_graphql::Result<crate::identity::IdentityApiKey> {
+    let api_keys = app.list_api_keys_for_subject(&subject.id).await?;
+    api_keys
+        .into_iter()
+        .find(|k| k.id == api_key_id)
+        .ok_or_else(|| async_graphql::Error::new("API key not found"))
 }
 
 #[Object]
@@ -215,10 +219,10 @@ impl Mutation {
         Ok(ApiKeyRevokePayload::from(api_key))
     }
 
-    async fn api_key_set_daily_limit(
+    async fn api_key_set_limit(
         &self,
         ctx: &Context<'_>,
-        input: ApiKeySetDailyLimitInput,
+        input: ApiKeySetLimitInput,
     ) -> async_graphql::Result<ApiKeySetLimitPayload> {
         let app = ctx.data_unchecked::<ApiKeysApp>();
         let subject = ctx.data::<AuthSubject>()?;
@@ -227,103 +231,23 @@ impl Mutation {
         }
 
         let api_key_id = input.id.parse::<IdentityApiKeyId>()?;
+        let api_key = find_owned_api_key(app, subject, api_key_id).await?;
 
-        let api_keys = app.list_api_keys_for_subject(&subject.id).await?;
-        let api_key = api_keys
-            .into_iter()
-            .find(|k| k.id == api_key_id)
-            .ok_or("API key not found")?;
-
-        app.set_daily_limit(api_key_id, input.daily_limit_sats)
-            .await?;
-
-        Ok(ApiKeySetLimitPayload {
-            api_key: ApiKey::from(api_key),
-        })
-    }
-
-    async fn api_key_set_weekly_limit(
-        &self,
-        ctx: &Context<'_>,
-        input: ApiKeySetWeeklyLimitInput,
-    ) -> async_graphql::Result<ApiKeySetLimitPayload> {
-        let app = ctx.data_unchecked::<ApiKeysApp>();
-        let subject = ctx.data::<AuthSubject>()?;
-        if !subject.can_write {
-            return Err("Permission denied".into());
+        match input.limit_time_window {
+            LimitTimeWindow::Daily => app.set_daily_limit(api_key_id, input.limit_sats).await?,
+            LimitTimeWindow::Weekly => app.set_weekly_limit(api_key_id, input.limit_sats).await?,
+            LimitTimeWindow::Monthly => {
+                app.set_monthly_limit(api_key_id, input.limit_sats).await?
+            }
+            LimitTimeWindow::Annual => app.set_annual_limit(api_key_id, input.limit_sats).await?,
         }
 
-        let api_key_id = input.id.parse::<IdentityApiKeyId>()?;
-
-        let api_keys = app.list_api_keys_for_subject(&subject.id).await?;
-        let api_key = api_keys
-            .into_iter()
-            .find(|k| k.id == api_key_id)
-            .ok_or("API key not found")?;
-
-        app.set_weekly_limit(api_key_id, input.weekly_limit_sats)
-            .await?;
-
         Ok(ApiKeySetLimitPayload {
             api_key: ApiKey::from(api_key),
         })
     }
 
-    async fn api_key_set_monthly_limit(
-        &self,
-        ctx: &Context<'_>,
-        input: ApiKeySetMonthlyLimitInput,
-    ) -> async_graphql::Result<ApiKeySetLimitPayload> {
-        let app = ctx.data_unchecked::<ApiKeysApp>();
-        let subject = ctx.data::<AuthSubject>()?;
-        if !subject.can_write {
-            return Err("Permission denied".into());
-        }
-
-        let api_key_id = input.id.parse::<IdentityApiKeyId>()?;
-
-        let api_keys = app.list_api_keys_for_subject(&subject.id).await?;
-        let api_key = api_keys
-            .into_iter()
-            .find(|k| k.id == api_key_id)
-            .ok_or("API key not found")?;
-
-        app.set_monthly_limit(api_key_id, input.monthly_limit_sats)
-            .await?;
-
-        Ok(ApiKeySetLimitPayload {
-            api_key: ApiKey::from(api_key),
-        })
-    }
-
-    async fn api_key_set_annual_limit(
-        &self,
-        ctx: &Context<'_>,
-        input: ApiKeySetAnnualLimitInput,
-    ) -> async_graphql::Result<ApiKeySetLimitPayload> {
-        let app = ctx.data_unchecked::<ApiKeysApp>();
-        let subject = ctx.data::<AuthSubject>()?;
-        if !subject.can_write {
-            return Err("Permission denied".into());
-        }
-
-        let api_key_id = input.id.parse::<IdentityApiKeyId>()?;
-
-        let api_keys = app.list_api_keys_for_subject(&subject.id).await?;
-        let api_key = api_keys
-            .into_iter()
-            .find(|k| k.id == api_key_id)
-            .ok_or("API key not found")?;
-
-        app.set_annual_limit(api_key_id, input.annual_limit_sats)
-            .await?;
-
-        Ok(ApiKeySetLimitPayload {
-            api_key: ApiKey::from(api_key),
-        })
-    }
-
-    async fn api_key_remove_daily_limit(
+    async fn api_key_remove_limit(
         &self,
         ctx: &Context<'_>,
         input: ApiKeyRemoveLimitInput,
@@ -335,92 +259,14 @@ impl Mutation {
         }
 
         let api_key_id = input.id.parse::<IdentityApiKeyId>()?;
+        let api_key = find_owned_api_key(app, subject, api_key_id).await?;
 
-        let api_keys = app.list_api_keys_for_subject(&subject.id).await?;
-        let api_key = api_keys
-            .into_iter()
-            .find(|k| k.id == api_key_id)
-            .ok_or("API key not found")?;
-
-        app.remove_daily_limit(api_key_id).await?;
-
-        Ok(ApiKeySetLimitPayload {
-            api_key: ApiKey::from(api_key),
-        })
-    }
-
-    async fn api_key_remove_weekly_limit(
-        &self,
-        ctx: &Context<'_>,
-        input: ApiKeyRemoveLimitInput,
-    ) -> async_graphql::Result<ApiKeySetLimitPayload> {
-        let app = ctx.data_unchecked::<ApiKeysApp>();
-        let subject = ctx.data::<AuthSubject>()?;
-        if !subject.can_write {
-            return Err("Permission denied".into());
+        match input.limit_time_window {
+            LimitTimeWindow::Daily => app.remove_daily_limit(api_key_id).await?,
+            LimitTimeWindow::Weekly => app.remove_weekly_limit(api_key_id).await?,
+            LimitTimeWindow::Monthly => app.remove_monthly_limit(api_key_id).await?,
+            LimitTimeWindow::Annual => app.remove_annual_limit(api_key_id).await?,
         }
-
-        let api_key_id = input.id.parse::<IdentityApiKeyId>()?;
-
-        let api_keys = app.list_api_keys_for_subject(&subject.id).await?;
-        let api_key = api_keys
-            .into_iter()
-            .find(|k| k.id == api_key_id)
-            .ok_or("API key not found")?;
-
-        app.remove_weekly_limit(api_key_id).await?;
-
-        Ok(ApiKeySetLimitPayload {
-            api_key: ApiKey::from(api_key),
-        })
-    }
-
-    async fn api_key_remove_monthly_limit(
-        &self,
-        ctx: &Context<'_>,
-        input: ApiKeyRemoveLimitInput,
-    ) -> async_graphql::Result<ApiKeySetLimitPayload> {
-        let app = ctx.data_unchecked::<ApiKeysApp>();
-        let subject = ctx.data::<AuthSubject>()?;
-        if !subject.can_write {
-            return Err("Permission denied".into());
-        }
-
-        let api_key_id = input.id.parse::<IdentityApiKeyId>()?;
-
-        let api_keys = app.list_api_keys_for_subject(&subject.id).await?;
-        let api_key = api_keys
-            .into_iter()
-            .find(|k| k.id == api_key_id)
-            .ok_or("API key not found")?;
-
-        app.remove_monthly_limit(api_key_id).await?;
-
-        Ok(ApiKeySetLimitPayload {
-            api_key: ApiKey::from(api_key),
-        })
-    }
-
-    async fn api_key_remove_annual_limit(
-        &self,
-        ctx: &Context<'_>,
-        input: ApiKeyRemoveLimitInput,
-    ) -> async_graphql::Result<ApiKeySetLimitPayload> {
-        let app = ctx.data_unchecked::<ApiKeysApp>();
-        let subject = ctx.data::<AuthSubject>()?;
-        if !subject.can_write {
-            return Err("Permission denied".into());
-        }
-
-        let api_key_id = input.id.parse::<IdentityApiKeyId>()?;
-
-        let api_keys = app.list_api_keys_for_subject(&subject.id).await?;
-        let api_key = api_keys
-            .into_iter()
-            .find(|k| k.id == api_key_id)
-            .ok_or("API key not found")?;
-
-        app.remove_annual_limit(api_key_id).await?;
 
         Ok(ApiKeySetLimitPayload {
             api_key: ApiKey::from(api_key),
