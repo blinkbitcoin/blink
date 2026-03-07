@@ -15,6 +15,13 @@ import {
   LnInvoiceCreateOnBehalfOfRecipientDocument,
   LnInvoiceCreateOnBehalfOfRecipientMutation,
 } from "@/lib/graphql/generated"
+import {
+  BOLT11_MAX_MEMO_BYTES,
+  isCommentWithinBolt11MemoLimit,
+  isCommentWithinLnurlLimit,
+  LNURL_COMMENT_MAX_CHARACTERS,
+  sanitizeComment,
+} from "@/app/lnurlp/[username]/comment"
 import { client } from "@/app/lnurlp/[username]/graphql"
 import { getOriginalRequestInfo } from "@/lib/utils"
 
@@ -23,12 +30,14 @@ gql`
     $walletId: WalletId!
     $amount: SatAmount!
     $descriptionHash: Hex32Bytes!
+    $memo: Memo
   ) {
     mutationData: lnInvoiceCreateOnBehalfOfRecipient(
       input: {
         recipientWalletId: $walletId
         amount: $amount
         descriptionHash: $descriptionHash
+        memo: $memo
       }
     ) {
       errors {
@@ -84,11 +93,28 @@ export async function GET(
   // this is part of the lnurl spec
   const amount = searchParams.get("amount")
   const nostr = searchParams.get("nostr")
+  const rawComment = searchParams.get("comment")
+
+  if (rawComment && !isCommentWithinLnurlLimit(rawComment)) {
+    return NextResponse.json({
+      status: "ERROR",
+      reason: `Comment too long. Maximum ${LNURL_COMMENT_MAX_CHARACTERS} characters allowed.`,
+    })
+  }
+
+  const comment = sanitizeComment(rawComment)
 
   if (!amount || !username) {
     return NextResponse.json({
       status: "ERROR",
       reason: "Invalid request",
+    })
+  }
+
+  if (comment && !isCommentWithinBolt11MemoLimit(comment)) {
+    return NextResponse.json({
+      status: "ERROR",
+      reason: `Comment exceeds BOLT11 memo limit (${BOLT11_MAX_MEMO_BYTES} UTF-8 bytes).`,
     })
   }
 
@@ -150,6 +176,7 @@ export async function GET(
         walletId,
         amount: amountSats,
         descriptionHash,
+        ...(comment ? { memo: comment } : {}),
       },
     })
 
