@@ -10,7 +10,8 @@ import {
 
 import { getOriginalRequestInfo } from "@/lib/utils"
 
-import { client, COMMENT_SIZE } from "@/app/lnurlp/[username]/graphql"
+import { client } from "@/app/lnurlp/[username]/graphql"
+import { LNURL_COMMENT_MAX_CHARACTERS } from "@/app/lnurlp/[username]/comment"
 
 const nostrEnabled = !!env.NOSTR_PUBKEY
 
@@ -93,7 +94,7 @@ export async function GET(
     minSendable,
     maxSendable,
     metadata,
-    commentAllowed: COMMENT_SIZE,
+    commentAllowed: LNURL_COMMENT_MAX_CHARACTERS,
     tag: "payRequest",
     ...(nostrEnabled
       ? {
