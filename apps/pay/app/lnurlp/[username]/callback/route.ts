@@ -15,7 +15,14 @@ import {
   LnInvoiceCreateOnBehalfOfRecipientDocument,
   LnInvoiceCreateOnBehalfOfRecipientMutation,
 } from "@/lib/graphql/generated"
-import { client, COMMENT_SIZE } from "@/app/lnurlp/[username]/graphql"
+import {
+  BOLT11_MAX_MEMO_BYTES,
+  isCommentWithinBolt11MemoLimit,
+  isCommentWithinLnurlLimit,
+  LNURL_COMMENT_MAX_CHARACTERS,
+  sanitizeComment,
+} from "@/app/lnurlp/[username]/comment"
+import { client } from "@/app/lnurlp/[username]/graphql"
 import { getOriginalRequestInfo } from "@/lib/utils"
 
 gql`
@@ -87,10 +94,15 @@ export async function GET(
   const amount = searchParams.get("amount")
   const nostr = searchParams.get("nostr")
   const rawComment = searchParams.get("comment")
-  // Trim whitespace and strip ASCII control characters (NULL, backspace, DEL, etc.)
-  // while preserving tab (\x09), newline (\x0A), and carriage return (\x0D)
-  // eslint-disable-next-line no-control-regex
-  const comment = rawComment?.trim().replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "").trim() || null
+
+  if (rawComment && !isCommentWithinLnurlLimit(rawComment)) {
+    return NextResponse.json({
+      status: "ERROR",
+      reason: `Comment too long. Maximum ${LNURL_COMMENT_MAX_CHARACTERS} characters allowed.`,
+    })
+  }
+
+  const comment = sanitizeComment(rawComment)
 
   if (!amount || !username) {
     return NextResponse.json({
@@ -99,10 +111,10 @@ export async function GET(
     })
   }
 
-  if (comment && comment.length > COMMENT_SIZE) {
+  if (comment && !isCommentWithinBolt11MemoLimit(comment)) {
     return NextResponse.json({
       status: "ERROR",
-      reason: `Comment too long. Maximum ${COMMENT_SIZE} characters allowed.`,
+      reason: `Comment exceeds BOLT11 memo limit (${BOLT11_MAX_MEMO_BYTES} UTF-8 bytes).`,
     })
   }
 
