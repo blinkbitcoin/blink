@@ -56,13 +56,13 @@ setup_file() {
   cache_value "hold-invoice-api-key-id" "$key_id"
 
   # Set daily limit to 10000 sats
-  variables="{\"input\":{\"id\":\"${key_id}\",\"dailyLimitSats\":10000}}"
-  exec_graphql 'alice' 'api-key-set-daily-limit' "$variables"
+  variables="{\"input\":{\"id\":\"${key_id}\",\"limitTimeWindow\":\"DAILY\",\"limitSats\":10000}}"
+  exec_graphql 'alice' 'api-key-set-limit' "$variables"
 
-  daily_limit="$(graphql_output '.data.apiKeySetDailyLimit.apiKey.limits.dailyLimitSats')"
+  daily_limit="$(graphql_output '.data.apiKeySetLimit.apiKey.limits.dailyLimitSats')"
   [[ "${daily_limit}" = "10000" ]] || exit 1
 
-  spent_24h="$(graphql_output '.data.apiKeySetDailyLimit.apiKey.limits.spentLast24HSats')"
+  spent_24h="$(graphql_output '.data.apiKeySetLimit.apiKey.limits.dailySpentSats')"
   [[ "${spent_24h}" = "0" ]] || exit 1
 }
 
@@ -96,7 +96,7 @@ setup_file() {
 
   # Check that spending was recorded
   exec_graphql 'alice' 'api-keys'
-  spent_24h="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'hold_invoice_key_name')'") | .limits.spentLast24HSats')"
+  spent_24h="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'hold_invoice_key_name')'") | .limits.dailySpentSats')"
 
   # Should have recorded 5000 sats spending
   [[ "${spent_24h}" -ge "5000" ]] || exit 1
@@ -139,7 +139,7 @@ setup_file() {
 
   # Check that spending was reversed
   exec_graphql 'alice' 'api-keys'
-  spent_24h="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'hold_invoice_key_name')'") | .limits.spentLast24HSats')"
+  spent_24h="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'hold_invoice_key_name')'") | .limits.dailySpentSats')"
 
   # Spending should be back to 0 after reversal
   [[ "${spent_24h}" = "0" ]] || exit 1

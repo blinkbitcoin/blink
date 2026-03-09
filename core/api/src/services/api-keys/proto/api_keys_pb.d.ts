@@ -52,14 +52,14 @@ export class CheckSpendingLimitResponse extends jspb.Message {
     clearAnnualLimitSats(): void;
     getAnnualLimitSats(): number | undefined;
     setAnnualLimitSats(value: number): CheckSpendingLimitResponse;
-    getSpentLast24hSats(): number;
-    setSpentLast24hSats(value: number): CheckSpendingLimitResponse;
-    getSpentLast7dSats(): number;
-    setSpentLast7dSats(value: number): CheckSpendingLimitResponse;
-    getSpentLast30dSats(): number;
-    setSpentLast30dSats(value: number): CheckSpendingLimitResponse;
-    getSpentLast365dSats(): number;
-    setSpentLast365dSats(value: number): CheckSpendingLimitResponse;
+    getDailySpentSats(): number;
+    setDailySpentSats(value: number): CheckSpendingLimitResponse;
+    getWeeklySpentSats(): number;
+    setWeeklySpentSats(value: number): CheckSpendingLimitResponse;
+    getMonthlySpentSats(): number;
+    setMonthlySpentSats(value: number): CheckSpendingLimitResponse;
+    getAnnualSpentSats(): number;
+    setAnnualSpentSats(value: number): CheckSpendingLimitResponse;
 
     hasRemainingDailySats(): boolean;
     clearRemainingDailySats(): void;
@@ -98,10 +98,10 @@ export namespace CheckSpendingLimitResponse {
         weeklyLimitSats?: number,
         monthlyLimitSats?: number,
         annualLimitSats?: number,
-        spentLast24hSats: number,
-        spentLast7dSats: number,
-        spentLast30dSats: number,
-        spentLast365dSats: number,
+        dailySpentSats: number,
+        weeklySpentSats: number,
+        monthlySpentSats: number,
+        annualSpentSats: number,
         remainingDailySats?: number,
         remainingWeeklySats?: number,
         remainingMonthlySats?: number,
@@ -150,14 +150,14 @@ export class GetSpendingSummaryResponse extends jspb.Message {
     clearAnnualLimitSats(): void;
     getAnnualLimitSats(): number | undefined;
     setAnnualLimitSats(value: number): GetSpendingSummaryResponse;
-    getSpentLast24hSats(): number;
-    setSpentLast24hSats(value: number): GetSpendingSummaryResponse;
-    getSpentLast7dSats(): number;
-    setSpentLast7dSats(value: number): GetSpendingSummaryResponse;
-    getSpentLast30dSats(): number;
-    setSpentLast30dSats(value: number): GetSpendingSummaryResponse;
-    getSpentLast365dSats(): number;
-    setSpentLast365dSats(value: number): GetSpendingSummaryResponse;
+    getDailySpentSats(): number;
+    setDailySpentSats(value: number): GetSpendingSummaryResponse;
+    getWeeklySpentSats(): number;
+    setWeeklySpentSats(value: number): GetSpendingSummaryResponse;
+    getMonthlySpentSats(): number;
+    setMonthlySpentSats(value: number): GetSpendingSummaryResponse;
+    getAnnualSpentSats(): number;
+    setAnnualSpentSats(value: number): GetSpendingSummaryResponse;
 
     hasRemainingDailySats(): boolean;
     clearRemainingDailySats(): void;
@@ -195,10 +195,10 @@ export namespace GetSpendingSummaryResponse {
         weeklyLimitSats?: number,
         monthlyLimitSats?: number,
         annualLimitSats?: number,
-        spentLast24hSats: number,
-        spentLast7dSats: number,
-        spentLast30dSats: number,
-        spentLast365dSats: number,
+        dailySpentSats: number,
+        weeklySpentSats: number,
+        monthlySpentSats: number,
+        annualSpentSats: number,
         remainingDailySats?: number,
         remainingWeeklySats?: number,
         remainingMonthlySats?: number,

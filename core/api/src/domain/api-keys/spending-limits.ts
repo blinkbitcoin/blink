@@ -5,10 +5,10 @@ export type SpendingLimits = {
   weeklyLimitSats: number | null
   monthlyLimitSats: number | null
   annualLimitSats: number | null
-  spentLast24hSats: number
-  spentLast7dSats: number
-  spentLast30dSats: number
-  spentLast365dSats: number
+  dailySpentSats: number
+  weeklySpentSats: number
+  monthlySpentSats: number
+  annualSpentSats: number
 }
 
 type ValidationResult =
@@ -32,21 +32,21 @@ export const validateSpendingLimit = ({
     weeklyLimitSats,
     monthlyLimitSats,
     annualLimitSats,
-    spentLast24hSats,
-    spentLast7dSats,
-    spentLast30dSats,
-    spentLast365dSats,
+    dailySpentSats,
+    weeklySpentSats,
+    monthlySpentSats,
+    annualSpentSats,
   } = limits
 
   // Calculate remaining amounts
   const remainingDailySats =
-    dailyLimitSats !== null ? dailyLimitSats - spentLast24hSats : null
+    dailyLimitSats !== null ? dailyLimitSats - dailySpentSats : null
   const remainingWeeklySats =
-    weeklyLimitSats !== null ? weeklyLimitSats - spentLast7dSats : null
+    weeklyLimitSats !== null ? weeklyLimitSats - weeklySpentSats : null
   const remainingMonthlySats =
-    monthlyLimitSats !== null ? monthlyLimitSats - spentLast30dSats : null
+    monthlyLimitSats !== null ? monthlyLimitSats - monthlySpentSats : null
   const remainingAnnualSats =
-    annualLimitSats !== null ? annualLimitSats - spentLast365dSats : null
+    annualLimitSats !== null ? annualLimitSats - annualSpentSats : null
 
   if (
     dailyLimitSats !== null &&

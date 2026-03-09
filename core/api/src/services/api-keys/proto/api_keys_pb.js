@@ -394,10 +394,10 @@ dailyLimitSats: (f = jspb.Message.getField(msg, 2)) == null ? undefined : f,
 weeklyLimitSats: (f = jspb.Message.getField(msg, 3)) == null ? undefined : f,
 monthlyLimitSats: (f = jspb.Message.getField(msg, 4)) == null ? undefined : f,
 annualLimitSats: (f = jspb.Message.getField(msg, 5)) == null ? undefined : f,
-spentLast24hSats: jspb.Message.getFieldWithDefault(msg, 6, 0),
-spentLast7dSats: jspb.Message.getFieldWithDefault(msg, 7, 0),
-spentLast30dSats: jspb.Message.getFieldWithDefault(msg, 8, 0),
-spentLast365dSats: jspb.Message.getFieldWithDefault(msg, 9, 0),
+dailySpentSats: jspb.Message.getFieldWithDefault(msg, 6, 0),
+weeklySpentSats: jspb.Message.getFieldWithDefault(msg, 7, 0),
+monthlySpentSats: jspb.Message.getFieldWithDefault(msg, 8, 0),
+annualSpentSats: jspb.Message.getFieldWithDefault(msg, 9, 0),
 remainingDailySats: (f = jspb.Message.getField(msg, 10)) == null ? undefined : f,
 remainingWeeklySats: (f = jspb.Message.getField(msg, 11)) == null ? undefined : f,
 remainingMonthlySats: (f = jspb.Message.getField(msg, 12)) == null ? undefined : f,
@@ -460,19 +460,19 @@ proto.services.api_keys.v1.CheckSpendingLimitResponse.deserializeBinaryFromReade
       break;
     case 6:
       var value = /** @type {number} */ (reader.readInt64());
-      msg.setSpentLast24hSats(value);
+      msg.setDailySpentSats(value);
       break;
     case 7:
       var value = /** @type {number} */ (reader.readInt64());
-      msg.setSpentLast7dSats(value);
+      msg.setWeeklySpentSats(value);
       break;
     case 8:
       var value = /** @type {number} */ (reader.readInt64());
-      msg.setSpentLast30dSats(value);
+      msg.setMonthlySpentSats(value);
       break;
     case 9:
       var value = /** @type {number} */ (reader.readInt64());
-      msg.setSpentLast365dSats(value);
+      msg.setAnnualSpentSats(value);
       break;
     case 10:
       var value = /** @type {number} */ (reader.readInt64());
@@ -554,28 +554,28 @@ proto.services.api_keys.v1.CheckSpendingLimitResponse.serializeBinaryToWriter = 
       f
     );
   }
-  f = message.getSpentLast24hSats();
+  f = message.getDailySpentSats();
   if (f !== 0) {
     writer.writeInt64(
       6,
       f
     );
   }
-  f = message.getSpentLast7dSats();
+  f = message.getWeeklySpentSats();
   if (f !== 0) {
     writer.writeInt64(
       7,
       f
     );
   }
-  f = message.getSpentLast30dSats();
+  f = message.getMonthlySpentSats();
   if (f !== 0) {
     writer.writeInt64(
       8,
       f
     );
   }
-  f = message.getSpentLast365dSats();
+  f = message.getAnnualSpentSats();
   if (f !== 0) {
     writer.writeInt64(
       9,
@@ -776,10 +776,10 @@ proto.services.api_keys.v1.CheckSpendingLimitResponse.prototype.hasAnnualLimitSa
 
 
 /**
- * optional int64 spent_last_24h_sats = 6;
+ * optional int64 daily_spent_sats = 6;
  * @return {number}
  */
-proto.services.api_keys.v1.CheckSpendingLimitResponse.prototype.getSpentLast24hSats = function() {
+proto.services.api_keys.v1.CheckSpendingLimitResponse.prototype.getDailySpentSats = function() {
   return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 6, 0));
 };
 
@@ -788,16 +788,16 @@ proto.services.api_keys.v1.CheckSpendingLimitResponse.prototype.getSpentLast24hS
  * @param {number} value
  * @return {!proto.services.api_keys.v1.CheckSpendingLimitResponse} returns this
  */
-proto.services.api_keys.v1.CheckSpendingLimitResponse.prototype.setSpentLast24hSats = function(value) {
+proto.services.api_keys.v1.CheckSpendingLimitResponse.prototype.setDailySpentSats = function(value) {
   return jspb.Message.setProto3IntField(this, 6, value);
 };
 
 
 /**
- * optional int64 spent_last_7d_sats = 7;
+ * optional int64 weekly_spent_sats = 7;
  * @return {number}
  */
-proto.services.api_keys.v1.CheckSpendingLimitResponse.prototype.getSpentLast7dSats = function() {
+proto.services.api_keys.v1.CheckSpendingLimitResponse.prototype.getWeeklySpentSats = function() {
   return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 7, 0));
 };
 
@@ -806,16 +806,16 @@ proto.services.api_keys.v1.CheckSpendingLimitResponse.prototype.getSpentLast7dSa
  * @param {number} value
  * @return {!proto.services.api_keys.v1.CheckSpendingLimitResponse} returns this
  */
-proto.services.api_keys.v1.CheckSpendingLimitResponse.prototype.setSpentLast7dSats = function(value) {
+proto.services.api_keys.v1.CheckSpendingLimitResponse.prototype.setWeeklySpentSats = function(value) {
   return jspb.Message.setProto3IntField(this, 7, value);
 };
 
 
 /**
- * optional int64 spent_last_30d_sats = 8;
+ * optional int64 monthly_spent_sats = 8;
  * @return {number}
  */
-proto.services.api_keys.v1.CheckSpendingLimitResponse.prototype.getSpentLast30dSats = function() {
+proto.services.api_keys.v1.CheckSpendingLimitResponse.prototype.getMonthlySpentSats = function() {
   return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 8, 0));
 };
 
@@ -824,16 +824,16 @@ proto.services.api_keys.v1.CheckSpendingLimitResponse.prototype.getSpentLast30dS
  * @param {number} value
  * @return {!proto.services.api_keys.v1.CheckSpendingLimitResponse} returns this
  */
-proto.services.api_keys.v1.CheckSpendingLimitResponse.prototype.setSpentLast30dSats = function(value) {
+proto.services.api_keys.v1.CheckSpendingLimitResponse.prototype.setMonthlySpentSats = function(value) {
   return jspb.Message.setProto3IntField(this, 8, value);
 };
 
 
 /**
- * optional int64 spent_last_365d_sats = 9;
+ * optional int64 annual_spent_sats = 9;
  * @return {number}
  */
-proto.services.api_keys.v1.CheckSpendingLimitResponse.prototype.getSpentLast365dSats = function() {
+proto.services.api_keys.v1.CheckSpendingLimitResponse.prototype.getAnnualSpentSats = function() {
   return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 9, 0));
 };
 
@@ -842,7 +842,7 @@ proto.services.api_keys.v1.CheckSpendingLimitResponse.prototype.getSpentLast365d
  * @param {number} value
  * @return {!proto.services.api_keys.v1.CheckSpendingLimitResponse} returns this
  */
-proto.services.api_keys.v1.CheckSpendingLimitResponse.prototype.setSpentLast365dSats = function(value) {
+proto.services.api_keys.v1.CheckSpendingLimitResponse.prototype.setAnnualSpentSats = function(value) {
   return jspb.Message.setProto3IntField(this, 9, value);
 };
 
@@ -1157,10 +1157,10 @@ dailyLimitSats: (f = jspb.Message.getField(msg, 1)) == null ? undefined : f,
 weeklyLimitSats: (f = jspb.Message.getField(msg, 2)) == null ? undefined : f,
 monthlyLimitSats: (f = jspb.Message.getField(msg, 3)) == null ? undefined : f,
 annualLimitSats: (f = jspb.Message.getField(msg, 4)) == null ? undefined : f,
-spentLast24hSats: jspb.Message.getFieldWithDefault(msg, 5, 0),
-spentLast7dSats: jspb.Message.getFieldWithDefault(msg, 6, 0),
-spentLast30dSats: jspb.Message.getFieldWithDefault(msg, 7, 0),
-spentLast365dSats: jspb.Message.getFieldWithDefault(msg, 8, 0),
+dailySpentSats: jspb.Message.getFieldWithDefault(msg, 5, 0),
+weeklySpentSats: jspb.Message.getFieldWithDefault(msg, 6, 0),
+monthlySpentSats: jspb.Message.getFieldWithDefault(msg, 7, 0),
+annualSpentSats: jspb.Message.getFieldWithDefault(msg, 8, 0),
 remainingDailySats: (f = jspb.Message.getField(msg, 9)) == null ? undefined : f,
 remainingWeeklySats: (f = jspb.Message.getField(msg, 10)) == null ? undefined : f,
 remainingMonthlySats: (f = jspb.Message.getField(msg, 11)) == null ? undefined : f,
@@ -1219,19 +1219,19 @@ proto.services.api_keys.v1.GetSpendingSummaryResponse.deserializeBinaryFromReade
       break;
     case 5:
       var value = /** @type {number} */ (reader.readInt64());
-      msg.setSpentLast24hSats(value);
+      msg.setDailySpentSats(value);
       break;
     case 6:
       var value = /** @type {number} */ (reader.readInt64());
-      msg.setSpentLast7dSats(value);
+      msg.setWeeklySpentSats(value);
       break;
     case 7:
       var value = /** @type {number} */ (reader.readInt64());
-      msg.setSpentLast30dSats(value);
+      msg.setMonthlySpentSats(value);
       break;
     case 8:
       var value = /** @type {number} */ (reader.readInt64());
-      msg.setSpentLast365dSats(value);
+      msg.setAnnualSpentSats(value);
       break;
     case 9:
       var value = /** @type {number} */ (reader.readInt64());
@@ -1306,28 +1306,28 @@ proto.services.api_keys.v1.GetSpendingSummaryResponse.serializeBinaryToWriter = 
       f
     );
   }
-  f = message.getSpentLast24hSats();
+  f = message.getDailySpentSats();
   if (f !== 0) {
     writer.writeInt64(
       5,
       f
     );
   }
-  f = message.getSpentLast7dSats();
+  f = message.getWeeklySpentSats();
   if (f !== 0) {
     writer.writeInt64(
       6,
       f
     );
   }
-  f = message.getSpentLast30dSats();
+  f = message.getMonthlySpentSats();
   if (f !== 0) {
     writer.writeInt64(
       7,
       f
     );
   }
-  f = message.getSpentLast365dSats();
+  f = message.getAnnualSpentSats();
   if (f !== 0) {
     writer.writeInt64(
       8,
@@ -1510,10 +1510,10 @@ proto.services.api_keys.v1.GetSpendingSummaryResponse.prototype.hasAnnualLimitSa
 
 
 /**
- * optional int64 spent_last_24h_sats = 5;
+ * optional int64 daily_spent_sats = 5;
  * @return {number}
  */
-proto.services.api_keys.v1.GetSpendingSummaryResponse.prototype.getSpentLast24hSats = function() {
+proto.services.api_keys.v1.GetSpendingSummaryResponse.prototype.getDailySpentSats = function() {
   return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 5, 0));
 };
 
@@ -1522,16 +1522,16 @@ proto.services.api_keys.v1.GetSpendingSummaryResponse.prototype.getSpentLast24hS
  * @param {number} value
  * @return {!proto.services.api_keys.v1.GetSpendingSummaryResponse} returns this
  */
-proto.services.api_keys.v1.GetSpendingSummaryResponse.prototype.setSpentLast24hSats = function(value) {
+proto.services.api_keys.v1.GetSpendingSummaryResponse.prototype.setDailySpentSats = function(value) {
   return jspb.Message.setProto3IntField(this, 5, value);
 };
 
 
 /**
- * optional int64 spent_last_7d_sats = 6;
+ * optional int64 weekly_spent_sats = 6;
  * @return {number}
  */
-proto.services.api_keys.v1.GetSpendingSummaryResponse.prototype.getSpentLast7dSats = function() {
+proto.services.api_keys.v1.GetSpendingSummaryResponse.prototype.getWeeklySpentSats = function() {
   return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 6, 0));
 };
 
@@ -1540,16 +1540,16 @@ proto.services.api_keys.v1.GetSpendingSummaryResponse.prototype.getSpentLast7dSa
  * @param {number} value
  * @return {!proto.services.api_keys.v1.GetSpendingSummaryResponse} returns this
  */
-proto.services.api_keys.v1.GetSpendingSummaryResponse.prototype.setSpentLast7dSats = function(value) {
+proto.services.api_keys.v1.GetSpendingSummaryResponse.prototype.setWeeklySpentSats = function(value) {
   return jspb.Message.setProto3IntField(this, 6, value);
 };
 
 
 /**
- * optional int64 spent_last_30d_sats = 7;
+ * optional int64 monthly_spent_sats = 7;
  * @return {number}
  */
-proto.services.api_keys.v1.GetSpendingSummaryResponse.prototype.getSpentLast30dSats = function() {
+proto.services.api_keys.v1.GetSpendingSummaryResponse.prototype.getMonthlySpentSats = function() {
   return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 7, 0));
 };
 
@@ -1558,16 +1558,16 @@ proto.services.api_keys.v1.GetSpendingSummaryResponse.prototype.getSpentLast30dS
  * @param {number} value
  * @return {!proto.services.api_keys.v1.GetSpendingSummaryResponse} returns this
  */
-proto.services.api_keys.v1.GetSpendingSummaryResponse.prototype.setSpentLast30dSats = function(value) {
+proto.services.api_keys.v1.GetSpendingSummaryResponse.prototype.setMonthlySpentSats = function(value) {
   return jspb.Message.setProto3IntField(this, 7, value);
 };
 
 
 /**
- * optional int64 spent_last_365d_sats = 8;
+ * optional int64 annual_spent_sats = 8;
  * @return {number}
  */
-proto.services.api_keys.v1.GetSpendingSummaryResponse.prototype.getSpentLast365dSats = function() {
+proto.services.api_keys.v1.GetSpendingSummaryResponse.prototype.getAnnualSpentSats = function() {
   return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 8, 0));
 };
 
@@ -1576,7 +1576,7 @@ proto.services.api_keys.v1.GetSpendingSummaryResponse.prototype.getSpentLast365d
  * @param {number} value
  * @return {!proto.services.api_keys.v1.GetSpendingSummaryResponse} returns this
  */
-proto.services.api_keys.v1.GetSpendingSummaryResponse.prototype.setSpentLast365dSats = function(value) {
+proto.services.api_keys.v1.GetSpendingSummaryResponse.prototype.setAnnualSpentSats = function(value) {
   return jspb.Message.setProto3IntField(this, 8, value);
 };
 
