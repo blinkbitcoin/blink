@@ -2,27 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1466
-        (#487)...'
-      sha: e780b5d0ce3a3b551874d1d2b3f4af61094a02db
+      commitTitle: 'test: bitcoin update to 28.3 (#334)'
+      sha: d7e26e1980edf79bf820b6dec822550f855b5883
       tags:
-      - 0.21.143-3-ge780b5d0c
+      - 0.21.145-1-gd7e26e198
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1466
-        (#487)...'
-      sha: e780b5d0ce3a3b551874d1d2b3f4af61094a02db
+      commitTitle: 'test: bitcoin update to 28.3 (#334)'
+      sha: d7e26e1980edf79bf820b6dec822550f855b5883
       tags:
-      - 0.21.143-3-ge780b5d0c
+      - 0.21.145-1-gd7e26e198
     path: schemas
   - git:
-      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1466
-        (#487)...'
-      sha: e780b5d0ce3a3b551874d1d2b3f4af61094a02db
+      commitTitle: 'test: bitcoin update to 28.3 (#334)'
+      sha: d7e26e1980edf79bf820b6dec822550f855b5883
       tags:
-      - 0.21.143-3-ge780b5d0c
+      - 0.21.145-1-gd7e26e198
     path: gql
   path: graphql
 kind: LockConfig
