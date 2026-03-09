@@ -15,6 +15,30 @@ new_key_name() {
   random_uuid
 }
 
+# Helper for concurrent tests: writes GraphQL output to a file instead of $output
+exec_graphql_to_file() {
+  local token_name=$1
+  local query_name=$2
+  local variables=${3:-"{}"}
+  local output_file=$4
+
+  local auth_header=""
+  if [[ ${token_name} == "anon" ]]; then
+    auth_header=""
+  elif [[ ${token_name} == api-key* ]]; then
+    auth_header="X-API-KEY: $(read_value "$token_name")"
+  else
+    auth_header="Authorization: Bearer $(read_value "$token_name")"
+  fi
+
+  curl -s -X POST \
+    ${auth_header:+ -H "$auth_header"} \
+    -H "Content-Type: application/json" \
+    -H "X-Idempotency-Key: $(new_idempotency_key)" \
+    -d "{\"query\": \"$(gql_query "$query_name")\", \"variables\": $variables}" \
+    "${OATHKEEPER_PROXY}/graphql" > "$output_file"
+}
+
 @test "api-keys: create new key" {
   login_user 'alice' '+16505554350'
 
@@ -307,6 +331,322 @@ new_key_name() {
   exec_graphql 'alice' 'api-key-remove-limit' "$variables"
   weekly_limit="$(graphql_output '.data.apiKeyRemoveLimit.apiKey.limits.weeklyLimitSats')"
   [[ "${weekly_limit}" = "null" ]] || exit 1
+}
+
+@test "api-keys: spending limit update replaces previous value" {
+  key_name="$(new_key_name)"
+  variables="{\"input\":{\"name\":\"${key_name}\",\"scopes\": [\"READ\",\"WRITE\"]}}"
+
+  exec_graphql 'alice' 'api-key-create' "$variables"
+  key="$(graphql_output '.data.apiKeyCreate.apiKey')"
+  key_id=$(echo "$key" | jq -r '.id')
+
+  # Set daily limit to 100000
+  variables=$(jq -n \
+    --arg id "$key_id" \
+    '{input: {id: $id, limitTimeWindow: "DAILY", limitSats: 100000}}'
+  )
+  exec_graphql 'alice' 'api-key-set-limit' "$variables"
+  daily_limit="$(graphql_output '.data.apiKeySetLimit.apiKey.limits.dailyLimitSats')"
+  [[ "${daily_limit}" = "100000" ]] || exit 1
+
+  # Update daily limit to 200000
+  variables=$(jq -n \
+    --arg id "$key_id" \
+    '{input: {id: $id, limitTimeWindow: "DAILY", limitSats: 200000}}'
+  )
+  exec_graphql 'alice' 'api-key-set-limit' "$variables"
+  daily_limit="$(graphql_output '.data.apiKeySetLimit.apiKey.limits.dailyLimitSats')"
+  [[ "${daily_limit}" = "200000" ]] || exit 1
+
+  # Verify via query
+  exec_graphql 'alice' 'api-keys'
+  daily="$(graphql_output '.data.me.apiKeys[] | select(.id == "'${key_id}'") | .limits.dailyLimitSats')"
+  [[ "${daily}" = "200000" ]] || exit 1
+}
+
+@test "api-keys: set all four time window limits" {
+  key_name="$(new_key_name)"
+  variables="{\"input\":{\"name\":\"${key_name}\",\"scopes\": [\"READ\",\"WRITE\"]}}"
+
+  exec_graphql 'alice' 'api-key-create' "$variables"
+  key="$(graphql_output '.data.apiKeyCreate.apiKey')"
+  key_id=$(echo "$key" | jq -r '.id')
+
+  # Set all four limits
+  for window_and_amount in "DAILY:100000" "WEEKLY:500000" "MONTHLY:2000000" "ANNUAL:10000000"; do
+    window="${window_and_amount%%:*}"
+    amount="${window_and_amount##*:}"
+    variables=$(jq -n \
+      --arg id "$key_id" \
+      --arg window "$window" \
+      --argjson amount "$amount" \
+      '{input: {id: $id, limitTimeWindow: $window, limitSats: $amount}}'
+    )
+    exec_graphql 'alice' 'api-key-set-limit' "$variables"
+  done
+
+  # Verify all four via query
+  exec_graphql 'alice' 'api-keys'
+  limits="$(graphql_output '.data.me.apiKeys[] | select(.id == "'${key_id}'") | .limits')"
+  daily="$(echo "$limits" | jq -r '.dailyLimitSats')"
+  weekly="$(echo "$limits" | jq -r '.weeklyLimitSats')"
+  monthly="$(echo "$limits" | jq -r '.monthlyLimitSats')"
+  annual="$(echo "$limits" | jq -r '.annualLimitSats')"
+  [[ "${daily}" = "100000" ]] || exit 1
+  [[ "${weekly}" = "500000" ]] || exit 1
+  [[ "${monthly}" = "2000000" ]] || exit 1
+  [[ "${annual}" = "10000000" ]] || exit 1
+}
+
+@test "api-keys: no limits returns null limits with zero spending" {
+  key_name="$(new_key_name)"
+  variables="{\"input\":{\"name\":\"${key_name}\",\"scopes\": [\"READ\",\"WRITE\"]}}"
+
+  exec_graphql 'alice' 'api-key-create' "$variables"
+  key="$(graphql_output '.data.apiKeyCreate.apiKey')"
+  key_id=$(echo "$key" | jq -r '.id')
+
+  exec_graphql 'alice' 'api-keys'
+  limits="$(graphql_output '.data.me.apiKeys[] | select(.id == "'${key_id}'") | .limits')"
+  daily_limit="$(echo "$limits" | jq -r '.dailyLimitSats')"
+  weekly_limit="$(echo "$limits" | jq -r '.weeklyLimitSats')"
+  monthly_limit="$(echo "$limits" | jq -r '.monthlyLimitSats')"
+  annual_limit="$(echo "$limits" | jq -r '.annualLimitSats')"
+  daily_spent="$(echo "$limits" | jq -r '.dailySpentSats')"
+  weekly_spent="$(echo "$limits" | jq -r '.weeklySpentSats')"
+  monthly_spent="$(echo "$limits" | jq -r '.monthlySpentSats')"
+  annual_spent="$(echo "$limits" | jq -r '.annualSpentSats')"
+  [[ "${daily_limit}" = "null" ]] || exit 1
+  [[ "${weekly_limit}" = "null" ]] || exit 1
+  [[ "${monthly_limit}" = "null" ]] || exit 1
+  [[ "${annual_limit}" = "null" ]] || exit 1
+  [[ "${daily_spent}" = "0" ]] || exit 1
+  [[ "${weekly_spent}" = "0" ]] || exit 1
+  [[ "${monthly_spent}" = "0" ]] || exit 1
+  [[ "${annual_spent}" = "0" ]] || exit 1
+}
+
+@test "api-keys: cannot set negative spending limit" {
+  key_name="$(new_key_name)"
+  variables="{\"input\":{\"name\":\"${key_name}\",\"scopes\": [\"READ\",\"WRITE\"]}}"
+
+  exec_graphql 'alice' 'api-key-create' "$variables"
+  key="$(graphql_output '.data.apiKeyCreate.apiKey')"
+  key_id=$(echo "$key" | jq -r '.id')
+
+  variables=$(jq -n \
+    --arg id "$key_id" \
+    '{input: {id: $id, limitTimeWindow: "DAILY", limitSats: -100}}'
+  )
+  exec_graphql 'alice' 'api-key-set-limit' "$variables"
+  errors="$(graphql_output '.errors | length')"
+  [[ "${errors}" -ge 1 ]] || exit 1
+}
+
+@test "api-keys: cannot set zero spending limit" {
+  key_name="$(new_key_name)"
+  variables="{\"input\":{\"name\":\"${key_name}\",\"scopes\": [\"READ\",\"WRITE\"]}}"
+
+  exec_graphql 'alice' 'api-key-create' "$variables"
+  key="$(graphql_output '.data.apiKeyCreate.apiKey')"
+  key_id=$(echo "$key" | jq -r '.id')
+
+  variables=$(jq -n \
+    --arg id "$key_id" \
+    '{input: {id: $id, limitTimeWindow: "DAILY", limitSats: 0}}'
+  )
+  exec_graphql 'alice' 'api-key-set-limit' "$variables"
+  errors="$(graphql_output '.errors | length')"
+  [[ "${errors}" -ge 1 ]] || exit 1
+}
+
+@test "api-keys: remove limit that was never set is idempotent" {
+  key_name="$(new_key_name)"
+  variables="{\"input\":{\"name\":\"${key_name}\",\"scopes\": [\"READ\",\"WRITE\"]}}"
+
+  exec_graphql 'alice' 'api-key-create' "$variables"
+  key="$(graphql_output '.data.apiKeyCreate.apiKey')"
+  key_id=$(echo "$key" | jq -r '.id')
+
+  # Remove daily limit that was never set — should not error
+  variables=$(jq -n \
+    --arg id "$key_id" \
+    '{input: {id: $id, limitTimeWindow: "DAILY"}}'
+  )
+  exec_graphql 'alice' 'api-key-remove-limit' "$variables"
+
+  # Verify no errors in response
+  has_errors="$(graphql_output '.errors // [] | length')"
+  [[ "${has_errors}" = "0" ]] || exit 1
+
+  # Verify all limits are still null
+  exec_graphql 'alice' 'api-keys'
+  limits="$(graphql_output '.data.me.apiKeys[] | select(.id == "'${key_id}'") | .limits')"
+  daily="$(echo "$limits" | jq -r '.dailyLimitSats')"
+  [[ "${daily}" = "null" ]] || exit 1
+}
+
+@test "api-keys: read-only key cannot set limits" {
+  key_name="$(new_key_name)"
+
+  # Create read-only key
+  variables="{\"input\":{\"name\":\"${key_name}\",\"scopes\": [\"READ\"]}}"
+  exec_graphql 'alice' 'api-key-create' "$variables"
+  key="$(graphql_output '.data.apiKeyCreate.apiKey')"
+  secret="$(graphql_output '.data.apiKeyCreate.apiKeySecret')"
+  key_id=$(echo "$key" | jq -r '.id')
+  cache_value "api-key-secret" "$secret"
+
+  # Attempt to set limit using read-only API key
+  variables=$(jq -n \
+    --arg id "$key_id" \
+    '{input: {id: $id, limitTimeWindow: "DAILY", limitSats: 100000}}'
+  )
+  exec_graphql 'api-key-secret' 'api-key-set-limit' "$variables"
+  errors="$(graphql_output '.errors | length')"
+  [[ "${errors}" -ge 1 ]] || exit 1
+}
+
+@test "api-keys: cannot set limit on another user's key" {
+  # Create key as alice
+  key_name="$(new_key_name)"
+  variables="{\"input\":{\"name\":\"${key_name}\",\"scopes\": [\"READ\",\"WRITE\"]}}"
+  exec_graphql 'alice' 'api-key-create' "$variables"
+  key="$(graphql_output '.data.apiKeyCreate.apiKey')"
+  alice_key_id=$(echo "$key" | jq -r '.id')
+
+  # Create a second user (bob)
+  create_user 'bob'
+
+  # Attempt to set limit on alice's key as bob
+  variables=$(jq -n \
+    --arg id "$alice_key_id" \
+    '{input: {id: $id, limitTimeWindow: "DAILY", limitSats: 100000}}'
+  )
+  exec_graphql 'bob' 'api-key-set-limit' "$variables"
+  errors="$(graphql_output '.errors | length')"
+  [[ "${errors}" -ge 1 ]] || exit 1
+}
+
+@test "api-keys: concurrent limit set operations on different windows are consistent" {
+  key_name="$(new_key_name)"
+  variables="{\"input\":{\"name\":\"${key_name}\",\"scopes\": [\"READ\",\"WRITE\"]}}"
+
+  exec_graphql 'alice' 'api-key-create' "$variables"
+  key="$(graphql_output '.data.apiKeyCreate.apiKey')"
+  key_id=$(echo "$key" | jq -r '.id')
+
+  local tmpdir
+  tmpdir=$(mktemp -d)
+
+  # Fire 3 parallel set-limit calls for different time windows
+  vars_daily=$(jq -n --arg id "$key_id" '{input: {id: $id, limitTimeWindow: "DAILY", limitSats: 100000}}')
+  vars_weekly=$(jq -n --arg id "$key_id" '{input: {id: $id, limitTimeWindow: "WEEKLY", limitSats: 500000}}')
+  vars_monthly=$(jq -n --arg id "$key_id" '{input: {id: $id, limitTimeWindow: "MONTHLY", limitSats: 2000000}}')
+
+  exec_graphql_to_file 'alice' 'api-key-set-limit' "$vars_daily" "$tmpdir/daily.json" &
+  pid1=$!
+  exec_graphql_to_file 'alice' 'api-key-set-limit' "$vars_weekly" "$tmpdir/weekly.json" &
+  pid2=$!
+  exec_graphql_to_file 'alice' 'api-key-set-limit' "$vars_monthly" "$tmpdir/monthly.json" &
+  pid3=$!
+  wait $pid1 $pid2 $pid3
+
+  # Verify no errors in any response
+  for f in "$tmpdir/daily.json" "$tmpdir/weekly.json" "$tmpdir/monthly.json"; do
+    errors=$(jq -r '.errors // [] | length' "$f")
+    [[ "${errors}" = "0" ]] || exit 1
+  done
+
+  # Query and verify all three limits are set
+  exec_graphql 'alice' 'api-keys'
+  limits="$(graphql_output '.data.me.apiKeys[] | select(.id == "'${key_id}'") | .limits')"
+  daily="$(echo "$limits" | jq -r '.dailyLimitSats')"
+  weekly="$(echo "$limits" | jq -r '.weeklyLimitSats')"
+  monthly="$(echo "$limits" | jq -r '.monthlyLimitSats')"
+  [[ "${daily}" = "100000" ]] || exit 1
+  [[ "${weekly}" = "500000" ]] || exit 1
+  [[ "${monthly}" = "2000000" ]] || exit 1
+
+  rm -rf "$tmpdir"
+}
+
+@test "api-keys: concurrent set and remove on same window" {
+  key_name="$(new_key_name)"
+  variables="{\"input\":{\"name\":\"${key_name}\",\"scopes\": [\"READ\",\"WRITE\"]}}"
+
+  exec_graphql 'alice' 'api-key-create' "$variables"
+  key="$(graphql_output '.data.apiKeyCreate.apiKey')"
+  key_id=$(echo "$key" | jq -r '.id')
+
+  # Set initial daily limit
+  variables=$(jq -n \
+    --arg id "$key_id" \
+    '{input: {id: $id, limitTimeWindow: "DAILY", limitSats: 100000}}'
+  )
+  exec_graphql 'alice' 'api-key-set-limit' "$variables"
+
+  local tmpdir
+  tmpdir=$(mktemp -d)
+
+  # Fire set and remove in parallel
+  vars_set=$(jq -n --arg id "$key_id" '{input: {id: $id, limitTimeWindow: "DAILY", limitSats: 200000}}')
+  vars_remove=$(jq -n --arg id "$key_id" '{input: {id: $id, limitTimeWindow: "DAILY"}}')
+
+  exec_graphql_to_file 'alice' 'api-key-set-limit' "$vars_set" "$tmpdir/set.json" &
+  pid1=$!
+  exec_graphql_to_file 'alice' 'api-key-remove-limit' "$vars_remove" "$tmpdir/remove.json" &
+  pid2=$!
+  wait $pid1 $pid2
+
+  # Verify no errors in either response
+  for f in "$tmpdir/set.json" "$tmpdir/remove.json"; do
+    errors=$(jq -r '.errors // [] | length' "$f")
+    [[ "${errors}" = "0" ]] || exit 1
+  done
+
+  # Query final state — should be one of: 200000 or null (both valid outcomes)
+  exec_graphql 'alice' 'api-keys'
+  daily="$(graphql_output '.data.me.apiKeys[] | select(.id == "'${key_id}'") | .limits.dailyLimitSats')"
+  [[ "${daily}" = "200000" || "${daily}" = "null" ]] || exit 1
+
+  rm -rf "$tmpdir"
+}
+
+@test "api-keys: concurrent identical set-limit calls are safe" {
+  key_name="$(new_key_name)"
+  variables="{\"input\":{\"name\":\"${key_name}\",\"scopes\": [\"READ\",\"WRITE\"]}}"
+
+  exec_graphql 'alice' 'api-key-create' "$variables"
+  key="$(graphql_output '.data.apiKeyCreate.apiKey')"
+  key_id=$(echo "$key" | jq -r '.id')
+
+  local tmpdir
+  tmpdir=$(mktemp -d)
+
+  # Fire 5 identical set-limit calls in parallel
+  vars=$(jq -n --arg id "$key_id" '{input: {id: $id, limitTimeWindow: "DAILY", limitSats: 100000}}')
+
+  pids=()
+  for i in $(seq 1 5); do
+    exec_graphql_to_file 'alice' 'api-key-set-limit' "$vars" "$tmpdir/result_${i}.json" &
+    pids+=($!)
+  done
+  wait "${pids[@]}"
+
+  # Verify no errors in any response
+  for i in $(seq 1 5); do
+    errors=$(jq -r '.errors // [] | length' "$tmpdir/result_${i}.json")
+    [[ "${errors}" = "0" ]] || exit 1
+  done
+
+  # Verify final state is correct (idempotent)
+  exec_graphql 'alice' 'api-keys'
+  daily="$(graphql_output '.data.me.apiKeys[] | select(.id == "'${key_id}'") | .limits.dailyLimitSats')"
+  [[ "${daily}" = "100000" ]] || exit 1
+
+  rm -rf "$tmpdir"
 }
 
 @test "api-keys: cannot create key without scopes" {

@@ -434,3 +434,97 @@ impl Limits {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_limits() -> Limits {
+        // Lazy pool that never actually connects — validation errors fire before any SQL
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://localhost/nonexistent")
+            .expect("connect_lazy should not fail");
+        Limits::new(pool)
+    }
+
+    fn test_api_key_id() -> IdentityApiKeyId {
+        IdentityApiKeyId::new()
+    }
+
+    #[tokio::test]
+    async fn check_spending_limit_rejects_negative_amount() {
+        let limits = test_limits();
+        let result = limits.check_spending_limit(test_api_key_id(), -1).await;
+        assert!(matches!(result, Err(LimitError::InvalidLimitAmount)));
+    }
+
+    #[tokio::test]
+    async fn record_spending_rejects_zero_amount() {
+        let limits = test_limits();
+        let result = limits.record_spending(test_api_key_id(), 0, None).await;
+        assert!(matches!(result, Err(LimitError::InvalidLimitAmount)));
+    }
+
+    #[tokio::test]
+    async fn record_spending_rejects_negative_amount() {
+        let limits = test_limits();
+        let result = limits.record_spending(test_api_key_id(), -100, None).await;
+        assert!(matches!(result, Err(LimitError::InvalidLimitAmount)));
+    }
+
+    #[tokio::test]
+    async fn set_daily_limit_rejects_zero() {
+        let limits = test_limits();
+        let result = limits.set_daily_limit(test_api_key_id(), 0).await;
+        assert!(matches!(result, Err(LimitError::InvalidLimitAmount)));
+    }
+
+    #[tokio::test]
+    async fn set_daily_limit_rejects_negative() {
+        let limits = test_limits();
+        let result = limits.set_daily_limit(test_api_key_id(), -1).await;
+        assert!(matches!(result, Err(LimitError::InvalidLimitAmount)));
+    }
+
+    #[tokio::test]
+    async fn set_weekly_limit_rejects_zero() {
+        let limits = test_limits();
+        let result = limits.set_weekly_limit(test_api_key_id(), 0).await;
+        assert!(matches!(result, Err(LimitError::InvalidLimitAmount)));
+    }
+
+    #[tokio::test]
+    async fn set_weekly_limit_rejects_negative() {
+        let limits = test_limits();
+        let result = limits.set_weekly_limit(test_api_key_id(), -1).await;
+        assert!(matches!(result, Err(LimitError::InvalidLimitAmount)));
+    }
+
+    #[tokio::test]
+    async fn set_monthly_limit_rejects_zero() {
+        let limits = test_limits();
+        let result = limits.set_monthly_limit(test_api_key_id(), 0).await;
+        assert!(matches!(result, Err(LimitError::InvalidLimitAmount)));
+    }
+
+    #[tokio::test]
+    async fn set_monthly_limit_rejects_negative() {
+        let limits = test_limits();
+        let result = limits.set_monthly_limit(test_api_key_id(), -1).await;
+        assert!(matches!(result, Err(LimitError::InvalidLimitAmount)));
+    }
+
+    #[tokio::test]
+    async fn set_annual_limit_rejects_zero() {
+        let limits = test_limits();
+        let result = limits.set_annual_limit(test_api_key_id(), 0).await;
+        assert!(matches!(result, Err(LimitError::InvalidLimitAmount)));
+    }
+
+    #[tokio::test]
+    async fn set_annual_limit_rejects_negative() {
+        let limits = test_limits();
+        let result = limits.set_annual_limit(test_api_key_id(), -1).await;
+        assert!(matches!(result, Err(LimitError::InvalidLimitAmount)));
+    }
+}
