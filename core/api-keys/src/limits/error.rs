@@ -7,7 +7,4 @@ pub enum LimitError {
 
     #[error("Invalid limit amount (must be positive)")]
     InvalidLimitAmount,
-
-    #[error("Transaction not found: {0}")]
-    TransactionNotFound(String),
 }
