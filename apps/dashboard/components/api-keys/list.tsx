@@ -44,14 +44,14 @@ const ApiKeysList: React.FC<ApiKeysListProps> = ({
             const weeklyLimitSats = limits?.weeklyLimitSats
             const monthlyLimitSats = limits?.monthlyLimitSats
             const annualLimitSats = limits?.annualLimitSats
-            const spentLast24HSats = limits?.spentLast24HSats ?? 0
-            const spentLast7DSats = limits?.spentLast7DSats ?? 0
-            const spentLast30DSats = limits?.spentLast30DSats ?? 0
-            const spentLast365DSats = limits?.spentLast365DSats ?? 0
+            const dailySpentSats = limits?.dailySpentSats ?? 0
+            const weeklySpentSats = limits?.weeklySpentSats ?? 0
+            const monthlySpentSats = limits?.monthlySpentSats ?? 0
+            const annualSpentSats = limits?.annualSpentSats ?? 0
 
             const remainingDailyLimitSats =
               dailyLimitSats !== null && dailyLimitSats !== undefined
-                ? dailyLimitSats - spentLast24HSats
+                ? dailyLimitSats - dailySpentSats
                 : null
 
             const hasAnyLimit =
@@ -71,7 +71,7 @@ const ApiKeysList: React.FC<ApiKeysListProps> = ({
                             <strong>Daily:</strong> {dailyLimitSats.toLocaleString()} sats
                           </Typography>
                           <Typography level="body-xs" color="neutral">
-                            Spent: {spentLast24HSats.toLocaleString()} / Remaining:{" "}
+                            Spent: {dailySpentSats.toLocaleString()} / Remaining:{" "}
                             {remainingDailyLimitSats?.toLocaleString() || 0}
                           </Typography>
                         </div>
@@ -83,8 +83,8 @@ const ApiKeysList: React.FC<ApiKeysListProps> = ({
                             sats
                           </Typography>
                           <Typography level="body-xs" color="neutral">
-                            Spent: {spentLast7DSats.toLocaleString()} / Remaining:{" "}
-                            {(weeklyLimitSats - spentLast7DSats).toLocaleString()}
+                            Spent: {weeklySpentSats.toLocaleString()} / Remaining:{" "}
+                            {(weeklyLimitSats - weeklySpentSats).toLocaleString()}
                           </Typography>
                         </div>
                       )}
@@ -95,8 +95,8 @@ const ApiKeysList: React.FC<ApiKeysListProps> = ({
                             sats
                           </Typography>
                           <Typography level="body-xs" color="neutral">
-                            Spent: {spentLast30DSats.toLocaleString()} / Remaining:{" "}
-                            {(monthlyLimitSats - spentLast30DSats).toLocaleString()}
+                            Spent: {monthlySpentSats.toLocaleString()} / Remaining:{" "}
+                            {(monthlyLimitSats - monthlySpentSats).toLocaleString()}
                           </Typography>
                         </div>
                       )}
@@ -107,8 +107,8 @@ const ApiKeysList: React.FC<ApiKeysListProps> = ({
                             sats
                           </Typography>
                           <Typography level="body-xs" color="neutral">
-                            Spent: {spentLast365DSats.toLocaleString()} / Remaining:{" "}
-                            {(annualLimitSats - spentLast365DSats).toLocaleString()}
+                            Spent: {annualSpentSats.toLocaleString()} / Remaining:{" "}
+                            {(annualLimitSats - annualSpentSats).toLocaleString()}
                           </Typography>
                         </div>
                       )}
@@ -132,10 +132,10 @@ const ApiKeysList: React.FC<ApiKeysListProps> = ({
                         annual: annualLimitSats ?? null,
                       }}
                       spent={{
-                        last24h: spentLast24HSats,
-                        last7d: spentLast7DSats,
-                        last30d: spentLast30DSats,
-                        last365d: spentLast365DSats,
+                        last24h: dailySpentSats,
+                        last7d: weeklySpentSats,
+                        last30d: monthlySpentSats,
+                        last365d: annualSpentSats,
                       }}
                     />
                     <RevokeKey id={id} />

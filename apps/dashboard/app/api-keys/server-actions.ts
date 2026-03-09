@@ -8,16 +8,10 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import {
   createApiKey,
   revokeApiKey,
-  setApiKeyDailyLimit,
-  setApiKeyWeeklyLimit,
-  setApiKeyMonthlyLimit,
-  setApiKeyAnnualLimit,
+  setApiKeyLimit,
   removeApiKeyLimit,
-  removeApiKeyWeeklyLimit,
-  removeApiKeyMonthlyLimit,
-  removeApiKeyAnnualLimit,
 } from "@/services/graphql/mutations/api-keys"
-import { Scope } from "@/services/graphql/generated"
+import { LimitTimeWindow, Scope } from "@/services/graphql/generated"
 
 export const revokeApiKeyServerAction = async (id: string) => {
   if (!id || typeof id !== "string") {
@@ -128,35 +122,24 @@ export const createApiKeyServerAction = async (
   if (data?.apiKeyCreate.apiKey.id) {
     const apiKeyId = data.apiKeyCreate.apiKey.id
     try {
-      const dailyLimitSats = form.get("dailyLimitSats")
-      if (dailyLimitSats && dailyLimitSats !== "") {
-        const limit = parseInt(dailyLimitSats as string, 10)
-        if (limit > 0) {
-          await setApiKeyDailyLimit({ id: apiKeyId, dailyLimitSats: limit })
-        }
-      }
+      const limitFields: Array<{ formField: string; timeWindow: LimitTimeWindow }> = [
+        { formField: "dailyLimitSats", timeWindow: LimitTimeWindow.Daily },
+        { formField: "weeklyLimitSats", timeWindow: LimitTimeWindow.Weekly },
+        { formField: "monthlyLimitSats", timeWindow: LimitTimeWindow.Monthly },
+        { formField: "annualLimitSats", timeWindow: LimitTimeWindow.Annual },
+      ]
 
-      const weeklyLimitSats = form.get("weeklyLimitSats")
-      if (weeklyLimitSats && weeklyLimitSats !== "") {
-        const limit = parseInt(weeklyLimitSats as string, 10)
-        if (limit > 0) {
-          await setApiKeyWeeklyLimit({ id: apiKeyId, weeklyLimitSats: limit })
-        }
-      }
-
-      const monthlyLimitSats = form.get("monthlyLimitSats")
-      if (monthlyLimitSats && monthlyLimitSats !== "") {
-        const limit = parseInt(monthlyLimitSats as string, 10)
-        if (limit > 0) {
-          await setApiKeyMonthlyLimit({ id: apiKeyId, monthlyLimitSats: limit })
-        }
-      }
-
-      const annualLimitSats = form.get("annualLimitSats")
-      if (annualLimitSats && annualLimitSats !== "") {
-        const limit = parseInt(annualLimitSats as string, 10)
-        if (limit > 0) {
-          await setApiKeyAnnualLimit({ id: apiKeyId, annualLimitSats: limit })
+      for (const { formField, timeWindow } of limitFields) {
+        const value = form.get(formField)
+        if (value && value !== "") {
+          const limit = parseInt(value as string, 10)
+          if (limit > 0) {
+            await setApiKeyLimit({
+              id: apiKeyId,
+              limitTimeWindow: timeWindow,
+              limitSats: limit,
+            })
+          }
         }
       }
     } catch (err) {
@@ -195,9 +178,9 @@ export const setDailyLimit = async ({
   }
 
   try {
-    await setApiKeyDailyLimit({ id, dailyLimitSats })
+    await setApiKeyLimit({ id, limitTimeWindow: LimitTimeWindow.Daily, limitSats: dailyLimitSats })
   } catch (err) {
-    console.log("error in setApiKeyDailyLimit ", err)
+    console.log("error in setApiKeyLimit (daily) ", err)
     throw new Error("Failed to set API key daily limit")
   }
 
@@ -226,9 +209,9 @@ export const setWeeklyLimit = async ({
   }
 
   try {
-    await setApiKeyWeeklyLimit({ id, weeklyLimitSats })
+    await setApiKeyLimit({ id, limitTimeWindow: LimitTimeWindow.Weekly, limitSats: weeklyLimitSats })
   } catch (err) {
-    console.log("error in setApiKeyWeeklyLimit ", err)
+    console.log("error in setApiKeyLimit (weekly) ", err)
     throw new Error("Failed to set API key weekly limit")
   }
 
@@ -257,9 +240,9 @@ export const setMonthlyLimit = async ({
   }
 
   try {
-    await setApiKeyMonthlyLimit({ id, monthlyLimitSats })
+    await setApiKeyLimit({ id, limitTimeWindow: LimitTimeWindow.Monthly, limitSats: monthlyLimitSats })
   } catch (err) {
-    console.log("error in setApiKeyMonthlyLimit ", err)
+    console.log("error in setApiKeyLimit (monthly) ", err)
     throw new Error("Failed to set API key monthly limit")
   }
 
@@ -288,9 +271,9 @@ export const setAnnualLimit = async ({
   }
 
   try {
-    await setApiKeyAnnualLimit({ id, annualLimitSats })
+    await setApiKeyLimit({ id, limitTimeWindow: LimitTimeWindow.Annual, limitSats: annualLimitSats })
   } catch (err) {
-    console.log("error in setApiKeyAnnualLimit ", err)
+    console.log("error in setApiKeyLimit (annual) ", err)
     throw new Error("Failed to set API key annual limit")
   }
 
@@ -309,9 +292,9 @@ export const removeLimit = async ({ id }: { id: string }) => {
   }
 
   try {
-    await removeApiKeyLimit({ id })
+    await removeApiKeyLimit({ id, limitTimeWindow: LimitTimeWindow.Daily })
   } catch (err) {
-    console.log("error in removeApiKeyLimit ", err)
+    console.log("error in removeApiKeyLimit (daily) ", err)
     throw new Error("Failed to remove API key limit")
   }
 
@@ -330,9 +313,9 @@ export const removeWeeklyLimit = async ({ id }: { id: string }) => {
   }
 
   try {
-    await removeApiKeyWeeklyLimit({ id })
+    await removeApiKeyLimit({ id, limitTimeWindow: LimitTimeWindow.Weekly })
   } catch (err) {
-    console.log("error in removeApiKeyWeeklyLimit ", err)
+    console.log("error in removeApiKeyLimit (weekly) ", err)
     throw new Error("Failed to remove API key weekly limit")
   }
 
@@ -351,9 +334,9 @@ export const removeMonthlyLimit = async ({ id }: { id: string }) => {
   }
 
   try {
-    await removeApiKeyMonthlyLimit({ id })
+    await removeApiKeyLimit({ id, limitTimeWindow: LimitTimeWindow.Monthly })
   } catch (err) {
-    console.log("error in removeApiKeyMonthlyLimit ", err)
+    console.log("error in removeApiKeyLimit (monthly) ", err)
     throw new Error("Failed to remove API key monthly limit")
   }
 
@@ -372,9 +355,9 @@ export const removeAnnualLimit = async ({ id }: { id: string }) => {
   }
 
   try {
-    await removeApiKeyAnnualLimit({ id })
+    await removeApiKeyLimit({ id, limitTimeWindow: LimitTimeWindow.Annual })
   } catch (err) {
-    console.log("error in removeApiKeyAnnualLimit ", err)
+    console.log("error in removeApiKeyLimit (annual) ", err)
     throw new Error("Failed to remove API key annual limit")
   }
 

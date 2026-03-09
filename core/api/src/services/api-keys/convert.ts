@@ -17,8 +17,8 @@ export const grpcSpendingLimitsToSpendingLimits = (
   annualLimitSats: response.hasAnnualLimitSats()
     ? (response.getAnnualLimitSats() ?? null)
     : null,
-  spentLast24hSats: response.getSpentLast24hSats(),
-  spentLast7dSats: response.getSpentLast7dSats(),
-  spentLast30dSats: response.getSpentLast30dSats(),
-  spentLast365dSats: response.getSpentLast365dSats(),
+  dailySpentSats: response.getDailySpentSats(),
+  weeklySpentSats: response.getWeeklySpentSats(),
+  monthlySpentSats: response.getMonthlySpentSats(),
+  annualSpentSats: response.getAnnualSpentSats(),
 })
