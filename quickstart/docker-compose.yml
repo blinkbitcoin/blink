@@ -236,6 +236,7 @@ services:
     - API_KEYS_CONFIG=/config/api-keys/api-keys.yml
     ports:
     - 5397:5397
+    - 6686:6686
     volumes:
     - ${HOST_PROJECT_PATH:-.}/${GALOY_QUICKSTART_PATH:-vendor/blink-quickstart}/dev/config/api-keys/api-keys.yml:/config/api-keys/api-keys.yml
     depends_on:
