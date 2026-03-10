@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE api_key_limits\n            SET weekly_limit_sats = NULL\n            WHERE api_key_id = $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "824699e48d065715106f7f03078594074bd079269649c1b9126a89fe5fd8d4e7"
+}

@@ -1,6 +1,6 @@
 mod error;
 
-use sqlx::{Pool, Postgres, Row};
+use sqlx::{Pool, Postgres};
 
 use crate::identity::IdentityApiKeyId;
 
@@ -105,16 +105,16 @@ impl Limits {
             return Err(LimitError::InvalidLimitAmount);
         }
 
-        sqlx::query(
+        sqlx::query!(
             r#"
             INSERT INTO api_key_transactions (api_key_id, amount_sats, transaction_id, created_at)
             VALUES ($1, $2, $3, NOW())
             ON CONFLICT (transaction_id) DO NOTHING
             "#,
+            api_key_id as IdentityApiKeyId,
+            amount_sats,
+            transaction_id,
         )
-        .bind(api_key_id)
-        .bind(amount_sats)
-        .bind(transaction_id)
         .execute(&self.pool)
         .await?;
 
@@ -123,13 +123,13 @@ impl Limits {
 
     #[tracing::instrument(name = "limits.reverse_spending", skip(self))]
     pub async fn reverse_spending(&self, transaction_id: String) -> Result<(), LimitError> {
-        sqlx::query(
+        sqlx::query!(
             r#"
             DELETE FROM api_key_transactions
             WHERE transaction_id = $1
             "#,
+            &transaction_id,
         )
-        .bind(&transaction_id)
         .execute(&self.pool)
         .await?;
 
@@ -166,16 +166,16 @@ impl Limits {
             return Err(LimitError::InvalidLimitAmount);
         }
 
-        sqlx::query(
+        sqlx::query!(
             r#"
             INSERT INTO api_key_limits (api_key_id, daily_limit_sats)
             VALUES ($1, $2)
             ON CONFLICT (api_key_id)
             DO UPDATE SET daily_limit_sats = $2
             "#,
+            api_key_id as IdentityApiKeyId,
+            daily_limit_sats,
         )
-        .bind(api_key_id)
-        .bind(daily_limit_sats)
         .execute(&self.pool)
         .await?;
 
@@ -192,16 +192,16 @@ impl Limits {
             return Err(LimitError::InvalidLimitAmount);
         }
 
-        sqlx::query(
+        sqlx::query!(
             r#"
             INSERT INTO api_key_limits (api_key_id, weekly_limit_sats)
             VALUES ($1, $2)
             ON CONFLICT (api_key_id)
             DO UPDATE SET weekly_limit_sats = $2
             "#,
+            api_key_id as IdentityApiKeyId,
+            weekly_limit_sats,
         )
-        .bind(api_key_id)
-        .bind(weekly_limit_sats)
         .execute(&self.pool)
         .await?;
 
@@ -218,16 +218,16 @@ impl Limits {
             return Err(LimitError::InvalidLimitAmount);
         }
 
-        sqlx::query(
+        sqlx::query!(
             r#"
             INSERT INTO api_key_limits (api_key_id, monthly_limit_sats)
             VALUES ($1, $2)
             ON CONFLICT (api_key_id)
             DO UPDATE SET monthly_limit_sats = $2
             "#,
+            api_key_id as IdentityApiKeyId,
+            monthly_limit_sats,
         )
-        .bind(api_key_id)
-        .bind(monthly_limit_sats)
         .execute(&self.pool)
         .await?;
 
@@ -244,16 +244,16 @@ impl Limits {
             return Err(LimitError::InvalidLimitAmount);
         }
 
-        sqlx::query(
+        sqlx::query!(
             r#"
             INSERT INTO api_key_limits (api_key_id, annual_limit_sats)
             VALUES ($1, $2)
             ON CONFLICT (api_key_id)
             DO UPDATE SET annual_limit_sats = $2
             "#,
+            api_key_id as IdentityApiKeyId,
+            annual_limit_sats,
         )
-        .bind(api_key_id)
-        .bind(annual_limit_sats)
         .execute(&self.pool)
         .await?;
 
@@ -262,14 +262,14 @@ impl Limits {
 
     #[tracing::instrument(name = "limits.remove_daily_limit", skip(self))]
     pub async fn remove_daily_limit(&self, api_key_id: IdentityApiKeyId) -> Result<(), LimitError> {
-        sqlx::query(
+        sqlx::query!(
             r#"
             UPDATE api_key_limits
             SET daily_limit_sats = NULL
             WHERE api_key_id = $1
             "#,
+            api_key_id as IdentityApiKeyId,
         )
-        .bind(api_key_id)
         .execute(&self.pool)
         .await?;
 
@@ -283,14 +283,14 @@ impl Limits {
         &self,
         api_key_id: IdentityApiKeyId,
     ) -> Result<(), LimitError> {
-        sqlx::query(
+        sqlx::query!(
             r#"
             UPDATE api_key_limits
             SET weekly_limit_sats = NULL
             WHERE api_key_id = $1
             "#,
+            api_key_id as IdentityApiKeyId,
         )
-        .bind(api_key_id)
         .execute(&self.pool)
         .await?;
 
@@ -304,14 +304,14 @@ impl Limits {
         &self,
         api_key_id: IdentityApiKeyId,
     ) -> Result<(), LimitError> {
-        sqlx::query(
+        sqlx::query!(
             r#"
             UPDATE api_key_limits
             SET monthly_limit_sats = NULL
             WHERE api_key_id = $1
             "#,
+            api_key_id as IdentityApiKeyId,
         )
-        .bind(api_key_id)
         .execute(&self.pool)
         .await?;
 
@@ -325,14 +325,14 @@ impl Limits {
         &self,
         api_key_id: IdentityApiKeyId,
     ) -> Result<(), LimitError> {
-        sqlx::query(
+        sqlx::query!(
             r#"
             UPDATE api_key_limits
             SET annual_limit_sats = NULL
             WHERE api_key_id = $1
             "#,
+            api_key_id as IdentityApiKeyId,
         )
-        .bind(api_key_id)
         .execute(&self.pool)
         .await?;
 
@@ -343,13 +343,13 @@ impl Limits {
 
     #[tracing::instrument(name = "limits.remove_all_limits", skip(self))]
     pub async fn remove_all_limits(&self, api_key_id: IdentityApiKeyId) -> Result<(), LimitError> {
-        sqlx::query(
+        sqlx::query!(
             r#"
             DELETE FROM api_key_limits
             WHERE api_key_id = $1
             "#,
+            api_key_id as IdentityApiKeyId,
         )
-        .bind(api_key_id)
         .execute(&self.pool)
         .await?;
 
@@ -357,23 +357,23 @@ impl Limits {
     }
 
     async fn get_all_limits(&self, api_key_id: IdentityApiKeyId) -> Result<AllLimits, LimitError> {
-        let row = sqlx::query(
+        let row = sqlx::query!(
             r#"
             SELECT daily_limit_sats, weekly_limit_sats, monthly_limit_sats, annual_limit_sats
             FROM api_key_limits
             WHERE api_key_id = $1
             "#,
+            api_key_id as IdentityApiKeyId,
         )
-        .bind(api_key_id)
         .fetch_optional(&self.pool)
         .await?;
 
         match row {
             Some(row) => Ok(AllLimits {
-                daily_limit_sats: row.get("daily_limit_sats"),
-                weekly_limit_sats: row.get("weekly_limit_sats"),
-                monthly_limit_sats: row.get("monthly_limit_sats"),
-                annual_limit_sats: row.get("annual_limit_sats"),
+                daily_limit_sats: row.daily_limit_sats,
+                weekly_limit_sats: row.weekly_limit_sats,
+                monthly_limit_sats: row.monthly_limit_sats,
+                annual_limit_sats: row.annual_limit_sats,
             }),
             None => Ok(AllLimits {
                 daily_limit_sats: None,
@@ -385,7 +385,7 @@ impl Limits {
     }
 
     async fn cleanup_empty_limits(&self, api_key_id: IdentityApiKeyId) -> Result<(), LimitError> {
-        sqlx::query(
+        sqlx::query!(
             r#"
             DELETE FROM api_key_limits
             WHERE api_key_id = $1
@@ -394,8 +394,8 @@ impl Limits {
               AND monthly_limit_sats IS NULL
               AND annual_limit_sats IS NULL
             "#,
+            api_key_id as IdentityApiKeyId,
         )
-        .bind(api_key_id)
         .execute(&self.pool)
         .await?;
 
@@ -406,27 +406,27 @@ impl Limits {
         &self,
         api_key_id: IdentityApiKeyId,
     ) -> Result<AllSpending, LimitError> {
-        let row = sqlx::query(
+        let row = sqlx::query!(
             r#"
             SELECT
-                COALESCE(SUM(amount_sats) FILTER (WHERE created_at > NOW() - INTERVAL '24 hours'), 0)::bigint AS daily_spent_sats,
-                COALESCE(SUM(amount_sats) FILTER (WHERE created_at > NOW() - INTERVAL '7 days'), 0)::bigint AS weekly_spent_sats,
-                COALESCE(SUM(amount_sats) FILTER (WHERE created_at > NOW() - INTERVAL '30 days'), 0)::bigint AS monthly_spent_sats,
-                COALESCE(SUM(amount_sats) FILTER (WHERE created_at > NOW() - INTERVAL '365 days'), 0)::bigint AS annual_spent_sats
+                COALESCE(SUM(amount_sats) FILTER (WHERE created_at > NOW() - INTERVAL '24 hours'), 0)::bigint AS "daily_spent_sats!",
+                COALESCE(SUM(amount_sats) FILTER (WHERE created_at > NOW() - INTERVAL '7 days'), 0)::bigint AS "weekly_spent_sats!",
+                COALESCE(SUM(amount_sats) FILTER (WHERE created_at > NOW() - INTERVAL '30 days'), 0)::bigint AS "monthly_spent_sats!",
+                COALESCE(SUM(amount_sats) FILTER (WHERE created_at > NOW() - INTERVAL '365 days'), 0)::bigint AS "annual_spent_sats!"
             FROM api_key_transactions
             WHERE api_key_id = $1
               AND created_at > NOW() - INTERVAL '365 days'
             "#,
+            api_key_id as IdentityApiKeyId,
         )
-        .bind(api_key_id)
         .fetch_one(&self.pool)
         .await?;
 
         Ok(AllSpending {
-            daily_spent_sats: row.get("daily_spent_sats"),
-            weekly_spent_sats: row.get("weekly_spent_sats"),
-            monthly_spent_sats: row.get("monthly_spent_sats"),
-            annual_spent_sats: row.get("annual_spent_sats"),
+            daily_spent_sats: row.daily_spent_sats,
+            weekly_spent_sats: row.weekly_spent_sats,
+            monthly_spent_sats: row.monthly_spent_sats,
+            annual_spent_sats: row.annual_spent_sats,
         })
     }
 }

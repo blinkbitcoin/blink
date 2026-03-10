@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE api_key_limits\n            SET annual_limit_sats = NULL\n            WHERE api_key_id = $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "31c8aaecaddf938aec2a98f08d90afc940fd7471262d106d41be71b7401903ac"
+}
