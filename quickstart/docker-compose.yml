@@ -99,7 +99,7 @@ services:
     - POSTGRES_PASSWORD=secret
     - POSTGRES_DB=hydra
   galoy:
-    image: us.gcr.io/galoy-org/galoy-api@sha256:0ca33a5401fc85e0bf122248cb6d98434846e0cf45800528bd3a420980989e2f
+    image: us.gcr.io/galoy-org/galoy-api@sha256:c62c171c391c283a6c92b071f2f7025c1c1b8869d10c2c807afa785f7248acb8
     environment:
     - HELMREVISION=dev
     - NETWORK=regtest
@@ -158,7 +158,7 @@ services:
         aliases:
         - bats-tests
   trigger:
-    image: us.gcr.io/galoy-org/galoy-api-trigger@sha256:295763e9ad5f81c0182e511901d05d0f1901a1cf213fc3a749016c2c6fc5c88f
+    image: us.gcr.io/galoy-org/galoy-api-trigger@sha256:d013961bf0e95e737c148f1603c8f902f163b03544fb2fadc5e67fbf04c1a58e
     environment:
     - HELMREVISION=dev
     - NETWORK=regtest
@@ -236,7 +236,6 @@ services:
     - API_KEYS_CONFIG=/config/api-keys/api-keys.yml
     ports:
     - 5397:5397
-    - 6686:6686
     volumes:
     - ${HOST_PROJECT_PATH:-.}/${GALOY_QUICKSTART_PATH:-vendor/blink-quickstart}/dev/config/api-keys/api-keys.yml:/config/api-keys/api-keys.yml
     depends_on:
@@ -270,7 +269,7 @@ services:
     environment:
     - MONGO_INITDB_DATABASE=galoy
   mongodb-migrate:
-    image: us.gcr.io/galoy-org/galoy-api-migrate@sha256:46f434d078fbe0d951195ea7fe471a2fe84772ac2d27b875495838828a41a14e
+    image: us.gcr.io/galoy-org/galoy-api-migrate@sha256:ac3e6409d908d9b5f72e100d65ad6be3e44a7baeb388de5e4cdac8f52e6fba9a
     depends_on:
     - mongodb
     environment:

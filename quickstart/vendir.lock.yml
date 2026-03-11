@@ -2,27 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1469
-        (#492)...'
-      sha: 30293ac350ec93bd6a3fbc3aaa7d90986c88435e
+      commitTitle: 'feat: add budget spending limits to api-keys service (#462)'
+      sha: d0d6d75094f62bb8badb3233b69fe8b3b4caef0d
       tags:
-      - 0.21.146-2-g30293ac35
+      - 0.21.147-1-gd0d6d7509
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1469
-        (#492)...'
-      sha: 30293ac350ec93bd6a3fbc3aaa7d90986c88435e
+      commitTitle: 'feat: add budget spending limits to api-keys service (#462)'
+      sha: d0d6d75094f62bb8badb3233b69fe8b3b4caef0d
       tags:
-      - 0.21.146-2-g30293ac35
+      - 0.21.147-1-gd0d6d7509
     path: schemas
   - git:
-      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1469
-        (#492)...'
-      sha: 30293ac350ec93bd6a3fbc3aaa7d90986c88435e
+      commitTitle: 'feat: add budget spending limits to api-keys service (#462)'
+      sha: d0d6d75094f62bb8badb3233b69fe8b3b4caef0d
       tags:
-      - 0.21.146-2-g30293ac35
+      - 0.21.147-1-gd0d6d7509
     path: gql
   path: graphql
 kind: LockConfig
