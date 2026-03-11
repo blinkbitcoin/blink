@@ -2,24 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat: add budget spending limits to api-keys service (#462)'
-      sha: d0d6d75094f62bb8badb3233b69fe8b3b4caef0d
+      commitTitle: 'fix: add api-keys grpc port to docker-compose.tmpl.yml (#495)'
+      sha: 34a433128c99480cbc90e44521eeb9f2381c853b
       tags:
-      - 0.21.147-1-gd0d6d7509
+      - 0.21.148-2-g34a433128
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat: add budget spending limits to api-keys service (#462)'
-      sha: d0d6d75094f62bb8badb3233b69fe8b3b4caef0d
+      commitTitle: 'fix: add api-keys grpc port to docker-compose.tmpl.yml (#495)'
+      sha: 34a433128c99480cbc90e44521eeb9f2381c853b
       tags:
-      - 0.21.147-1-gd0d6d7509
+      - 0.21.148-2-g34a433128
     path: schemas
   - git:
-      commitTitle: 'feat: add budget spending limits to api-keys service (#462)'
-      sha: d0d6d75094f62bb8badb3233b69fe8b3b4caef0d
+      commitTitle: 'fix: add api-keys grpc port to docker-compose.tmpl.yml (#495)'
+      sha: 34a433128c99480cbc90e44521eeb9f2381c853b
       tags:
-      - 0.21.147-1-gd0d6d7509
+      - 0.21.148-2-g34a433128
     path: gql
   path: graphql
 kind: LockConfig
