@@ -1,16 +1,8 @@
-query apiKeys {
-  me {
-    defaultAccount {
-      id
-    }
-    apiKeys {
+mutation apiKeyRemoveLimit($input: ApiKeyRemoveLimitInput!) {
+  apiKeyRemoveLimit(input: $input) {
+    apiKey {
       id
       name
-      revoked
-      createdAt
-      expiresAt
-      readOnly
-      scopes
       limits {
         dailyLimitSats
         weeklyLimitSats

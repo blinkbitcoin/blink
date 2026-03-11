@@ -6,9 +6,8 @@ use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::{extract::State, routing::get, Extension, Json, Router};
 use axum_extra::headers::HeaderMap;
 use serde::{Deserialize, Serialize};
-use tracing::instrument;
-
 use std::sync::Arc;
+use tracing::instrument;
 
 use crate::{
     app::{ApiKeysApp, ApplicationError},
@@ -61,6 +60,7 @@ pub async fn run_server(config: ServerConfig, api_keys_app: ApiKeysApp) -> anyho
 struct CheckResponse {
     sub: String,
     scope: String,
+    api_key_id: String,
 }
 
 #[instrument(
@@ -86,7 +86,11 @@ async fn check_handler(
     span.record("sub", &sub);
     span.record("scope", &scope);
 
-    Ok(Json(CheckResponse { sub, scope }))
+    Ok(Json(CheckResponse {
+        sub,
+        scope,
+        api_key_id: id.to_string(),
+    }))
 }
 
 pub async fn graphql_handler(

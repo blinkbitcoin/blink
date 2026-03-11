@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            DELETE FROM api_key_limits\n            WHERE api_key_id = $1\n              AND daily_limit_sats IS NULL\n              AND weekly_limit_sats IS NULL\n              AND monthly_limit_sats IS NULL\n              AND annual_limit_sats IS NULL\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "76ce26277ecb7129c7ea0073d5dacdd7953d4616f585d31b3ca2e66944ca45fd"
+}

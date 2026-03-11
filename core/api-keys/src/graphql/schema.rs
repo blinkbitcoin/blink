@@ -42,6 +42,14 @@ impl ScalarType for Timestamp {
     }
 }
 
+#[derive(Enum, Copy, Clone, Eq, PartialEq)]
+pub enum LimitTimeWindow {
+    Daily,
+    Weekly,
+    Monthly,
+    Annual,
+}
+
 pub struct Query;
 
 #[Object]
@@ -53,6 +61,19 @@ impl Query {
 }
 
 #[derive(SimpleObject)]
+pub(super) struct ApiKeyLimits {
+    pub daily_limit_sats: Option<i64>,
+    pub weekly_limit_sats: Option<i64>,
+    pub monthly_limit_sats: Option<i64>,
+    pub annual_limit_sats: Option<i64>,
+    pub daily_spent_sats: i64,
+    pub weekly_spent_sats: i64,
+    pub monthly_spent_sats: i64,
+    pub annual_spent_sats: i64,
+}
+
+#[derive(SimpleObject)]
+#[graphql(complex)]
 pub(super) struct ApiKey {
     pub id: ID,
     pub name: String,
@@ -63,6 +84,26 @@ pub(super) struct ApiKey {
     pub expires_at: Option<Timestamp>,
     pub read_only: bool,
     pub scopes: Vec<Scope>,
+}
+
+#[ComplexObject]
+impl ApiKey {
+    async fn limits(&self, ctx: &Context<'_>) -> Result<ApiKeyLimits> {
+        let app = ctx.data_unchecked::<ApiKeysApp>();
+        let api_key_id = self.id.parse::<IdentityApiKeyId>()?;
+
+        let summary = app.get_spending_summary(api_key_id).await?;
+        Ok(ApiKeyLimits {
+            daily_limit_sats: summary.daily_limit_sats,
+            weekly_limit_sats: summary.weekly_limit_sats,
+            monthly_limit_sats: summary.monthly_limit_sats,
+            annual_limit_sats: summary.annual_limit_sats,
+            daily_spent_sats: summary.daily_spent_sats,
+            weekly_spent_sats: summary.weekly_spent_sats,
+            monthly_spent_sats: summary.monthly_spent_sats,
+            annual_spent_sats: summary.annual_spent_sats,
+        })
+    }
 }
 
 #[derive(SimpleObject)]
@@ -97,6 +138,11 @@ pub(super) struct ApiKeyRevokePayload {
     pub api_key: ApiKey,
 }
 
+#[derive(SimpleObject)]
+pub(super) struct ApiKeySetLimitPayload {
+    pub api_key: ApiKey,
+}
+
 pub struct Mutation;
 
 #[derive(InputObject)]
@@ -114,6 +160,31 @@ fn default_scopes() -> Vec<Scope> {
 #[derive(InputObject)]
 struct ApiKeyRevokeInput {
     id: ID,
+}
+
+#[derive(InputObject)]
+struct ApiKeySetLimitInput {
+    id: ID,
+    limit_time_window: LimitTimeWindow,
+    limit_sats: i64,
+}
+
+#[derive(InputObject)]
+struct ApiKeyRemoveLimitInput {
+    id: ID,
+    limit_time_window: LimitTimeWindow,
+}
+
+async fn find_owned_api_key(
+    app: &ApiKeysApp,
+    subject: &AuthSubject,
+    api_key_id: IdentityApiKeyId,
+) -> async_graphql::Result<crate::identity::IdentityApiKey> {
+    let api_keys = app.list_api_keys_for_subject(&subject.id).await?;
+    api_keys
+        .into_iter()
+        .find(|k| k.id == api_key_id)
+        .ok_or_else(|| async_graphql::Error::new("API key not found"))
 }
 
 #[Object]
@@ -146,5 +217,57 @@ impl Mutation {
             .revoke_api_key_for_subject(&subject.id, api_key_id)
             .await?;
         Ok(ApiKeyRevokePayload::from(api_key))
+    }
+
+    async fn api_key_set_limit(
+        &self,
+        ctx: &Context<'_>,
+        input: ApiKeySetLimitInput,
+    ) -> async_graphql::Result<ApiKeySetLimitPayload> {
+        let app = ctx.data_unchecked::<ApiKeysApp>();
+        let subject = ctx.data::<AuthSubject>()?;
+        if !subject.can_write {
+            return Err("Permission denied".into());
+        }
+
+        let api_key_id = input.id.parse::<IdentityApiKeyId>()?;
+        let api_key = find_owned_api_key(app, subject, api_key_id).await?;
+
+        match input.limit_time_window {
+            LimitTimeWindow::Daily => app.set_daily_limit(api_key_id, input.limit_sats).await?,
+            LimitTimeWindow::Weekly => app.set_weekly_limit(api_key_id, input.limit_sats).await?,
+            LimitTimeWindow::Monthly => app.set_monthly_limit(api_key_id, input.limit_sats).await?,
+            LimitTimeWindow::Annual => app.set_annual_limit(api_key_id, input.limit_sats).await?,
+        }
+
+        Ok(ApiKeySetLimitPayload {
+            api_key: ApiKey::from(api_key),
+        })
+    }
+
+    async fn api_key_remove_limit(
+        &self,
+        ctx: &Context<'_>,
+        input: ApiKeyRemoveLimitInput,
+    ) -> async_graphql::Result<ApiKeySetLimitPayload> {
+        let app = ctx.data_unchecked::<ApiKeysApp>();
+        let subject = ctx.data::<AuthSubject>()?;
+        if !subject.can_write {
+            return Err("Permission denied".into());
+        }
+
+        let api_key_id = input.id.parse::<IdentityApiKeyId>()?;
+        let api_key = find_owned_api_key(app, subject, api_key_id).await?;
+
+        match input.limit_time_window {
+            LimitTimeWindow::Daily => app.remove_daily_limit(api_key_id).await?,
+            LimitTimeWindow::Weekly => app.remove_weekly_limit(api_key_id).await?,
+            LimitTimeWindow::Monthly => app.remove_monthly_limit(api_key_id).await?,
+            LimitTimeWindow::Annual => app.remove_annual_limit(api_key_id).await?,
+        }
+
+        Ok(ApiKeySetLimitPayload {
+            api_key: ApiKey::from(api_key),
+        })
     }
 }
