@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE api_key_limits\n            SET daily_limit_sats = NULL\n            WHERE api_key_id = $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6e0fbe8b80316a7c1441595daceed42957fae933c999e985ec3659a714ff174b"
+}

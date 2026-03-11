@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            DELETE FROM api_key_transactions\n            WHERE transaction_id = $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1d6417653dda037c0494cfaa32a2b2572d913c602e5d5c6e66f855bcf9a7366b"
+}

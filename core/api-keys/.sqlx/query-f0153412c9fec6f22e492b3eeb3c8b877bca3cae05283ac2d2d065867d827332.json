@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT daily_limit_sats, weekly_limit_sats, monthly_limit_sats, annual_limit_sats\n            FROM api_key_limits\n            WHERE api_key_id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "daily_limit_sats",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "weekly_limit_sats",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "monthly_limit_sats",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "annual_limit_sats",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "f0153412c9fec6f22e492b3eeb3c8b877bca3cae05283ac2d2d065867d827332"
+}
