@@ -15,20 +15,21 @@ export const lnAddressPaymentSend = async ({
     return amount
   }
 
-  const invoice = await LnurlPayService().fetchInvoiceFromLnAddressOrLnurl({
+  const lnurlResponse = await LnurlPayService().fetchInvoiceFromLnAddressOrLnurl({
     amount,
     lnAddressOrLnurl: lnAddress,
   })
 
-  if (invoice instanceof Error) {
-    return invoice
+  if (lnurlResponse instanceof Error) {
+    return lnurlResponse
   }
 
   return payInvoiceByWalletId({
-    uncheckedPaymentRequest: invoice,
+    uncheckedPaymentRequest: lnurlResponse.invoice,
     memo: null,
     senderWalletId,
     senderAccount,
+    lnurlSuccessAction: lnurlResponse.successAction,
   })
 }
 
@@ -44,19 +45,20 @@ export const lnurlPaymentSend = async ({
     return amount
   }
 
-  const invoice = await LnurlPayService().fetchInvoiceFromLnAddressOrLnurl({
+  const lnurlResponse = await LnurlPayService().fetchInvoiceFromLnAddressOrLnurl({
     amount,
     lnAddressOrLnurl: lnurl,
   })
 
-  if (invoice instanceof Error) {
-    return invoice
+  if (lnurlResponse instanceof Error) {
+    return lnurlResponse
   }
 
   return payInvoiceByWalletId({
-    uncheckedPaymentRequest: invoice,
+    uncheckedPaymentRequest: lnurlResponse.invoice,
     memo: null,
     senderWalletId,
     senderAccount,
+    lnurlSuccessAction: lnurlResponse.successAction,
   })
 }

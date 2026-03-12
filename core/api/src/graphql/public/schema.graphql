@@ -804,6 +804,27 @@ scalar LnPaymentRequest
 
 scalar LnPaymentSecret
 
+"""LNURL success action returned after a successful payment (LUD-09)"""
+type LnurlSuccessAction {
+  """Action type: 'message', 'url', or 'aes'"""
+  tag: String!
+
+  """Message content (for 'message' tag)"""
+  message: String
+
+  """Description text (for 'url' and 'aes' tags)"""
+  description: String
+
+  """URL to open (for 'url' tag)"""
+  url: String
+
+  """Encrypted content (for 'aes' tag)"""
+  ciphertext: String
+
+  """Initialization vector for decryption (for 'aes' tag)"""
+  iv: String
+}
+
 type LnUpdate {
   paymentHash: PaymentHash! @deprecated(reason: "Deprecated in favor of transaction")
   status: InvoicePaymentStatus!
@@ -1429,6 +1450,9 @@ type SettlementViaIntraLedger {
 type SettlementViaLn {
   paymentSecret: LnPaymentSecret @deprecated(reason: "Shifting property to 'preImage' to improve granularity of the LnPaymentSecret type")
   preImage: LnPaymentPreImage
+
+  """LNURL success action returned after payment (LUD-09/10)"""
+  successAction: LnurlSuccessAction
 }
 
 type SettlementViaOnChain {
