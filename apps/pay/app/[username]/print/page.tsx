@@ -27,7 +27,7 @@ export default function Print({
     1500,
   )
   const webURL = `${url.protocol}//${url.host}/${username}`
-  const qrCodeURL = (webURL + "?lightning=" + lnurl).toUpperCase()
+  const qrCodeURL = webURL.toUpperCase() + "?lightning=" + lnurl.toUpperCase()
   const userHeader = `Pay ${username
     ?.toString()
     .toLowerCase()}@${getClientSidePayDomain()}`
