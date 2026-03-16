@@ -2,24 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix: add api-keys grpc port to docker-compose.tmpl.yml (#495)'
-      sha: 34a433128c99480cbc90e44521eeb9f2381c853b
+      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1475
+        (#501)...'
+      sha: 90a55d8852d538c1f9d521f2d96ed79d110719fb
       tags:
-      - 0.21.148-2-g34a433128
+      - 0.21.149-1-g90a55d885
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'fix: add api-keys grpc port to docker-compose.tmpl.yml (#495)'
-      sha: 34a433128c99480cbc90e44521eeb9f2381c853b
+      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1475
+        (#501)...'
+      sha: 90a55d8852d538c1f9d521f2d96ed79d110719fb
       tags:
-      - 0.21.148-2-g34a433128
+      - 0.21.149-1-g90a55d885
     path: schemas
   - git:
-      commitTitle: 'fix: add api-keys grpc port to docker-compose.tmpl.yml (#495)'
-      sha: 34a433128c99480cbc90e44521eeb9f2381c853b
+      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1475
+        (#501)...'
+      sha: 90a55d8852d538c1f9d521f2d96ed79d110719fb
       tags:
-      - 0.21.148-2-g34a433128
+      - 0.21.149-1-g90a55d885
     path: gql
   path: graphql
 kind: LockConfig
