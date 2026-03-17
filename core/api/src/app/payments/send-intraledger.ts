@@ -263,9 +263,7 @@ const executePaymentViaIntraledger = async <
     if (limits instanceof Error) return limits
 
     const validation = validateSpendingLimit({ amountSats, limits })
-    if (!validation.allowed) {
-      return validation.error
-    }
+    if (validation instanceof Error) return validation
   }
 
   const checkLimits =
@@ -339,7 +337,6 @@ const executePaymentViaIntraledger = async <
     transaction: senderWalletTransaction,
   })
 
-  // Record API key spending after successful payment
   if (apiKeyId) {
     const amountSats = Number(paymentFlow.btcPaymentAmount.amount)
     const recordResult = await apiKeys.recordSpending({
@@ -347,7 +344,9 @@ const executePaymentViaIntraledger = async <
       amountSats,
       transactionId: journalId,
     })
-    if (recordResult instanceof Error) return recordResult
+    if (recordResult instanceof Error) {
+      recordExceptionInCurrentSpan({ error: recordResult })
+    }
   }
 
   return {

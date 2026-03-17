@@ -51,7 +51,10 @@ import {
   WalletsRepository,
 } from "@/services/mongoose"
 import { NotificationsService } from "@/services/notifications"
-import { addAttributesToCurrentSpan } from "@/services/tracing"
+import {
+  addAttributesToCurrentSpan,
+  recordExceptionInCurrentSpan,
+} from "@/services/tracing"
 import { ApiKeysService } from "@/services/api-keys"
 import { validateSpendingLimit } from "@/domain/api-keys"
 
@@ -306,9 +309,7 @@ const executePaymentViaIntraledger = async <
     if (limits instanceof Error) return limits
 
     const validation = validateSpendingLimit({ amountSats, limits })
-    if (!validation.allowed) {
-      return validation.error
-    }
+    if (validation instanceof Error) return validation
   }
 
   const checkLimits =
@@ -379,7 +380,6 @@ const executePaymentViaIntraledger = async <
     transaction: senderWalletTransaction,
   })
 
-  // Record API key spending after successful payment
   if (apiKeyId) {
     const amountSats = Number(paymentFlow.btcPaymentAmount.amount)
     const recordResult = await apiKeys.recordSpending({
@@ -387,7 +387,9 @@ const executePaymentViaIntraledger = async <
       amountSats,
       transactionId: journalId,
     })
-    if (recordResult instanceof Error) return recordResult
+    if (recordResult instanceof Error) {
+      recordExceptionInCurrentSpan({ error: recordResult })
+    }
   }
 
   return {
@@ -585,9 +587,7 @@ const executePaymentViaOnChain = async <
     if (limits instanceof Error) return limits
 
     const validation = validateSpendingLimit({ amountSats, limits })
-    if (!validation.allowed) {
-      return validation.error
-    }
+    if (validation instanceof Error) return validation
   }
 
   const limitCheck = await checkWithdrawalLimits({
@@ -621,7 +621,6 @@ const executePaymentViaOnChain = async <
   })
   if (walletTransaction instanceof Error) return walletTransaction
 
-  // Record API key spending after successful payment
   if (apiKeyId) {
     const paymentFlow = await builder.proposedAmounts()
     if (!(paymentFlow instanceof Error)) {
@@ -631,7 +630,9 @@ const executePaymentViaOnChain = async <
         amountSats,
         transactionId: journalId,
       })
-      if (recordResult instanceof Error) return recordResult
+      if (recordResult instanceof Error) {
+        recordExceptionInCurrentSpan({ error: recordResult })
+      }
     }
   }
 
