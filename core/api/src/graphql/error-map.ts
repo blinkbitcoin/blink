@@ -842,6 +842,7 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "InvalidErrorCodeForPhoneMetadataError":
     case "InvalidCountryCodeForPhoneMetadataError":
     case "MultipleWalletsFoundForAccountIdAndCurrency":
+    case "ApiKeysServiceError":
       message = `Unexpected error occurred, please try again or contact support if it persists (code: ${
         error.name
       }${error.message ? ": " + error.message : ""})`
