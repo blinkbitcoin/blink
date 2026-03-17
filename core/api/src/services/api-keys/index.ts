@@ -11,6 +11,7 @@ import * as apiKeysGrpc from "./grpc-client"
 import { handleCommonApiKeysErrors } from "./errors"
 
 import { baseLogger } from "@/services/logger"
+import { wrapAsyncFunctionsToRunInSpan } from "@/services/tracing"
 import { SpendingLimits } from "@/domain/api-keys"
 
 export const ApiKeysService = (): IApiKeysService => {
@@ -31,9 +32,7 @@ export const ApiKeysService = (): IApiKeysService => {
         apiKeysGrpc.apiKeysMetadata,
       )
 
-      const limits = grpcSpendingLimitsToSpendingLimits(response)
-
-      return limits
+      return grpcSpendingLimitsToSpendingLimits(response)
     } catch (err) {
       baseLogger.error(
         { err, apiKeyId, amountSats },
@@ -88,9 +87,12 @@ export const ApiKeysService = (): IApiKeysService => {
     }
   }
 
-  return {
-    getSpendingLimits,
-    recordSpending,
-    reverseSpending,
-  }
+  return wrapAsyncFunctionsToRunInSpan({
+    namespace: "services.api-keys",
+    fns: {
+      getSpendingLimits,
+      recordSpending,
+      reverseSpending,
+    },
+  })
 }
