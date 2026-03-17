@@ -118,7 +118,6 @@ export const createApiKeyServerAction = async (
     }
   }
 
-  // Set budget limits if provided
   if (data?.apiKeyCreate.apiKey.id) {
     const apiKeyId = data.apiKeyCreate.apiKey.id
     try {

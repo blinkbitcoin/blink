@@ -117,7 +117,7 @@ const Limit: React.FC<LimitProps> = ({ id, limits, spent }) => {
           break
       }
       setOpen(false)
-      window.location.reload() // Refresh to show updated data
+      window.location.reload()
     } catch (error) {
       console.error("Error setting limit:", error)
       alert("Failed to set limit. Please try again.")
@@ -159,7 +159,7 @@ const Limit: React.FC<LimitProps> = ({ id, limits, spent }) => {
           break
       }
       setOpen(false)
-      window.location.reload() // Refresh to show updated data
+      window.location.reload()
     } catch (error) {
       console.error("Error removing limit:", error)
       alert("Failed to remove limit. Please try again.")
