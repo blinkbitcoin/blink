@@ -44,6 +44,8 @@ import {
 } from "@/services/tracing"
 import { runInParallel } from "@/utils"
 
+const apiKeys = ApiKeysService()
+
 export const updatePendingPayments = async (logger: Logger): Promise<void> => {
   const ledgerService = LedgerService()
   const walletIdsWithPendingPayments = ledgerService.listWalletIdsWithPendingPayments()
@@ -345,7 +347,6 @@ const lockedPendingPaymentSteps = async ({
     // pendingPayment is a different version to latest payment from lnd
     satsAmount !== toSats(paymentFlow.btcPaymentAmount.amount)
   ) {
-    const apiKeys = ApiKeysService()
     paymentLogger.warn(
       { success: false, id: paymentHash, payment: pendingPayment },
       "payment has failed. reverting transaction",
