@@ -11,106 +11,43 @@ export type SpendingLimits = {
   annualSpentSats: number
 }
 
-type ValidationResult =
-  | {
-      allowed: true
-    }
-  | {
-      allowed: false
-      error: ApiKeyLimitExceededError
-    }
-
 export const validateSpendingLimit = ({
   amountSats,
   limits,
 }: {
   amountSats: number
   limits: SpendingLimits
-}): ValidationResult => {
-  const {
-    dailyLimitSats,
-    weeklyLimitSats,
-    monthlyLimitSats,
-    annualLimitSats,
-    dailySpentSats,
-    weeklySpentSats,
-    monthlySpentSats,
-    annualSpentSats,
-  } = limits
+}): true | ApiKeyLimitExceededError => {
+  const checks = [
+    {
+      period: "daily",
+      limit: limits.dailyLimitSats,
+      spent: limits.dailySpentSats,
+    },
+    {
+      period: "weekly",
+      limit: limits.weeklyLimitSats,
+      spent: limits.weeklySpentSats,
+    },
+    {
+      period: "monthly",
+      limit: limits.monthlyLimitSats,
+      spent: limits.monthlySpentSats,
+    },
+    {
+      period: "annual",
+      limit: limits.annualLimitSats,
+      spent: limits.annualSpentSats,
+    },
+  ] as const
 
-  // Calculate remaining amounts
-  const remainingDailySats =
-    dailyLimitSats !== null ? dailyLimitSats - dailySpentSats : null
-  const remainingWeeklySats =
-    weeklyLimitSats !== null ? weeklyLimitSats - weeklySpentSats : null
-  const remainingMonthlySats =
-    monthlyLimitSats !== null ? monthlyLimitSats - monthlySpentSats : null
-  const remainingAnnualSats =
-    annualLimitSats !== null ? annualLimitSats - annualSpentSats : null
-
-  if (
-    dailyLimitSats !== null &&
-    remainingDailySats !== null &&
-    remainingDailySats < amountSats
-  ) {
-    return {
-      allowed: false,
-      error: new ApiKeyLimitExceededError({
-        daily: remainingDailySats,
-        weekly: remainingWeeklySats,
-        monthly: remainingMonthlySats,
-        annual: remainingAnnualSats,
-      }),
+  for (const { period, limit, spent } of checks) {
+    if (limit && limit - spent < amountSats) {
+      return new ApiKeyLimitExceededError(
+        `${period} spending limit exceeded, remaining: ${limit - spent} sats`,
+      )
     }
   }
 
-  if (
-    weeklyLimitSats !== null &&
-    remainingWeeklySats !== null &&
-    remainingWeeklySats < amountSats
-  ) {
-    return {
-      allowed: false,
-      error: new ApiKeyLimitExceededError({
-        daily: remainingDailySats,
-        weekly: remainingWeeklySats,
-        monthly: remainingMonthlySats,
-        annual: remainingAnnualSats,
-      }),
-    }
-  }
-
-  if (
-    monthlyLimitSats !== null &&
-    remainingMonthlySats !== null &&
-    remainingMonthlySats < amountSats
-  ) {
-    return {
-      allowed: false,
-      error: new ApiKeyLimitExceededError({
-        daily: remainingDailySats,
-        weekly: remainingWeeklySats,
-        monthly: remainingMonthlySats,
-        annual: remainingAnnualSats,
-      }),
-    }
-  }
-
-  if (
-    annualLimitSats !== null &&
-    remainingAnnualSats !== null &&
-    remainingAnnualSats < amountSats
-  ) {
-    return {
-      allowed: false,
-      error: new ApiKeyLimitExceededError({
-        daily: remainingDailySats,
-        weekly: remainingWeeklySats,
-        monthly: remainingMonthlySats,
-        annual: remainingAnnualSats,
-      }),
-    }
-  }
-
-  return { allowed: true }
+  return true
 }
