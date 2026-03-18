@@ -175,7 +175,7 @@ describe("LndService", () => {
   })
 
   describe("payInvoiceViaPaymentDetails error mapping", () => {
-    it("maps exact missing feature dependency error to DestinationMissingDependentFeatureError", async () => {
+    it("maps missing feature dependency error to DestinationMissingDependentFeatureError", async () => {
       const lndConnect = createMockLndConnect(PUBKEYS.active1)
       mockGetLnds.mockImplementation(({ active, type } = {}) => {
         if (active === true && type === "offchain") return [lndConnect]
@@ -183,7 +183,7 @@ describe("LndService", () => {
         return []
       })
 
-      const exactLndError = [
+      const lndError = [
         503,
         "UnexpectedPaymentError",
         {
@@ -198,7 +198,7 @@ describe("LndService", () => {
       ]
 
       mockPayViaPaymentDetails.mockImplementation(async () => {
-        throw exactLndError
+        throw lndError
       })
       mockParseLndErrorDetails.mockReturnValue("missing feature dependency: 9")
 
@@ -236,7 +236,7 @@ describe("LndService", () => {
       })
 
       expect(result).toBeInstanceOf(DestinationMissingDependentFeatureError)
-      expect(mockParseLndErrorDetails).toHaveBeenCalledWith(exactLndError)
+      expect(mockParseLndErrorDetails).toHaveBeenCalledWith(lndError)
     })
   })
 })
