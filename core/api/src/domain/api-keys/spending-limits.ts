@@ -1,23 +1,24 @@
 import { ApiKeyLimitExceededError } from "./errors"
 
 export type SpendingLimits = {
-  dailyLimitSats: number | null
-  weeklyLimitSats: number | null
-  monthlyLimitSats: number | null
-  annualLimitSats: number | null
-  dailySpentSats: number
-  weeklySpentSats: number
-  monthlySpentSats: number
-  annualSpentSats: number
+  dailyLimitSats: Satoshis | null
+  weeklyLimitSats: Satoshis | null
+  monthlyLimitSats: Satoshis | null
+  annualLimitSats: Satoshis | null
+  dailySpentSats: Satoshis
+  weeklySpentSats: Satoshis
+  monthlySpentSats: Satoshis
+  annualSpentSats: Satoshis
 }
 
 export const validateSpendingLimit = ({
-  amountSats,
+  amount,
   limits,
 }: {
-  amountSats: number
+  amount: BtcPaymentAmount
   limits: SpendingLimits
 }): true | ApiKeyLimitExceededError => {
+  const amountSats = Number(amount.amount) as Satoshis
   const checks = [
     {
       period: "daily",

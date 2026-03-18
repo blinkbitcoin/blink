@@ -1,24 +1,28 @@
 import { CheckSpendingLimitResponse } from "./proto/api_keys_pb"
 
+import { toSats } from "@/domain/bitcoin"
 import { SpendingLimits } from "@/domain/api-keys"
+
+const toSatsOrNull = (value: number | undefined): Satoshis | null =>
+  value !== undefined ? toSats(value) : null
 
 export const grpcSpendingLimitsToSpendingLimits = (
   response: CheckSpendingLimitResponse,
 ): SpendingLimits => ({
   dailyLimitSats: response.hasDailyLimitSats()
-    ? (response.getDailyLimitSats() ?? null)
+    ? toSatsOrNull(response.getDailyLimitSats())
     : null,
   weeklyLimitSats: response.hasWeeklyLimitSats()
-    ? (response.getWeeklyLimitSats() ?? null)
+    ? toSatsOrNull(response.getWeeklyLimitSats())
     : null,
   monthlyLimitSats: response.hasMonthlyLimitSats()
-    ? (response.getMonthlyLimitSats() ?? null)
+    ? toSatsOrNull(response.getMonthlyLimitSats())
     : null,
   annualLimitSats: response.hasAnnualLimitSats()
-    ? (response.getAnnualLimitSats() ?? null)
+    ? toSatsOrNull(response.getAnnualLimitSats())
     : null,
-  dailySpentSats: response.getDailySpentSats(),
-  weeklySpentSats: response.getWeeklySpentSats(),
-  monthlySpentSats: response.getMonthlySpentSats(),
-  annualSpentSats: response.getAnnualSpentSats(),
+  dailySpentSats: toSats(response.getDailySpentSats()),
+  weeklySpentSats: toSats(response.getWeeklySpentSats()),
+  monthlySpentSats: toSats(response.getMonthlySpentSats()),
+  annualSpentSats: toSats(response.getAnnualSpentSats()),
 })

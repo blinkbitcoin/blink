@@ -263,7 +263,7 @@ const executePaymentViaIntraledger = async <
   senderAccount: Account
   memo: string | null
   sendAll: boolean
-  apiKeyId?: string
+  apiKeyId?: ApiKeyId
 }): Promise<PaymentSendResult | ApplicationError> => {
   const paymentFlow = await builder.withoutMinerFee()
   if (paymentFlow instanceof Error) return paymentFlow
@@ -301,14 +301,14 @@ const executePaymentViaIntraledger = async <
   if (priceRatioForLimits instanceof Error) return priceRatioForLimits
 
   if (apiKeyId) {
-    const amountSats = Number(paymentFlow.btcPaymentAmount.amount)
+    const amount = paymentFlow.btcPaymentAmount
     const limits = await apiKeys.getSpendingLimits({
       apiKeyId,
-      amountSats,
+      amount,
     })
     if (limits instanceof Error) return limits
 
-    const validation = validateSpendingLimit({ amountSats, limits })
+    const validation = validateSpendingLimit({ amount, limits })
     if (validation instanceof Error) return validation
   }
 
@@ -381,10 +381,9 @@ const executePaymentViaIntraledger = async <
   })
 
   if (apiKeyId) {
-    const amountSats = Number(paymentFlow.btcPaymentAmount.amount)
     const recordResult = await apiKeys.recordSpending({
       apiKeyId,
-      amountSats,
+      amount: paymentFlow.btcPaymentAmount,
       transactionId: journalId,
     })
     if (recordResult instanceof Error) {
@@ -566,7 +565,7 @@ const executePaymentViaOnChain = async <
   memo: string | null
   sendAll: boolean
   logger: Logger
-  apiKeyId?: string
+  apiKeyId?: ApiKeyId
 }): Promise<PaymentSendResult | ApplicationError> => {
   const senderWalletDescriptor = await builder.senderWalletDescriptor()
   if (senderWalletDescriptor instanceof Error) return senderWalletDescriptor
@@ -579,14 +578,14 @@ const executePaymentViaOnChain = async <
   if (priceRatioForLimits instanceof Error) return priceRatioForLimits
 
   if (apiKeyId) {
-    const amountSats = Number(proposedAmounts.btc.amount)
+    const amount = proposedAmounts.btc
     const limits = await apiKeys.getSpendingLimits({
       apiKeyId,
-      amountSats,
+      amount,
     })
     if (limits instanceof Error) return limits
 
-    const validation = validateSpendingLimit({ amountSats, limits })
+    const validation = validateSpendingLimit({ amount, limits })
     if (validation instanceof Error) return validation
   }
 
@@ -622,17 +621,13 @@ const executePaymentViaOnChain = async <
   if (walletTransaction instanceof Error) return walletTransaction
 
   if (apiKeyId) {
-    const paymentFlow = await builder.proposedAmounts()
-    if (!(paymentFlow instanceof Error)) {
-      const amountSats = Number(paymentFlow.btc.amount)
-      const recordResult = await apiKeys.recordSpending({
-        apiKeyId,
-        amountSats,
-        transactionId: journalId,
-      })
-      if (recordResult instanceof Error) {
-        recordExceptionInCurrentSpan({ error: recordResult })
-      }
+    const recordResult = await apiKeys.recordSpending({
+      apiKeyId,
+      amount: proposedAmounts.btc,
+      transactionId: journalId,
+    })
+    if (recordResult instanceof Error) {
+      recordExceptionInCurrentSpan({ error: recordResult })
     }
   }
 

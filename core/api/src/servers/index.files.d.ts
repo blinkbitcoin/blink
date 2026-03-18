@@ -18,7 +18,7 @@ type GraphQLPublicContextAuth = GraphQLPublicContext & {
   domainAccount: Account
   scope: ScopesOauth2[] | undefined
   appId: string | undefined
-  apiKeyId?: string
+  apiKeyId?: ApiKeyId
 }
 
 type GraphQLAdminContext = {

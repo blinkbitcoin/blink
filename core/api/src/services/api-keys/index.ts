@@ -17,12 +17,13 @@ import { SpendingLimits } from "@/domain/api-keys"
 export const ApiKeysService = (): IApiKeysService => {
   const getSpendingLimits = async ({
     apiKeyId,
-    amountSats,
+    amount,
   }: {
-    apiKeyId: string
-    amountSats: number
+    apiKeyId: ApiKeyId
+    amount: BtcPaymentAmount
   }): Promise<SpendingLimits | ApiKeysServiceError> => {
     try {
+      const amountSats = Number(amount.amount)
       const request = new CheckSpendingLimitRequest()
       request.setApiKeyId(apiKeyId)
       request.setAmountSats(amountSats)
@@ -34,24 +35,22 @@ export const ApiKeysService = (): IApiKeysService => {
 
       return grpcSpendingLimitsToSpendingLimits(response)
     } catch (err) {
-      baseLogger.error(
-        { err, apiKeyId, amountSats },
-        "Failed to get API key spending limits",
-      )
+      baseLogger.error({ err, apiKeyId, amount }, "Failed to get API key spending limits")
       return handleCommonApiKeysErrors(err)
     }
   }
 
   const recordSpending = async ({
     apiKeyId,
-    amountSats,
+    amount,
     transactionId,
   }: {
-    apiKeyId: string
-    amountSats: number
-    transactionId: string
+    apiKeyId: ApiKeyId
+    amount: BtcPaymentAmount
+    transactionId: LedgerJournalId
   }): Promise<true | ApiKeysServiceError> => {
     try {
+      const amountSats = Number(amount.amount)
       const request = new RecordSpendingRequest()
       request.setApiKeyId(apiKeyId)
       request.setAmountSats(amountSats)
@@ -62,7 +61,7 @@ export const ApiKeysService = (): IApiKeysService => {
       return true
     } catch (err) {
       baseLogger.error(
-        { err, apiKeyId, amountSats, transactionId },
+        { err, apiKeyId, amount, transactionId },
         "Failed to record API key spending",
       )
       return handleCommonApiKeysErrors(err)
@@ -72,7 +71,7 @@ export const ApiKeysService = (): IApiKeysService => {
   const reverseSpending = async ({
     transactionId,
   }: {
-    transactionId: string
+    transactionId: LedgerJournalId
   }): Promise<true | ApiKeysServiceError> => {
     try {
       const request = new ReverseSpendingRequest()

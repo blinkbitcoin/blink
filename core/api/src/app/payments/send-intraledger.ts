@@ -245,7 +245,7 @@ const executePaymentViaIntraledger = async <
   recipientUser: User
   senderUser: User
   memo: string | null
-  apiKeyId?: string
+  apiKeyId?: ApiKeyId
 }): Promise<PaymentSendResult | ApplicationError> => {
   addAttributesToCurrentSpan({
     "payment.settlement_method": SettlementMethod.IntraLedger,
@@ -255,14 +255,14 @@ const executePaymentViaIntraledger = async <
   if (priceRatioForLimits instanceof Error) return priceRatioForLimits
 
   if (apiKeyId) {
-    const amountSats = Number(paymentFlow.btcPaymentAmount.amount)
+    const amount = paymentFlow.btcPaymentAmount
     const limits = await apiKeys.getSpendingLimits({
       apiKeyId,
-      amountSats,
+      amount,
     })
     if (limits instanceof Error) return limits
 
-    const validation = validateSpendingLimit({ amountSats, limits })
+    const validation = validateSpendingLimit({ amount, limits })
     if (validation instanceof Error) return validation
   }
 
@@ -338,10 +338,9 @@ const executePaymentViaIntraledger = async <
   })
 
   if (apiKeyId) {
-    const amountSats = Number(paymentFlow.btcPaymentAmount.amount)
     const recordResult = await apiKeys.recordSpending({
       apiKeyId,
-      amountSats,
+      amount: paymentFlow.btcPaymentAmount,
       transactionId: journalId,
     })
     if (recordResult instanceof Error) {
