@@ -33,7 +33,7 @@ jest.mock("lightning", () => {
 
 import { payViaPaymentDetails } from "lightning"
 
-import { DestinationMissingDependentFeatureError } from "@/domain/bitcoin/lightning"
+import { FeatureCompatibilityError } from "@/domain/bitcoin/lightning"
 import { LndService } from "@/services/lnd"
 import { getHistoricalLndPubkeys } from "@/config"
 import { getLnds, getActiveLnd, parseLndErrorDetails } from "@/services/lnd/config"
@@ -175,7 +175,7 @@ describe("LndService", () => {
   })
 
   describe("payInvoiceViaPaymentDetails error mapping", () => {
-    it("maps missing feature dependency error to DestinationMissingDependentFeatureError", async () => {
+    it("maps missing feature dependency error to FeatureCompatibilityError", async () => {
       const lndConnect = createMockLndConnect(PUBKEYS.active1)
       mockGetLnds.mockImplementation(({ active, type } = {}) => {
         if (active === true && type === "offchain") return [lndConnect]
@@ -235,11 +235,11 @@ describe("LndService", () => {
         maxFeeAmount: undefined,
       })
 
-      expect(result).toBeInstanceOf(DestinationMissingDependentFeatureError)
+      expect(result).toBeInstanceOf(FeatureCompatibilityError)
       expect(mockParseLndErrorDetails).toHaveBeenCalledWith(lndError)
     })
 
-    it("maps unknown required feature error to DestinationMissingDependentFeatureError", async () => {
+    it("maps unknown required feature error to FeatureCompatibilityError", async () => {
       const lndConnect = createMockLndConnect(PUBKEYS.active1)
       mockGetLnds.mockImplementation(({ active, type } = {}) => {
         if (active === true && type === "offchain") return [lndConnect]
@@ -299,7 +299,7 @@ describe("LndService", () => {
         maxFeeAmount: undefined,
       })
 
-      expect(result).toBeInstanceOf(DestinationMissingDependentFeatureError)
+      expect(result).toBeInstanceOf(FeatureCompatibilityError)
       expect(mockParseLndErrorDetails).toHaveBeenCalledWith(lndError)
     })
   })

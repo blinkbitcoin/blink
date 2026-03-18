@@ -49,7 +49,7 @@ import {
   BadPaymentDataError,
   CorruptLndDbError,
   CouldNotDecodeReturnedPaymentRequest,
-  DestinationMissingDependentFeatureError,
+  FeatureCompatibilityError,
   InsufficientBalanceForLnPaymentError,
   InsufficientBalanceForRoutingError,
   InvalidFeatureBitsForLndInvoiceError,
@@ -1237,8 +1237,8 @@ const handleSendPaymentLndErrors = ({
     case match(KnownLndErrorDetails.FeaturePairExists):
     case match(KnownLndErrorDetails.UnsupportedPaymentFeature):
       return new InvalidFeatureBitsForLndInvoiceError()
-    case match(KnownLndErrorDetails.MissingFeature):
-      return new DestinationMissingDependentFeatureError()
+    case match(KnownLndErrorDetails.FeatureCompatibilityError):
+      return new FeatureCompatibilityError()
     case match(KnownLndErrorDetails.InsufficientFee):
       return new InsufficientFeeForLnPaymentError()
 
@@ -1290,8 +1290,8 @@ const handleCommonRouteNotFoundErrors = (err: Error | unknown) => {
       checkAllLndHealth()
       return new OffChainServiceUnavailableError()
 
-    case match(KnownLndErrorDetails.MissingFeature):
-      return new DestinationMissingDependentFeatureError()
+    case match(KnownLndErrorDetails.FeatureCompatibilityError):
+      return new FeatureCompatibilityError()
 
     case match(KnownLndErrorDetails.FeaturePairExists):
     case match(KnownLndErrorDetails.UnsupportedPaymentFeature):
