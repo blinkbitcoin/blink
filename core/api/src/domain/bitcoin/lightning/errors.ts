@@ -49,7 +49,7 @@ export class ProbeForRouteTimedOutFromApplicationError extends LightningServiceE
 export class PaymentInTransitionError extends LightningServiceError {}
 export class TemporaryChannelFailureError extends LightningServiceError {}
 export class TemporaryNodeFailureError extends LightningServiceError {}
-export class DestinationMissingDependentFeatureError extends LightningServiceError {}
+export class FeatureCompatibilityError extends LightningServiceError {}
 export class InvalidFeatureBitsForLndInvoiceError extends LightningServiceError {}
 export class InvalidInvoiceAmountError extends LightningServiceError {
   level = ErrorLevel.Warn
