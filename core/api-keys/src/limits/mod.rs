@@ -62,7 +62,7 @@ impl Limits {
         api_key_id: IdentityApiKeyId,
         amount_sats: i64,
     ) -> Result<LimitCheckResult, LimitError> {
-        if amount_sats < 0 {
+        if amount_sats <= 0 {
             return Err(LimitError::InvalidLimitAmount);
         }
 
@@ -451,6 +451,13 @@ mod tests {
     async fn check_spending_limit_rejects_negative_amount() {
         let limits = test_limits();
         let result = limits.check_spending_limit(test_api_key_id(), -1).await;
+        assert!(matches!(result, Err(LimitError::InvalidLimitAmount)));
+    }
+
+    #[tokio::test]
+    async fn check_spending_limit_rejects_zero_amount() {
+        let limits = test_limits();
+        let result = limits.check_spending_limit(test_api_key_id(), 0).await;
         assert!(matches!(result, Err(LimitError::InvalidLimitAmount)));
     }
 

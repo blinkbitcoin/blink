@@ -1,0 +1,97 @@
+import { grpcSpendingLimitsToSpendingLimits } from "./convert"
+
+import {
+  CheckSpendingLimitRequest,
+  RecordSpendingRequest,
+  ReverseSpendingRequest,
+} from "./proto/api_keys_pb"
+
+import * as apiKeysGrpc from "./grpc-client"
+
+import { handleCommonApiKeysErrors } from "./errors"
+
+import { baseLogger } from "@/services/logger"
+import { wrapAsyncFunctionsToRunInSpan } from "@/services/tracing"
+import { SpendingLimits } from "@/domain/api-keys"
+
+export const ApiKeysService = (): IApiKeysService => {
+  const getSpendingLimits = async ({
+    apiKeyId,
+    amount,
+  }: {
+    apiKeyId: ApiKeyId
+    amount: BtcPaymentAmount
+  }): Promise<SpendingLimits | ApiKeysServiceError> => {
+    try {
+      const amountSats = Number(amount.amount)
+      const request = new CheckSpendingLimitRequest()
+      request.setApiKeyId(apiKeyId)
+      request.setAmountSats(amountSats)
+
+      const response = await apiKeysGrpc.checkSpendingLimit(
+        request,
+        apiKeysGrpc.apiKeysMetadata,
+      )
+
+      return grpcSpendingLimitsToSpendingLimits(response)
+    } catch (err) {
+      baseLogger.error({ err, apiKeyId, amount }, "Failed to get API key spending limits")
+      return handleCommonApiKeysErrors(err)
+    }
+  }
+
+  const recordSpending = async ({
+    apiKeyId,
+    amount,
+    transactionId,
+  }: {
+    apiKeyId: ApiKeyId
+    amount: BtcPaymentAmount
+    transactionId: LedgerJournalId
+  }): Promise<true | ApiKeysServiceError> => {
+    try {
+      const amountSats = Number(amount.amount)
+      const request = new RecordSpendingRequest()
+      request.setApiKeyId(apiKeyId)
+      request.setAmountSats(amountSats)
+      request.setTransactionId(transactionId)
+
+      await apiKeysGrpc.recordSpending(request, apiKeysGrpc.apiKeysMetadata)
+
+      return true
+    } catch (err) {
+      baseLogger.error(
+        { err, apiKeyId, amount, transactionId },
+        "Failed to record API key spending",
+      )
+      return handleCommonApiKeysErrors(err)
+    }
+  }
+
+  const reverseSpending = async ({
+    transactionId,
+  }: {
+    transactionId: LedgerJournalId
+  }): Promise<true | ApiKeysServiceError> => {
+    try {
+      const request = new ReverseSpendingRequest()
+      request.setTransactionId(transactionId)
+
+      await apiKeysGrpc.reverseSpending(request, apiKeysGrpc.apiKeysMetadata)
+
+      return true
+    } catch (err) {
+      baseLogger.error({ err, transactionId }, "Failed to reverse API key spending")
+      return handleCommonApiKeysErrors(err)
+    }
+  }
+
+  return wrapAsyncFunctionsToRunInSpan({
+    namespace: "services.api-keys",
+    fns: {
+      getSpendingLimits,
+      recordSpending,
+      reverseSpending,
+    },
+  })
+}

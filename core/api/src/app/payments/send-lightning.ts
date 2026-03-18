@@ -54,6 +54,7 @@ import { DealerPriceService } from "@/services/dealer-price"
 import { LedgerService } from "@/services/ledger"
 import { LockService } from "@/services/lock"
 import { NotificationsService } from "@/services/notifications"
+import { ApiKeysService } from "@/services/api-keys"
 
 import * as LedgerFacade from "@/services/ledger/facade"
 import {
@@ -76,8 +77,10 @@ import {
 } from "@/app/wallets"
 
 import { ResourceExpiredLockServiceError } from "@/domain/lock"
+import { validateSpendingLimit } from "@/domain/api-keys"
 
 const dealer = DealerPriceService()
+const apiKeys = ApiKeysService()
 const paymentFlowRepo = PaymentFlowStateRepository(defaultTimeToExpiryInSeconds)
 
 export const payInvoiceByWalletId = async ({
@@ -85,6 +88,7 @@ export const payInvoiceByWalletId = async ({
   memo,
   senderWalletId: uncheckedSenderWalletId,
   senderAccount,
+  apiKeyId,
 }: PayInvoiceByWalletIdArgs): Promise<PaymentSendResult | ApplicationError> => {
   addAttributesToCurrentSpan({
     "payment.initiation_method": PaymentInitiationMethod.Lightning,
@@ -121,6 +125,7 @@ export const payInvoiceByWalletId = async ({
       paymentFlow,
       senderAccount,
       memo,
+      apiKeyId,
     })
   }
 
@@ -144,6 +149,7 @@ export const payInvoiceByWalletId = async ({
     senderAccount,
     recipientAccount,
     memo,
+    apiKeyId,
   })
   if (paymentSendResult instanceof Error) return paymentSendResult
 
@@ -166,6 +172,7 @@ const payNoAmountInvoiceByWalletId = async ({
   memo,
   senderWalletId: uncheckedSenderWalletId,
   senderAccount,
+  apiKeyId,
 }: PayNoAmountInvoiceByWalletIdArgs): Promise<PaymentSendResult | ApplicationError> => {
   addAttributesToCurrentSpan({
     "payment.initiation_method": PaymentInitiationMethod.Lightning,
@@ -204,6 +211,7 @@ const payNoAmountInvoiceByWalletId = async ({
       paymentFlow,
       senderAccount,
       memo,
+      apiKeyId,
     })
   }
 
@@ -228,6 +236,7 @@ const payNoAmountInvoiceByWalletId = async ({
     senderAccount,
     recipientAccount,
     memo,
+    apiKeyId,
   })
   if (paymentSendResult instanceof Error) return paymentSendResult
 
@@ -432,12 +441,14 @@ const executePaymentViaIntraledger = async <
   senderWalletId,
   recipientAccount,
   memo,
+  apiKeyId,
 }: {
   paymentFlow: PaymentFlow<S, R>
   senderAccount: Account
   senderWalletId: WalletId
   recipientAccount: Account
   memo: string | null
+  apiKeyId?: ApiKeyId
 }): Promise<PaymentSendResult | ApplicationError> => {
   addAttributesToCurrentSpan({
     "payment.settlement_method": SettlementMethod.IntraLedger,
@@ -445,6 +456,19 @@ const executePaymentViaIntraledger = async <
 
   const priceRatioForLimits = await getPriceRatioForLimits(paymentFlow.paymentAmounts())
   if (priceRatioForLimits instanceof Error) return priceRatioForLimits
+
+  if (apiKeyId) {
+    const amount = paymentFlow.btcPaymentAmount
+    const limits = await apiKeys.getSpendingLimits({
+      apiKeyId,
+      amount,
+    })
+
+    if (limits instanceof Error) return limits
+
+    const validation = validateSpendingLimit({ amount, limits })
+    if (validation instanceof Error) return validation
+  }
 
   const paymentHash = paymentFlow.paymentHashForFlow()
   if (paymentHash instanceof Error) return paymentHash
@@ -545,6 +569,17 @@ const executePaymentViaIntraledger = async <
     recipient: senderAsNotificationRecipient,
     transaction: senderWalletTransaction,
   })
+
+  if (apiKeyId) {
+    const recordResult = await apiKeys.recordSpending({
+      apiKeyId,
+      amount: paymentFlow.btcPaymentAmount,
+      transactionId: journalId,
+    })
+    if (recordResult instanceof Error) {
+      recordExceptionInCurrentSpan({ error: recordResult })
+    }
+  }
 
   return {
     status: PaymentSendStatus.Success,
@@ -727,11 +762,13 @@ const executePaymentViaLn = async ({
   paymentFlow,
   senderAccount,
   memo,
+  apiKeyId,
 }: {
   decodedInvoice: LnInvoice
   paymentFlow: PaymentFlow<WalletCurrency, WalletCurrency>
   senderAccount: Account
   memo: string | null
+  apiKeyId?: ApiKeyId
 }): Promise<PaymentSendResult | ApplicationError> => {
   addAttributesToCurrentSpan({
     "payment.settlement_method": SettlementMethod.Lightning,
@@ -741,6 +778,19 @@ const executePaymentViaLn = async ({
 
   const priceRatioForLimits = await getPriceRatioForLimits(paymentFlow.paymentAmounts())
   if (priceRatioForLimits instanceof Error) return priceRatioForLimits
+
+  if (apiKeyId) {
+    const amount = paymentFlow.btcPaymentAmount
+    const limits = await apiKeys.getSpendingLimits({
+      apiKeyId,
+      amount,
+    })
+
+    if (limits instanceof Error) return limits
+
+    const validation = validateSpendingLimit({ amount, limits })
+    if (validation instanceof Error) return validation
+  }
 
   const limitCheck = await checkWithdrawalLimits({
     amount: paymentFlow.usdPaymentAmount,
@@ -801,6 +851,16 @@ const executePaymentViaLn = async ({
       return paymentSendAttemptResult.error
 
     case PaymentSendAttemptResultType.Pending:
+      if (apiKeyId) {
+        const recordResult = await apiKeys.recordSpending({
+          apiKeyId,
+          amount: paymentFlow.btcPaymentAmount,
+          transactionId: paymentSendAttemptResult.journalId,
+        })
+        if (recordResult instanceof Error) {
+          recordExceptionInCurrentSpan({ error: recordResult })
+        }
+      }
       return getPendingPaymentResponse({
         walletId: senderWalletId,
         paymentHash,
@@ -813,6 +873,17 @@ const executePaymentViaLn = async ({
       })
 
     default:
+      if (apiKeyId) {
+        const recordResult = await apiKeys.recordSpending({
+          apiKeyId,
+          amount: paymentFlow.btcPaymentAmount,
+          transactionId: paymentSendAttemptResult.journalId,
+        })
+        if (recordResult instanceof Error) {
+          recordExceptionInCurrentSpan({ error: recordResult })
+        }
+      }
+
       return {
         status: PaymentSendStatus.Success,
         transaction: walletTransaction,
