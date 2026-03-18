@@ -1237,7 +1237,7 @@ const handleSendPaymentLndErrors = ({
     case match(KnownLndErrorDetails.FeaturePairExists):
     case match(KnownLndErrorDetails.UnsupportedPaymentFeature):
       return new InvalidFeatureBitsForLndInvoiceError()
-    case match(KnownLndErrorDetails.MissingDependentFeature):
+    case match(KnownLndErrorDetails.MissingFeature):
       return new DestinationMissingDependentFeatureError()
     case match(KnownLndErrorDetails.InsufficientFee):
       return new InsufficientFeeForLnPaymentError()
@@ -1290,7 +1290,7 @@ const handleCommonRouteNotFoundErrors = (err: Error | unknown) => {
       checkAllLndHealth()
       return new OffChainServiceUnavailableError()
 
-    case match(KnownLndErrorDetails.MissingDependentFeature):
+    case match(KnownLndErrorDetails.MissingFeature):
       return new DestinationMissingDependentFeatureError()
 
     case match(KnownLndErrorDetails.FeaturePairExists):
