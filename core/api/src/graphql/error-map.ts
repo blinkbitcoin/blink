@@ -397,7 +397,7 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       message = "Unable to find a route for payment."
       return new RouteFindingError({ message, logger: baseLogger })
 
-    case "DestinationMissingDependentFeatureError":
+    case "FeatureCompatibilityError":
       message = "Unable to pay incompatible recipient."
       return new RouteFindingError({ message, logger: baseLogger })
 

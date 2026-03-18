@@ -1114,8 +1114,8 @@ importers:
         specifier: ^0.7.15
         version: 0.7.15
       '@ip1sms/disposable-phone-numbers':
-        specifier: ^2.1.1475
-        version: 2.1.1475
+        specifier: ^2.1.1478
+        version: 2.1.1478
       '@merqva/telegram-passport':
         specifier: ^1.0.2
         version: 1.0.2
@@ -7480,8 +7480,8 @@ packages:
     resolution: {integrity: sha512-Sx1pU8EM64o2BrqNpEO1CNLtKQwyhuXuqyfH7oGKCk+1a33d2r5saW8zNwm3j6BTExtjrv2BxTgzzkMwts6vGg==}
     dev: false
 
-  /@ip1sms/disposable-phone-numbers@2.1.1475:
-    resolution: {integrity: sha512-/4zGxi10qsRtiAGRBGJpC6CJIi1a3SJ82W/a5+4yKjn96S5ONRbwfpCAAfjG63SU5oe3pZyxNRfWqpHI16UsOQ==}
+  /@ip1sms/disposable-phone-numbers@2.1.1478:
+    resolution: {integrity: sha512-dkl3w7xQdkNsQRc5rJxECAVCXsgNWuhlG/799YGXczKDMq+MmOlk+oUNbsQWdzenIHoGIBEGEooNFN8ZiNh7Rw==}
     dev: false
 
   /@isaacs/cliui@8.0.2:
@@ -18924,8 +18924,8 @@ packages:
       tapable: 2.2.2
     dev: true
 
-  /enhanced-resolve@5.20.0:
-    resolution: {integrity: sha512-/ce7+jQ1PQ6rVXwe+jKEg5hW5ciicHwIQUagZkp6IufBoY3YDgdTTY1azVs0qoRgVmvsNB+rbjLJxDAeHHtwsQ==}
+  /enhanced-resolve@5.20.1:
+    resolution: {integrity: sha512-Qohcme7V1inbAfvjItgw0EaxVX5q2rdVEZHRBrEQdRZTssLDGsL8Lwrznl8oQ/6kuTJONLaDcGjkNP247XEhcA==}
     engines: {node: '>=10.13.0'}
     dependencies:
       graceful-fs: 4.2.11
@@ -25436,7 +25436,7 @@ packages:
     requiresBuild: true
     dependencies:
       iconv-lite: 0.6.3
-      sax: 1.5.0
+      sax: 1.6.0
     dev: true
     optional: true
 
@@ -28498,8 +28498,8 @@ packages:
       '@parcel/watcher': 2.5.6
     dev: true
 
-  /sax@1.5.0:
-    resolution: {integrity: sha512-21IYA3Q5cQf089Z6tgaUTr7lDAyzoTPx5HRtbhsME8Udispad8dC/+sziTNugOEx54ilvatQ9YCzl4KQLPcRHA==}
+  /sax@1.6.0:
+    resolution: {integrity: sha512-6R3J5M4AcbtLUdZmRv2SygeVaM7IhrLXu9BmnOGmmACak8fiUtOsYNWUS4uK7upbmHIBbLBeFeI//477BKLBzA==}
     engines: {node: '>=11.0.0'}
     requiresBuild: true
     dev: true
@@ -29919,7 +29919,7 @@ packages:
       '@jridgewell/trace-mapping': 0.3.31
       jest-worker: 27.5.1
       schema-utils: 4.3.3
-      terser: 5.46.0
+      terser: 5.46.1
       webpack: 5.105.4
     dev: true
 
@@ -29934,8 +29934,8 @@ packages:
       source-map-support: 0.5.21
     dev: true
 
-  /terser@5.46.0:
-    resolution: {integrity: sha512-jTwoImyr/QbOWFFso3YoU3ik0jBBDJ6JTOQiy/J2YxVJdZCc+5u7skhNwiOR3FQIygFqVUPHl7qbbxtjW2K3Qg==}
+  /terser@5.46.1:
+    resolution: {integrity: sha512-vzCjQO/rgUuK9sf8VJZvjqiqiHFaZLnOiimmUuOKODxWL8mm/xua7viT7aqX7dgPY60otQjUotzFMmCB4VdmqQ==}
     engines: {node: '>=10'}
     hasBin: true
     dependencies:
@@ -31438,7 +31438,7 @@ packages:
       acorn-import-phases: 1.0.4(acorn@8.16.0)
       browserslist: 4.28.1
       chrome-trace-event: 1.0.4
-      enhanced-resolve: 5.20.0
+      enhanced-resolve: 5.20.1
       es-module-lexer: 2.0.0
       eslint-scope: 5.1.1
       events: 3.3.0
