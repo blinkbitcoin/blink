@@ -23,15 +23,32 @@ jest.mock("@/services/lnd/config", () => ({
   parseLndErrorDetails: jest.fn(),
 }))
 
+jest.mock("lightning", () => {
+  const actual = jest.requireActual("lightning")
+  return {
+    ...actual,
+    payViaPaymentDetails: jest.fn(),
+  }
+})
+
+import { payViaPaymentDetails } from "lightning"
+
+import { DestinationMissingDependentFeatureError } from "@/domain/bitcoin/lightning"
 import { LndService } from "@/services/lnd"
 import { getHistoricalLndPubkeys } from "@/config"
-import { getLnds, getActiveLnd } from "@/services/lnd/config"
+import { getLnds, getActiveLnd, parseLndErrorDetails } from "@/services/lnd/config"
 
 const mockGetHistoricalLndPubkeys = getHistoricalLndPubkeys as jest.MockedFunction<
   typeof getHistoricalLndPubkeys
 >
+const mockPayViaPaymentDetails = payViaPaymentDetails as jest.MockedFunction<
+  typeof payViaPaymentDetails
+>
 const mockGetLnds = getLnds as jest.MockedFunction<typeof getLnds>
 const mockGetActiveLnd = getActiveLnd as jest.MockedFunction<typeof getActiveLnd>
+const mockParseLndErrorDetails = parseLndErrorDetails as jest.MockedFunction<
+  typeof parseLndErrorDetails
+>
 
 const PUBKEYS = {
   active1:
@@ -154,6 +171,72 @@ describe("LndService", () => {
 
       expect(lndService.isLocalOrHistorical(PUBKEYS.historical1)).toBe(true)
       expect(lndService.isLocalOrHistorical(PUBKEYS.external)).toBe(false)
+    })
+  })
+
+  describe("payInvoiceViaPaymentDetails error mapping", () => {
+    it("maps exact missing feature dependency error to DestinationMissingDependentFeatureError", async () => {
+      const lndConnect = createMockLndConnect(PUBKEYS.active1)
+      mockGetLnds.mockImplementation(({ active, type } = {}) => {
+        if (active === true && type === "offchain") return [lndConnect]
+        if (type === "offchain") return [lndConnect]
+        return []
+      })
+
+      const exactLndError = [
+        503,
+        "UnexpectedPaymentError",
+        {
+          err: {
+            code: 2,
+            details: "missing feature dependency: 9",
+            metadata: {
+              "content-type": ["application/grpc"],
+            },
+          },
+        },
+      ]
+
+      mockPayViaPaymentDetails.mockImplementation(async () => {
+        throw exactLndError
+      })
+      mockParseLndErrorDetails.mockReturnValue("missing feature dependency: 9")
+
+      const lndService = LndService()
+      if (lndService instanceof Error) throw lndService
+
+      const decodedInvoice = {
+        paymentHash: "a".repeat(64),
+        destination: PUBKEYS.external,
+        paymentRequest: "lnbc1test",
+        milliSatsAmount: 1000,
+        description: "test",
+        paymentSecret: "b".repeat(64),
+        cltvDelta: 40,
+        amount: 1,
+        paymentAmount: {
+          amount: 1n,
+          currency: "BTC",
+        },
+        features: [],
+        routeHints: [],
+        expiresAt: new Date(Date.now() + 60_000),
+        isExpired: false,
+      } as unknown as LnInvoice
+
+      const btcPaymentAmount = {
+        amount: 1n,
+        currency: "BTC",
+      } as BtcPaymentAmount
+
+      const result = await lndService.payInvoiceViaPaymentDetails({
+        decodedInvoice,
+        btcPaymentAmount,
+        maxFeeAmount: undefined,
+      })
+
+      expect(result).toBeInstanceOf(DestinationMissingDependentFeatureError)
+      expect(mockParseLndErrorDetails).toHaveBeenCalledWith(exactLndError)
     })
   })
 })

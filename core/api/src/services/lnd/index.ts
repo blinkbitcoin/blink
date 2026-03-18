@@ -1237,6 +1237,8 @@ const handleSendPaymentLndErrors = ({
     case match(KnownLndErrorDetails.FeaturePairExists):
     case match(KnownLndErrorDetails.UnsupportedPaymentFeature):
       return new InvalidFeatureBitsForLndInvoiceError()
+    case match(KnownLndErrorDetails.MissingDependentFeature):
+      return new DestinationMissingDependentFeatureError()
     case match(KnownLndErrorDetails.InsufficientFee):
       return new InsufficientFeeForLnPaymentError()
 
