@@ -9,6 +9,7 @@ import * as api_keys_pb from "./api_keys_pb";
 
 interface IApiKeysServiceService extends grpc.ServiceDefinition<grpc.UntypedServiceImplementation> {
     checkSpendingLimit: IApiKeysServiceService_ICheckSpendingLimit;
+    checkAndLockSpending: IApiKeysServiceService_ICheckAndLockSpending;
     getSpendingSummary: IApiKeysServiceService_IGetSpendingSummary;
     recordSpending: IApiKeysServiceService_IRecordSpending;
     reverseSpending: IApiKeysServiceService_IReverseSpending;
@@ -22,6 +23,15 @@ interface IApiKeysServiceService_ICheckSpendingLimit extends grpc.MethodDefiniti
     requestDeserialize: grpc.deserialize<api_keys_pb.CheckSpendingLimitRequest>;
     responseSerialize: grpc.serialize<api_keys_pb.CheckSpendingLimitResponse>;
     responseDeserialize: grpc.deserialize<api_keys_pb.CheckSpendingLimitResponse>;
+}
+interface IApiKeysServiceService_ICheckAndLockSpending extends grpc.MethodDefinition<api_keys_pb.CheckAndLockSpendingRequest, api_keys_pb.CheckAndLockSpendingResponse> {
+    path: "/services.api_keys.v1.ApiKeysService/CheckAndLockSpending";
+    requestStream: false;
+    responseStream: false;
+    requestSerialize: grpc.serialize<api_keys_pb.CheckAndLockSpendingRequest>;
+    requestDeserialize: grpc.deserialize<api_keys_pb.CheckAndLockSpendingRequest>;
+    responseSerialize: grpc.serialize<api_keys_pb.CheckAndLockSpendingResponse>;
+    responseDeserialize: grpc.deserialize<api_keys_pb.CheckAndLockSpendingResponse>;
 }
 interface IApiKeysServiceService_IGetSpendingSummary extends grpc.MethodDefinition<api_keys_pb.GetSpendingSummaryRequest, api_keys_pb.GetSpendingSummaryResponse> {
     path: "/services.api_keys.v1.ApiKeysService/GetSpendingSummary";
@@ -55,6 +65,7 @@ export const ApiKeysServiceService: IApiKeysServiceService;
 
 export interface IApiKeysServiceServer extends grpc.UntypedServiceImplementation {
     checkSpendingLimit: grpc.handleUnaryCall<api_keys_pb.CheckSpendingLimitRequest, api_keys_pb.CheckSpendingLimitResponse>;
+    checkAndLockSpending: grpc.handleUnaryCall<api_keys_pb.CheckAndLockSpendingRequest, api_keys_pb.CheckAndLockSpendingResponse>;
     getSpendingSummary: grpc.handleUnaryCall<api_keys_pb.GetSpendingSummaryRequest, api_keys_pb.GetSpendingSummaryResponse>;
     recordSpending: grpc.handleUnaryCall<api_keys_pb.RecordSpendingRequest, api_keys_pb.RecordSpendingResponse>;
     reverseSpending: grpc.handleUnaryCall<api_keys_pb.ReverseSpendingRequest, api_keys_pb.ReverseSpendingResponse>;
@@ -64,6 +75,9 @@ export interface IApiKeysServiceClient {
     checkSpendingLimit(request: api_keys_pb.CheckSpendingLimitRequest, callback: (error: grpc.ServiceError | null, response: api_keys_pb.CheckSpendingLimitResponse) => void): grpc.ClientUnaryCall;
     checkSpendingLimit(request: api_keys_pb.CheckSpendingLimitRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: api_keys_pb.CheckSpendingLimitResponse) => void): grpc.ClientUnaryCall;
     checkSpendingLimit(request: api_keys_pb.CheckSpendingLimitRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: api_keys_pb.CheckSpendingLimitResponse) => void): grpc.ClientUnaryCall;
+    checkAndLockSpending(request: api_keys_pb.CheckAndLockSpendingRequest, callback: (error: grpc.ServiceError | null, response: api_keys_pb.CheckAndLockSpendingResponse) => void): grpc.ClientUnaryCall;
+    checkAndLockSpending(request: api_keys_pb.CheckAndLockSpendingRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: api_keys_pb.CheckAndLockSpendingResponse) => void): grpc.ClientUnaryCall;
+    checkAndLockSpending(request: api_keys_pb.CheckAndLockSpendingRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: api_keys_pb.CheckAndLockSpendingResponse) => void): grpc.ClientUnaryCall;
     getSpendingSummary(request: api_keys_pb.GetSpendingSummaryRequest, callback: (error: grpc.ServiceError | null, response: api_keys_pb.GetSpendingSummaryResponse) => void): grpc.ClientUnaryCall;
     getSpendingSummary(request: api_keys_pb.GetSpendingSummaryRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: api_keys_pb.GetSpendingSummaryResponse) => void): grpc.ClientUnaryCall;
     getSpendingSummary(request: api_keys_pb.GetSpendingSummaryRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: api_keys_pb.GetSpendingSummaryResponse) => void): grpc.ClientUnaryCall;
@@ -80,6 +94,9 @@ export class ApiKeysServiceClient extends grpc.Client implements IApiKeysService
     public checkSpendingLimit(request: api_keys_pb.CheckSpendingLimitRequest, callback: (error: grpc.ServiceError | null, response: api_keys_pb.CheckSpendingLimitResponse) => void): grpc.ClientUnaryCall;
     public checkSpendingLimit(request: api_keys_pb.CheckSpendingLimitRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: api_keys_pb.CheckSpendingLimitResponse) => void): grpc.ClientUnaryCall;
     public checkSpendingLimit(request: api_keys_pb.CheckSpendingLimitRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: api_keys_pb.CheckSpendingLimitResponse) => void): grpc.ClientUnaryCall;
+    public checkAndLockSpending(request: api_keys_pb.CheckAndLockSpendingRequest, callback: (error: grpc.ServiceError | null, response: api_keys_pb.CheckAndLockSpendingResponse) => void): grpc.ClientUnaryCall;
+    public checkAndLockSpending(request: api_keys_pb.CheckAndLockSpendingRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: api_keys_pb.CheckAndLockSpendingResponse) => void): grpc.ClientUnaryCall;
+    public checkAndLockSpending(request: api_keys_pb.CheckAndLockSpendingRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: api_keys_pb.CheckAndLockSpendingResponse) => void): grpc.ClientUnaryCall;
     public getSpendingSummary(request: api_keys_pb.GetSpendingSummaryRequest, callback: (error: grpc.ServiceError | null, response: api_keys_pb.GetSpendingSummaryResponse) => void): grpc.ClientUnaryCall;
     public getSpendingSummary(request: api_keys_pb.GetSpendingSummaryRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: api_keys_pb.GetSpendingSummaryResponse) => void): grpc.ClientUnaryCall;
     public getSpendingSummary(request: api_keys_pb.GetSpendingSummaryRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: api_keys_pb.GetSpendingSummaryResponse) => void): grpc.ClientUnaryCall;

@@ -109,6 +109,49 @@ export namespace CheckSpendingLimitResponse {
     }
 }
 
+export class CheckAndLockSpendingRequest extends jspb.Message { 
+    getApiKeyId(): string;
+    setApiKeyId(value: string): CheckAndLockSpendingRequest;
+    getAmountSats(): number;
+    setAmountSats(value: number): CheckAndLockSpendingRequest;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): CheckAndLockSpendingRequest.AsObject;
+    static toObject(includeInstance: boolean, msg: CheckAndLockSpendingRequest): CheckAndLockSpendingRequest.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: CheckAndLockSpendingRequest, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): CheckAndLockSpendingRequest;
+    static deserializeBinaryFromReader(message: CheckAndLockSpendingRequest, reader: jspb.BinaryReader): CheckAndLockSpendingRequest;
+}
+
+export namespace CheckAndLockSpendingRequest {
+    export type AsObject = {
+        apiKeyId: string,
+        amountSats: number,
+    }
+}
+
+export class CheckAndLockSpendingResponse extends jspb.Message { 
+    getEphemeralId(): string;
+    setEphemeralId(value: string): CheckAndLockSpendingResponse;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): CheckAndLockSpendingResponse.AsObject;
+    static toObject(includeInstance: boolean, msg: CheckAndLockSpendingResponse): CheckAndLockSpendingResponse.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: CheckAndLockSpendingResponse, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): CheckAndLockSpendingResponse;
+    static deserializeBinaryFromReader(message: CheckAndLockSpendingResponse, reader: jspb.BinaryReader): CheckAndLockSpendingResponse;
+}
+
+export namespace CheckAndLockSpendingResponse {
+    export type AsObject = {
+        ephemeralId: string,
+    }
+}
+
 export class GetSpendingSummaryRequest extends jspb.Message { 
     getApiKeyId(): string;
     setApiKeyId(value: string): GetSpendingSummaryRequest;
@@ -217,6 +260,11 @@ export class RecordSpendingRequest extends jspb.Message {
     getTransactionId(): string | undefined;
     setTransactionId(value: string): RecordSpendingRequest;
 
+    hasEphemeralId(): boolean;
+    clearEphemeralId(): void;
+    getEphemeralId(): string | undefined;
+    setEphemeralId(value: string): RecordSpendingRequest;
+
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): RecordSpendingRequest.AsObject;
     static toObject(includeInstance: boolean, msg: RecordSpendingRequest): RecordSpendingRequest.AsObject;
@@ -232,6 +280,7 @@ export namespace RecordSpendingRequest {
         apiKeyId: string,
         amountSats: number,
         transactionId?: string,
+        ephemeralId?: string,
     }
 }
 

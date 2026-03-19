@@ -1,5 +1,6 @@
 import {
   ApiKeyInvalidLimitError,
+  ApiKeyLimitExceededError,
   ApiKeySpendingRecordError,
   InvalidApiKeyIdError,
   UnknownApiKeysServiceError,
@@ -12,6 +13,9 @@ export const handleCommonApiKeysErrors = (err: Error | string | unknown) => {
   const match = (knownErrDetail: RegExp): boolean => knownErrDetail.test(errMsg)
 
   switch (true) {
+    case match(KnownApiKeysErrorMessages.LimitExceeded):
+      return new ApiKeyLimitExceededError(errMsg)
+
     case match(KnownApiKeysErrorMessages.InvalidApiKeyId):
       return new InvalidApiKeyIdError(errMsg)
 
@@ -27,6 +31,7 @@ export const handleCommonApiKeysErrors = (err: Error | string | unknown) => {
 }
 
 export const KnownApiKeysErrorMessages = {
+  LimitExceeded: /spending limit exceeded/,
   InvalidApiKeyId: /Invalid API key ID/,
   InvalidAmountError: /Negative amount not allowed|Amount must be positive/,
   InvalidLimitError: /Invalid limit value/,
