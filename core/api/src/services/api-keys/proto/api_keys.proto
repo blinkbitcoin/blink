@@ -4,6 +4,7 @@ package services.api_keys.v1;
 
 service ApiKeysService {
   rpc CheckSpendingLimit (CheckSpendingLimitRequest) returns (CheckSpendingLimitResponse) {}
+  rpc CheckAndLockSpending (CheckAndLockSpendingRequest) returns (CheckAndLockSpendingResponse) {}
   rpc GetSpendingSummary (GetSpendingSummaryRequest) returns (GetSpendingSummaryResponse) {}
   rpc RecordSpending (RecordSpendingRequest) returns (RecordSpendingResponse) {}
   rpc ReverseSpending (ReverseSpendingRequest) returns (ReverseSpendingResponse) {}
@@ -30,6 +31,15 @@ message CheckSpendingLimitResponse {
   optional int64 remaining_annual_sats = 13;
 }
 
+message CheckAndLockSpendingRequest {
+  string api_key_id = 1;
+  int64 amount_sats = 2;
+}
+
+message CheckAndLockSpendingResponse {
+  string ephemeral_id = 1;
+}
+
 message GetSpendingSummaryRequest {
   string api_key_id = 1;
 }
@@ -53,6 +63,7 @@ message RecordSpendingRequest {
   string api_key_id = 1;
   int64 amount_sats = 2;
   optional string transaction_id = 3;
+  optional string ephemeral_id = 4;
 }
 
 message RecordSpendingResponse {

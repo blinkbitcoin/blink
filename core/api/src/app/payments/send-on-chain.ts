@@ -56,7 +56,6 @@ import {
   recordExceptionInCurrentSpan,
 } from "@/services/tracing"
 import { ApiKeysService } from "@/services/api-keys"
-import { validateSpendingLimit } from "@/domain/api-keys"
 
 const { dustThreshold } = getOnChainWalletConfig()
 const dealer = DealerPriceService()
@@ -180,13 +179,33 @@ const payOnChainByWalletId = async ({
       .withAmount(amount)
       .withConversion(withConversionArgs)
 
-    return executePaymentViaIntraledger({
+    let ephemeralId: EphemeralId | undefined
+    if (apiKeyId) {
+      const proposedAmounts = await builder.proposedAmounts()
+      if (proposedAmounts instanceof Error) return proposedAmounts
+
+      const lockResult = await apiKeys.checkAndLockSpending({
+        apiKeyId,
+        amount: proposedAmounts.btc,
+      })
+      if (lockResult instanceof Error) return lockResult
+      ephemeralId = lockResult
+    }
+
+    const result = await executePaymentViaIntraledger({
       builder,
       senderAccount,
       memo,
       sendAll,
       apiKeyId,
+      ephemeralId,
     })
+
+    if (result instanceof Error && ephemeralId) {
+      await apiKeys.reverseSpending({ transactionId: ephemeralId })
+    }
+
+    return result
   }
 
   const builder = withSenderBuilder
@@ -194,7 +213,20 @@ const payOnChainByWalletId = async ({
     .withAmount(amount)
     .withConversion(withConversionArgs)
 
-  return executePaymentViaOnChain({
+  let ephemeralId: EphemeralId | undefined
+  if (apiKeyId) {
+    const proposedAmounts = await builder.proposedAmounts()
+    if (proposedAmounts instanceof Error) return proposedAmounts
+
+    const lockResult = await apiKeys.checkAndLockSpending({
+      apiKeyId,
+      amount: proposedAmounts.btc,
+    })
+    if (lockResult instanceof Error) return lockResult
+    ephemeralId = lockResult
+  }
+
+  const result = await executePaymentViaOnChain({
     builder,
     senderDisplayCurrency: senderAccount.displayCurrency,
     speed,
@@ -202,7 +234,14 @@ const payOnChainByWalletId = async ({
     sendAll,
     logger: onchainLogger,
     apiKeyId,
+    ephemeralId,
   })
+
+  if (result instanceof Error && ephemeralId) {
+    await apiKeys.reverseSpending({ transactionId: ephemeralId })
+  }
+
+  return result
 }
 
 export const payOnChainByWalletIdForBtcWallet = async (
@@ -258,12 +297,14 @@ const executePaymentViaIntraledger = async <
   memo,
   sendAll,
   apiKeyId,
+  ephemeralId,
 }: {
   builder: OPFBWithConversion<S, R> | OPFBWithError
   senderAccount: Account
   memo: string | null
   sendAll: boolean
   apiKeyId?: ApiKeyId
+  ephemeralId?: EphemeralId
 }): Promise<PaymentSendResult | ApplicationError> => {
   const paymentFlow = await builder.withoutMinerFee()
   if (paymentFlow instanceof Error) return paymentFlow
@@ -299,18 +340,6 @@ const executePaymentViaIntraledger = async <
   // Limit check
   const priceRatioForLimits = await getPriceRatioForLimits(paymentFlow.paymentAmounts())
   if (priceRatioForLimits instanceof Error) return priceRatioForLimits
-
-  if (apiKeyId) {
-    const amount = paymentFlow.btcPaymentAmount
-    const limits = await apiKeys.getSpendingLimits({
-      apiKeyId,
-      amount,
-    })
-    if (limits instanceof Error) return limits
-
-    const validation = validateSpendingLimit({ amount, limits })
-    if (validation instanceof Error) return validation
-  }
 
   const checkLimits =
     senderAccount.id === recipientAccount.id
@@ -380,11 +409,12 @@ const executePaymentViaIntraledger = async <
     transaction: senderWalletTransaction,
   })
 
-  if (apiKeyId) {
+  if (apiKeyId && ephemeralId) {
     const recordResult = await apiKeys.recordSpending({
       apiKeyId,
       amount: paymentFlow.btcPaymentAmount,
       transactionId: journalId,
+      ephemeralId,
     })
     if (recordResult instanceof Error) {
       recordExceptionInCurrentSpan({ error: recordResult })
@@ -558,6 +588,7 @@ const executePaymentViaOnChain = async <
   sendAll,
   logger,
   apiKeyId,
+  ephemeralId,
 }: {
   builder: OPFBWithConversion<S, R> | OPFBWithError
   senderDisplayCurrency: DisplayCurrency
@@ -566,6 +597,7 @@ const executePaymentViaOnChain = async <
   sendAll: boolean
   logger: Logger
   apiKeyId?: ApiKeyId
+  ephemeralId?: EphemeralId
 }): Promise<PaymentSendResult | ApplicationError> => {
   const senderWalletDescriptor = await builder.senderWalletDescriptor()
   if (senderWalletDescriptor instanceof Error) return senderWalletDescriptor
@@ -576,18 +608,6 @@ const executePaymentViaOnChain = async <
 
   const priceRatioForLimits = await getPriceRatioForLimits(proposedAmounts)
   if (priceRatioForLimits instanceof Error) return priceRatioForLimits
-
-  if (apiKeyId) {
-    const amount = proposedAmounts.btc
-    const limits = await apiKeys.getSpendingLimits({
-      apiKeyId,
-      amount,
-    })
-    if (limits instanceof Error) return limits
-
-    const validation = validateSpendingLimit({ amount, limits })
-    if (validation instanceof Error) return validation
-  }
 
   const limitCheck = await checkWithdrawalLimits({
     amount: proposedAmounts.usd,
@@ -620,11 +640,12 @@ const executePaymentViaOnChain = async <
   })
   if (walletTransaction instanceof Error) return walletTransaction
 
-  if (apiKeyId) {
+  if (apiKeyId && ephemeralId) {
     const recordResult = await apiKeys.recordSpending({
       apiKeyId,
       amount: proposedAmounts.btc,
       transactionId: journalId,
+      ephemeralId,
     })
     if (recordResult instanceof Error) {
       recordExceptionInCurrentSpan({ error: recordResult })

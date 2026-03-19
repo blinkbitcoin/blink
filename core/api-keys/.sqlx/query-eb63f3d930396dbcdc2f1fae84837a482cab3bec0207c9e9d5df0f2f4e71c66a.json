@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO api_key_transactions (api_key_id, amount_sats, transaction_id, created_at)\n            VALUES ($1, $2, $3, NOW())\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "eb63f3d930396dbcdc2f1fae84837a482cab3bec0207c9e9d5df0f2f4e71c66a"
+}

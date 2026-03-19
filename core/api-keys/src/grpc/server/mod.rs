@@ -72,6 +72,38 @@ impl ApiKeysService for ApiKeys {
         }))
     }
 
+    #[instrument(name = "api_keys.check_and_lock_spending", skip_all, err)]
+    async fn check_and_lock_spending(
+        &self,
+        request: Request<CheckAndLockSpendingRequest>,
+    ) -> Result<Response<CheckAndLockSpendingResponse>, Status> {
+        grpc::extract_tracing(&request);
+        let request = request.into_inner();
+        let CheckAndLockSpendingRequest {
+            api_key_id,
+            amount_sats,
+        } = request;
+
+        let api_key_id = api_key_id
+            .parse::<IdentityApiKeyId>()
+            .map_err(|e| Status::invalid_argument(format!("Invalid API key ID: {}", e)))?;
+
+        let ephemeral_id = self
+            .app
+            .check_and_lock_spending(api_key_id, amount_sats)
+            .await
+            .map_err(|e| {
+                let limit_exceeded = e.to_string().contains("spending limit exceeded");
+                if limit_exceeded {
+                    Status::failed_precondition(e.to_string())
+                } else {
+                    Status::internal(e.to_string())
+                }
+            })?;
+
+        Ok(Response::new(CheckAndLockSpendingResponse { ephemeral_id }))
+    }
+
     #[instrument(name = "api_keys.get_spending_summary", skip_all, err)]
     async fn get_spending_summary(
         &self,
@@ -131,6 +163,7 @@ impl ApiKeysService for ApiKeys {
             api_key_id,
             amount_sats,
             transaction_id,
+            ephemeral_id,
         } = request;
 
         let api_key_id = api_key_id
@@ -138,7 +171,7 @@ impl ApiKeysService for ApiKeys {
             .map_err(|e| Status::invalid_argument(format!("Invalid API key ID: {}", e)))?;
 
         self.app
-            .record_spending(api_key_id, amount_sats, transaction_id)
+            .record_spending(api_key_id, amount_sats, transaction_id, ephemeral_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 

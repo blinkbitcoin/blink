@@ -4,6 +4,28 @@
 var grpc = require('@grpc/grpc-js');
 var api_keys_pb = require('./api_keys_pb.js');
 
+function serialize_services_api_keys_v1_CheckAndLockSpendingRequest(arg) {
+  if (!(arg instanceof api_keys_pb.CheckAndLockSpendingRequest)) {
+    throw new Error('Expected argument of type services.api_keys.v1.CheckAndLockSpendingRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_services_api_keys_v1_CheckAndLockSpendingRequest(buffer_arg) {
+  return api_keys_pb.CheckAndLockSpendingRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_services_api_keys_v1_CheckAndLockSpendingResponse(arg) {
+  if (!(arg instanceof api_keys_pb.CheckAndLockSpendingResponse)) {
+    throw new Error('Expected argument of type services.api_keys.v1.CheckAndLockSpendingResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_services_api_keys_v1_CheckAndLockSpendingResponse(buffer_arg) {
+  return api_keys_pb.CheckAndLockSpendingResponse.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
 function serialize_services_api_keys_v1_CheckSpendingLimitRequest(arg) {
   if (!(arg instanceof api_keys_pb.CheckSpendingLimitRequest)) {
     throw new Error('Expected argument of type services.api_keys.v1.CheckSpendingLimitRequest');
@@ -104,6 +126,17 @@ var ApiKeysServiceService = exports.ApiKeysServiceService = {
     requestDeserialize: deserialize_services_api_keys_v1_CheckSpendingLimitRequest,
     responseSerialize: serialize_services_api_keys_v1_CheckSpendingLimitResponse,
     responseDeserialize: deserialize_services_api_keys_v1_CheckSpendingLimitResponse,
+  },
+  checkAndLockSpending: {
+    path: '/services.api_keys.v1.ApiKeysService/CheckAndLockSpending',
+    requestStream: false,
+    responseStream: false,
+    requestType: api_keys_pb.CheckAndLockSpendingRequest,
+    responseType: api_keys_pb.CheckAndLockSpendingResponse,
+    requestSerialize: serialize_services_api_keys_v1_CheckAndLockSpendingRequest,
+    requestDeserialize: deserialize_services_api_keys_v1_CheckAndLockSpendingRequest,
+    responseSerialize: serialize_services_api_keys_v1_CheckAndLockSpendingResponse,
+    responseDeserialize: deserialize_services_api_keys_v1_CheckAndLockSpendingResponse,
   },
   getSpendingSummary: {
     path: '/services.api_keys.v1.ApiKeysService/GetSpendingSummary',

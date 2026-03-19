@@ -5,10 +5,8 @@ import { credentials, Metadata } from "@grpc/grpc-js"
 import { ApiKeysServiceClient } from "./proto/api_keys_grpc_pb"
 
 import {
-  CheckSpendingLimitRequest,
-  CheckSpendingLimitResponse,
-  GetSpendingSummaryRequest,
-  GetSpendingSummaryResponse,
+  CheckAndLockSpendingRequest,
+  CheckAndLockSpendingResponse,
   RecordSpendingRequest,
   RecordSpendingResponse,
   ReverseSpendingRequest,
@@ -26,17 +24,11 @@ const apiKeysClient = new ApiKeysServiceClient(
 
 export const apiKeysMetadata = new Metadata()
 
-export const checkSpendingLimit = promisify<
-  CheckSpendingLimitRequest,
+export const checkAndLockSpending = promisify<
+  CheckAndLockSpendingRequest,
   Metadata,
-  CheckSpendingLimitResponse
->(apiKeysClient.checkSpendingLimit.bind(apiKeysClient))
-
-export const getSpendingSummary = promisify<
-  GetSpendingSummaryRequest,
-  Metadata,
-  GetSpendingSummaryResponse
->(apiKeysClient.getSpendingSummary.bind(apiKeysClient))
+  CheckAndLockSpendingResponse
+>(apiKeysClient.checkAndLockSpending.bind(apiKeysClient))
 
 export const recordSpending = promisify<
   RecordSpendingRequest,
