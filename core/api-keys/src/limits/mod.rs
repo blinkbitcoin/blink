@@ -94,29 +94,138 @@ impl Limits {
         })
     }
 
+    #[tracing::instrument(name = "limits.check_and_lock_spending", skip(self))]
+    pub async fn check_and_lock_spending(
+        &self,
+        api_key_id: IdentityApiKeyId,
+        amount_sats: i64,
+    ) -> Result<String, LimitError> {
+        if amount_sats <= 0 {
+            return Err(LimitError::InvalidLimitAmount);
+        }
+
+        let mut tx = self.pool.begin().await?;
+
+        let limits = sqlx::query!(
+            r#"
+            SELECT daily_limit_sats, weekly_limit_sats, monthly_limit_sats, annual_limit_sats
+            FROM api_key_limits
+            WHERE api_key_id = $1
+            FOR UPDATE
+            "#,
+            api_key_id as IdentityApiKeyId,
+        )
+        .fetch_optional(&mut *tx)
+        .await?;
+
+        let (daily_limit, weekly_limit, monthly_limit, annual_limit) = match limits {
+            Some(row) => (
+                row.daily_limit_sats,
+                row.weekly_limit_sats,
+                row.monthly_limit_sats,
+                row.annual_limit_sats,
+            ),
+            None => (None, None, None, None),
+        };
+
+        let spending = sqlx::query!(
+            r#"
+            SELECT
+                COALESCE(SUM(amount_sats) FILTER (WHERE created_at > NOW() - INTERVAL '24 hours'), 0)::bigint AS "daily_spent_sats!",
+                COALESCE(SUM(amount_sats) FILTER (WHERE created_at > NOW() - INTERVAL '7 days'), 0)::bigint AS "weekly_spent_sats!",
+                COALESCE(SUM(amount_sats) FILTER (WHERE created_at > NOW() - INTERVAL '30 days'), 0)::bigint AS "monthly_spent_sats!",
+                COALESCE(SUM(amount_sats) FILTER (WHERE created_at > NOW() - INTERVAL '365 days'), 0)::bigint AS "annual_spent_sats!"
+            FROM api_key_transactions
+            WHERE api_key_id = $1
+              AND created_at > NOW() - INTERVAL '365 days'
+            "#,
+            api_key_id as IdentityApiKeyId,
+        )
+        .fetch_one(&mut *tx)
+        .await?;
+
+        let checks = [
+            ("daily", daily_limit, spending.daily_spent_sats),
+            ("weekly", weekly_limit, spending.weekly_spent_sats),
+            ("monthly", monthly_limit, spending.monthly_spent_sats),
+            ("annual", annual_limit, spending.annual_spent_sats),
+        ];
+
+        for (period, limit, spent) in &checks {
+            if let Some(limit) = limit {
+                if spent.saturating_add(amount_sats) > *limit {
+                    tx.rollback().await?;
+                    return Err(LimitError::LimitExceeded(period.to_string()));
+                }
+            }
+        }
+
+        let ephemeral_id = uuid::Uuid::new_v4().to_string();
+
+        sqlx::query!(
+            r#"
+            INSERT INTO api_key_transactions (api_key_id, amount_sats, transaction_id, created_at)
+            VALUES ($1, $2, $3, NOW())
+            "#,
+            api_key_id as IdentityApiKeyId,
+            amount_sats,
+            &ephemeral_id,
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+
+        Ok(ephemeral_id)
+    }
+
     #[tracing::instrument(name = "limits.record_spending", skip(self))]
     pub async fn record_spending(
         &self,
         api_key_id: IdentityApiKeyId,
         amount_sats: i64,
         transaction_id: Option<String>,
+        ephemeral_id: Option<String>,
     ) -> Result<(), LimitError> {
         if amount_sats <= 0 {
             return Err(LimitError::InvalidLimitAmount);
         }
 
-        sqlx::query!(
-            r#"
-            INSERT INTO api_key_transactions (api_key_id, amount_sats, transaction_id, created_at)
-            VALUES ($1, $2, $3, NOW())
-            ON CONFLICT (transaction_id) DO NOTHING
-            "#,
-            api_key_id as IdentityApiKeyId,
-            amount_sats,
-            transaction_id,
-        )
-        .execute(&self.pool)
-        .await?;
+        match ephemeral_id {
+            Some(eid) => {
+                let result = sqlx::query!(
+                    r#"
+                    UPDATE api_key_transactions
+                    SET transaction_id = $1
+                    WHERE transaction_id = $2
+                      AND api_key_id = $3
+                    "#,
+                    transaction_id,
+                    &eid,
+                    api_key_id as IdentityApiKeyId,
+                )
+                .execute(&self.pool)
+                .await?;
+
+                if result.rows_affected() == 0 {
+                    return Err(LimitError::EphemeralNotFound(eid));
+                }
+            }
+            None => {
+                sqlx::query!(
+                    r#"
+                    INSERT INTO api_key_transactions (api_key_id, amount_sats, transaction_id, created_at)
+                    VALUES ($1, $2, $3, NOW())
+                    ON CONFLICT (transaction_id) DO NOTHING
+                    "#,
+                    api_key_id as IdentityApiKeyId,
+                    amount_sats,
+                    transaction_id,
+                )
+                .execute(&self.pool)
+                .await?;
+            }
+        }
 
         Ok(())
     }
@@ -464,14 +573,14 @@ mod tests {
     #[tokio::test]
     async fn record_spending_rejects_zero_amount() {
         let limits = test_limits();
-        let result = limits.record_spending(test_api_key_id(), 0, None).await;
+        let result = limits.record_spending(test_api_key_id(), 0, None, None).await;
         assert!(matches!(result, Err(LimitError::InvalidLimitAmount)));
     }
 
     #[tokio::test]
     async fn record_spending_rejects_negative_amount() {
         let limits = test_limits();
-        let result = limits.record_spending(test_api_key_id(), -100, None).await;
+        let result = limits.record_spending(test_api_key_id(), -100, None, None).await;
         assert!(matches!(result, Err(LimitError::InvalidLimitAmount)));
     }
 
@@ -528,6 +637,20 @@ mod tests {
     async fn set_annual_limit_rejects_negative() {
         let limits = test_limits();
         let result = limits.set_annual_limit(test_api_key_id(), -1).await;
+        assert!(matches!(result, Err(LimitError::InvalidLimitAmount)));
+    }
+
+    #[tokio::test]
+    async fn check_and_lock_spending_rejects_zero_amount() {
+        let limits = test_limits();
+        let result = limits.check_and_lock_spending(test_api_key_id(), 0).await;
+        assert!(matches!(result, Err(LimitError::InvalidLimitAmount)));
+    }
+
+    #[tokio::test]
+    async fn check_and_lock_spending_rejects_negative_amount() {
+        let limits = test_limits();
+        let result = limits.check_and_lock_spending(test_api_key_id(), -1).await;
         assert!(matches!(result, Err(LimitError::InvalidLimitAmount)));
     }
 }
