@@ -790,6 +790,17 @@ const executePaymentViaLn = async ({
     journalId: paymentSendAttemptResult.journalId,
   })
   if (walletTransaction instanceof Error) return walletTransaction
+  
+  // Inject revealedPreImage into settlementVia if available and this was a successful Lightning payment
+  if (
+    paymentSendAttemptResult.type === PaymentSendAttemptResultType.Ok &&
+    paymentSendAttemptResult.revealedPreImage &&
+    walletTransaction.settlementVia.type === "lightning"
+  ) {
+    // Type assertion is safe here because we've checked the transaction is Lightning
+    (walletTransaction.settlementVia as any).revealedPreImage = paymentSendAttemptResult.revealedPreImage
+  }
+  
   NotificationsService().sendTransaction({
     recipient: notificationRecipient,
     transaction: walletTransaction,
@@ -1050,7 +1061,7 @@ const lockedPaymentViaLnSteps = async ({
   if (updateJournalTxnsState instanceof Error) {
     return LnSendAttemptResult.err(updateJournalTxnsState)
   }
-  return LnSendAttemptResult.ok(journalId)
+  return LnSendAttemptResult.ok(journalId, payResult.revealedPreImage)
 }
 
 const getAlreadyPaidResponse = async (args: {

@@ -25,6 +25,7 @@ type LnSendAttemptResult =
   | {
       type: PaymentSendAttemptResultTypeObj["Ok"]
       journalId: LedgerJournalId
+      revealedPreImage?: RevealedPreImage
     }
   | {
       type: PaymentSendAttemptResultTypeObj["Pending"]
