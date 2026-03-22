@@ -24,7 +24,7 @@ export const persistAndReturnEntry = async ({
       hash,
       revealedPreImage,
     }))
-    txMetadataRepo.persistAll(txsMetadataToPersist)
+    await txMetadataRepo.persistAll(txsMetadataToPersist)
 
     return journalEntry
   } catch (err) {

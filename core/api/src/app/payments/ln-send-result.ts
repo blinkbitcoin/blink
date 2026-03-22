@@ -21,9 +21,10 @@ export const IntraLedgerSendAttemptResult = {
 }
 
 export const LnSendAttemptResult = {
-  ok: (journalId: LedgerJournalId): LnSendAttemptResult => ({
+  ok: (journalId: LedgerJournalId, revealedPreImage?: RevealedPreImage): LnSendAttemptResult => ({
     type: PaymentSendAttemptResultType.Ok,
     journalId,
+    revealedPreImage,
   }),
   pending: (journalId: LedgerJournalId): LnSendAttemptResult => ({
     type: PaymentSendAttemptResultType.Pending,
