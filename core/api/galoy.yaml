@@ -30,6 +30,7 @@ admin_accounts:
   - role: bankowner
     phone: "+16505554334"
 test_accounts: []
+test_accounts_captcha: []
 rateLimits:
   requestCodePerEmail:
     points: 4
