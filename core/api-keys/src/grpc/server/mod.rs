@@ -11,7 +11,11 @@ use tracing::{grpc, instrument};
 use self::proto::{api_keys_service_server::ApiKeysService, *};
 
 use super::config::*;
-use crate::{app::{ApiKeysApp, ApplicationError}, identity::IdentityApiKeyId, limits::LimitError};
+use crate::{
+    app::{ApiKeysApp, ApplicationError},
+    identity::IdentityApiKeyId,
+    limits::LimitError,
+};
 use std::sync::Arc;
 
 pub struct ApiKeys {
@@ -175,8 +179,8 @@ impl ApiKeysService for ApiKeys {
             .record_spending(api_key_id, amount_sats, transaction_id, ephemeral_id)
             .await
             .map_err(|e| match &e {
-                ApplicationError::Limit(LimitError::InvalidLimitAmount) |
-                ApplicationError::Limit(LimitError::MissingTransactionId) => {
+                ApplicationError::Limit(LimitError::InvalidLimitAmount)
+                | ApplicationError::Limit(LimitError::MissingTransactionId) => {
                     Status::invalid_argument(e.to_string())
                 }
                 ApplicationError::Limit(LimitError::EphemeralNotFound(_)) => {

@@ -177,7 +177,11 @@ export const setDailyLimit = async ({
   }
 
   try {
-    await setApiKeyLimit({ id, limitTimeWindow: LimitTimeWindow.Daily, limitSats: dailyLimitSats })
+    await setApiKeyLimit({
+      id,
+      limitTimeWindow: LimitTimeWindow.Daily,
+      limitSats: dailyLimitSats,
+    })
   } catch (err) {
     console.log("error in setApiKeyLimit (daily) ", err)
     throw new Error("Failed to set API key daily limit")
@@ -208,7 +212,11 @@ export const setWeeklyLimit = async ({
   }
 
   try {
-    await setApiKeyLimit({ id, limitTimeWindow: LimitTimeWindow.Weekly, limitSats: weeklyLimitSats })
+    await setApiKeyLimit({
+      id,
+      limitTimeWindow: LimitTimeWindow.Weekly,
+      limitSats: weeklyLimitSats,
+    })
   } catch (err) {
     console.log("error in setApiKeyLimit (weekly) ", err)
     throw new Error("Failed to set API key weekly limit")
@@ -239,7 +247,11 @@ export const setMonthlyLimit = async ({
   }
 
   try {
-    await setApiKeyLimit({ id, limitTimeWindow: LimitTimeWindow.Monthly, limitSats: monthlyLimitSats })
+    await setApiKeyLimit({
+      id,
+      limitTimeWindow: LimitTimeWindow.Monthly,
+      limitSats: monthlyLimitSats,
+    })
   } catch (err) {
     console.log("error in setApiKeyLimit (monthly) ", err)
     throw new Error("Failed to set API key monthly limit")
@@ -270,7 +282,11 @@ export const setAnnualLimit = async ({
   }
 
   try {
-    await setApiKeyLimit({ id, limitTimeWindow: LimitTimeWindow.Annual, limitSats: annualLimitSats })
+    await setApiKeyLimit({
+      id,
+      limitTimeWindow: LimitTimeWindow.Annual,
+      limitSats: annualLimitSats,
+    })
   } catch (err) {
     console.log("error in setApiKeyLimit (annual) ", err)
     throw new Error("Failed to set API key annual limit")

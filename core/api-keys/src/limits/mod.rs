@@ -591,14 +591,18 @@ mod tests {
     #[tokio::test]
     async fn record_spending_rejects_zero_amount() {
         let limits = test_limits();
-        let result = limits.record_spending(test_api_key_id(), 0, None, None).await;
+        let result = limits
+            .record_spending(test_api_key_id(), 0, None, None)
+            .await;
         assert!(matches!(result, Err(LimitError::InvalidLimitAmount)));
     }
 
     #[tokio::test]
     async fn record_spending_rejects_negative_amount() {
         let limits = test_limits();
-        let result = limits.record_spending(test_api_key_id(), -100, None, None).await;
+        let result = limits
+            .record_spending(test_api_key_id(), -100, None, None)
+            .await;
         assert!(matches!(result, Err(LimitError::InvalidLimitAmount)));
     }
 
