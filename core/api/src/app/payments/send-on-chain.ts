@@ -202,7 +202,10 @@ const payOnChainByWalletId = async ({
     })
 
     if (result instanceof Error && ephemeralId) {
-      await apiKeys.reverseSpending({ transactionId: ephemeralId })
+      const reverseResult = await apiKeys.reverseSpending({ transactionId: ephemeralId })
+      if (reverseResult instanceof Error) {
+        recordExceptionInCurrentSpan({ error: reverseResult })
+      }
     }
 
     return result
@@ -238,7 +241,10 @@ const payOnChainByWalletId = async ({
   })
 
   if (result instanceof Error && ephemeralId) {
-    await apiKeys.reverseSpending({ transactionId: ephemeralId })
+    const reverseResult = await apiKeys.reverseSpending({ transactionId: ephemeralId })
+    if (reverseResult instanceof Error) {
+      recordExceptionInCurrentSpan({ error: reverseResult })
+    }
   }
 
   return result

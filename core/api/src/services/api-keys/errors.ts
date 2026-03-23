@@ -33,7 +33,8 @@ export const handleCommonApiKeysErrors = (err: Error | string | unknown) => {
 export const KnownApiKeysErrorMessages = {
   LimitExceeded: /spending limit exceeded/,
   InvalidApiKeyId: /Invalid API key ID/,
-  InvalidAmountError: /Negative amount not allowed|Amount must be positive/,
+  InvalidAmountError:
+    /Negative amount not allowed|Amount must be positive|Invalid limit amount \(must be positive\)/,
   InvalidLimitError: /Invalid limit value/,
   DatabaseError: /Database/,
 } as const

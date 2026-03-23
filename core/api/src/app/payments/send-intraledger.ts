@@ -146,7 +146,10 @@ const intraledgerPaymentSendWalletId = async ({
   })
 
   if (paymentSendResult instanceof Error && ephemeralId) {
-    await apiKeys.reverseSpending({ transactionId: ephemeralId })
+    const reverseResult = await apiKeys.reverseSpending({ transactionId: ephemeralId })
+    if (reverseResult instanceof Error) {
+      recordExceptionInCurrentSpan({ error: reverseResult })
+    }
   }
 
   if (paymentSendResult instanceof Error) return paymentSendResult
