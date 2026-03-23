@@ -54,6 +54,7 @@ import { DealerPriceService } from "@/services/dealer-price"
 import { LedgerService } from "@/services/ledger"
 import { LockService } from "@/services/lock"
 import { NotificationsService } from "@/services/notifications"
+import { ApiKeysService } from "@/services/api-keys"
 
 import * as LedgerFacade from "@/services/ledger/facade"
 import {
@@ -78,6 +79,7 @@ import {
 import { ResourceExpiredLockServiceError } from "@/domain/lock"
 
 const dealer = DealerPriceService()
+const apiKeys = ApiKeysService()
 const paymentFlowRepo = PaymentFlowStateRepository(defaultTimeToExpiryInSeconds)
 
 export const payInvoiceByWalletId = async ({
@@ -85,6 +87,7 @@ export const payInvoiceByWalletId = async ({
   memo,
   senderWalletId: uncheckedSenderWalletId,
   senderAccount,
+  apiKeyId,
 }: PayInvoiceByWalletIdArgs): Promise<PaymentSendResult | ApplicationError> => {
   addAttributesToCurrentSpan({
     "payment.initiation_method": PaymentInitiationMethod.Lightning,
@@ -116,12 +119,31 @@ export const payInvoiceByWalletId = async ({
   } = validatedPaymentInputs
 
   if (paymentFlow.settlementMethod !== SettlementMethod.IntraLedger) {
-    return executePaymentViaLn({
+    let ephemeralId: EphemeralId | undefined
+    if (apiKeyId) {
+      const lockResult = await apiKeys.checkAndLockSpending({
+        apiKeyId,
+        amount: paymentFlow.btcPaymentAmount,
+      })
+      if (lockResult instanceof Error) return lockResult
+      ephemeralId = lockResult
+    }
+
+    const paymentSendResult = await executePaymentViaLn({
       decodedInvoice,
       paymentFlow,
       senderAccount,
       memo,
+      apiKeyId,
+      ephemeralId,
     })
+    if (paymentSendResult instanceof Error && ephemeralId) {
+      const reverseResult = await apiKeys.reverseSpending({ transactionId: ephemeralId })
+      if (reverseResult instanceof Error) {
+        recordExceptionInCurrentSpan({ error: reverseResult })
+      }
+    }
+    return paymentSendResult
   }
 
   const { walletDescriptor: recipientWalletDescriptor } = paymentFlow.recipientDetails()
@@ -138,13 +160,31 @@ export const payInvoiceByWalletId = async ({
   const accountValidator = AccountValidator(recipientAccount)
   if (accountValidator instanceof Error) return accountValidator
 
+  let ephemeralId: EphemeralId | undefined
+  if (apiKeyId) {
+    const lockResult = await apiKeys.checkAndLockSpending({
+      apiKeyId,
+      amount: paymentFlow.btcPaymentAmount,
+    })
+    if (lockResult instanceof Error) return lockResult
+    ephemeralId = lockResult
+  }
+
   const paymentSendResult = await executePaymentViaIntraledger({
     paymentFlow,
     senderWalletId,
     senderAccount,
     recipientAccount,
     memo,
+    apiKeyId,
+    ephemeralId,
   })
+  if (paymentSendResult instanceof Error && ephemeralId) {
+    const reverseResult = await apiKeys.reverseSpending({ transactionId: ephemeralId })
+    if (reverseResult instanceof Error) {
+      recordExceptionInCurrentSpan({ error: reverseResult })
+    }
+  }
   if (paymentSendResult instanceof Error) return paymentSendResult
 
   if (senderAccount.id !== recipientAccount.id) {
@@ -166,6 +206,7 @@ const payNoAmountInvoiceByWalletId = async ({
   memo,
   senderWalletId: uncheckedSenderWalletId,
   senderAccount,
+  apiKeyId,
 }: PayNoAmountInvoiceByWalletIdArgs): Promise<PaymentSendResult | ApplicationError> => {
   addAttributesToCurrentSpan({
     "payment.initiation_method": PaymentInitiationMethod.Lightning,
@@ -199,12 +240,31 @@ const payNoAmountInvoiceByWalletId = async ({
   } = validatedNoAmountPaymentInputs
 
   if (paymentFlow.settlementMethod !== SettlementMethod.IntraLedger) {
-    return executePaymentViaLn({
+    let ephemeralId: EphemeralId | undefined
+    if (apiKeyId) {
+      const lockResult = await apiKeys.checkAndLockSpending({
+        apiKeyId,
+        amount: paymentFlow.btcPaymentAmount,
+      })
+      if (lockResult instanceof Error) return lockResult
+      ephemeralId = lockResult
+    }
+
+    const paymentSendResult = await executePaymentViaLn({
       decodedInvoice,
       paymentFlow,
       senderAccount,
       memo,
+      apiKeyId,
+      ephemeralId,
     })
+    if (paymentSendResult instanceof Error && ephemeralId) {
+      const reverseResult = await apiKeys.reverseSpending({ transactionId: ephemeralId })
+      if (reverseResult instanceof Error) {
+        recordExceptionInCurrentSpan({ error: reverseResult })
+      }
+    }
+    return paymentSendResult
   }
 
   const { walletDescriptor: recipientWalletDescriptor } = paymentFlow.recipientDetails()
@@ -222,13 +282,31 @@ const payNoAmountInvoiceByWalletId = async ({
   const accountValidator = AccountValidator(recipientAccount)
   if (accountValidator instanceof Error) return accountValidator
 
+  let ephemeralId: EphemeralId | undefined
+  if (apiKeyId) {
+    const lockResult = await apiKeys.checkAndLockSpending({
+      apiKeyId,
+      amount: paymentFlow.btcPaymentAmount,
+    })
+    if (lockResult instanceof Error) return lockResult
+    ephemeralId = lockResult
+  }
+
   const paymentSendResult = await executePaymentViaIntraledger({
     paymentFlow,
     senderWalletId,
     senderAccount,
     recipientAccount,
     memo,
+    apiKeyId,
+    ephemeralId,
   })
+  if (paymentSendResult instanceof Error && ephemeralId) {
+    const reverseResult = await apiKeys.reverseSpending({ transactionId: ephemeralId })
+    if (reverseResult instanceof Error) {
+      recordExceptionInCurrentSpan({ error: reverseResult })
+    }
+  }
   if (paymentSendResult instanceof Error) return paymentSendResult
 
   if (senderAccount.id !== recipientAccount.id) {
@@ -432,12 +510,16 @@ const executePaymentViaIntraledger = async <
   senderWalletId,
   recipientAccount,
   memo,
+  apiKeyId,
+  ephemeralId,
 }: {
   paymentFlow: PaymentFlow<S, R>
   senderAccount: Account
   senderWalletId: WalletId
   recipientAccount: Account
   memo: string | null
+  apiKeyId?: ApiKeyId
+  ephemeralId?: EphemeralId
 }): Promise<PaymentSendResult | ApplicationError> => {
   addAttributesToCurrentSpan({
     "payment.settlement_method": SettlementMethod.IntraLedger,
@@ -545,6 +627,18 @@ const executePaymentViaIntraledger = async <
     recipient: senderAsNotificationRecipient,
     transaction: senderWalletTransaction,
   })
+
+  if (apiKeyId && ephemeralId) {
+    const recordResult = await apiKeys.recordSpending({
+      apiKeyId,
+      amount: paymentFlow.btcPaymentAmount,
+      transactionId: journalId,
+      ephemeralId,
+    })
+    if (recordResult instanceof Error) {
+      recordExceptionInCurrentSpan({ error: recordResult })
+    }
+  }
 
   return {
     status: PaymentSendStatus.Success,
@@ -727,11 +821,15 @@ const executePaymentViaLn = async ({
   paymentFlow,
   senderAccount,
   memo,
+  apiKeyId,
+  ephemeralId,
 }: {
   decodedInvoice: LnInvoice
   paymentFlow: PaymentFlow<WalletCurrency, WalletCurrency>
   senderAccount: Account
   memo: string | null
+  apiKeyId?: ApiKeyId
+  ephemeralId?: EphemeralId
 }): Promise<PaymentSendResult | ApplicationError> => {
   addAttributesToCurrentSpan({
     "payment.settlement_method": SettlementMethod.Lightning,
@@ -801,6 +899,17 @@ const executePaymentViaLn = async ({
       return paymentSendAttemptResult.error
 
     case PaymentSendAttemptResultType.Pending:
+      if (apiKeyId && ephemeralId) {
+        const recordResult = await apiKeys.recordSpending({
+          apiKeyId,
+          amount: paymentFlow.btcPaymentAmount,
+          transactionId: paymentSendAttemptResult.journalId,
+          ephemeralId,
+        })
+        if (recordResult instanceof Error) {
+          recordExceptionInCurrentSpan({ error: recordResult })
+        }
+      }
       return getPendingPaymentResponse({
         walletId: senderWalletId,
         paymentHash,
@@ -813,6 +922,18 @@ const executePaymentViaLn = async ({
       })
 
     default:
+      if (apiKeyId && ephemeralId) {
+        const recordResult = await apiKeys.recordSpending({
+          apiKeyId,
+          amount: paymentFlow.btcPaymentAmount,
+          transactionId: paymentSendAttemptResult.journalId,
+          ephemeralId,
+        })
+        if (recordResult instanceof Error) {
+          recordExceptionInCurrentSpan({ error: recordResult })
+        }
+      }
+
       return {
         status: PaymentSendStatus.Success,
         transaction: walletTransaction,

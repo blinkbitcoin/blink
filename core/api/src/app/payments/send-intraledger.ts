@@ -44,8 +44,10 @@ import {
   WalletsRepository,
 } from "@/services/mongoose"
 import { NotificationsService } from "@/services/notifications"
+import { ApiKeysService } from "@/services/api-keys"
 
 const dealer = DealerPriceService()
+const apiKeys = ApiKeysService()
 
 const intraledgerPaymentSendWalletId = async ({
   recipientWalletId: uncheckedRecipientWalletId,
@@ -53,6 +55,7 @@ const intraledgerPaymentSendWalletId = async ({
   amount: uncheckedAmount,
   memo,
   senderWalletId: uncheckedSenderWalletId,
+  apiKeyId,
 }: IntraLedgerPaymentSendWalletIdArgs): Promise<PaymentSendResult | ApplicationError> => {
   const validatedPaymentInputs = await validateIntraledgerPaymentInputs({
     uncheckedSenderWalletId,
@@ -120,6 +123,16 @@ const intraledgerPaymentSendWalletId = async ({
     "payment.finalRecipient": JSON.stringify(paymentFlow.recipientWalletDescriptor()),
   })
 
+  let ephemeralId: EphemeralId | undefined
+  if (apiKeyId) {
+    const lockResult = await apiKeys.checkAndLockSpending({
+      apiKeyId,
+      amount: paymentFlow.btcPaymentAmount,
+    })
+    if (lockResult instanceof Error) return lockResult
+    ephemeralId = lockResult
+  }
+
   const paymentSendResult = await executePaymentViaIntraledger({
     paymentFlow,
     senderAccount,
@@ -128,7 +141,17 @@ const intraledgerPaymentSendWalletId = async ({
     recipientUser,
     senderUser,
     memo,
+    apiKeyId,
+    ephemeralId,
   })
+
+  if (paymentSendResult instanceof Error && ephemeralId) {
+    const reverseResult = await apiKeys.reverseSpending({ transactionId: ephemeralId })
+    if (reverseResult instanceof Error) {
+      recordExceptionInCurrentSpan({ error: reverseResult })
+    }
+  }
+
   if (paymentSendResult instanceof Error) return paymentSendResult
 
   if (senderAccount.id !== recipientAccount.id) {
@@ -231,6 +254,8 @@ const executePaymentViaIntraledger = async <
   recipientUser,
   senderUser,
   memo,
+  apiKeyId,
+  ephemeralId,
 }: {
   paymentFlow: PaymentFlow<S, R>
   senderAccount: Account
@@ -239,6 +264,8 @@ const executePaymentViaIntraledger = async <
   recipientUser: User
   senderUser: User
   memo: string | null
+  apiKeyId?: ApiKeyId
+  ephemeralId?: EphemeralId
 }): Promise<PaymentSendResult | ApplicationError> => {
   addAttributesToCurrentSpan({
     "payment.settlement_method": SettlementMethod.IntraLedger,
@@ -317,6 +344,18 @@ const executePaymentViaIntraledger = async <
     recipient: senderAsNotificationRecipient,
     transaction: senderWalletTransaction,
   })
+
+  if (apiKeyId && ephemeralId) {
+    const recordResult = await apiKeys.recordSpending({
+      apiKeyId,
+      amount: paymentFlow.btcPaymentAmount,
+      transactionId: journalId,
+      ephemeralId,
+    })
+    if (recordResult instanceof Error) {
+      recordExceptionInCurrentSpan({ error: recordResult })
+    }
+  }
 
   return {
     status: PaymentSendStatus.Success,
