@@ -98,16 +98,29 @@ impl ApiKeysApp {
             .await?)
     }
 
+    #[tracing::instrument(name = "app.check_and_lock_spending", skip_all)]
+    pub async fn check_and_lock_spending(
+        &self,
+        api_key_id: IdentityApiKeyId,
+        amount_sats: i64,
+    ) -> Result<String, ApplicationError> {
+        Ok(self
+            .limits
+            .check_and_lock_spending(api_key_id, amount_sats)
+            .await?)
+    }
+
     #[tracing::instrument(name = "app.record_spending", skip_all)]
     pub async fn record_spending(
         &self,
         api_key_id: IdentityApiKeyId,
         amount_sats: i64,
         transaction_id: Option<String>,
+        ephemeral_id: Option<String>,
     ) -> Result<(), ApplicationError> {
         Ok(self
             .limits
-            .record_spending(api_key_id, amount_sats, transaction_id)
+            .record_spending(api_key_id, amount_sats, transaction_id, ephemeral_id)
             .await?)
     }
 

@@ -45,7 +45,6 @@ import {
 } from "@/services/mongoose"
 import { NotificationsService } from "@/services/notifications"
 import { ApiKeysService } from "@/services/api-keys"
-import { validateSpendingLimit } from "@/domain/api-keys"
 
 const dealer = DealerPriceService()
 const apiKeys = ApiKeysService()
@@ -124,6 +123,16 @@ const intraledgerPaymentSendWalletId = async ({
     "payment.finalRecipient": JSON.stringify(paymentFlow.recipientWalletDescriptor()),
   })
 
+  let ephemeralId: EphemeralId | undefined
+  if (apiKeyId) {
+    const lockResult = await apiKeys.checkAndLockSpending({
+      apiKeyId,
+      amount: paymentFlow.btcPaymentAmount,
+    })
+    if (lockResult instanceof Error) return lockResult
+    ephemeralId = lockResult
+  }
+
   const paymentSendResult = await executePaymentViaIntraledger({
     paymentFlow,
     senderAccount,
@@ -133,7 +142,16 @@ const intraledgerPaymentSendWalletId = async ({
     senderUser,
     memo,
     apiKeyId,
+    ephemeralId,
   })
+
+  if (paymentSendResult instanceof Error && ephemeralId) {
+    const reverseResult = await apiKeys.reverseSpending({ transactionId: ephemeralId })
+    if (reverseResult instanceof Error) {
+      recordExceptionInCurrentSpan({ error: reverseResult })
+    }
+  }
+
   if (paymentSendResult instanceof Error) return paymentSendResult
 
   if (senderAccount.id !== recipientAccount.id) {
@@ -237,6 +255,7 @@ const executePaymentViaIntraledger = async <
   senderUser,
   memo,
   apiKeyId,
+  ephemeralId,
 }: {
   paymentFlow: PaymentFlow<S, R>
   senderAccount: Account
@@ -246,6 +265,7 @@ const executePaymentViaIntraledger = async <
   senderUser: User
   memo: string | null
   apiKeyId?: ApiKeyId
+  ephemeralId?: EphemeralId
 }): Promise<PaymentSendResult | ApplicationError> => {
   addAttributesToCurrentSpan({
     "payment.settlement_method": SettlementMethod.IntraLedger,
@@ -253,18 +273,6 @@ const executePaymentViaIntraledger = async <
 
   const priceRatioForLimits = await getPriceRatioForLimits(paymentFlow.paymentAmounts())
   if (priceRatioForLimits instanceof Error) return priceRatioForLimits
-
-  if (apiKeyId) {
-    const amount = paymentFlow.btcPaymentAmount
-    const limits = await apiKeys.getSpendingLimits({
-      apiKeyId,
-      amount,
-    })
-    if (limits instanceof Error) return limits
-
-    const validation = validateSpendingLimit({ amount, limits })
-    if (validation instanceof Error) return validation
-  }
 
   const checkLimits =
     senderAccount.id === recipientAccount.id
@@ -337,11 +345,12 @@ const executePaymentViaIntraledger = async <
     transaction: senderWalletTransaction,
   })
 
-  if (apiKeyId) {
+  if (apiKeyId && ephemeralId) {
     const recordResult = await apiKeys.recordSpending({
       apiKeyId,
       amount: paymentFlow.btcPaymentAmount,
       transactionId: journalId,
+      ephemeralId,
     })
     if (recordResult instanceof Error) {
       recordExceptionInCurrentSpan({ error: recordResult })

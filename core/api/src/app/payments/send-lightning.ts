@@ -77,7 +77,6 @@ import {
 } from "@/app/wallets"
 
 import { ResourceExpiredLockServiceError } from "@/domain/lock"
-import { validateSpendingLimit } from "@/domain/api-keys"
 
 const dealer = DealerPriceService()
 const apiKeys = ApiKeysService()
@@ -120,13 +119,31 @@ export const payInvoiceByWalletId = async ({
   } = validatedPaymentInputs
 
   if (paymentFlow.settlementMethod !== SettlementMethod.IntraLedger) {
-    return executePaymentViaLn({
+    let ephemeralId: EphemeralId | undefined
+    if (apiKeyId) {
+      const lockResult = await apiKeys.checkAndLockSpending({
+        apiKeyId,
+        amount: paymentFlow.btcPaymentAmount,
+      })
+      if (lockResult instanceof Error) return lockResult
+      ephemeralId = lockResult
+    }
+
+    const paymentSendResult = await executePaymentViaLn({
       decodedInvoice,
       paymentFlow,
       senderAccount,
       memo,
       apiKeyId,
+      ephemeralId,
     })
+    if (paymentSendResult instanceof Error && ephemeralId) {
+      const reverseResult = await apiKeys.reverseSpending({ transactionId: ephemeralId })
+      if (reverseResult instanceof Error) {
+        recordExceptionInCurrentSpan({ error: reverseResult })
+      }
+    }
+    return paymentSendResult
   }
 
   const { walletDescriptor: recipientWalletDescriptor } = paymentFlow.recipientDetails()
@@ -143,6 +160,16 @@ export const payInvoiceByWalletId = async ({
   const accountValidator = AccountValidator(recipientAccount)
   if (accountValidator instanceof Error) return accountValidator
 
+  let ephemeralId: EphemeralId | undefined
+  if (apiKeyId) {
+    const lockResult = await apiKeys.checkAndLockSpending({
+      apiKeyId,
+      amount: paymentFlow.btcPaymentAmount,
+    })
+    if (lockResult instanceof Error) return lockResult
+    ephemeralId = lockResult
+  }
+
   const paymentSendResult = await executePaymentViaIntraledger({
     paymentFlow,
     senderWalletId,
@@ -150,7 +177,14 @@ export const payInvoiceByWalletId = async ({
     recipientAccount,
     memo,
     apiKeyId,
+    ephemeralId,
   })
+  if (paymentSendResult instanceof Error && ephemeralId) {
+    const reverseResult = await apiKeys.reverseSpending({ transactionId: ephemeralId })
+    if (reverseResult instanceof Error) {
+      recordExceptionInCurrentSpan({ error: reverseResult })
+    }
+  }
   if (paymentSendResult instanceof Error) return paymentSendResult
 
   if (senderAccount.id !== recipientAccount.id) {
@@ -206,13 +240,31 @@ const payNoAmountInvoiceByWalletId = async ({
   } = validatedNoAmountPaymentInputs
 
   if (paymentFlow.settlementMethod !== SettlementMethod.IntraLedger) {
-    return executePaymentViaLn({
+    let ephemeralId: EphemeralId | undefined
+    if (apiKeyId) {
+      const lockResult = await apiKeys.checkAndLockSpending({
+        apiKeyId,
+        amount: paymentFlow.btcPaymentAmount,
+      })
+      if (lockResult instanceof Error) return lockResult
+      ephemeralId = lockResult
+    }
+
+    const paymentSendResult = await executePaymentViaLn({
       decodedInvoice,
       paymentFlow,
       senderAccount,
       memo,
       apiKeyId,
+      ephemeralId,
     })
+    if (paymentSendResult instanceof Error && ephemeralId) {
+      const reverseResult = await apiKeys.reverseSpending({ transactionId: ephemeralId })
+      if (reverseResult instanceof Error) {
+        recordExceptionInCurrentSpan({ error: reverseResult })
+      }
+    }
+    return paymentSendResult
   }
 
   const { walletDescriptor: recipientWalletDescriptor } = paymentFlow.recipientDetails()
@@ -230,6 +282,16 @@ const payNoAmountInvoiceByWalletId = async ({
   const accountValidator = AccountValidator(recipientAccount)
   if (accountValidator instanceof Error) return accountValidator
 
+  let ephemeralId: EphemeralId | undefined
+  if (apiKeyId) {
+    const lockResult = await apiKeys.checkAndLockSpending({
+      apiKeyId,
+      amount: paymentFlow.btcPaymentAmount,
+    })
+    if (lockResult instanceof Error) return lockResult
+    ephemeralId = lockResult
+  }
+
   const paymentSendResult = await executePaymentViaIntraledger({
     paymentFlow,
     senderWalletId,
@@ -237,7 +299,14 @@ const payNoAmountInvoiceByWalletId = async ({
     recipientAccount,
     memo,
     apiKeyId,
+    ephemeralId,
   })
+  if (paymentSendResult instanceof Error && ephemeralId) {
+    const reverseResult = await apiKeys.reverseSpending({ transactionId: ephemeralId })
+    if (reverseResult instanceof Error) {
+      recordExceptionInCurrentSpan({ error: reverseResult })
+    }
+  }
   if (paymentSendResult instanceof Error) return paymentSendResult
 
   if (senderAccount.id !== recipientAccount.id) {
@@ -442,6 +511,7 @@ const executePaymentViaIntraledger = async <
   recipientAccount,
   memo,
   apiKeyId,
+  ephemeralId,
 }: {
   paymentFlow: PaymentFlow<S, R>
   senderAccount: Account
@@ -449,6 +519,7 @@ const executePaymentViaIntraledger = async <
   recipientAccount: Account
   memo: string | null
   apiKeyId?: ApiKeyId
+  ephemeralId?: EphemeralId
 }): Promise<PaymentSendResult | ApplicationError> => {
   addAttributesToCurrentSpan({
     "payment.settlement_method": SettlementMethod.IntraLedger,
@@ -456,19 +527,6 @@ const executePaymentViaIntraledger = async <
 
   const priceRatioForLimits = await getPriceRatioForLimits(paymentFlow.paymentAmounts())
   if (priceRatioForLimits instanceof Error) return priceRatioForLimits
-
-  if (apiKeyId) {
-    const amount = paymentFlow.btcPaymentAmount
-    const limits = await apiKeys.getSpendingLimits({
-      apiKeyId,
-      amount,
-    })
-
-    if (limits instanceof Error) return limits
-
-    const validation = validateSpendingLimit({ amount, limits })
-    if (validation instanceof Error) return validation
-  }
 
   const paymentHash = paymentFlow.paymentHashForFlow()
   if (paymentHash instanceof Error) return paymentHash
@@ -570,11 +628,12 @@ const executePaymentViaIntraledger = async <
     transaction: senderWalletTransaction,
   })
 
-  if (apiKeyId) {
+  if (apiKeyId && ephemeralId) {
     const recordResult = await apiKeys.recordSpending({
       apiKeyId,
       amount: paymentFlow.btcPaymentAmount,
       transactionId: journalId,
+      ephemeralId,
     })
     if (recordResult instanceof Error) {
       recordExceptionInCurrentSpan({ error: recordResult })
@@ -763,12 +822,14 @@ const executePaymentViaLn = async ({
   senderAccount,
   memo,
   apiKeyId,
+  ephemeralId,
 }: {
   decodedInvoice: LnInvoice
   paymentFlow: PaymentFlow<WalletCurrency, WalletCurrency>
   senderAccount: Account
   memo: string | null
   apiKeyId?: ApiKeyId
+  ephemeralId?: EphemeralId
 }): Promise<PaymentSendResult | ApplicationError> => {
   addAttributesToCurrentSpan({
     "payment.settlement_method": SettlementMethod.Lightning,
@@ -778,19 +839,6 @@ const executePaymentViaLn = async ({
 
   const priceRatioForLimits = await getPriceRatioForLimits(paymentFlow.paymentAmounts())
   if (priceRatioForLimits instanceof Error) return priceRatioForLimits
-
-  if (apiKeyId) {
-    const amount = paymentFlow.btcPaymentAmount
-    const limits = await apiKeys.getSpendingLimits({
-      apiKeyId,
-      amount,
-    })
-
-    if (limits instanceof Error) return limits
-
-    const validation = validateSpendingLimit({ amount, limits })
-    if (validation instanceof Error) return validation
-  }
 
   const limitCheck = await checkWithdrawalLimits({
     amount: paymentFlow.usdPaymentAmount,
@@ -851,11 +899,12 @@ const executePaymentViaLn = async ({
       return paymentSendAttemptResult.error
 
     case PaymentSendAttemptResultType.Pending:
-      if (apiKeyId) {
+      if (apiKeyId && ephemeralId) {
         const recordResult = await apiKeys.recordSpending({
           apiKeyId,
           amount: paymentFlow.btcPaymentAmount,
           transactionId: paymentSendAttemptResult.journalId,
+          ephemeralId,
         })
         if (recordResult instanceof Error) {
           recordExceptionInCurrentSpan({ error: recordResult })
@@ -873,11 +922,12 @@ const executePaymentViaLn = async ({
       })
 
     default:
-      if (apiKeyId) {
+      if (apiKeyId && ephemeralId) {
         const recordResult = await apiKeys.recordSpending({
           apiKeyId,
           amount: paymentFlow.btcPaymentAmount,
           transactionId: paymentSendAttemptResult.journalId,
+          ephemeralId,
         })
         if (recordResult instanceof Error) {
           recordExceptionInCurrentSpan({ error: recordResult })

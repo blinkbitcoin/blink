@@ -1,22 +1,21 @@
 type ApiKeyId = string & { readonly brand: unique symbol }
 
+type EphemeralId = string & { readonly brand: unique symbol }
+
 type ApiKeysServiceError = import("./errors").ApiKeysServiceError
 
-type SpendingLimits = import("./spending-limits").SpendingLimits
-
 interface IApiKeysService {
-  getSpendingLimits(args: {
+  checkAndLockSpending(args: {
     apiKeyId: ApiKeyId
     amount: BtcPaymentAmount
-  }): Promise<SpendingLimits | ApiKeysServiceError>
+  }): Promise<EphemeralId | ApiKeysServiceError>
 
   recordSpending(args: {
     apiKeyId: ApiKeyId
     amount: BtcPaymentAmount
     transactionId: LedgerJournalId
+    ephemeralId: EphemeralId
   }): Promise<true | ApiKeysServiceError>
 
-  reverseSpending(args: {
-    transactionId: LedgerJournalId
-  }): Promise<true | ApiKeysServiceError>
+  reverseSpending(args: { transactionId: string }): Promise<true | ApiKeysServiceError>
 }
