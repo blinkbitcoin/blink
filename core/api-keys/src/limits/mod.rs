@@ -193,6 +193,8 @@ impl Limits {
 
         match ephemeral_id {
             Some(eid) => {
+                let txn_id = transaction_id.ok_or(LimitError::MissingTransactionId)?;
+
                 let result = sqlx::query!(
                     r#"
                     UPDATE api_key_transactions
@@ -200,7 +202,7 @@ impl Limits {
                     WHERE transaction_id = $2
                       AND api_key_id = $3
                     "#,
-                    transaction_id,
+                    &txn_id,
                     &eid,
                     api_key_id as IdentityApiKeyId,
                 )
@@ -208,7 +210,23 @@ impl Limits {
                 .await?;
 
                 if result.rows_affected() == 0 {
-                    return Err(LimitError::EphemeralNotFound(eid));
+                    // Check if already finalized (idempotent retry)
+                    let already_recorded = sqlx::query_scalar!(
+                        r#"
+                        SELECT 1 as "exists!"
+                        FROM api_key_transactions
+                        WHERE transaction_id = $1
+                          AND api_key_id = $2
+                        "#,
+                        &txn_id,
+                        api_key_id as IdentityApiKeyId,
+                    )
+                    .fetch_optional(&self.pool)
+                    .await?;
+
+                    if already_recorded.is_none() {
+                        return Err(LimitError::EphemeralNotFound(eid));
+                    }
                 }
             }
             None => {
@@ -652,5 +670,19 @@ mod tests {
         let limits = test_limits();
         let result = limits.check_and_lock_spending(test_api_key_id(), -1).await;
         assert!(matches!(result, Err(LimitError::InvalidLimitAmount)));
+    }
+
+    #[tokio::test]
+    async fn record_spending_requires_transaction_id_with_ephemeral_id() {
+        let limits = test_limits();
+        let result = limits
+            .record_spending(
+                test_api_key_id(),
+                1000,
+                None,
+                Some("ephemeral-123".to_string()),
+            )
+            .await;
+        assert!(matches!(result, Err(LimitError::MissingTransactionId)));
     }
 }

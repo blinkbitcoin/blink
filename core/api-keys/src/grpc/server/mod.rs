@@ -11,7 +11,7 @@ use tracing::{grpc, instrument};
 use self::proto::{api_keys_service_server::ApiKeysService, *};
 
 use super::config::*;
-use crate::{app::ApiKeysApp, identity::IdentityApiKeyId};
+use crate::{app::{ApiKeysApp, ApplicationError}, identity::IdentityApiKeyId, limits::LimitError};
 use std::sync::Arc;
 
 pub struct ApiKeys {
@@ -92,13 +92,14 @@ impl ApiKeysService for ApiKeys {
             .app
             .check_and_lock_spending(api_key_id, amount_sats)
             .await
-            .map_err(|e| {
-                let limit_exceeded = e.to_string().contains("spending limit exceeded");
-                if limit_exceeded {
+            .map_err(|e| match &e {
+                ApplicationError::Limit(LimitError::LimitExceeded(_)) => {
                     Status::failed_precondition(e.to_string())
-                } else {
-                    Status::internal(e.to_string())
                 }
+                ApplicationError::Limit(LimitError::InvalidLimitAmount) => {
+                    Status::invalid_argument(e.to_string())
+                }
+                _ => Status::internal(e.to_string()),
             })?;
 
         Ok(Response::new(CheckAndLockSpendingResponse { ephemeral_id }))
@@ -173,7 +174,16 @@ impl ApiKeysService for ApiKeys {
         self.app
             .record_spending(api_key_id, amount_sats, transaction_id, ephemeral_id)
             .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+            .map_err(|e| match &e {
+                ApplicationError::Limit(LimitError::InvalidLimitAmount) |
+                ApplicationError::Limit(LimitError::MissingTransactionId) => {
+                    Status::invalid_argument(e.to_string())
+                }
+                ApplicationError::Limit(LimitError::EphemeralNotFound(_)) => {
+                    Status::not_found(e.to_string())
+                }
+                _ => Status::internal(e.to_string()),
+            })?;
 
         Ok(Response::new(RecordSpendingResponse {}))
     }
