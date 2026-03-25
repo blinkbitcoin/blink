@@ -2,7 +2,7 @@ import { createServer } from "http"
 
 import { ApolloServer, ApolloServerPlugin } from "@apollo/server"
 import { unwrapResolverError } from "@apollo/server/errors"
-import { expressMiddleware } from "@apollo/server/express4"
+import { expressMiddleware } from "@as-integrations/express4"
 import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer"
 import cors from "cors"
 import express, { NextFunction, Request, Response } from "express"
