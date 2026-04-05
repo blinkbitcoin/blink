@@ -123,4 +123,26 @@ mod tests {
         assert_eq!(localized_message.title, "BTC Transaction");
         assert_eq!(localized_message.body, "+$0.04 | 1 sats");
     }
+
+    #[test]
+    fn lightning_receipt_huf_display_amount() {
+        // TypeScript sends HUF minor_units using Intl.NumberFormat (exponent=2):
+        // 248.07 Ft * 10^2 = 24807. After the fix in primitives.rs, this is divided
+        // by 10^(2-0)=100 before calling from_minor, giving 248 Ft — not 24807 Ft.
+        let event = TransactionOccurred {
+            transaction_type: TransactionType::LightningReceipt,
+            settlement_amount: TransactionAmount {
+                minor_units: 1111,
+                currency: Currency::Crypto(rusty_money::crypto::BTC),
+            },
+            display_amount: Some(TransactionAmount {
+                minor_units: 24807,
+                currency: Currency::Iso(rusty_money::iso::HUF),
+            }),
+        };
+        let localized_message = event.to_localized_push_msg(&GaloyLocale::from("en".to_string()));
+        assert_eq!(localized_message.title, "BTC Transaction");
+        // Should show 248 Ft (not 24,807 Ft which was the 100x bug)
+        assert_eq!(localized_message.body, "+248 Ft | 1111 sats");
+    }
 }

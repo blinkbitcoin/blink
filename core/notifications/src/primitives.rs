@@ -180,6 +180,12 @@ impl Currency {
         round_to_major: bool,
     ) -> std::fmt::Result {
         match self {
+            Currency::Iso(c) if c.iso_alpha_code == "HUF" => {
+                // TypeScript sends HUF minor_units using Intl.NumberFormat (exponent=2),
+                // but rusty_money defines HUF with exponent=0. Divide by 100 to reconcile.
+                let adjusted = minor_units / 100;
+                write!(f, "{adjusted} Ft")
+            }
             Currency::Iso(c) => {
                 let money = if round_to_major {
                     rusty_money::Money::from_minor(minor_units as i64, *c)
