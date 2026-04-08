@@ -71,7 +71,7 @@ export const ApiKeysService = (): IApiKeysService => {
   const reverseSpending = async ({
     transactionId,
   }: {
-    transactionId: string
+    transactionId: LedgerJournalId | EphemeralId
   }): Promise<true | ApiKeysServiceError> => {
     try {
       const request = new ReverseSpendingRequest()

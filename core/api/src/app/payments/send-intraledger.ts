@@ -1,12 +1,9 @@
 import { getPriceRatioForLimits } from "./helpers"
+import { withSpendingLimits } from "./spending-limits"
 
 import { getValuesToSkipProbe } from "@/config"
 
-import {
-  checkIntraledgerLimits,
-  checkTradeIntraAccountLimits,
-  createIntraledgerContact,
-} from "@/app/accounts"
+import { createIntraledgerContact } from "@/app/accounts"
 import {
   btcFromUsdMidPriceFn,
   getCurrentPriceAsDisplayPriceRatio,
@@ -44,10 +41,8 @@ import {
   WalletsRepository,
 } from "@/services/mongoose"
 import { NotificationsService } from "@/services/notifications"
-import { ApiKeysService } from "@/services/api-keys"
 
 const dealer = DealerPriceService()
-const apiKeys = ApiKeysService()
 
 const intraledgerPaymentSendWalletId = async ({
   recipientWalletId: uncheckedRecipientWalletId,
@@ -123,16 +118,6 @@ const intraledgerPaymentSendWalletId = async ({
     "payment.finalRecipient": JSON.stringify(paymentFlow.recipientWalletDescriptor()),
   })
 
-  let ephemeralId: EphemeralId | undefined
-  if (apiKeyId) {
-    const lockResult = await apiKeys.checkAndLockSpending({
-      apiKeyId,
-      amount: paymentFlow.btcPaymentAmount,
-    })
-    if (lockResult instanceof Error) return lockResult
-    ephemeralId = lockResult
-  }
-
   const paymentSendResult = await executePaymentViaIntraledger({
     paymentFlow,
     senderAccount,
@@ -142,15 +127,7 @@ const intraledgerPaymentSendWalletId = async ({
     senderUser,
     memo,
     apiKeyId,
-    ephemeralId,
   })
-
-  if (paymentSendResult instanceof Error && ephemeralId) {
-    const reverseResult = await apiKeys.reverseSpending({ transactionId: ephemeralId })
-    if (reverseResult instanceof Error) {
-      recordExceptionInCurrentSpan({ error: reverseResult })
-    }
-  }
 
   if (paymentSendResult instanceof Error) return paymentSendResult
 
@@ -255,7 +232,6 @@ const executePaymentViaIntraledger = async <
   senderUser,
   memo,
   apiKeyId,
-  ephemeralId,
 }: {
   paymentFlow: PaymentFlow<S, R>
   senderAccount: Account
@@ -265,7 +241,6 @@ const executePaymentViaIntraledger = async <
   senderUser: User
   memo: string | null
   apiKeyId?: ApiKeyId
-  ephemeralId?: EphemeralId
 }): Promise<PaymentSendResult | ApplicationError> => {
   addAttributesToCurrentSpan({
     "payment.settlement_method": SettlementMethod.IntraLedger,
@@ -273,17 +248,6 @@ const executePaymentViaIntraledger = async <
 
   const priceRatioForLimits = await getPriceRatioForLimits(paymentFlow.paymentAmounts())
   if (priceRatioForLimits instanceof Error) return priceRatioForLimits
-
-  const checkLimits =
-    senderAccount.id === recipientAccount.id
-      ? checkTradeIntraAccountLimits
-      : checkIntraledgerLimits
-  const limitCheck = await checkLimits({
-    amount: paymentFlow.usdPaymentAmount,
-    accountId: senderAccount.id,
-    priceRatio: priceRatioForLimits,
-  })
-  if (limitCheck instanceof Error) return limitCheck
 
   const { walletDescriptor: recipientWalletDescriptor } = paymentFlow.recipientDetails()
   if (!recipientWalletDescriptor) {
@@ -310,57 +274,68 @@ const executePaymentViaIntraledger = async <
     phoneNumber: senderUser.phone,
   }
 
-  const journalId = await LockService().lockWalletId(senderWalletId, async (signal) =>
-    lockedPaymentViaIntraledgerSteps({
-      signal,
+  const paymentSendResult = await withSpendingLimits({
+    settlementMethod: SettlementMethod.IntraLedger,
+    accountId: senderAccount.id,
+    recipientAccountId: recipientAccount.id,
+    usdPaymentAmount: paymentFlow.usdPaymentAmount,
+    priceRatioForLimits,
+    apiKeyId,
+    btcPaymentAmount: paymentFlow.btcPaymentAmount,
+    execute: async () => {
+      const journalId = await LockService().lockWalletId(senderWalletId, async (signal) =>
+        lockedPaymentViaIntraledgerSteps({
+          signal,
 
-      paymentFlow,
-      senderDisplayCurrency: senderAccount.displayCurrency,
-      senderUsername: senderAccount.username,
-      recipientDisplayCurrency: recipientAccount.displayCurrency,
-      recipientUsername: recipientAccount.username,
+          paymentFlow,
+          senderDisplayCurrency: senderAccount.displayCurrency,
+          senderUsername: senderAccount.username,
+          recipientDisplayCurrency: recipientAccount.displayCurrency,
+          recipientUsername: recipientAccount.username,
 
-      memo,
-    }),
-  )
-  if (journalId instanceof Error) return journalId
+          memo,
+        }),
+      )
+      if (journalId instanceof Error) {
+        return { result: journalId }
+      }
 
-  const recipientWalletTransaction = await getTransactionForWalletByJournalId({
-    walletId: recipientWalletDescriptor.id,
-    journalId,
+      const recipientWalletTransaction = await getTransactionForWalletByJournalId({
+        walletId: recipientWalletDescriptor.id,
+        journalId,
+      })
+      if (recipientWalletTransaction instanceof Error) {
+        return { result: recipientWalletTransaction }
+      }
+
+      NotificationsService().sendTransaction({
+        recipient: recipientAsNotificationRecipient,
+        transaction: recipientWalletTransaction,
+      })
+
+      const senderWalletTransaction = await getTransactionForWalletByJournalId({
+        walletId: senderWalletId,
+        journalId,
+      })
+      if (senderWalletTransaction instanceof Error) {
+        return { result: senderWalletTransaction }
+      }
+
+      NotificationsService().sendTransaction({
+        recipient: senderAsNotificationRecipient,
+        transaction: senderWalletTransaction,
+      })
+
+      return {
+        result: {
+          status: PaymentSendStatus.Success,
+          transaction: senderWalletTransaction,
+        },
+        settlementTransactionId: journalId,
+      }
+    },
   })
-  if (recipientWalletTransaction instanceof Error) return recipientWalletTransaction
-  NotificationsService().sendTransaction({
-    recipient: recipientAsNotificationRecipient,
-    transaction: recipientWalletTransaction,
-  })
-
-  const senderWalletTransaction = await getTransactionForWalletByJournalId({
-    walletId: senderWalletId,
-    journalId,
-  })
-  if (senderWalletTransaction instanceof Error) return senderWalletTransaction
-  NotificationsService().sendTransaction({
-    recipient: senderAsNotificationRecipient,
-    transaction: senderWalletTransaction,
-  })
-
-  if (apiKeyId && ephemeralId) {
-    const recordResult = await apiKeys.recordSpending({
-      apiKeyId,
-      amount: paymentFlow.btcPaymentAmount,
-      transactionId: journalId,
-      ephemeralId,
-    })
-    if (recordResult instanceof Error) {
-      recordExceptionInCurrentSpan({ error: recordResult })
-    }
-  }
-
-  return {
-    status: PaymentSendStatus.Success,
-    transaction: senderWalletTransaction,
-  }
+  return paymentSendResult
 }
 
 const lockedPaymentViaIntraledgerSteps = async ({

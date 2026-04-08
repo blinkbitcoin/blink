@@ -3,6 +3,28 @@ type PaymentSendResult = {
   transaction: WalletTransaction
 }
 
+type ApiKeySpendingLock = {
+  apiKeyId: ApiKeyId
+  amount: BtcPaymentAmount
+  ephemeralId: EphemeralId
+}
+
+type ApiKeySpendingSettlementType = "record" | "reverse"
+
+type ApiKeySpendingSettlement =
+  | {
+      type: "record"
+      transactionId: LedgerJournalId
+    }
+  | {
+      type: "reverse"
+    }
+
+type SpendingLimitsExecutionResult = {
+  result: PaymentSendResult | ApplicationError
+  settlementTransactionId?: LedgerJournalId
+}
+
 type PaymentSendAttemptResultTypeObj =
   typeof import("./ln-send-result").PaymentSendAttemptResultType
 type PaymentSendAttemptResultType =

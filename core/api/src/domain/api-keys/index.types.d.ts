@@ -17,5 +17,7 @@ interface IApiKeysService {
     ephemeralId: EphemeralId
   }): Promise<true | ApiKeysServiceError>
 
-  reverseSpending(args: { transactionId: string }): Promise<true | ApiKeysServiceError>
+  reverseSpending(args: {
+    transactionId: LedgerJournalId | EphemeralId
+  }): Promise<true | ApiKeysServiceError>
 }
