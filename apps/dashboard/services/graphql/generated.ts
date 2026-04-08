@@ -2536,7 +2536,7 @@ export type ApiKeyCreateMutationVariables = Exact<{
 }>;
 
 
-export type ApiKeyCreateMutation = { readonly __typename: 'Mutation', readonly apiKeyCreate: { readonly __typename: 'ApiKeyCreatePayload', readonly apiKeySecret: string, readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly createdAt: number, readonly revoked: boolean, readonly expired: boolean, readonly lastUsedAt?: number | null, readonly expiresAt?: number | null, readonly scopes: ReadonlyArray<Scope>, readonly limits: { readonly __typename: 'ApiKeyLimits', readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly dailySpentSats: number, readonly weeklySpentSats: number, readonly monthlySpentSats: number, readonly annualSpentSats: number } } } };
+export type ApiKeyCreateMutation = { readonly __typename: 'Mutation', readonly apiKeyCreate: { readonly __typename: 'ApiKeyCreatePayload', readonly apiKeySecret: string, readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly createdAt: number, readonly revoked: boolean, readonly expired: boolean, readonly lastUsedAt?: number | null, readonly expiresAt?: number | null, readonly scopes: ReadonlyArray<Scope> } } };
 
 export type ApiKeyRevokeMutationVariables = Exact<{
   input: ApiKeyRevokeInput;
@@ -2544,20 +2544,6 @@ export type ApiKeyRevokeMutationVariables = Exact<{
 
 
 export type ApiKeyRevokeMutation = { readonly __typename: 'Mutation', readonly apiKeyRevoke: { readonly __typename: 'ApiKeyRevokePayload', readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly createdAt: number, readonly revoked: boolean, readonly expired: boolean, readonly lastUsedAt?: number | null, readonly expiresAt?: number | null, readonly scopes: ReadonlyArray<Scope> } } };
-
-export type ApiKeySetLimitMutationVariables = Exact<{
-  input: ApiKeySetLimitInput;
-}>;
-
-
-export type ApiKeySetLimitMutation = { readonly __typename: 'Mutation', readonly apiKeySetLimit: { readonly __typename: 'ApiKeySetLimitPayload', readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly limits: { readonly __typename: 'ApiKeyLimits', readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly dailySpentSats: number, readonly weeklySpentSats: number, readonly monthlySpentSats: number, readonly annualSpentSats: number } } } };
-
-export type ApiKeyRemoveLimitMutationVariables = Exact<{
-  input: ApiKeyRemoveLimitInput;
-}>;
-
-
-export type ApiKeyRemoveLimitMutation = { readonly __typename: 'Mutation', readonly apiKeyRemoveLimit: { readonly __typename: 'ApiKeySetLimitPayload', readonly apiKey: { readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly limits: { readonly __typename: 'ApiKeyLimits', readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly dailySpentSats: number, readonly weeklySpentSats: number, readonly monthlySpentSats: number, readonly annualSpentSats: number } } } };
 
 export type CallbackEndpointAddMutationVariables = Exact<{
   input: CallbackEndpointAddInput;
@@ -2681,16 +2667,6 @@ export const ApiKeyCreateDocument = gql`
       lastUsedAt
       expiresAt
       scopes
-      limits {
-        dailyLimitSats
-        weeklyLimitSats
-        monthlyLimitSats
-        annualLimitSats
-        dailySpentSats
-        weeklySpentSats
-        monthlySpentSats
-        annualSpentSats
-      }
     }
     apiKeySecret
   }
@@ -2764,98 +2740,6 @@ export function useApiKeyRevokeMutation(baseOptions?: Apollo.MutationHookOptions
 export type ApiKeyRevokeMutationHookResult = ReturnType<typeof useApiKeyRevokeMutation>;
 export type ApiKeyRevokeMutationResult = Apollo.MutationResult<ApiKeyRevokeMutation>;
 export type ApiKeyRevokeMutationOptions = Apollo.BaseMutationOptions<ApiKeyRevokeMutation, ApiKeyRevokeMutationVariables>;
-export const ApiKeySetLimitDocument = gql`
-    mutation ApiKeySetLimit($input: ApiKeySetLimitInput!) {
-  apiKeySetLimit(input: $input) {
-    apiKey {
-      id
-      name
-      limits {
-        dailyLimitSats
-        weeklyLimitSats
-        monthlyLimitSats
-        annualLimitSats
-        dailySpentSats
-        weeklySpentSats
-        monthlySpentSats
-        annualSpentSats
-      }
-    }
-  }
-}
-    `;
-export type ApiKeySetLimitMutationFn = Apollo.MutationFunction<ApiKeySetLimitMutation, ApiKeySetLimitMutationVariables>;
-
-/**
- * __useApiKeySetLimitMutation__
- *
- * To run a mutation, you first call `useApiKeySetLimitMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useApiKeySetLimitMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [apiKeySetLimitMutation, { data, loading, error }] = useApiKeySetLimitMutation({
- *   variables: {
- *      input: // value for 'input'
- *   },
- * });
- */
-export function useApiKeySetLimitMutation(baseOptions?: Apollo.MutationHookOptions<ApiKeySetLimitMutation, ApiKeySetLimitMutationVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useMutation<ApiKeySetLimitMutation, ApiKeySetLimitMutationVariables>(ApiKeySetLimitDocument, options);
-      }
-export type ApiKeySetLimitMutationHookResult = ReturnType<typeof useApiKeySetLimitMutation>;
-export type ApiKeySetLimitMutationResult = Apollo.MutationResult<ApiKeySetLimitMutation>;
-export type ApiKeySetLimitMutationOptions = Apollo.BaseMutationOptions<ApiKeySetLimitMutation, ApiKeySetLimitMutationVariables>;
-export const ApiKeyRemoveLimitDocument = gql`
-    mutation ApiKeyRemoveLimit($input: ApiKeyRemoveLimitInput!) {
-  apiKeyRemoveLimit(input: $input) {
-    apiKey {
-      id
-      name
-      limits {
-        dailyLimitSats
-        weeklyLimitSats
-        monthlyLimitSats
-        annualLimitSats
-        dailySpentSats
-        weeklySpentSats
-        monthlySpentSats
-        annualSpentSats
-      }
-    }
-  }
-}
-    `;
-export type ApiKeyRemoveLimitMutationFn = Apollo.MutationFunction<ApiKeyRemoveLimitMutation, ApiKeyRemoveLimitMutationVariables>;
-
-/**
- * __useApiKeyRemoveLimitMutation__
- *
- * To run a mutation, you first call `useApiKeyRemoveLimitMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useApiKeyRemoveLimitMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [apiKeyRemoveLimitMutation, { data, loading, error }] = useApiKeyRemoveLimitMutation({
- *   variables: {
- *      input: // value for 'input'
- *   },
- * });
- */
-export function useApiKeyRemoveLimitMutation(baseOptions?: Apollo.MutationHookOptions<ApiKeyRemoveLimitMutation, ApiKeyRemoveLimitMutationVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useMutation<ApiKeyRemoveLimitMutation, ApiKeyRemoveLimitMutationVariables>(ApiKeyRemoveLimitDocument, options);
-      }
-export type ApiKeyRemoveLimitMutationHookResult = ReturnType<typeof useApiKeyRemoveLimitMutation>;
-export type ApiKeyRemoveLimitMutationResult = Apollo.MutationResult<ApiKeyRemoveLimitMutation>;
-export type ApiKeyRemoveLimitMutationOptions = Apollo.BaseMutationOptions<ApiKeyRemoveLimitMutation, ApiKeyRemoveLimitMutationVariables>;
 export const CallbackEndpointAddDocument = gql`
     mutation CallbackEndpointAdd($input: CallbackEndpointAddInput!) {
   callbackEndpointAdd(input: $input) {

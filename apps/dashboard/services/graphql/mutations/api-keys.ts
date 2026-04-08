@@ -6,11 +6,6 @@ import {
   ApiKeyCreateMutation,
   ApiKeyRevokeDocument,
   ApiKeyRevokeMutation,
-  ApiKeySetLimitDocument,
-  ApiKeySetLimitMutation,
-  ApiKeyRemoveLimitDocument,
-  ApiKeyRemoveLimitMutation,
-  LimitTimeWindow,
   Scope,
 } from "../generated"
 
@@ -26,16 +21,6 @@ gql`
         lastUsedAt
         expiresAt
         scopes
-        limits {
-          dailyLimitSats
-          weeklyLimitSats
-          monthlyLimitSats
-          annualLimitSats
-          dailySpentSats
-          weeklySpentSats
-          monthlySpentSats
-          annualSpentSats
-        }
       }
       apiKeySecret
     }
@@ -52,44 +37,6 @@ gql`
         lastUsedAt
         expiresAt
         scopes
-      }
-    }
-  }
-
-  mutation ApiKeySetLimit($input: ApiKeySetLimitInput!) {
-    apiKeySetLimit(input: $input) {
-      apiKey {
-        id
-        name
-        limits {
-          dailyLimitSats
-          weeklyLimitSats
-          monthlyLimitSats
-          annualLimitSats
-          dailySpentSats
-          weeklySpentSats
-          monthlySpentSats
-          annualSpentSats
-        }
-      }
-    }
-  }
-
-  mutation ApiKeyRemoveLimit($input: ApiKeyRemoveLimitInput!) {
-    apiKeyRemoveLimit(input: $input) {
-      apiKey {
-        id
-        name
-        limits {
-          dailyLimitSats
-          weeklyLimitSats
-          monthlyLimitSats
-          annualLimitSats
-          dailySpentSats
-          weeklySpentSats
-          monthlySpentSats
-          annualSpentSats
-        }
       }
     }
   }
@@ -128,47 +75,5 @@ export async function revokeApiKey({ id }: { id: string }) {
   } catch (error) {
     console.error("Error executing mutation: apiKeyRevoke ==> ", error)
     throw new Error("Error in apiKeyRevoke")
-  }
-}
-
-export async function setApiKeyLimit({
-  id,
-  limitTimeWindow,
-  limitSats,
-}: {
-  id: string
-  limitTimeWindow: LimitTimeWindow
-  limitSats: number
-}) {
-  const client = await apolloClient.authenticated()
-  try {
-    const { data } = await client.mutate<ApiKeySetLimitMutation>({
-      mutation: ApiKeySetLimitDocument,
-      variables: { input: { id, limitTimeWindow, limitSats } },
-    })
-    return data
-  } catch (error) {
-    console.error("Error executing mutation: apiKeySetLimit ==> ", error)
-    throw new Error("Error in apiKeySetLimit")
-  }
-}
-
-export async function removeApiKeyLimit({
-  id,
-  limitTimeWindow,
-}: {
-  id: string
-  limitTimeWindow: LimitTimeWindow
-}) {
-  const client = await apolloClient.authenticated()
-  try {
-    const { data } = await client.mutate<ApiKeyRemoveLimitMutation>({
-      mutation: ApiKeyRemoveLimitDocument,
-      variables: { input: { id, limitTimeWindow } },
-    })
-    return data
-  } catch (error) {
-    console.error("Error executing mutation: apiKeyRemoveLimit ==> ", error)
-    throw new Error("Error in apiKeyRemoveLimit")
   }
 }
