@@ -230,6 +230,8 @@ impl Limits {
                 }
             }
             None => {
+                let txn_id = transaction_id.ok_or(LimitError::MissingTransactionId)?;
+
                 sqlx::query!(
                     r#"
                     INSERT INTO api_key_transactions (api_key_id, amount_sats, transaction_id, created_at)
@@ -238,7 +240,7 @@ impl Limits {
                     "#,
                     api_key_id as IdentityApiKeyId,
                     amount_sats,
-                    transaction_id,
+                    txn_id,
                 )
                 .execute(&self.pool)
                 .await?;
@@ -686,6 +688,15 @@ mod tests {
                 None,
                 Some("ephemeral-123".to_string()),
             )
+            .await;
+        assert!(matches!(result, Err(LimitError::MissingTransactionId)));
+    }
+
+    #[tokio::test]
+    async fn record_spending_without_ephemeral_id_requires_transaction_id() {
+        let limits = test_limits();
+        let result = limits
+            .record_spending(test_api_key_id(), 1000, None, None)
             .await;
         assert!(matches!(result, Err(LimitError::MissingTransactionId)));
     }
