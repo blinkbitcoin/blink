@@ -1,22 +1,8 @@
 #!/usr/bin/env bats
 
-load "../../helpers/_common.bash"
-load "../../helpers/cli.bash"
 load "../../helpers/user.bash"
 load "../../helpers/onchain.bash"
 load "../../helpers/ln.bash"
-
-random_uuid() {
-  if [[ -e /proc/sys/kernel/random/uuid ]]; then
-    cat /proc/sys/kernel/random/uuid
-  else
-    uuidgen
-  fi
-}
-
-new_key_name() {
-  random_uuid
-}
 
 ALICE='alice'
 BOB='bob'
@@ -37,11 +23,12 @@ setup_file() {
 
   create_user "$BOB"
   user_update_username "$BOB"
+  # xyz_zap_receiver is a user whose lnurl address is hardcoded in the lnurlPaymentSend tests below.
   ensure_username_is_present "xyz_zap_receiver"
 }
 
 @test "api-keys-limits: create key and set daily limit" {
-  key_name="$(new_key_name)"
+  key_name="$(random_uuid)"
   cache_value 'limit_key_name' "$key_name"
 
   variables="{\"input\":{\"name\":\"${key_name}\",\"scopes\":[\"READ\",\"WRITE\"]}}"
@@ -58,7 +45,6 @@ setup_file() {
   key_id=$(echo "$key" | jq -r '.id')
   cache_value "limit-api-key-id" "$key_id"
 
-  # Set daily limit to 10000 sats
   variables="{\"input\":{\"id\":\"${key_id}\",\"limitTimeWindow\":\"DAILY\",\"limitSats\":10000}}"
   exec_graphql 'alice' 'api-key-set-limit' "$variables"
 
@@ -86,7 +72,6 @@ setup_file() {
   send_status="$(graphql_output '.data.intraLedgerPaymentSend.status')"
   [[ "${send_status}" = "SUCCESS" ]] || exit 1
 
-  # Check spending was recorded
   exec_graphql 'alice' 'api-keys'
   spent_24h="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'limit_key_name')'") | .limits.dailySpentSats')"
   [[ "${spent_24h}" -ge "$amount" ]] || exit 1
@@ -107,14 +92,14 @@ setup_file() {
 
   exec_graphql 'api-key-limit-secret' 'intraledger-payment-send' "$variables"
   send_status="$(graphql_output '.data.intraLedgerPaymentSend.status')"
-
-  # Should fail due to limit
   [[ "${send_status}" = "FAILURE" ]] || exit 1
 
   errors="$(graphql_output '.data.intraLedgerPaymentSend.errors | length')"
   [[ "${errors}" -ge "1" ]] || exit 1
 
-  # Verify error message contains limit information
+  # Verify error code and message both indicate a daily spending limit restriction
+  error_code="$(graphql_output '.data.intraLedgerPaymentSend.errors[0].code')"
+  [[ "${error_code}" == "TRANSACTION_RESTRICTED" ]] || exit 1
   error_msg="$(graphql_output '.data.intraLedgerPaymentSend.errors[0].message')"
   [[ "${error_msg}" == *"daily"* ]] || exit 1
 }
@@ -122,7 +107,6 @@ setup_file() {
 @test "api-keys-limits: set weekly limit" {
   key_id=$(read_value "limit-api-key-id")
 
-  # Set weekly limit to 50000 sats
   variables="{\"input\":{\"id\":\"${key_id}\",\"limitTimeWindow\":\"WEEKLY\",\"limitSats\":50000}}"
   exec_graphql 'alice' 'api-key-set-limit' "$variables"
 
@@ -157,18 +141,14 @@ setup_file() {
   send_status="$(graphql_output '.data.intraLedgerPaymentSend.status')"
   [[ "${send_status}" = "SUCCESS" ]] || exit 1
 
-  # Check total spending across all time periods
   exec_graphql 'alice' 'api-keys'
   spent_7d="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'limit_key_name')'") | .limits.weeklySpentSats')"
-
-  # Should have accumulated spending from previous tests
   [[ "${spent_7d}" -ge "8000" ]] || exit 1
 }
 
 @test "api-keys-limits: set monthly and annual limits" {
   key_id=$(read_value "limit-api-key-id")
 
-  # Set monthly limit to 100000 sats
   variables="{\"input\":{\"id\":\"${key_id}\",\"limitTimeWindow\":\"MONTHLY\",\"limitSats\":100000}}"
   exec_graphql 'alice' 'api-key-set-limit' "$variables"
   monthly_limit="$(graphql_output '.data.apiKeySetLimit.apiKey.limits.monthlyLimitSats')"
@@ -177,7 +157,6 @@ setup_file() {
   spent_30d="$(graphql_output '.data.apiKeySetLimit.apiKey.limits.monthlySpentSats')"
   [[ "${spent_30d}" -ge "8000" ]] || exit 1
 
-  # Set annual limit to 500000 sats
   variables="{\"input\":{\"id\":\"${key_id}\",\"limitTimeWindow\":\"ANNUAL\",\"limitSats\":500000}}"
   exec_graphql 'alice' 'api-key-set-limit' "$variables"
   annual_limit="$(graphql_output '.data.apiKeySetLimit.apiKey.limits.annualLimitSats')"
@@ -193,8 +172,6 @@ setup_file() {
   # - Weekly: 50000 sats (spent: ~8000)
   # - Monthly: 100000 sats (spent: ~8000)
   # - Annual: 500000 sats (spent: ~8000)
-
-  # Try to send 45000 sats - this would exceed weekly limit
   local from_wallet_name="$ALICE.btc_wallet_id"
   local to_wallet_name="$BOB.btc_wallet_id"
   local amount=45000
@@ -209,11 +186,11 @@ setup_file() {
 
   exec_graphql 'api-key-limit-secret' 'intraledger-payment-send' "$variables"
   send_status="$(graphql_output '.data.intraLedgerPaymentSend.status')"
-
-  # Should fail due to weekly limit
   [[ "${send_status}" = "FAILURE" ]] || exit 1
 
-  # Verify error message contains limit information
+  # Verify error code and message both indicate a weekly spending limit restriction
+  error_code="$(graphql_output '.data.intraLedgerPaymentSend.errors[0].code')"
+  [[ "${error_code}" == "TRANSACTION_RESTRICTED" ]] || exit 1
   error_msg="$(graphql_output '.data.intraLedgerPaymentSend.errors[0].message')"
   [[ "${error_msg}" == *"weekly"* ]] || exit 1
 }
@@ -236,7 +213,6 @@ setup_file() {
   send_status="$(graphql_output '.data.intraLedgerPaymentSend.status')"
   [[ "${send_status}" = "SUCCESS" ]] || exit 1
 
-  # Verify spending updated across all time windows
   exec_graphql 'alice' 'api-keys'
   key_data="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'limit_key_name')'")')"
 
@@ -255,7 +231,6 @@ setup_file() {
   exec_graphql 'alice' 'api-keys'
   key_data="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'limit_key_name')'")')"
 
-  # Verify all limits are still set
   daily_limit=$(echo "$key_data" | jq -r '.limits.dailyLimitSats')
   weekly_limit=$(echo "$key_data" | jq -r '.limits.weeklyLimitSats')
   monthly_limit=$(echo "$key_data" | jq -r '.limits.monthlyLimitSats')
@@ -266,7 +241,7 @@ setup_file() {
   [[ "${monthly_limit}" = "100000" ]] || exit 1
   [[ "${annual_limit}" = "500000" ]] || exit 1
 
-  # Verify spending is consistent across all time windows (since all payments are within last 24h)
+  # All payments occurred within the last 24h so all windows should show the same total
   spent_24h=$(echo "$key_data" | jq -r '.limits.dailySpentSats')
   spent_7d=$(echo "$key_data" | jq -r '.limits.weeklySpentSats')
   spent_30d=$(echo "$key_data" | jq -r '.limits.monthlySpentSats')
@@ -286,7 +261,7 @@ setup_file() {
   weekly_limit="$(graphql_output '.data.apiKeySetLimit.apiKey.limits.weeklyLimitSats')"
   [[ "${weekly_limit}" = "40000" ]] || exit 1
 
-  # Try to send 3000 - should fail as it would exceed updated limit
+  # 3000 sats would exceed the newly lowered limit
   local from_wallet_name="$ALICE.btc_wallet_id"
   local to_wallet_name="$BOB.btc_wallet_id"
   local amount=3000
@@ -303,7 +278,9 @@ setup_file() {
   send_status="$(graphql_output '.data.intraLedgerPaymentSend.status')"
   [[ "${send_status}" = "FAILURE" ]] || exit 1
 
-  # Verify error message contains limit information
+  # Verify error code and message both indicate a weekly spending limit restriction
+  error_code="$(graphql_output '.data.intraLedgerPaymentSend.errors[0].code')"
+  [[ "${error_code}" == "TRANSACTION_RESTRICTED" ]] || exit 1
   error_msg="$(graphql_output '.data.intraLedgerPaymentSend.errors[0].message')"
   [[ "${error_msg}" == *"weekly"* ]] || exit 1
 }
@@ -311,19 +288,16 @@ setup_file() {
 @test "api-keys-limits: remove all limits" {
   key_id=$(read_value "limit-api-key-id")
 
-  # Remove weekly limit
   variables="{\"input\":{\"id\":\"${key_id}\",\"limitTimeWindow\":\"WEEKLY\"}}"
   exec_graphql 'alice' 'api-key-remove-limit' "$variables"
   weekly_limit="$(graphql_output '.data.apiKeyRemoveLimit.apiKey.limits.weeklyLimitSats')"
   [[ "${weekly_limit}" = "null" ]] || exit 1
 
-  # Remove monthly limit
   variables="{\"input\":{\"id\":\"${key_id}\",\"limitTimeWindow\":\"MONTHLY\"}}"
   exec_graphql 'alice' 'api-key-remove-limit' "$variables"
   monthly_limit="$(graphql_output '.data.apiKeyRemoveLimit.apiKey.limits.monthlyLimitSats')"
   [[ "${monthly_limit}" = "null" ]] || exit 1
 
-  # Remove annual limit
   variables="{\"input\":{\"id\":\"${key_id}\",\"limitTimeWindow\":\"ANNUAL\"}}"
   exec_graphql 'alice' 'api-key-remove-limit' "$variables"
   annual_limit="$(graphql_output '.data.apiKeyRemoveLimit.apiKey.limits.annualLimitSats')"
@@ -331,7 +305,6 @@ setup_file() {
 }
 
 @test "api-keys-limits: can send large amount with no limits" {
-  # With all limits removed, should be able to send larger amounts
   local from_wallet_name="$ALICE.btc_wallet_id"
   local to_wallet_name="$BOB.btc_wallet_id"
   local amount=100000
@@ -359,8 +332,7 @@ setup_file() {
 # ============================================================================
 
 @test "api-keys-limits: lightning payment respects limits" {
-  # Create new API key with daily limit for lightning tests
-  key_name="$(new_key_name)"
+  key_name="$(random_uuid)"
   cache_value 'ln_key_name' "$key_name"
 
   variables="{\"input\":{\"name\":\"${key_name}\",\"scopes\":[\"READ\",\"WRITE\"]}}"
@@ -373,14 +345,12 @@ setup_file() {
   cache_value "api-key-ln-secret" "$secret"
   cache_value "ln-api-key-id" "$key_id"
 
-  # Set daily limit to 5000 sats
   variables="{\"input\":{\"id\":\"${key_id}\",\"limitTimeWindow\":\"DAILY\",\"limitSats\":5000}}"
   exec_graphql 'alice' 'api-key-set-limit' "$variables"
 
-  # Create invoice for 3000 sats
   invoice_response="$(lnd_outside_cli addinvoice --amt 3000)"
-  payment_request="$(echo $invoice_response | jq -r '.payment_request')"
-  payment_hash=$(echo $invoice_response | jq -r '.r_hash')
+  payment_request="$(echo "$invoice_response" | jq -r '.payment_request')"
+  payment_hash=$(echo "$invoice_response" | jq -r '.r_hash')
 
   variables=$(
     jq -n \
@@ -389,12 +359,10 @@ setup_file() {
     '{input: {walletId: $wallet_id, paymentRequest: $payment_request}}'
   )
 
-  # Send lightning payment with API key
   exec_graphql 'api-key-ln-secret' 'ln-invoice-payment-send' "$variables"
   send_status="$(graphql_output '.data.lnInvoicePaymentSend.status')"
   [[ "${send_status}" = "SUCCESS" ]] || exit 1
 
-  # Verify spending was recorded
   exec_graphql 'alice' 'api-keys'
   spent_24h="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'ln_key_name')'") | .limits.dailySpentSats')"
   [[ "${spent_24h}" -ge "3000" ]] || exit 1
@@ -403,7 +371,7 @@ setup_file() {
 @test "api-keys-limits: lightning payment exceeding limit fails" {
   # Try to send 3000 more sats (would exceed 5000 limit)
   invoice_response="$(lnd_outside_cli addinvoice --amt 3000)"
-  payment_request="$(echo $invoice_response | jq -r '.payment_request')"
+  payment_request="$(echo "$invoice_response" | jq -r '.payment_request')"
 
   variables=$(
     jq -n \
@@ -416,14 +384,15 @@ setup_file() {
   send_status="$(graphql_output '.data.lnInvoicePaymentSend.status')"
   [[ "${send_status}" = "FAILURE" ]] || exit 1
 
-  # Verify error message contains limit information
+  # Verify error code and message both indicate a daily spending limit restriction
+  error_code="$(graphql_output '.data.lnInvoicePaymentSend.errors[0].code')"
+  [[ "${error_code}" == "TRANSACTION_RESTRICTED" ]] || exit 1
   error_msg="$(graphql_output '.data.lnInvoicePaymentSend.errors[0].message')"
   [[ "${error_msg}" == *"daily"* ]] || exit 1
 }
 
 @test "api-keys-limits: onchain payment respects limits" {
-  # Create new API key with daily limit for onchain tests
-  key_name="$(new_key_name)"
+  key_name="$(random_uuid)"
   cache_value 'onchain_key_name' "$key_name"
 
   variables="{\"input\":{\"name\":\"${key_name}\",\"scopes\":[\"READ\",\"WRITE\"]}}"
@@ -436,14 +405,11 @@ setup_file() {
   cache_value "api-key-onchain-secret" "$secret"
   cache_value "onchain-api-key-id" "$key_id"
 
-  # Set daily limit to 10000 sats
   variables="{\"input\":{\"id\":\"${key_id}\",\"limitTimeWindow\":\"DAILY\",\"limitSats\":10000}}"
   exec_graphql 'alice' 'api-key-set-limit' "$variables"
 
-  # Create onchain address
   onchain_address=$(bitcoin_cli getnewaddress)
 
-  # Send onchain payment for 5000 sats with API key
   variables=$(
     jq -n \
     --arg wallet_id "$(read_value $ALICE.btc_wallet_id)" \
@@ -456,7 +422,6 @@ setup_file() {
   send_status="$(graphql_output '.data.onChainPaymentSend.status')"
   [[ "${send_status}" = "SUCCESS" ]] || exit 1
 
-  # Verify spending was recorded
   exec_graphql 'alice' 'api-keys'
   spent_24h="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'onchain_key_name')'") | .limits.dailySpentSats')"
   [[ "${spent_24h}" -ge "5000" ]] || exit 1
@@ -478,37 +443,34 @@ setup_file() {
   send_status="$(graphql_output '.data.onChainPaymentSend.status')"
   [[ "${send_status}" = "FAILURE" ]] || exit 1
 
-  # Verify error message contains limit information
+  # Verify error code and message both indicate a daily spending limit restriction
+  error_code="$(graphql_output '.data.onChainPaymentSend.errors[0].code')"
+  [[ "${error_code}" == "TRANSACTION_RESTRICTED" ]] || exit 1
   error_msg="$(graphql_output '.data.onChainPaymentSend.errors[0].message')"
   [[ "${error_msg}" == *"daily"* ]] || exit 1
 }
 
 @test "api-keys-limits: mixed payment flows tracked separately per key" {
-  # Verify that each API key tracks its own spending independently
+  exec_graphql 'alice' 'api-keys'
 
   # Check intraledger key spending (original key from earlier tests)
-  exec_graphql 'alice' 'api-keys'
   intraledger_spent="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'limit_key_name')'") | .limits.dailySpentSats')"
   [[ "${intraledger_spent}" -ge "130000" ]] || exit 1
 
-  # Check lightning key spending (separate key)
   ln_spent="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'ln_key_name')'") | .limits.dailySpentSats')"
   [[ "${ln_spent}" -ge "3000" ]] || exit 1
   [[ "${ln_spent}" -lt "10000" ]] || exit 1
 
-  # Check onchain key spending (separate key)
   onchain_spent="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'onchain_key_name')'") | .limits.dailySpentSats')"
   [[ "${onchain_spent}" -ge "5000" ]] || exit 1
   [[ "${onchain_spent}" -lt "10000" ]] || exit 1
 
-  # Each key should have independent spending totals
   [[ "${intraledger_spent}" != "${ln_spent}" ]] || exit 1
   [[ "${intraledger_spent}" != "${onchain_spent}" ]] || exit 1
 }
 
 @test "api-keys-limits: USD wallet payments also respect limits" {
-  # Create API key with daily limit for USD wallet tests
-  key_name="$(new_key_name)"
+  key_name="$(random_uuid)"
 
   variables="{\"input\":{\"name\":\"${key_name}\",\"scopes\":[\"READ\",\"WRITE\"]}}"
   exec_graphql 'alice' 'api-key-create' "$variables"
@@ -519,7 +481,6 @@ setup_file() {
 
   cache_value "api-key-usd-secret" "$secret"
 
-  # Set daily limit to 50000 sats (in satoshi equivalent)
   variables="{\"input\":{\"id\":\"${key_id}\",\"limitTimeWindow\":\"DAILY\",\"limitSats\":50000}}"
   exec_graphql 'alice' 'api-key-set-limit' "$variables"
 
@@ -536,7 +497,6 @@ setup_file() {
   send_status="$(graphql_output '.data.intraLedgerUsdPaymentSend.status')"
   [[ "${send_status}" = "SUCCESS" ]] || exit 1
 
-  # Verify spending was recorded (converted to sats)
   exec_graphql 'alice' 'api-keys'
   spent_24h="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$key_name'") | .limits.dailySpentSats')"
   # USD amount converted to sats should be tracked
@@ -544,8 +504,7 @@ setup_file() {
 }
 
 @test "api-keys-limits: lnNoAmountInvoicePaymentSend respects limits" {
-  # Create new API key with daily limit
-  key_name="$(new_key_name)"
+  key_name="$(random_uuid)"
   cache_value 'ln_noamount_key_name' "$key_name"
 
   variables="{\"input\":{\"name\":\"${key_name}\",\"scopes\":[\"READ\",\"WRITE\"]}}"
@@ -558,13 +517,11 @@ setup_file() {
   cache_value "api-key-ln-noamount-secret" "$secret"
   cache_value "ln-noamount-api-key-id" "$key_id"
 
-  # Set daily limit to 8000 sats
   variables="{\"input\":{\"id\":\"${key_id}\",\"limitTimeWindow\":\"DAILY\",\"limitSats\":8000}}"
   exec_graphql 'alice' 'api-key-set-limit' "$variables"
 
-  # Create no-amount invoice
   invoice_response="$(lnd_outside_cli addinvoice)"
-  payment_request="$(echo $invoice_response | jq -r '.payment_request')"
+  payment_request="$(echo "$invoice_response" | jq -r '.payment_request')"
 
   # Pay 4000 sats to the no-amount invoice
   variables=$(
@@ -579,7 +536,6 @@ setup_file() {
   send_status="$(graphql_output '.data.lnNoAmountInvoicePaymentSend.status')"
   [[ "${send_status}" = "SUCCESS" ]] || exit 1
 
-  # Verify spending was recorded
   exec_graphql 'alice' 'api-keys'
   spent_24h="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'ln_noamount_key_name')'") | .limits.dailySpentSats')"
   [[ "${spent_24h}" -ge "4000" ]] || exit 1
@@ -588,7 +544,7 @@ setup_file() {
 @test "api-keys-limits: lnNoAmountInvoicePaymentSend exceeding limit fails" {
   # Try to pay 5000 more sats (would exceed 8000 limit)
   invoice_response="$(lnd_outside_cli addinvoice)"
-  payment_request="$(echo $invoice_response | jq -r '.payment_request')"
+  payment_request="$(echo "$invoice_response" | jq -r '.payment_request')"
 
   variables=$(
     jq -n \
@@ -602,14 +558,15 @@ setup_file() {
   send_status="$(graphql_output '.data.lnNoAmountInvoicePaymentSend.status')"
   [[ "${send_status}" = "FAILURE" ]] || exit 1
 
-  # Verify error message contains limit information
+  # Verify error code and message both indicate a daily spending limit restriction
+  error_code="$(graphql_output '.data.lnNoAmountInvoicePaymentSend.errors[0].code')"
+  [[ "${error_code}" == "TRANSACTION_RESTRICTED" ]] || exit 1
   error_msg="$(graphql_output '.data.lnNoAmountInvoicePaymentSend.errors[0].message')"
   [[ "${error_msg}" == *"daily"* ]] || exit 1
 }
 
 @test "api-keys-limits: lnNoAmountUsdInvoicePaymentSend respects limits" {
-  # Create new API key with daily limit
-  key_name="$(new_key_name)"
+  key_name="$(random_uuid)"
   cache_value 'ln_noamount_usd_key_name' "$key_name"
 
   variables="{\"input\":{\"name\":\"${key_name}\",\"scopes\":[\"READ\",\"WRITE\"]}}"
@@ -621,13 +578,11 @@ setup_file() {
 
   cache_value "api-key-ln-noamount-usd-secret" "$secret"
 
-  # Set daily limit to 8000 sats
   variables="{\"input\":{\"id\":\"${key_id}\",\"limitTimeWindow\":\"DAILY\",\"limitSats\":8000}}"
   exec_graphql 'alice' 'api-key-set-limit' "$variables"
 
-  # Create no-amount invoice
   invoice_response="$(lnd_outside_cli addinvoice)"
-  payment_request="$(echo $invoice_response | jq -r '.payment_request')"
+  payment_request="$(echo "$invoice_response" | jq -r '.payment_request')"
 
   # Pay 30 cents (USD) to the no-amount invoice from USD wallet
   variables=$(
@@ -642,15 +597,14 @@ setup_file() {
   send_status="$(graphql_output '.data.lnNoAmountUsdInvoicePaymentSend.status')"
   [[ "${send_status}" = "SUCCESS" ]] || exit 1
 
-  # Verify spending was recorded (converted to sats)
   exec_graphql 'alice' 'api-keys'
   spent_24h="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'ln_noamount_usd_key_name')'") | .limits.dailySpentSats')"
+  # USD amount is converted to sats for tracking
   [[ "${spent_24h}" -gt "0" ]] || exit 1
 }
 
 @test "api-keys-limits: lnurlPaymentSend respects limits" {
-  # Create new API key with daily limit
-  key_name="$(new_key_name)"
+  key_name="$(random_uuid)"
   cache_value 'lnurl_key_name' "$key_name"
 
   variables="{\"input\":{\"name\":\"${key_name}\",\"scopes\":[\"READ\",\"WRITE\"]}}"
@@ -662,7 +616,6 @@ setup_file() {
 
   cache_value "api-key-lnurl-secret" "$secret"
 
-  # Set daily limit to 5000 sats
   variables="{\"input\":{\"id\":\"${key_id}\",\"limitTimeWindow\":\"DAILY\",\"limitSats\":5000}}"
   exec_graphql 'alice' 'api-key-set-limit' "$variables"
 
@@ -681,7 +634,6 @@ setup_file() {
   send_status="$(graphql_output '.data.lnurlPaymentSend.status')"
   [[ "${send_status}" = "SUCCESS" ]] || exit 1
 
-  # Verify spending was recorded
   exec_graphql 'alice' 'api-keys'
   spent_24h="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'lnurl_key_name')'") | .limits.dailySpentSats')"
   [[ "${spent_24h}" -ge "2000" ]] || exit 1
@@ -703,7 +655,9 @@ setup_file() {
   send_status="$(graphql_output '.data.lnurlPaymentSend.status')"
   [[ "${send_status}" = "FAILURE" ]] || exit 1
 
-  # Verify error message contains limit information
+  # Verify error code and message both indicate a daily spending limit restriction
+  error_code="$(graphql_output '.data.lnurlPaymentSend.errors[0].code')"
+  [[ "${error_code}" == "TRANSACTION_RESTRICTED" ]] || exit 1
   error_msg="$(graphql_output '.data.lnurlPaymentSend.errors[0].message')"
   [[ "${error_msg}" == *"daily"* ]] || exit 1
 }

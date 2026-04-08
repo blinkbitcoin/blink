@@ -2,6 +2,7 @@ mutation intraLedgerPaymentSend($input: IntraLedgerPaymentSendInput!) {
   intraLedgerPaymentSend(input: $input) {
     status
     errors {
+      code
       message
       path
     }
