@@ -365,7 +365,7 @@ setup_file() {
 
   variables="{\"input\":{\"name\":\"${key_name}\",\"scopes\":[\"READ\",\"WRITE\"]}}"
   exec_graphql 'alice' 'api-key-create' "$variables"
-  
+
   key="$(graphql_output '.data.apiKeyCreate.apiKey')"
   secret="$(graphql_output '.data.apiKeyCreate.apiKeySecret')"
   key_id=$(echo "$key" | jq -r '.id')
@@ -428,7 +428,7 @@ setup_file() {
 
   variables="{\"input\":{\"name\":\"${key_name}\",\"scopes\":[\"READ\",\"WRITE\"]}}"
   exec_graphql 'alice' 'api-key-create' "$variables"
-  
+
   key="$(graphql_output '.data.apiKeyCreate.apiKey')"
   secret="$(graphql_output '.data.apiKeyCreate.apiKeySecret')"
   key_id=$(echo "$key" | jq -r '.id')
@@ -485,7 +485,7 @@ setup_file() {
 
 @test "api-keys-limits: mixed payment flows tracked separately per key" {
   # Verify that each API key tracks its own spending independently
-  
+
   # Check intraledger key spending (original key from earlier tests)
   exec_graphql 'alice' 'api-keys'
   intraledger_spent="$(graphql_output '.data.me.apiKeys[] | select(.name == "'$(read_value 'limit_key_name')'") | .limits.dailySpentSats')"
@@ -512,7 +512,7 @@ setup_file() {
 
   variables="{\"input\":{\"name\":\"${key_name}\",\"scopes\":[\"READ\",\"WRITE\"]}}"
   exec_graphql 'alice' 'api-key-create' "$variables"
-  
+
   key="$(graphql_output '.data.apiKeyCreate.apiKey')"
   secret="$(graphql_output '.data.apiKeyCreate.apiKeySecret')"
   key_id=$(echo "$key" | jq -r '.id')
