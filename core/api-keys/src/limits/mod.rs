@@ -57,6 +57,7 @@ impl Limits {
         Self { pool }
     }
 
+    #[tracing::instrument(name = "limits.check_spending_limit", skip(self))]
     pub async fn check_spending_limit(
         &self,
         api_key_id: IdentityApiKeyId,
@@ -154,7 +155,6 @@ impl Limits {
         for (period, limit, spent) in &checks {
             if let Some(limit) = limit {
                 if spent.saturating_add(amount_sats) > *limit {
-                    tx.rollback().await?;
                     return Err(LimitError::LimitExceeded(period.to_string()));
                 }
             }
