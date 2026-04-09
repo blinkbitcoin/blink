@@ -186,6 +186,10 @@ impl ApiKeysService for ApiKeys {
                 ApplicationError::Limit(LimitError::EphemeralNotFound(_)) => {
                     Status::not_found(e.to_string())
                 }
+                ApplicationError::Limit(LimitError::AmountMismatch)
+                | ApplicationError::Limit(LimitError::LimitExceeded(_)) => {
+                    Status::failed_precondition(e.to_string())
+                }
                 _ => Status::internal(e.to_string()),
             })?;
 

@@ -191,109 +191,73 @@ impl Limits {
             return Err(LimitError::InvalidLimitAmount);
         }
 
+        let txn_id = transaction_id.ok_or(LimitError::MissingTransactionId)?;
+
         match ephemeral_id {
             Some(eid) => {
-                let txn_id = transaction_id.ok_or(LimitError::MissingTransactionId)?;
-
-                let mut tx = self.pool.begin().await?;
-
-                let duplicate_txn = sqlx::query!(
-                    r#"
-                    SELECT amount_sats
-                    FROM api_key_transactions
-                    WHERE transaction_id = $1
-                      AND api_key_id = $2
-                    FOR UPDATE
-                    "#,
-                    &txn_id,
-                    api_key_id as IdentityApiKeyId,
-                )
-                .fetch_optional(&mut *tx)
-                .await?;
-
-                if let Some(duplicate_txn) = duplicate_txn {
-                    if duplicate_txn.amount_sats != amount_sats {
-                        return Err(LimitError::AmountMismatch);
-                    }
-                }
-
-                let ephemeral_txn = sqlx::query!(
-                    r#"
-                    SELECT amount_sats, transaction_id
-                    FROM api_key_transactions
-                    WHERE transaction_id = $1
-                      AND api_key_id = $2
-                    FOR UPDATE
-                    "#,
-                    &eid,
-                    api_key_id as IdentityApiKeyId,
-                )
-                .fetch_optional(&mut *tx)
-                .await?;
-
-                if let Some(ephemeral_txn) = ephemeral_txn {
-                    if ephemeral_txn.amount_sats != amount_sats {
-                        return Err(LimitError::AmountMismatch);
-                    }
-
-                    sqlx::query!(
-                        r#"
-                        UPDATE api_key_transactions
-                        SET transaction_id = $1
-                        WHERE transaction_id = $2
-                          AND api_key_id = $3
-                        "#,
-                        &txn_id,
-                        &eid,
-                        api_key_id as IdentityApiKeyId,
-                    )
-                    .execute(&mut *tx)
-                    .await?;
-
-                    tx.commit().await?;
-                    return Ok(());
-                }
-
-                // Idempotent retry: ephemeral row already finalized, check canonical txn row
-                let finalized_txn = sqlx::query!(
-                    r#"
-                    SELECT amount_sats
-                    FROM api_key_transactions
-                    WHERE transaction_id = $1
-                      AND api_key_id = $2
-                    FOR UPDATE
-                    "#,
-                    &txn_id,
-                    api_key_id as IdentityApiKeyId,
-                )
-                .fetch_optional(&mut *tx)
-                .await?;
-
-                let finalized_txn = finalized_txn.ok_or(LimitError::EphemeralNotFound(eid))?;
-
-                if finalized_txn.amount_sats != amount_sats {
-                    return Err(LimitError::AmountMismatch);
-                }
-
-                tx.commit().await?;
+                self.finalize_ephemeral(api_key_id, amount_sats, txn_id, eid)
+                    .await
             }
-            None => {
-                let txn_id = transaction_id.ok_or(LimitError::MissingTransactionId)?;
+            None => self.record_canonical(api_key_id, amount_sats, txn_id).await,
+        }
+    }
 
-                sqlx::query!(
-                    r#"
-                    INSERT INTO api_key_transactions (api_key_id, amount_sats, transaction_id, created_at)
-                    VALUES ($1, $2, $3, NOW())
-                    ON CONFLICT (transaction_id) DO NOTHING
-                    "#,
-                    api_key_id as IdentityApiKeyId,
-                    amount_sats,
-                    txn_id,
-                )
-                .execute(&self.pool)
-                .await?;
+    async fn finalize_ephemeral(
+        &self,
+        api_key_id: IdentityApiKeyId,
+        amount_sats: i64,
+        txn_id: String,
+        eid: String,
+    ) -> Result<(), LimitError> {
+        let mut tx = self.pool.begin().await?;
+
+        let canonical = fetch_transaction(&mut tx, api_key_id, &txn_id).await?;
+        let ephemeral = fetch_transaction(&mut tx, api_key_id, &eid).await?;
+
+        match (ephemeral, canonical) {
+            (Some(eph_amount), Some(can_amount)) => {
+                // Both rows exist: canonical was inserted by a concurrent/prior non-ephemeral call.
+                // Validate both amounts, then delete the ephemeral row to avoid a UNIQUE violation.
+                ensure_amount_matches(eph_amount, amount_sats)?;
+                ensure_amount_matches(can_amount, amount_sats)?;
+                delete_transaction(&mut tx, api_key_id, &eid).await?;
+            }
+            (Some(eph_amount), None) => {
+                // Happy path: rename the ephemeral row to the final transaction_id.
+                ensure_amount_matches(eph_amount, amount_sats)?;
+                rename_transaction(&mut tx, api_key_id, &eid, &txn_id).await?;
+            }
+            (None, Some(can_amount)) => {
+                // Ephemeral row already gone: idempotent retry of a completed finalization.
+                ensure_amount_matches(can_amount, amount_sats)?;
+            }
+            (None, None) => {
+                return Err(LimitError::EphemeralNotFound(eid));
             }
         }
+
+        tx.commit().await?;
+        Ok(())
+    }
+
+    async fn record_canonical(
+        &self,
+        api_key_id: IdentityApiKeyId,
+        amount_sats: i64,
+        txn_id: String,
+    ) -> Result<(), LimitError> {
+        sqlx::query!(
+            r#"
+            INSERT INTO api_key_transactions (api_key_id, amount_sats, transaction_id, created_at)
+            VALUES ($1, $2, $3, NOW())
+            ON CONFLICT (transaction_id) DO NOTHING
+            "#,
+            api_key_id as IdentityApiKeyId,
+            amount_sats,
+            txn_id,
+        )
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }
@@ -608,6 +572,78 @@ impl Limits {
     }
 }
 
+fn ensure_amount_matches(stored: i64, expected: i64) -> Result<(), LimitError> {
+    if stored != expected {
+        return Err(LimitError::AmountMismatch);
+    }
+    Ok(())
+}
+
+async fn fetch_transaction(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    api_key_id: IdentityApiKeyId,
+    transaction_id: &str,
+) -> Result<Option<i64>, LimitError> {
+    let row = sqlx::query!(
+        r#"
+        SELECT amount_sats
+        FROM api_key_transactions
+        WHERE transaction_id = $1
+          AND api_key_id = $2
+        FOR UPDATE
+        "#,
+        transaction_id,
+        api_key_id as IdentityApiKeyId,
+    )
+    .fetch_optional(&mut **tx)
+    .await?;
+
+    Ok(row.map(|r| r.amount_sats))
+}
+
+async fn delete_transaction(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    api_key_id: IdentityApiKeyId,
+    transaction_id: &str,
+) -> Result<(), LimitError> {
+    sqlx::query!(
+        r#"
+        DELETE FROM api_key_transactions
+        WHERE transaction_id = $1
+          AND api_key_id = $2
+        "#,
+        transaction_id,
+        api_key_id as IdentityApiKeyId,
+    )
+    .execute(&mut **tx)
+    .await?;
+
+    Ok(())
+}
+
+async fn rename_transaction(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    api_key_id: IdentityApiKeyId,
+    from_id: &str,
+    to_id: &str,
+) -> Result<(), LimitError> {
+    sqlx::query!(
+        r#"
+        UPDATE api_key_transactions
+        SET transaction_id = $1
+        WHERE transaction_id = $2
+          AND api_key_id = $3
+        "#,
+        to_id,
+        from_id,
+        api_key_id as IdentityApiKeyId,
+    )
+    .execute(&mut **tx)
+    .await?;
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -747,5 +783,27 @@ mod tests {
             .record_spending(test_api_key_id(), 1000, None, None)
             .await;
         assert!(matches!(result, Err(LimitError::MissingTransactionId)));
+    }
+
+    #[test]
+    fn ensure_amount_matches_returns_ok_when_amounts_match() {
+        assert!(ensure_amount_matches(1000, 1000).is_ok());
+    }
+
+    #[test]
+    fn ensure_amount_matches_returns_ok_for_zero() {
+        assert!(ensure_amount_matches(0, 0).is_ok());
+    }
+
+    #[test]
+    fn ensure_amount_matches_returns_error_when_stored_is_less() {
+        let result = ensure_amount_matches(500, 1000);
+        assert!(matches!(result, Err(LimitError::AmountMismatch)));
+    }
+
+    #[test]
+    fn ensure_amount_matches_returns_error_when_stored_is_more() {
+        let result = ensure_amount_matches(1000, 500);
+        assert!(matches!(result, Err(LimitError::AmountMismatch)));
     }
 }
