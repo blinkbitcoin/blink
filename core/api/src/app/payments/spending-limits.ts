@@ -11,29 +11,66 @@ import {
   checkWithdrawalLimits,
 } from "@/app/accounts"
 
-import { PaymentSendStatus } from "@/domain/bitcoin/lightning"
+import { ErrorLevel } from "@/domain/shared"
 import { SettlementMethod } from "@/domain/wallets"
 import { recordExceptionInCurrentSpan } from "@/services/tracing"
 
-// Records spending only for successful/pending outcomes when a settlement transaction exists.
-// Reverses lock otherwise.
-const settlementFor = ({
+export const SpendingLimitsSettlement = {
+  Record: "record",
+  Reverse: "reverse",
+} as const
+
+export const recordSettlement = ({
   result,
   settlementTransactionId,
 }: {
   result: PaymentSendResult | ApplicationError
-  settlementTransactionId?: LedgerJournalId
-}): ApiKeySpendingSettlement => {
+  settlementTransactionId: LedgerJournalId
+}): SpendingLimitsExecutionResult => ({
+  apiKeySettlement: SpendingLimitsSettlement.Record,
+  settlementTransactionId,
+  result,
+})
+
+export const reverseSettlement = ({
+  result,
+}: {
+  result: PaymentSendResult | ApplicationError
+}): SpendingLimitsExecutionResult => ({
+  apiKeySettlement: SpendingLimitsSettlement.Reverse,
+  result,
+})
+
+const settlementFor = (
+  executionResult: SpendingLimitsExecutionResult,
+): ApiKeySpendingSettlement => {
+  const { apiKeySettlement } = executionResult
+
   if (
-    !settlementTransactionId ||
-    result instanceof Error ||
-    result.status === PaymentSendStatus.AlreadyPaid ||
-    result.status === PaymentSendStatus.Failure
+    apiKeySettlement === SpendingLimitsSettlement.Record &&
+    !executionResult.settlementTransactionId
   ) {
+    recordExceptionInCurrentSpan({
+      error: new Error(
+        "Invalid spending settlement result: record settlement without transaction id",
+      ),
+      level: ErrorLevel.Critical,
+    })
     return reverseApiKeySpendingSettlement()
   }
 
-  return recordApiKeySpendingSettlement(settlementTransactionId)
+  switch (apiKeySettlement) {
+    case SpendingLimitsSettlement.Record:
+      return recordApiKeySpendingSettlement(executionResult.settlementTransactionId)
+
+    case SpendingLimitsSettlement.Reverse:
+      return reverseApiKeySpendingSettlement()
+
+    default: {
+      const exhaustiveCheck: never = apiKeySettlement
+      return exhaustiveCheck
+    }
+  }
 }
 
 const getLimitCheck = ({
@@ -81,15 +118,15 @@ export const withSpendingLimits = async ({
   const lock = await lockApiKeySpending({ apiKeyId, amount: btcPaymentAmount })
   if (lock instanceof Error) return lock
 
-  const { result, settlementTransactionId } = await execute()
+  const executionResult = await execute()
 
   const settleResult = await settleApiKeySpending({
     lock,
-    settlement: settlementFor({ result, settlementTransactionId }),
+    settlement: settlementFor(executionResult),
   })
   if (settleResult instanceof Error) {
     recordExceptionInCurrentSpan({ error: settleResult })
   }
 
-  return result
+  return executionResult.result
 }

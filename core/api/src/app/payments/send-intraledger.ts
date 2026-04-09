@@ -1,5 +1,9 @@
 import { getPriceRatioForLimits } from "./helpers"
-import { withSpendingLimits } from "./spending-limits"
+import {
+  recordSettlement,
+  reverseSettlement,
+  withSpendingLimits,
+} from "./spending-limits"
 
 import { getValuesToSkipProbe } from "@/config"
 
@@ -297,7 +301,7 @@ const executePaymentViaIntraledger = async <
         }),
       )
       if (journalId instanceof Error) {
-        return { result: journalId }
+        return reverseSettlement({ result: journalId })
       }
 
       const recipientWalletTransaction = await getTransactionForWalletByJournalId({
@@ -305,7 +309,10 @@ const executePaymentViaIntraledger = async <
         journalId,
       })
       if (recipientWalletTransaction instanceof Error) {
-        return { result: recipientWalletTransaction }
+        return recordSettlement({
+          result: recipientWalletTransaction,
+          settlementTransactionId: journalId,
+        })
       }
 
       NotificationsService().sendTransaction({
@@ -318,7 +325,10 @@ const executePaymentViaIntraledger = async <
         journalId,
       })
       if (senderWalletTransaction instanceof Error) {
-        return { result: senderWalletTransaction }
+        return recordSettlement({
+          result: senderWalletTransaction,
+          settlementTransactionId: journalId,
+        })
       }
 
       NotificationsService().sendTransaction({
@@ -326,13 +336,13 @@ const executePaymentViaIntraledger = async <
         transaction: senderWalletTransaction,
       })
 
-      return {
+      return recordSettlement({
         result: {
           status: PaymentSendStatus.Success,
           transaction: senderWalletTransaction,
         },
         settlementTransactionId: journalId,
-      }
+      })
     },
   })
   return paymentSendResult

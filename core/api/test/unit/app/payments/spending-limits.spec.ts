@@ -23,9 +23,16 @@ jest.mock("@/app/accounts", () => ({
   checkWithdrawalLimits: jest.fn(),
 }))
 
-import { withSpendingLimits } from "@/app/payments/spending-limits"
+import {
+  recordSettlement,
+  reverseSettlement,
+  SpendingLimitsSettlement,
+  withSpendingLimits,
+} from "@/app/payments/spending-limits"
 import { PaymentSendStatus } from "@/domain/bitcoin/lightning"
 import { ApiKeyLimitExceededError } from "@/domain/api-keys/errors"
+import { CouldNotFindError } from "@/domain/errors"
+import { ErrorLevel } from "@/domain/shared"
 import { SettlementMethod } from "@/domain/wallets"
 import { recordExceptionInCurrentSpan } from "@/services/tracing"
 import {
@@ -87,10 +94,11 @@ describe("withSpendingLimits", () => {
       priceRatioForLimits: {} as WalletPriceRatio,
       apiKeyId,
       btcPaymentAmount,
-      execute: async () => ({
-        result: paymentSendSuccessResult,
-        settlementTransactionId: journalId,
-      }),
+      execute: async () =>
+        recordSettlement({
+          result: paymentSendSuccessResult,
+          settlementTransactionId: journalId,
+        }),
     })
 
     expect(result).toBe(accountLimitError)
@@ -105,10 +113,11 @@ describe("withSpendingLimits", () => {
       priceRatioForLimits: {} as WalletPriceRatio,
       apiKeyId,
       btcPaymentAmount,
-      execute: async () => ({
-        result: paymentSendSuccessResult,
-        settlementTransactionId: journalId,
-      }),
+      execute: async () =>
+        recordSettlement({
+          result: paymentSendSuccessResult,
+          settlementTransactionId: journalId,
+        }),
     })
 
     expect(result).toEqual(paymentSendSuccessResult)
@@ -120,7 +129,7 @@ describe("withSpendingLimits", () => {
     expect(mockApiKeys.reverseSpending).not.toHaveBeenCalled()
   })
 
-  it("reverses settlement when success result is already paid", async () => {
+  it("reverses settlement when execution returns reverse intent for already-paid result", async () => {
     const result = await withSpendingLimits({
       settlementMethod: SettlementMethod.Lightning,
       accountId: "sender-account-id" as AccountId,
@@ -128,10 +137,7 @@ describe("withSpendingLimits", () => {
       priceRatioForLimits: {} as WalletPriceRatio,
       apiKeyId,
       btcPaymentAmount,
-      execute: async () => ({
-        result: paymentSendAlreadyPaidResult,
-        settlementTransactionId: journalId,
-      }),
+      execute: async () => reverseSettlement({ result: paymentSendAlreadyPaidResult }),
     })
 
     expect(result).toEqual(paymentSendAlreadyPaidResult)
@@ -139,7 +145,7 @@ describe("withSpendingLimits", () => {
     expect(mockApiKeys.recordSpending).not.toHaveBeenCalled()
   })
 
-  it("reverses settlement when already-paid result has no settlement transaction id", async () => {
+  it("reverses settlement when execution returns reverse intent for failure result", async () => {
     const result = await withSpendingLimits({
       settlementMethod: SettlementMethod.Lightning,
       accountId: "sender-account-id" as AccountId,
@@ -147,28 +153,7 @@ describe("withSpendingLimits", () => {
       priceRatioForLimits: {} as WalletPriceRatio,
       apiKeyId,
       btcPaymentAmount,
-      execute: async () => ({
-        result: paymentSendAlreadyPaidResult,
-      }),
-    })
-
-    expect(result).toEqual(paymentSendAlreadyPaidResult)
-    expect(mockApiKeys.reverseSpending).toHaveBeenCalled()
-    expect(mockApiKeys.recordSpending).not.toHaveBeenCalled()
-  })
-
-  it("reverses settlement when failure result has settlement transaction id", async () => {
-    const result = await withSpendingLimits({
-      settlementMethod: SettlementMethod.Lightning,
-      accountId: "sender-account-id" as AccountId,
-      usdPaymentAmount: { amount: 1000n, currency: "USD" } as UsdPaymentAmount,
-      priceRatioForLimits: {} as WalletPriceRatio,
-      apiKeyId,
-      btcPaymentAmount,
-      execute: async () => ({
-        result: paymentSendFailureResult,
-        settlementTransactionId: journalId,
-      }),
+      execute: async () => reverseSettlement({ result: paymentSendFailureResult }),
     })
 
     expect(result).toEqual(paymentSendFailureResult)
@@ -176,7 +161,7 @@ describe("withSpendingLimits", () => {
     expect(mockApiKeys.recordSpending).not.toHaveBeenCalled()
   })
 
-  it("reverses settlement when execution fails without settlement transaction id", async () => {
+  it("reverses settlement when execution error is returned with reverse intent", async () => {
     const executionError = new ApiKeyLimitExceededError()
 
     const result = await withSpendingLimits({
@@ -186,9 +171,7 @@ describe("withSpendingLimits", () => {
       priceRatioForLimits: {} as WalletPriceRatio,
       apiKeyId,
       btcPaymentAmount,
-      execute: async () => ({
-        result: executionError,
-      }),
+      execute: async () => reverseSettlement({ result: executionError }),
     })
 
     expect(result).toBe(executionError)
@@ -196,8 +179,8 @@ describe("withSpendingLimits", () => {
     expect(mockApiKeys.recordSpending).not.toHaveBeenCalled()
   })
 
-  it("reverses settlement when execution fails with settlement transaction id", async () => {
-    const executionError = new ApiKeyLimitExceededError()
+  it("records settlement for lightning-style post-journal lookup errors", async () => {
+    const executionError = new CouldNotFindError("wallet transaction")
 
     const result = await withSpendingLimits({
       settlementMethod: SettlementMethod.Lightning,
@@ -206,15 +189,38 @@ describe("withSpendingLimits", () => {
       priceRatioForLimits: {} as WalletPriceRatio,
       apiKeyId,
       btcPaymentAmount,
-      execute: async () => ({
-        result: executionError,
-        settlementTransactionId: journalId,
-      }),
+      execute: async () =>
+        recordSettlement({
+          result: executionError,
+          settlementTransactionId: journalId,
+        }),
     })
 
     expect(result).toBe(executionError)
-    expect(mockApiKeys.reverseSpending).toHaveBeenCalled()
-    expect(mockApiKeys.recordSpending).not.toHaveBeenCalled()
+    expect(mockApiKeys.recordSpending).toHaveBeenCalled()
+    expect(mockApiKeys.reverseSpending).not.toHaveBeenCalled()
+  })
+
+  it("records settlement for on-chain-style post-journal lookup errors", async () => {
+    const executionError = new CouldNotFindError("wallet transaction")
+
+    const result = await withSpendingLimits({
+      settlementMethod: SettlementMethod.OnChain,
+      accountId: "sender-account-id" as AccountId,
+      usdPaymentAmount: { amount: 1000n, currency: "USD" } as UsdPaymentAmount,
+      priceRatioForLimits: {} as WalletPriceRatio,
+      apiKeyId,
+      btcPaymentAmount,
+      execute: async () =>
+        recordSettlement({
+          result: executionError,
+          settlementTransactionId: journalId,
+        }),
+    })
+
+    expect(result).toBe(executionError)
+    expect(mockApiKeys.recordSpending).toHaveBeenCalled()
+    expect(mockApiKeys.reverseSpending).not.toHaveBeenCalled()
   })
 
   it("records exception when settlement fails", async () => {
@@ -228,10 +234,11 @@ describe("withSpendingLimits", () => {
       priceRatioForLimits: {} as WalletPriceRatio,
       apiKeyId,
       btcPaymentAmount,
-      execute: async () => ({
-        result: paymentSendSuccessResult,
-        settlementTransactionId: journalId,
-      }),
+      execute: async () =>
+        recordSettlement({
+          result: paymentSendSuccessResult,
+          settlementTransactionId: journalId,
+        }),
     })
 
     expect(result).toEqual(paymentSendSuccessResult)
@@ -249,10 +256,11 @@ describe("withSpendingLimits", () => {
       priceRatioForLimits: {} as WalletPriceRatio,
       apiKeyId,
       btcPaymentAmount,
-      execute: async () => ({
-        result: paymentSendSuccessResult,
-        settlementTransactionId: journalId,
-      }),
+      execute: async () =>
+        recordSettlement({
+          result: paymentSendSuccessResult,
+          settlementTransactionId: journalId,
+        }),
     })
 
     expect(result).toEqual(paymentSendSuccessResult)
@@ -270,10 +278,11 @@ describe("withSpendingLimits", () => {
       priceRatioForLimits: {} as WalletPriceRatio,
       apiKeyId,
       btcPaymentAmount,
-      execute: async () => ({
-        result: paymentSendSuccessResult,
-        settlementTransactionId: journalId,
-      }),
+      execute: async () =>
+        recordSettlement({
+          result: paymentSendSuccessResult,
+          settlementTransactionId: journalId,
+        }),
     })
 
     expect(result).toEqual(paymentSendSuccessResult)
@@ -289,13 +298,37 @@ describe("withSpendingLimits", () => {
       priceRatioForLimits: {} as WalletPriceRatio,
       apiKeyId,
       btcPaymentAmount,
-      execute: async () => ({
-        result: paymentSendSuccessResult,
-        settlementTransactionId: journalId,
-      }),
+      execute: async () =>
+        recordSettlement({
+          result: paymentSendSuccessResult,
+          settlementTransactionId: journalId,
+        }),
     })
 
     expect(result).toEqual(paymentSendSuccessResult)
     expect(mockCheckWithdrawalLimits).toHaveBeenCalledTimes(1)
+  })
+
+  it("reverses and records error-level trace on invalid record settlement payload", async () => {
+    const result = await withSpendingLimits({
+      settlementMethod: SettlementMethod.Lightning,
+      accountId: "sender-account-id" as AccountId,
+      usdPaymentAmount: { amount: 1000n, currency: "USD" } as UsdPaymentAmount,
+      priceRatioForLimits: {} as WalletPriceRatio,
+      apiKeyId,
+      btcPaymentAmount,
+      execute: async () =>
+        ({
+          apiKeySettlement: SpendingLimitsSettlement.Record,
+          result: paymentSendSuccessResult,
+        }) as SpendingLimitsExecutionResult,
+    })
+
+    expect(result).toEqual(paymentSendSuccessResult)
+    expect(mockApiKeys.reverseSpending).toHaveBeenCalled()
+    expect(mockApiKeys.recordSpending).not.toHaveBeenCalled()
+    expect(mockRecordExceptionInCurrentSpan).toHaveBeenCalledWith(
+      expect.objectContaining({ level: ErrorLevel.Critical }),
+    )
   })
 })

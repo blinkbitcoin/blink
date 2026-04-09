@@ -1,5 +1,9 @@
 import { getPriceRatioForLimits } from "./helpers"
-import { withSpendingLimits } from "./spending-limits"
+import {
+  recordSettlement,
+  reverseSettlement,
+  withSpendingLimits,
+} from "./spending-limits"
 
 import { NETWORK, getOnChainWalletConfig } from "@/config"
 import {
@@ -313,7 +317,7 @@ const executePaymentViaIntraledger = async <
         }),
       )
       if (journalId instanceof Error) {
-        return { result: journalId }
+        return reverseSettlement({ result: journalId })
       }
 
       const recipientAsNotificationRecipient = {
@@ -330,7 +334,10 @@ const executePaymentViaIntraledger = async <
         journalId,
       })
       if (recipientWalletTransaction instanceof Error) {
-        return { result: recipientWalletTransaction }
+        return recordSettlement({
+          result: recipientWalletTransaction,
+          settlementTransactionId: journalId,
+        })
       }
 
       // Send 'received'-side intraledger notification
@@ -353,7 +360,10 @@ const executePaymentViaIntraledger = async <
         journalId,
       })
       if (senderWalletTransaction instanceof Error) {
-        return { result: senderWalletTransaction }
+        return recordSettlement({
+          result: senderWalletTransaction,
+          settlementTransactionId: journalId,
+        })
       }
 
       NotificationsService().sendTransaction({
@@ -361,13 +371,13 @@ const executePaymentViaIntraledger = async <
         transaction: senderWalletTransaction,
       })
 
-      return {
+      return recordSettlement({
         result: {
           status: PaymentSendStatus.Success,
           transaction: senderWalletTransaction,
         },
         settlementTransactionId: journalId,
-      }
+      })
     },
   })
   return paymentSendResult
@@ -578,7 +588,7 @@ const executePaymentViaOnChain = async <
           }),
       )
       if (journalId instanceof Error) {
-        return { result: journalId }
+        return reverseSettlement({ result: journalId })
       }
 
       const walletTransaction = await getTransactionForWalletByJournalId({
@@ -586,13 +596,16 @@ const executePaymentViaOnChain = async <
         journalId,
       })
       if (walletTransaction instanceof Error) {
-        return { result: walletTransaction }
+        return recordSettlement({
+          result: walletTransaction,
+          settlementTransactionId: journalId,
+        })
       }
 
-      return {
+      return recordSettlement({
         result: { status: PaymentSendStatus.Success, transaction: walletTransaction },
         settlementTransactionId: journalId,
-      }
+      })
     },
   })
   return paymentSendResult

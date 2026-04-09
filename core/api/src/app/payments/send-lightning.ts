@@ -5,7 +5,11 @@ import {
   LnSendAttemptResult,
   PaymentSendAttemptResultType,
 } from "./ln-send-result"
-import { withSpendingLimits } from "./spending-limits"
+import {
+  recordSettlement,
+  reverseSettlement,
+  withSpendingLimits,
+} from "./spending-limits"
 import { reimburseFee } from "./reimburse-fee"
 
 import { AccountValidator } from "@/domain/accounts"
@@ -514,21 +518,19 @@ const executePaymentViaIntraledger = async <
           }),
       )
       if (paymentSendAttemptResult instanceof Error) {
-        return { result: paymentSendAttemptResult }
+        return reverseSettlement({ result: paymentSendAttemptResult })
       }
 
       switch (paymentSendAttemptResult.type) {
         case PaymentSendAttemptResultType.Error:
-          return { result: paymentSendAttemptResult.error }
+          return reverseSettlement({ result: paymentSendAttemptResult.error })
 
         case PaymentSendAttemptResultType.AlreadyPaid: {
           const result = await getAlreadyPaidResponse({
             walletId: senderWalletId,
             paymentHash,
           })
-          if (result instanceof Error) return { result }
-
-          return { result }
+          return reverseSettlement({ result })
         }
       }
 
@@ -539,7 +541,10 @@ const executePaymentViaIntraledger = async <
         journalId,
       })
       if (recipientWalletTransaction instanceof Error) {
-        return { result: recipientWalletTransaction }
+        return recordSettlement({
+          result: recipientWalletTransaction,
+          settlementTransactionId: journalId,
+        })
       }
       NotificationsService().sendTransaction({
         recipient: recipientAsNotificationRecipient,
@@ -551,20 +556,23 @@ const executePaymentViaIntraledger = async <
         journalId,
       })
       if (senderWalletTransaction instanceof Error) {
-        return { result: senderWalletTransaction }
+        return recordSettlement({
+          result: senderWalletTransaction,
+          settlementTransactionId: journalId,
+        })
       }
       NotificationsService().sendTransaction({
         recipient: senderAsNotificationRecipient,
         transaction: senderWalletTransaction,
       })
 
-      return {
+      return recordSettlement({
         result: {
           status: PaymentSendStatus.Success,
           transaction: senderWalletTransaction,
         },
         settlementTransactionId: journalId,
-      }
+      })
     },
   })
   return paymentSendResult
@@ -802,17 +810,36 @@ const executePaymentViaLn = async ({
           }),
       )
       if (paymentSendAttemptResult instanceof Error) {
-        return { result: paymentSendAttemptResult }
+        return reverseSettlement({ result: paymentSendAttemptResult })
       }
       if (paymentSendAttemptResult.type === PaymentSendAttemptResultType.Error) {
-        return { result: paymentSendAttemptResult.error }
+        return reverseSettlement({ result: paymentSendAttemptResult.error })
+      }
+
+      if (paymentSendAttemptResult.type === PaymentSendAttemptResultType.AlreadyPaid) {
+        const { paymentHash } = decodedInvoice
+        const result = await getAlreadyPaidResponse({
+          walletId: senderWalletId,
+          paymentHash,
+        })
+        return reverseSettlement({ result })
       }
 
       const walletTransaction = await getTransactionForWalletByJournalId({
         walletId: senderWalletId,
         journalId: paymentSendAttemptResult.journalId,
       })
-      if (walletTransaction instanceof Error) return { result: walletTransaction }
+      if (walletTransaction instanceof Error) {
+        if (
+          paymentSendAttemptResult.type === PaymentSendAttemptResultType.ErrorWithJournal
+        ) {
+          return reverseSettlement({ result: walletTransaction })
+        }
+        return recordSettlement({
+          result: walletTransaction,
+          settlementTransactionId: paymentSendAttemptResult.journalId,
+        })
+      }
       NotificationsService().sendTransaction({
         recipient: notificationRecipient,
         transaction: walletTransaction,
@@ -821,40 +848,34 @@ const executePaymentViaLn = async ({
       const { paymentHash } = decodedInvoice
       switch (paymentSendAttemptResult.type) {
         case PaymentSendAttemptResultType.ErrorWithJournal:
-          return {
-            result: paymentSendAttemptResult.error,
-          }
+          return reverseSettlement({ result: paymentSendAttemptResult.error })
 
         case PaymentSendAttemptResultType.Pending: {
           const result = await getPendingPaymentResponse({
             walletId: senderWalletId,
             paymentHash,
           })
-          if (result instanceof Error) return { result }
+          if (result instanceof Error) {
+            return recordSettlement({
+              result,
+              settlementTransactionId: paymentSendAttemptResult.journalId,
+            })
+          }
 
-          return {
+          return recordSettlement({
             result,
             settlementTransactionId: paymentSendAttemptResult.journalId,
-          }
-        }
-
-        case PaymentSendAttemptResultType.AlreadyPaid: {
-          const result = await getAlreadyPaidResponse({
-            walletId: senderWalletId,
-            paymentHash,
           })
-
-          return { result }
         }
 
         default:
-          return {
+          return recordSettlement({
             result: {
               status: PaymentSendStatus.Success,
               transaction: walletTransaction,
             },
             settlementTransactionId: paymentSendAttemptResult.journalId,
-          }
+          })
       }
     },
   })
