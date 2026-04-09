@@ -1,4 +1,5 @@
 import {
+  ApiKeySpendingSettlementType,
   lockApiKeySpending,
   reverseApiKeySpendingSettlement,
   recordApiKeySpendingSettlement,
@@ -15,11 +16,6 @@ import { ErrorLevel } from "@/domain/shared"
 import { SettlementMethod } from "@/domain/wallets"
 import { recordExceptionInCurrentSpan } from "@/services/tracing"
 
-export const SpendingLimitsSettlement = {
-  Record: "record",
-  Reverse: "reverse",
-} as const
-
 export const recordSettlement = ({
   result,
   settlementTransactionId,
@@ -27,7 +23,7 @@ export const recordSettlement = ({
   result: PaymentSendResult | ApplicationError
   settlementTransactionId: LedgerJournalId
 }): SpendingLimitsExecutionResult => ({
-  apiKeySettlement: SpendingLimitsSettlement.Record,
+  apiKeySettlement: ApiKeySpendingSettlementType.Record,
   settlementTransactionId,
   result,
 })
@@ -37,7 +33,7 @@ export const reverseSettlement = ({
 }: {
   result: PaymentSendResult | ApplicationError
 }): SpendingLimitsExecutionResult => ({
-  apiKeySettlement: SpendingLimitsSettlement.Reverse,
+  apiKeySettlement: ApiKeySpendingSettlementType.Reverse,
   result,
 })
 
@@ -47,7 +43,7 @@ const settlementFor = (
   const { apiKeySettlement } = executionResult
 
   if (
-    apiKeySettlement === SpendingLimitsSettlement.Record &&
+    apiKeySettlement === ApiKeySpendingSettlementType.Record &&
     !executionResult.settlementTransactionId
   ) {
     recordExceptionInCurrentSpan({
@@ -60,10 +56,10 @@ const settlementFor = (
   }
 
   switch (apiKeySettlement) {
-    case SpendingLimitsSettlement.Record:
+    case ApiKeySpendingSettlementType.Record:
       return recordApiKeySpendingSettlement(executionResult.settlementTransactionId)
 
-    case SpendingLimitsSettlement.Reverse:
+    case ApiKeySpendingSettlementType.Reverse:
       return reverseApiKeySpendingSettlement()
 
     default: {

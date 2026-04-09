@@ -23,10 +23,10 @@ jest.mock("@/app/accounts", () => ({
   checkWithdrawalLimits: jest.fn(),
 }))
 
+import { ApiKeySpendingSettlementType } from "@/app/payments/api-key-spending"
 import {
   recordSettlement,
   reverseSettlement,
-  SpendingLimitsSettlement,
   withSpendingLimits,
 } from "@/app/payments/spending-limits"
 import { PaymentSendStatus } from "@/domain/bitcoin/lightning"
@@ -319,7 +319,7 @@ describe("withSpendingLimits", () => {
       btcPaymentAmount,
       execute: async () =>
         ({
-          apiKeySettlement: SpendingLimitsSettlement.Record,
+          apiKeySettlement: ApiKeySpendingSettlementType.Record,
           result: paymentSendSuccessResult,
         }) as SpendingLimitsExecutionResult,
     })

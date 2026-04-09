@@ -22,19 +22,17 @@ type ApiKeySpendingSettlement =
 
 // NOTE: api-key settlement behavior must be explicit and must not be inferred
 // from result shape/status (e.g. result instanceof Error).
-type SpendingLimitsSettlementObj =
-  typeof import("./spending-limits").SpendingLimitsSettlement
-type SpendingLimitsSettlement =
-  SpendingLimitsSettlementObj[keyof SpendingLimitsSettlementObj]
+type ApiKeySpendingSettlementTypeObj =
+  typeof import("./api-key-spending").ApiKeySpendingSettlementType
 
 type SpendingLimitsExecutionResult =
   | {
-      apiKeySettlement: SpendingLimitsSettlementObj["Record"]
+      apiKeySettlement: ApiKeySpendingSettlementTypeObj["Record"]
       settlementTransactionId: LedgerJournalId
       result: PaymentSendResult | ApplicationError
     }
   | {
-      apiKeySettlement: SpendingLimitsSettlementObj["Reverse"]
+      apiKeySettlement: ApiKeySpendingSettlementTypeObj["Reverse"]
       result: PaymentSendResult | ApplicationError
     }
 

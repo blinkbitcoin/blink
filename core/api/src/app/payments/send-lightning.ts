@@ -830,6 +830,11 @@ const executePaymentViaLn = async ({
         journalId: paymentSendAttemptResult.journalId,
       })
       if (walletTransaction instanceof Error) {
+        if (
+          paymentSendAttemptResult.type === PaymentSendAttemptResultType.ErrorWithJournal
+        ) {
+          return reverseSettlement({ result: walletTransaction })
+        }
         return recordSettlement({
           result: walletTransaction,
           settlementTransactionId: paymentSendAttemptResult.journalId,
@@ -843,10 +848,7 @@ const executePaymentViaLn = async ({
       const { paymentHash } = decodedInvoice
       switch (paymentSendAttemptResult.type) {
         case PaymentSendAttemptResultType.ErrorWithJournal:
-          return recordSettlement({
-            result: paymentSendAttemptResult.error,
-            settlementTransactionId: paymentSendAttemptResult.journalId,
-          })
+          return reverseSettlement({ result: paymentSendAttemptResult.error })
 
         case PaymentSendAttemptResultType.Pending: {
           const result = await getPendingPaymentResponse({
