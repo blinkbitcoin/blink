@@ -20,9 +20,9 @@ export const handleCommonApiKeysErrors = (err: Error | string | unknown) => {
       return new InvalidApiKeyIdError(errMsg)
 
     case match(KnownApiKeysErrorMessages.InvalidAmountError):
-      return new ApiKeySpendingRecordError(errMsg)
-
     case match(KnownApiKeysErrorMessages.AmountMismatchError):
+    case match(KnownApiKeysErrorMessages.MissingTransactionIdError):
+    case match(KnownApiKeysErrorMessages.EphemeralNotFoundError):
       return new ApiKeySpendingRecordError(errMsg)
 
     case match(KnownApiKeysErrorMessages.InvalidLimitError):
@@ -39,6 +39,7 @@ export const KnownApiKeysErrorMessages = {
   InvalidAmountError:
     /Negative amount not allowed|Amount must be positive|Invalid limit amount \(must be positive\)/,
   AmountMismatchError: /Spending amount mismatch for transaction reference/,
+  MissingTransactionIdError: /Missing transaction id for ephemeral finalization/,
+  EphemeralNotFoundError: /Ephemeral reservation not found:/,
   InvalidLimitError: /Invalid limit value/,
-  DatabaseError: /Database/,
 } as const
