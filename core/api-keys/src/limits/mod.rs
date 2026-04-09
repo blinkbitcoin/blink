@@ -195,39 +195,87 @@ impl Limits {
             Some(eid) => {
                 let txn_id = transaction_id.ok_or(LimitError::MissingTransactionId)?;
 
-                let result = sqlx::query!(
+                let mut tx = self.pool.begin().await?;
+
+                let duplicate_txn = sqlx::query!(
                     r#"
-                    UPDATE api_key_transactions
-                    SET transaction_id = $1
-                    WHERE transaction_id = $2
-                      AND api_key_id = $3
+                    SELECT amount_sats
+                    FROM api_key_transactions
+                    WHERE transaction_id = $1
+                      AND api_key_id = $2
+                    FOR UPDATE
                     "#,
                     &txn_id,
+                    api_key_id as IdentityApiKeyId,
+                )
+                .fetch_optional(&mut *tx)
+                .await?;
+
+                if let Some(duplicate_txn) = duplicate_txn {
+                    if duplicate_txn.amount_sats != amount_sats {
+                        return Err(LimitError::AmountMismatch);
+                    }
+                }
+
+                let ephemeral_txn = sqlx::query!(
+                    r#"
+                    SELECT amount_sats, transaction_id
+                    FROM api_key_transactions
+                    WHERE transaction_id = $1
+                      AND api_key_id = $2
+                    FOR UPDATE
+                    "#,
                     &eid,
                     api_key_id as IdentityApiKeyId,
                 )
-                .execute(&self.pool)
+                .fetch_optional(&mut *tx)
                 .await?;
 
-                if result.rows_affected() == 0 {
-                    // Check if already finalized (idempotent retry)
-                    let already_recorded = sqlx::query_scalar!(
+                if let Some(ephemeral_txn) = ephemeral_txn {
+                    if ephemeral_txn.amount_sats != amount_sats {
+                        return Err(LimitError::AmountMismatch);
+                    }
+
+                    sqlx::query!(
                         r#"
-                        SELECT 1 as "exists!"
-                        FROM api_key_transactions
-                        WHERE transaction_id = $1
-                          AND api_key_id = $2
+                        UPDATE api_key_transactions
+                        SET transaction_id = $1
+                        WHERE transaction_id = $2
+                          AND api_key_id = $3
                         "#,
                         &txn_id,
+                        &eid,
                         api_key_id as IdentityApiKeyId,
                     )
-                    .fetch_optional(&self.pool)
+                    .execute(&mut *tx)
                     .await?;
 
-                    if already_recorded.is_none() {
-                        return Err(LimitError::EphemeralNotFound(eid));
-                    }
+                    tx.commit().await?;
+                    return Ok(());
                 }
+
+                // Idempotent retry: ephemeral row already finalized, check canonical txn row
+                let finalized_txn = sqlx::query!(
+                    r#"
+                    SELECT amount_sats
+                    FROM api_key_transactions
+                    WHERE transaction_id = $1
+                      AND api_key_id = $2
+                    FOR UPDATE
+                    "#,
+                    &txn_id,
+                    api_key_id as IdentityApiKeyId,
+                )
+                .fetch_optional(&mut *tx)
+                .await?;
+
+                let finalized_txn = finalized_txn.ok_or(LimitError::EphemeralNotFound(eid))?;
+
+                if finalized_txn.amount_sats != amount_sats {
+                    return Err(LimitError::AmountMismatch);
+                }
+
+                tx.commit().await?;
             }
             None => {
                 let txn_id = transaction_id.ok_or(LimitError::MissingTransactionId)?;

@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                        UPDATE api_key_transactions\n                        SET transaction_id = $1\n                        WHERE transaction_id = $2\n                          AND api_key_id = $3\n                        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3dfccb253bd325b5b387477116b421be0dd5b0c10a3e34f7cc28ac315d327368"
+}

@@ -196,7 +196,7 @@ describe("withSpendingLimits", () => {
     expect(mockApiKeys.recordSpending).not.toHaveBeenCalled()
   })
 
-  it("records settlement when execution fails with settlement transaction id", async () => {
+  it("reverses settlement when execution fails with settlement transaction id", async () => {
     const executionError = new ApiKeyLimitExceededError()
 
     const result = await withSpendingLimits({
@@ -213,8 +213,8 @@ describe("withSpendingLimits", () => {
     })
 
     expect(result).toBe(executionError)
-    expect(mockApiKeys.recordSpending).toHaveBeenCalled()
-    expect(mockApiKeys.reverseSpending).not.toHaveBeenCalled()
+    expect(mockApiKeys.reverseSpending).toHaveBeenCalled()
+    expect(mockApiKeys.recordSpending).not.toHaveBeenCalled()
   })
 
   it("records exception when settlement fails", async () => {

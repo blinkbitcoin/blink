@@ -22,6 +22,9 @@ export const handleCommonApiKeysErrors = (err: Error | string | unknown) => {
     case match(KnownApiKeysErrorMessages.InvalidAmountError):
       return new ApiKeySpendingRecordError(errMsg)
 
+    case match(KnownApiKeysErrorMessages.AmountMismatchError):
+      return new ApiKeySpendingRecordError(errMsg)
+
     case match(KnownApiKeysErrorMessages.InvalidLimitError):
       return new ApiKeyInvalidLimitError(errMsg)
 
@@ -35,6 +38,7 @@ export const KnownApiKeysErrorMessages = {
   InvalidApiKeyId: /Invalid API key ID/,
   InvalidAmountError:
     /Negative amount not allowed|Amount must be positive|Invalid limit amount \(must be positive\)/,
+  AmountMismatchError: /Spending amount mismatch for transaction reference/,
   InvalidLimitError: /Invalid limit value/,
   DatabaseError: /Database/,
 } as const

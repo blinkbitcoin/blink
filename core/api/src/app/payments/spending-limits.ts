@@ -15,9 +15,8 @@ import { PaymentSendStatus } from "@/domain/bitcoin/lightning"
 import { SettlementMethod } from "@/domain/wallets"
 import { recordExceptionInCurrentSpan } from "@/services/tracing"
 
-// Records spending when a journal entry exists (settlementTransactionId is present),
-// reverses the lock otherwise. AlreadyPaid and Failure are reversed even with a journal
-// since no net new spending occurred.
+// Records spending only for successful/pending outcomes when a settlement transaction exists.
+// Reverses lock otherwise.
 const settlementFor = ({
   result,
   settlementTransactionId,
@@ -25,13 +24,9 @@ const settlementFor = ({
   result: PaymentSendResult | ApplicationError
   settlementTransactionId?: LedgerJournalId
 }): ApiKeySpendingSettlement => {
-  if (!settlementTransactionId) return reverseApiKeySpendingSettlement()
-
-  if (result instanceof Error) {
-    return recordApiKeySpendingSettlement(settlementTransactionId)
-  }
-
   if (
+    !settlementTransactionId ||
+    result instanceof Error ||
     result.status === PaymentSendStatus.AlreadyPaid ||
     result.status === PaymentSendStatus.Failure
   ) {

@@ -823,7 +823,6 @@ const executePaymentViaLn = async ({
         case PaymentSendAttemptResultType.ErrorWithJournal:
           return {
             result: paymentSendAttemptResult.error,
-            settlementTransactionId: paymentSendAttemptResult.journalId,
           }
 
         case PaymentSendAttemptResultType.Pending: {
@@ -844,7 +843,6 @@ const executePaymentViaLn = async ({
             walletId: senderWalletId,
             paymentHash,
           })
-          if (result instanceof Error) return { result }
 
           return { result }
         }

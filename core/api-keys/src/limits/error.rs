@@ -11,6 +11,9 @@ pub enum LimitError {
     #[error("Missing transaction id for ephemeral finalization")]
     MissingTransactionId,
 
+    #[error("Spending amount mismatch for transaction reference")]
+    AmountMismatch,
+
     #[error("{0} spending limit exceeded")]
     LimitExceeded(String),
 

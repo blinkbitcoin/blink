@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                    SELECT amount_sats\n                    FROM api_key_transactions\n                    WHERE transaction_id = $1\n                      AND api_key_id = $2\n                    FOR UPDATE\n                    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "amount_sats",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "51351754fbad093aa266a1694c6dc3b109364bfa6f0b54a00aa3cce03a488540"
+}
