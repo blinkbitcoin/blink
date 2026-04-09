@@ -211,6 +211,10 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       message = "A valid usd amount is required"
       return new ValidationInternalError({ message, logger: baseLogger })
 
+    case "BigIntToNumberConversionError":
+      message = "Sats amount passed is too large to be safely converted"
+      return new ValidationInternalError({ message, logger: baseLogger })
+
     case "BtcAmountTooLargeError":
       message = "Sats amount passed is too large"
       return new ValidationInternalError({ message, logger: baseLogger })

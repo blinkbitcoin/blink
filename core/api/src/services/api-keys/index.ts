@@ -8,6 +8,7 @@ import * as apiKeysGrpc from "./grpc-client"
 
 import { handleCommonApiKeysErrors } from "./errors"
 
+import { safeIntFromBigInt } from "@/domain/shared"
 import { baseLogger } from "@/services/logger"
 import { wrapAsyncFunctionsToRunInSpan } from "@/services/tracing"
 
@@ -20,7 +21,8 @@ export const ApiKeysService = (): IApiKeysService => {
     amount: BtcPaymentAmount
   }): Promise<EphemeralId | ApiKeysServiceError> => {
     try {
-      const amountSats = Number(amount.amount)
+      const amountSats = safeIntFromBigInt(amount.amount)
+      if (amountSats instanceof Error) return amountSats
       const request = new CheckAndLockSpendingRequest()
       request.setApiKeyId(apiKeyId)
       request.setAmountSats(amountSats)
@@ -49,7 +51,8 @@ export const ApiKeysService = (): IApiKeysService => {
     ephemeralId: EphemeralId
   }): Promise<true | ApiKeysServiceError> => {
     try {
-      const amountSats = Number(amount.amount)
+      const amountSats = safeIntFromBigInt(amount.amount)
+      if (amountSats instanceof Error) return amountSats
       const request = new RecordSpendingRequest()
       request.setApiKeyId(apiKeyId)
       request.setAmountSats(amountSats)

@@ -107,6 +107,18 @@ impl Limits {
 
         let mut tx = self.pool.begin().await?;
 
+        // Acquire a transaction-scoped advisory lock keyed on a stable hash of the
+        // api_key_id. This serializes concurrent check_and_lock_spending calls for the
+        // same key, preventing two calls from both reading the spending aggregate before
+        // either inserts its ephemeral row (the FOR UPDATE on api_key_limits alone cannot
+        // block concurrent inserts into api_key_transactions when no limits row exists).
+        sqlx::query!(
+            "SELECT pg_advisory_xact_lock(hashtext($1)::bigint)",
+            api_key_id.to_string(),
+        )
+        .execute(&mut *tx)
+        .await?;
+
         let limits = sqlx::query!(
             r#"
             SELECT daily_limit_sats, weekly_limit_sats, monthly_limit_sats, annual_limit_sats
