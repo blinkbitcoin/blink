@@ -113,7 +113,7 @@ impl Limits {
         // either inserts its ephemeral row (the FOR UPDATE on api_key_limits alone cannot
         // block concurrent inserts into api_key_transactions when no limits row exists).
         sqlx::query!(
-            "SELECT pg_advisory_xact_lock(hashtext($1)::bigint)",
+            "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))",
             api_key_id.to_string(),
         )
         .execute(&mut *tx)
