@@ -856,12 +856,6 @@ const executePaymentViaLn = async ({
             walletId: senderWalletId,
             paymentHash,
           })
-          if (result instanceof Error) {
-            return recordSettlement({
-              result,
-              settlementTransactionId: paymentSendAttemptResult.journalId,
-            })
-          }
 
           return recordSettlement({
             result,
