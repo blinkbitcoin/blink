@@ -840,16 +840,18 @@ const executePaymentViaLn = async ({
           settlementTransactionId: paymentSendAttemptResult.journalId,
         })
       }
+
+      NotificationsService().sendTransaction({
+        recipient: notificationRecipient,
+        transaction: walletTransaction,
+      })
+
       const { paymentHash } = decodedInvoice
       switch (paymentSendAttemptResult.type) {
         case PaymentSendAttemptResultType.ErrorWithJournal:
           return reverseSettlement({ result: paymentSendAttemptResult.error })
 
         case PaymentSendAttemptResultType.Pending: {
-          NotificationsService().sendTransaction({
-            recipient: notificationRecipient,
-            transaction: walletTransaction,
-          })
           const result = await getPendingPaymentResponse({
             walletId: senderWalletId,
             paymentHash,
@@ -868,10 +870,6 @@ const executePaymentViaLn = async ({
         }
 
         default:
-          NotificationsService().sendTransaction({
-            recipient: notificationRecipient,
-            transaction: walletTransaction,
-          })
           return recordSettlement({
             result: {
               status: PaymentSendStatus.Success,
