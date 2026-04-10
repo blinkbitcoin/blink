@@ -5,7 +5,7 @@
     "eslint-check": "eslint src test --ext .ts",
     "eslint-fix": "eslint src test --ext .ts --fix",
     "circular-deps-check": "madge --circular --extensions ts src",
-    "build": "tsc -p tsconfig-build.json && cp -R src/services/price/protos dist/services/price/ && cp -R src/services/dealer-price/proto dist/services/dealer-price/ && cp -R src/services/bria/proto dist/services/bria/ && cp -R src/services/notifications/proto dist/services/notifications/ && tscpaths --silent -p tsconfig.json -s ./src -o ./dist",
+    "build": "tsc -p tsconfig-build.json && cp -R src/services/price/protos dist/services/price/ && cp -R src/services/dealer-price/proto dist/services/dealer-price/ && cp -R src/services/bria/proto dist/services/bria/ && cp -R src/services/notifications/proto dist/services/notifications/ && cp -R src/services/api-keys/proto dist/services/api-keys/ && tscpaths --silent -p tsconfig.json -s ./src -o ./dist",
     "trigger": "pnpm run build && node dist/servers/trigger.js | pino-pretty -c -l",
     "ws": "pnpm run build && node dist/servers/ws-server.js | pino-pretty -c -l",
     "watch": "nodemon -V -e ts,graphql -w ./src -x pnpm run start",
@@ -32,7 +32,8 @@
     "migrate:up": "migrate-mongo up -f src/migrations/migrate-mongo-config.js",
     "migrate:down": "migrate-mongo down -f src/migrations/migrate-mongo-config.js",
     "mongodb-migrate": "pnpm run migrate:status && pnpm run migrate:up && pnpm run migrate:status",
-    "codegen:notifications": "cd ./src/services/notifications/proto && buf generate"
+    "codegen:notifications": "cd ./src/services/notifications/proto && buf generate",
+    "codegen:api-keys": "cd ./src/services/api-keys/proto && buf generate"
   },
   "engines": {
     "node": "20"
@@ -64,7 +65,7 @@
     "@prelude.so/sdk": "^0.7.0",
     "@t3-oss/env-core": "^0.7.3",
     "ajv": "^8.17.1",
-    "axios": "^1.11.0",
+    "axios": "^1.15.0",
     "axios-retry": "^4.5.0",
     "basic-auth": "^2.0.1",
     "bignumber.js": "^9.3.1",

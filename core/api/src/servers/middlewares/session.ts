@@ -30,6 +30,10 @@ export const sessionPublicContext = async ({
   )
   const sub = tokenPayload?.sub
   const appId = tokenPayload?.client_id
+  let apiKeyId: ApiKeyId | undefined
+  if (typeof tokenPayload?.api_key_id === "string") {
+    apiKeyId = tokenPayload.api_key_id as ApiKeyId
+  }
 
   // note: value should match (ie: "anon") if not an accountId
   // settings from dev/ory/oathkeeper.yml/authenticator/anonymous/config/subjet
@@ -87,6 +91,7 @@ export const sessionPublicContext = async ({
     sessionId,
     scope,
     appId,
+    apiKeyId,
   }
 }
 

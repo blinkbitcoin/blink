@@ -1,12 +1,13 @@
 import { getPriceRatioForLimits } from "./helpers"
+import {
+  recordSettlement,
+  reverseSettlement,
+  withSpendingLimits,
+} from "./spending-limits"
 
 import { getValuesToSkipProbe } from "@/config"
 
-import {
-  checkIntraledgerLimits,
-  checkTradeIntraAccountLimits,
-  createIntraledgerContact,
-} from "@/app/accounts"
+import { createIntraledgerContact } from "@/app/accounts"
 import {
   btcFromUsdMidPriceFn,
   getCurrentPriceAsDisplayPriceRatio,
@@ -53,6 +54,7 @@ const intraledgerPaymentSendWalletId = async ({
   amount: uncheckedAmount,
   memo,
   senderWalletId: uncheckedSenderWalletId,
+  apiKeyId,
 }: IntraLedgerPaymentSendWalletIdArgs): Promise<PaymentSendResult | ApplicationError> => {
   const validatedPaymentInputs = await validateIntraledgerPaymentInputs({
     uncheckedSenderWalletId,
@@ -128,7 +130,9 @@ const intraledgerPaymentSendWalletId = async ({
     recipientUser,
     senderUser,
     memo,
+    apiKeyId,
   })
+
   if (paymentSendResult instanceof Error) return paymentSendResult
 
   if (senderAccount.id !== recipientAccount.id) {
@@ -231,6 +235,7 @@ const executePaymentViaIntraledger = async <
   recipientUser,
   senderUser,
   memo,
+  apiKeyId,
 }: {
   paymentFlow: PaymentFlow<S, R>
   senderAccount: Account
@@ -239,6 +244,7 @@ const executePaymentViaIntraledger = async <
   recipientUser: User
   senderUser: User
   memo: string | null
+  apiKeyId?: ApiKeyId
 }): Promise<PaymentSendResult | ApplicationError> => {
   addAttributesToCurrentSpan({
     "payment.settlement_method": SettlementMethod.IntraLedger,
@@ -246,17 +252,6 @@ const executePaymentViaIntraledger = async <
 
   const priceRatioForLimits = await getPriceRatioForLimits(paymentFlow.paymentAmounts())
   if (priceRatioForLimits instanceof Error) return priceRatioForLimits
-
-  const checkLimits =
-    senderAccount.id === recipientAccount.id
-      ? checkTradeIntraAccountLimits
-      : checkIntraledgerLimits
-  const limitCheck = await checkLimits({
-    amount: paymentFlow.usdPaymentAmount,
-    accountId: senderAccount.id,
-    priceRatio: priceRatioForLimits,
-  })
-  if (limitCheck instanceof Error) return limitCheck
 
   const { walletDescriptor: recipientWalletDescriptor } = paymentFlow.recipientDetails()
   if (!recipientWalletDescriptor) {
@@ -283,45 +278,74 @@ const executePaymentViaIntraledger = async <
     phoneNumber: senderUser.phone,
   }
 
-  const journalId = await LockService().lockWalletId(senderWalletId, async (signal) =>
-    lockedPaymentViaIntraledgerSteps({
-      signal,
+  const paymentSendResult = await withSpendingLimits({
+    settlementMethod: SettlementMethod.IntraLedger,
+    accountId: senderAccount.id,
+    recipientAccountId: recipientAccount.id,
+    usdPaymentAmount: paymentFlow.usdPaymentAmount,
+    priceRatioForLimits,
+    apiKeyId,
+    btcPaymentAmount: paymentFlow.btcPaymentAmount,
+    execute: async () => {
+      const journalId = await LockService().lockWalletId(senderWalletId, async (signal) =>
+        lockedPaymentViaIntraledgerSteps({
+          signal,
 
-      paymentFlow,
-      senderDisplayCurrency: senderAccount.displayCurrency,
-      senderUsername: senderAccount.username,
-      recipientDisplayCurrency: recipientAccount.displayCurrency,
-      recipientUsername: recipientAccount.username,
+          paymentFlow,
+          senderDisplayCurrency: senderAccount.displayCurrency,
+          senderUsername: senderAccount.username,
+          recipientDisplayCurrency: recipientAccount.displayCurrency,
+          recipientUsername: recipientAccount.username,
 
-      memo,
-    }),
-  )
-  if (journalId instanceof Error) return journalId
+          memo,
+        }),
+      )
+      if (journalId instanceof Error) {
+        return reverseSettlement({ result: journalId })
+      }
 
-  const recipientWalletTransaction = await getTransactionForWalletByJournalId({
-    walletId: recipientWalletDescriptor.id,
-    journalId,
+      const recipientWalletTransaction = await getTransactionForWalletByJournalId({
+        walletId: recipientWalletDescriptor.id,
+        journalId,
+      })
+      if (recipientWalletTransaction instanceof Error) {
+        return recordSettlement({
+          result: recipientWalletTransaction,
+          settlementTransactionId: journalId,
+        })
+      }
+
+      NotificationsService().sendTransaction({
+        recipient: recipientAsNotificationRecipient,
+        transaction: recipientWalletTransaction,
+      })
+
+      const senderWalletTransaction = await getTransactionForWalletByJournalId({
+        walletId: senderWalletId,
+        journalId,
+      })
+      if (senderWalletTransaction instanceof Error) {
+        return recordSettlement({
+          result: senderWalletTransaction,
+          settlementTransactionId: journalId,
+        })
+      }
+
+      NotificationsService().sendTransaction({
+        recipient: senderAsNotificationRecipient,
+        transaction: senderWalletTransaction,
+      })
+
+      return recordSettlement({
+        result: {
+          status: PaymentSendStatus.Success,
+          transaction: senderWalletTransaction,
+        },
+        settlementTransactionId: journalId,
+      })
+    },
   })
-  if (recipientWalletTransaction instanceof Error) return recipientWalletTransaction
-  NotificationsService().sendTransaction({
-    recipient: recipientAsNotificationRecipient,
-    transaction: recipientWalletTransaction,
-  })
-
-  const senderWalletTransaction = await getTransactionForWalletByJournalId({
-    walletId: senderWalletId,
-    journalId,
-  })
-  if (senderWalletTransaction instanceof Error) return senderWalletTransaction
-  NotificationsService().sendTransaction({
-    recipient: senderAsNotificationRecipient,
-    transaction: senderWalletTransaction,
-  })
-
-  return {
-    status: PaymentSendStatus.Success,
-    transaction: senderWalletTransaction,
-  }
+  return paymentSendResult
 }
 
 const lockedPaymentViaIntraledgerSteps = async ({

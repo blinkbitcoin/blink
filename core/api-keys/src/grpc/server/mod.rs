@@ -11,7 +11,11 @@ use tracing::{grpc, instrument};
 use self::proto::{api_keys_service_server::ApiKeysService, *};
 
 use super::config::*;
-use crate::{app::ApiKeysApp, identity::IdentityApiKeyId};
+use crate::{
+    app::{ApiKeysApp, ApplicationError},
+    identity::IdentityApiKeyId,
+    limits::LimitError,
+};
 use std::sync::Arc;
 
 pub struct ApiKeys {
@@ -70,6 +74,39 @@ impl ApiKeysService for ApiKeys {
             remaining_monthly_sats,
             remaining_annual_sats,
         }))
+    }
+
+    #[instrument(name = "api_keys.check_and_lock_spending", skip_all, err)]
+    async fn check_and_lock_spending(
+        &self,
+        request: Request<CheckAndLockSpendingRequest>,
+    ) -> Result<Response<CheckAndLockSpendingResponse>, Status> {
+        grpc::extract_tracing(&request);
+        let request = request.into_inner();
+        let CheckAndLockSpendingRequest {
+            api_key_id,
+            amount_sats,
+        } = request;
+
+        let api_key_id = api_key_id
+            .parse::<IdentityApiKeyId>()
+            .map_err(|e| Status::invalid_argument(format!("Invalid API key ID: {}", e)))?;
+
+        let ephemeral_id = self
+            .app
+            .check_and_lock_spending(api_key_id, amount_sats)
+            .await
+            .map_err(|e| match &e {
+                ApplicationError::Limit(LimitError::LimitExceeded(_)) => {
+                    Status::failed_precondition(e.to_string())
+                }
+                ApplicationError::Limit(LimitError::InvalidLimitAmount) => {
+                    Status::invalid_argument(e.to_string())
+                }
+                _ => Status::internal(e.to_string()),
+            })?;
+
+        Ok(Response::new(CheckAndLockSpendingResponse { ephemeral_id }))
     }
 
     #[instrument(name = "api_keys.get_spending_summary", skip_all, err)]
@@ -131,6 +168,7 @@ impl ApiKeysService for ApiKeys {
             api_key_id,
             amount_sats,
             transaction_id,
+            ephemeral_id,
         } = request;
 
         let api_key_id = api_key_id
@@ -138,9 +176,22 @@ impl ApiKeysService for ApiKeys {
             .map_err(|e| Status::invalid_argument(format!("Invalid API key ID: {}", e)))?;
 
         self.app
-            .record_spending(api_key_id, amount_sats, transaction_id)
+            .record_spending(api_key_id, amount_sats, transaction_id, ephemeral_id)
             .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+            .map_err(|e| match &e {
+                ApplicationError::Limit(LimitError::InvalidLimitAmount)
+                | ApplicationError::Limit(LimitError::MissingTransactionId) => {
+                    Status::invalid_argument(e.to_string())
+                }
+                ApplicationError::Limit(LimitError::EphemeralNotFound(_)) => {
+                    Status::not_found(e.to_string())
+                }
+                ApplicationError::Limit(LimitError::AmountMismatch)
+                | ApplicationError::Limit(LimitError::LimitExceeded(_)) => {
+                    Status::failed_precondition(e.to_string())
+                }
+                _ => Status::internal(e.to_string()),
+            })?;
 
         Ok(Response::new(RecordSpendingResponse {}))
     }

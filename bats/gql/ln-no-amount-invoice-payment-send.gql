@@ -1,6 +1,7 @@
 mutation lnNoAmountInvoicePaymentSend($input: LnNoAmountInvoicePaymentInput!) {
   lnNoAmountInvoicePaymentSend(input: $input) {
     errors {
+      code
       message
     }
     status

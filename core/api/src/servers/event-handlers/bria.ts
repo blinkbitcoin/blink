@@ -11,6 +11,7 @@ import {
   recordExceptionInCurrentSpan,
   addAttributesToCurrentSpan,
 } from "@/services/tracing"
+import { ApiKeysService } from "@/services/api-keys"
 import {
   EventAugmentationMissingError,
   UnknownPayloadTypeReceivedError,
@@ -23,6 +24,8 @@ import { NoTransactionToSettleError } from "@/services/ledger/domain/errors"
 // This should never compile if 'payloadType' is not never
 const assertUnreachable = (payloadType: never): Error =>
   new UnknownPayloadTypeReceivedError(payloadType)
+
+const apiKeys = ApiKeysService()
 
 const isBriaPayoutEvent = (payload: BriaPayload): payload is BriaPayoutPayload => {
   return (payload as BriaPayoutPayload).id !== undefined
@@ -180,15 +183,32 @@ export const payoutCancelledEventHandler = async ({
   event: PayoutCancelled
   payoutInfo: PayoutAugmentation
 }): Promise<true | ApplicationError> => {
+  const journalId = payoutInfo.externalId as LedgerJournalId
   const res = await LedgerFacade.recordOnChainSendRevert({
-    journalId: payoutInfo.externalId as LedgerJournalId,
+    journalId,
     payoutId: event.id,
   })
   if (res instanceof NoTransactionToUpdateError) {
     return true
   }
+  if (res instanceof Error) {
+    return res
+  }
 
-  return res
+  const reverseResult = await apiKeys.reverseSpending({
+    transactionId: journalId,
+  })
+  if (reverseResult instanceof Error) {
+    recordExceptionInCurrentSpan({
+      error: reverseResult,
+      attributes: {
+        "apiKeys.reverseSpending.failed": true,
+        "journalId": payoutInfo.externalId,
+      },
+    })
+  }
+
+  return true
 }
 
 export const payoutBroadcastEventHandler = async ({

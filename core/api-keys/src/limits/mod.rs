@@ -57,12 +57,13 @@ impl Limits {
         Self { pool }
     }
 
+    #[tracing::instrument(name = "limits.check_spending_limit", skip(self))]
     pub async fn check_spending_limit(
         &self,
         api_key_id: IdentityApiKeyId,
         amount_sats: i64,
     ) -> Result<LimitCheckResult, LimitError> {
-        if amount_sats < 0 {
+        if amount_sats <= 0 {
             return Err(LimitError::InvalidLimitAmount);
         }
 
@@ -94,17 +95,169 @@ impl Limits {
         })
     }
 
+    #[tracing::instrument(name = "limits.check_and_lock_spending", skip(self))]
+    pub async fn check_and_lock_spending(
+        &self,
+        api_key_id: IdentityApiKeyId,
+        amount_sats: i64,
+    ) -> Result<String, LimitError> {
+        if amount_sats <= 0 {
+            return Err(LimitError::InvalidLimitAmount);
+        }
+
+        let mut tx = self.pool.begin().await?;
+
+        // Acquire a transaction-scoped advisory lock keyed on a stable hash of the
+        // api_key_id. This serializes concurrent check_and_lock_spending calls for the
+        // same key, preventing two calls from both reading the spending aggregate before
+        // either inserts its ephemeral row (the FOR UPDATE on api_key_limits alone cannot
+        // block concurrent inserts into api_key_transactions when no limits row exists).
+        sqlx::query!(
+            "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))",
+            api_key_id.to_string(),
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        let limits = sqlx::query!(
+            r#"
+            SELECT daily_limit_sats, weekly_limit_sats, monthly_limit_sats, annual_limit_sats
+            FROM api_key_limits
+            WHERE api_key_id = $1
+            FOR UPDATE
+            "#,
+            api_key_id as IdentityApiKeyId,
+        )
+        .fetch_optional(&mut *tx)
+        .await?;
+
+        let (daily_limit, weekly_limit, monthly_limit, annual_limit) = match limits {
+            Some(row) => (
+                row.daily_limit_sats,
+                row.weekly_limit_sats,
+                row.monthly_limit_sats,
+                row.annual_limit_sats,
+            ),
+            None => (None, None, None, None),
+        };
+
+        let spending = sqlx::query!(
+            r#"
+            SELECT
+                COALESCE(SUM(amount_sats) FILTER (WHERE created_at > NOW() - INTERVAL '24 hours'), 0)::bigint AS "daily_spent_sats!",
+                COALESCE(SUM(amount_sats) FILTER (WHERE created_at > NOW() - INTERVAL '7 days'), 0)::bigint AS "weekly_spent_sats!",
+                COALESCE(SUM(amount_sats) FILTER (WHERE created_at > NOW() - INTERVAL '30 days'), 0)::bigint AS "monthly_spent_sats!",
+                COALESCE(SUM(amount_sats) FILTER (WHERE created_at > NOW() - INTERVAL '365 days'), 0)::bigint AS "annual_spent_sats!"
+            FROM api_key_transactions
+            WHERE api_key_id = $1
+              AND created_at > NOW() - INTERVAL '365 days'
+            "#,
+            api_key_id as IdentityApiKeyId,
+        )
+        .fetch_one(&mut *tx)
+        .await?;
+
+        let checks = [
+            ("daily", daily_limit, spending.daily_spent_sats),
+            ("weekly", weekly_limit, spending.weekly_spent_sats),
+            ("monthly", monthly_limit, spending.monthly_spent_sats),
+            ("annual", annual_limit, spending.annual_spent_sats),
+        ];
+
+        for (period, limit, spent) in &checks {
+            if let Some(limit) = limit {
+                if spent.saturating_add(amount_sats) > *limit {
+                    return Err(LimitError::LimitExceeded(period.to_string()));
+                }
+            }
+        }
+
+        let ephemeral_id = uuid::Uuid::new_v4().to_string();
+
+        sqlx::query!(
+            r#"
+            INSERT INTO api_key_transactions (api_key_id, amount_sats, transaction_id, created_at)
+            VALUES ($1, $2, $3, NOW())
+            "#,
+            api_key_id as IdentityApiKeyId,
+            amount_sats,
+            &ephemeral_id,
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+
+        Ok(ephemeral_id)
+    }
+
     #[tracing::instrument(name = "limits.record_spending", skip(self))]
     pub async fn record_spending(
         &self,
         api_key_id: IdentityApiKeyId,
         amount_sats: i64,
         transaction_id: Option<String>,
+        ephemeral_id: Option<String>,
     ) -> Result<(), LimitError> {
         if amount_sats <= 0 {
             return Err(LimitError::InvalidLimitAmount);
         }
 
+        let txn_id = transaction_id.ok_or(LimitError::MissingTransactionId)?;
+
+        match ephemeral_id {
+            Some(eid) => {
+                self.finalize_ephemeral(api_key_id, amount_sats, txn_id, eid)
+                    .await
+            }
+            None => self.record_canonical(api_key_id, amount_sats, txn_id).await,
+        }
+    }
+
+    async fn finalize_ephemeral(
+        &self,
+        api_key_id: IdentityApiKeyId,
+        amount_sats: i64,
+        txn_id: String,
+        eid: String,
+    ) -> Result<(), LimitError> {
+        let mut tx = self.pool.begin().await?;
+
+        let canonical = fetch_transaction(&mut tx, api_key_id, &txn_id).await?;
+        let ephemeral = fetch_transaction(&mut tx, api_key_id, &eid).await?;
+
+        match (ephemeral, canonical) {
+            (Some(eph_amount), Some(can_amount)) => {
+                // Both rows exist: canonical was inserted by a concurrent/prior non-ephemeral call.
+                // Validate both amounts, then delete the ephemeral row to avoid a UNIQUE violation.
+                ensure_amount_matches(eph_amount, amount_sats)?;
+                ensure_amount_matches(can_amount, amount_sats)?;
+                delete_transaction(&mut tx, api_key_id, &eid).await?;
+            }
+            (Some(eph_amount), None) => {
+                // Happy path: rename the ephemeral row to the final transaction_id.
+                ensure_amount_matches(eph_amount, amount_sats)?;
+                rename_transaction(&mut tx, api_key_id, &eid, &txn_id).await?;
+            }
+            (None, Some(can_amount)) => {
+                // Ephemeral row already gone: idempotent retry of a completed finalization.
+                ensure_amount_matches(can_amount, amount_sats)?;
+            }
+            (None, None) => {
+                return Err(LimitError::EphemeralNotFound(eid));
+            }
+        }
+
+        tx.commit().await?;
+        Ok(())
+    }
+
+    async fn record_canonical(
+        &self,
+        api_key_id: IdentityApiKeyId,
+        amount_sats: i64,
+        txn_id: String,
+    ) -> Result<(), LimitError> {
         sqlx::query!(
             r#"
             INSERT INTO api_key_transactions (api_key_id, amount_sats, transaction_id, created_at)
@@ -113,7 +266,7 @@ impl Limits {
             "#,
             api_key_id as IdentityApiKeyId,
             amount_sats,
-            transaction_id,
+            txn_id,
         )
         .execute(&self.pool)
         .await?;
@@ -431,6 +584,78 @@ impl Limits {
     }
 }
 
+fn ensure_amount_matches(stored: i64, expected: i64) -> Result<(), LimitError> {
+    if stored != expected {
+        return Err(LimitError::AmountMismatch);
+    }
+    Ok(())
+}
+
+async fn fetch_transaction(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    api_key_id: IdentityApiKeyId,
+    transaction_id: &str,
+) -> Result<Option<i64>, LimitError> {
+    let row = sqlx::query!(
+        r#"
+        SELECT amount_sats
+        FROM api_key_transactions
+        WHERE transaction_id = $1
+          AND api_key_id = $2
+        FOR UPDATE
+        "#,
+        transaction_id,
+        api_key_id as IdentityApiKeyId,
+    )
+    .fetch_optional(&mut **tx)
+    .await?;
+
+    Ok(row.map(|r| r.amount_sats))
+}
+
+async fn delete_transaction(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    api_key_id: IdentityApiKeyId,
+    transaction_id: &str,
+) -> Result<(), LimitError> {
+    sqlx::query!(
+        r#"
+        DELETE FROM api_key_transactions
+        WHERE transaction_id = $1
+          AND api_key_id = $2
+        "#,
+        transaction_id,
+        api_key_id as IdentityApiKeyId,
+    )
+    .execute(&mut **tx)
+    .await?;
+
+    Ok(())
+}
+
+async fn rename_transaction(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    api_key_id: IdentityApiKeyId,
+    from_id: &str,
+    to_id: &str,
+) -> Result<(), LimitError> {
+    sqlx::query!(
+        r#"
+        UPDATE api_key_transactions
+        SET transaction_id = $1
+        WHERE transaction_id = $2
+          AND api_key_id = $3
+        "#,
+        to_id,
+        from_id,
+        api_key_id as IdentityApiKeyId,
+    )
+    .execute(&mut **tx)
+    .await?;
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -455,16 +680,27 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn check_spending_limit_rejects_zero_amount() {
+        let limits = test_limits();
+        let result = limits.check_spending_limit(test_api_key_id(), 0).await;
+        assert!(matches!(result, Err(LimitError::InvalidLimitAmount)));
+    }
+
+    #[tokio::test]
     async fn record_spending_rejects_zero_amount() {
         let limits = test_limits();
-        let result = limits.record_spending(test_api_key_id(), 0, None).await;
+        let result = limits
+            .record_spending(test_api_key_id(), 0, None, None)
+            .await;
         assert!(matches!(result, Err(LimitError::InvalidLimitAmount)));
     }
 
     #[tokio::test]
     async fn record_spending_rejects_negative_amount() {
         let limits = test_limits();
-        let result = limits.record_spending(test_api_key_id(), -100, None).await;
+        let result = limits
+            .record_spending(test_api_key_id(), -100, None, None)
+            .await;
         assert!(matches!(result, Err(LimitError::InvalidLimitAmount)));
     }
 
@@ -522,5 +758,64 @@ mod tests {
         let limits = test_limits();
         let result = limits.set_annual_limit(test_api_key_id(), -1).await;
         assert!(matches!(result, Err(LimitError::InvalidLimitAmount)));
+    }
+
+    #[tokio::test]
+    async fn check_and_lock_spending_rejects_zero_amount() {
+        let limits = test_limits();
+        let result = limits.check_and_lock_spending(test_api_key_id(), 0).await;
+        assert!(matches!(result, Err(LimitError::InvalidLimitAmount)));
+    }
+
+    #[tokio::test]
+    async fn check_and_lock_spending_rejects_negative_amount() {
+        let limits = test_limits();
+        let result = limits.check_and_lock_spending(test_api_key_id(), -1).await;
+        assert!(matches!(result, Err(LimitError::InvalidLimitAmount)));
+    }
+
+    #[tokio::test]
+    async fn record_spending_requires_transaction_id_with_ephemeral_id() {
+        let limits = test_limits();
+        let result = limits
+            .record_spending(
+                test_api_key_id(),
+                1000,
+                None,
+                Some("ephemeral-123".to_string()),
+            )
+            .await;
+        assert!(matches!(result, Err(LimitError::MissingTransactionId)));
+    }
+
+    #[tokio::test]
+    async fn record_spending_without_ephemeral_id_requires_transaction_id() {
+        let limits = test_limits();
+        let result = limits
+            .record_spending(test_api_key_id(), 1000, None, None)
+            .await;
+        assert!(matches!(result, Err(LimitError::MissingTransactionId)));
+    }
+
+    #[test]
+    fn ensure_amount_matches_returns_ok_when_amounts_match() {
+        assert!(ensure_amount_matches(1000, 1000).is_ok());
+    }
+
+    #[test]
+    fn ensure_amount_matches_returns_ok_for_zero() {
+        assert!(ensure_amount_matches(0, 0).is_ok());
+    }
+
+    #[test]
+    fn ensure_amount_matches_returns_error_when_stored_is_less() {
+        let result = ensure_amount_matches(500, 1000);
+        assert!(matches!(result, Err(LimitError::AmountMismatch)));
+    }
+
+    #[test]
+    fn ensure_amount_matches_returns_error_when_stored_is_more() {
+        let result = ensure_amount_matches(1000, 500);
+        assert!(matches!(result, Err(LimitError::AmountMismatch)));
     }
 }

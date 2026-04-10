@@ -1,12 +1,11 @@
 import { getPriceRatioForLimits } from "./helpers"
+import {
+  recordSettlement,
+  reverseSettlement,
+  withSpendingLimits,
+} from "./spending-limits"
 
 import { NETWORK, getOnChainWalletConfig } from "@/config"
-
-import {
-  checkIntraledgerLimits,
-  checkTradeIntraAccountLimits,
-  checkWithdrawalLimits,
-} from "@/app/accounts"
 import {
   btcFromUsdMidPriceFn,
   getCurrentPriceAsDisplayPriceRatio,
@@ -65,6 +64,7 @@ const payOnChainByWalletId = async ({
   speed,
   memo,
   sendAll,
+  apiKeyId,
 }: PayOnChainByWalletIdArgs): Promise<PaymentSendResult | ApplicationError> => {
   const latestAccountState = await AccountsRepository().findById(senderAccount.id)
   if (latestAccountState instanceof Error) return latestAccountState
@@ -178,6 +178,7 @@ const payOnChainByWalletId = async ({
       senderAccount,
       memo,
       sendAll,
+      apiKeyId,
     })
   }
 
@@ -193,6 +194,7 @@ const payOnChainByWalletId = async ({
     memo,
     sendAll,
     logger: onchainLogger,
+    apiKeyId,
   })
 }
 
@@ -248,11 +250,13 @@ const executePaymentViaIntraledger = async <
   senderAccount,
   memo,
   sendAll,
+  apiKeyId,
 }: {
   builder: OPFBWithConversion<S, R> | OPFBWithError
   senderAccount: Account
   memo: string | null
   sendAll: boolean
+  apiKeyId?: ApiKeyId
 }): Promise<PaymentSendResult | ApplicationError> => {
   const paymentFlow = await builder.withoutMinerFee()
   if (paymentFlow instanceof Error) return paymentFlow
@@ -289,78 +293,94 @@ const executePaymentViaIntraledger = async <
   const priceRatioForLimits = await getPriceRatioForLimits(paymentFlow.paymentAmounts())
   if (priceRatioForLimits instanceof Error) return priceRatioForLimits
 
-  const checkLimits =
-    senderAccount.id === recipientAccount.id
-      ? checkTradeIntraAccountLimits
-      : checkIntraledgerLimits
-  const limitCheck = await checkLimits({
-    amount: paymentFlow.usdPaymentAmount,
+  const paymentSendResult = await withSpendingLimits({
+    settlementMethod: SettlementMethod.IntraLedger,
     accountId: senderAccount.id,
-    priceRatio: priceRatioForLimits,
+    recipientAccountId: recipientAccount.id,
+    usdPaymentAmount: paymentFlow.usdPaymentAmount,
+    priceRatioForLimits,
+    apiKeyId,
+    btcPaymentAmount: paymentFlow.btcPaymentAmount,
+    execute: async () => {
+      const journalId = await LockService().lockWalletId(senderWalletId, async (signal) =>
+        lockedPaymentViaIntraledgerSteps({
+          signal,
+
+          paymentFlow,
+          senderDisplayCurrency: senderAccount.displayCurrency,
+          senderUsername: senderAccount.username,
+          recipientDisplayCurrency: recipientAccount.displayCurrency,
+          recipientUsername: recipientAccount.username,
+
+          memo,
+          sendAll,
+        }),
+      )
+      if (journalId instanceof Error) {
+        return reverseSettlement({ result: journalId })
+      }
+
+      const recipientAsNotificationRecipient = {
+        accountId: recipientAccount.id,
+        walletId: recipientWalletDescriptor.id,
+        userId: recipientAccount.kratosUserId,
+        level: recipientAccount.level,
+        status: recipientAccount.status,
+        phoneNumber: recipientUser.phone,
+      }
+
+      const recipientWalletTransaction = await getTransactionForWalletByJournalId({
+        walletId: recipientWalletDescriptor.id,
+        journalId,
+      })
+      if (recipientWalletTransaction instanceof Error) {
+        return recordSettlement({
+          result: recipientWalletTransaction,
+          settlementTransactionId: journalId,
+        })
+      }
+
+      // Send 'received'-side intraledger notification
+      NotificationsService().sendTransaction({
+        recipient: recipientAsNotificationRecipient,
+        transaction: recipientWalletTransaction,
+      })
+
+      const senderAsNotificationRecipient = {
+        accountId: senderAccount.id,
+        walletId: senderWalletId,
+        userId: senderAccount.kratosUserId,
+        level: senderAccount.level,
+        status: senderAccount.status,
+        phoneNumber: senderUser.phone,
+      }
+
+      const senderWalletTransaction = await getTransactionForWalletByJournalId({
+        walletId: senderWalletId,
+        journalId,
+      })
+      if (senderWalletTransaction instanceof Error) {
+        return recordSettlement({
+          result: senderWalletTransaction,
+          settlementTransactionId: journalId,
+        })
+      }
+
+      NotificationsService().sendTransaction({
+        recipient: senderAsNotificationRecipient,
+        transaction: senderWalletTransaction,
+      })
+
+      return recordSettlement({
+        result: {
+          status: PaymentSendStatus.Success,
+          transaction: senderWalletTransaction,
+        },
+        settlementTransactionId: journalId,
+      })
+    },
   })
-  if (limitCheck instanceof Error) return limitCheck
-
-  const journalId = await LockService().lockWalletId(senderWalletId, async (signal) =>
-    lockedPaymentViaIntraledgerSteps({
-      signal,
-
-      paymentFlow,
-      senderDisplayCurrency: senderAccount.displayCurrency,
-      senderUsername: senderAccount.username,
-      recipientDisplayCurrency: recipientAccount.displayCurrency,
-      recipientUsername: recipientAccount.username,
-
-      memo,
-      sendAll,
-    }),
-  )
-  if (journalId instanceof Error) return journalId
-
-  const recipientAsNotificationRecipient = {
-    accountId: recipientAccount.id,
-    walletId: recipientWalletDescriptor.id,
-    userId: recipientAccount.kratosUserId,
-    level: recipientAccount.level,
-    status: recipientAccount.status,
-    phoneNumber: recipientUser.phone,
-  }
-
-  const recipientWalletTransaction = await getTransactionForWalletByJournalId({
-    walletId: recipientWalletDescriptor.id,
-    journalId,
-  })
-  if (recipientWalletTransaction instanceof Error) return recipientWalletTransaction
-
-  // Send 'received'-side intraledger notification
-  NotificationsService().sendTransaction({
-    recipient: recipientAsNotificationRecipient,
-    transaction: recipientWalletTransaction,
-  })
-
-  const senderAsNotificationRecipient = {
-    accountId: senderAccount.id,
-    walletId: senderWalletId,
-    userId: senderAccount.kratosUserId,
-    level: senderAccount.level,
-    status: senderAccount.status,
-    phoneNumber: senderUser.phone,
-  }
-
-  const senderWalletTransaction = await getTransactionForWalletByJournalId({
-    walletId: senderWalletId,
-    journalId,
-  })
-  if (senderWalletTransaction instanceof Error) return senderWalletTransaction
-
-  NotificationsService().sendTransaction({
-    recipient: senderAsNotificationRecipient,
-    transaction: senderWalletTransaction,
-  })
-
-  return {
-    status: PaymentSendStatus.Success,
-    transaction: senderWalletTransaction,
-  }
+  return paymentSendResult
 }
 
 const lockedPaymentViaIntraledgerSteps = async <
@@ -523,6 +543,7 @@ const executePaymentViaOnChain = async <
   memo,
   sendAll,
   logger,
+  apiKeyId,
 }: {
   builder: OPFBWithConversion<S, R> | OPFBWithError
   senderDisplayCurrency: DisplayCurrency
@@ -530,6 +551,7 @@ const executePaymentViaOnChain = async <
   memo: string | null
   sendAll: boolean
   logger: Logger
+  apiKeyId?: ApiKeyId
 }): Promise<PaymentSendResult | ApplicationError> => {
   const senderWalletDescriptor = await builder.senderWalletDescriptor()
   if (senderWalletDescriptor instanceof Error) return senderWalletDescriptor
@@ -541,38 +563,52 @@ const executePaymentViaOnChain = async <
   const priceRatioForLimits = await getPriceRatioForLimits(proposedAmounts)
   if (priceRatioForLimits instanceof Error) return priceRatioForLimits
 
-  const limitCheck = await checkWithdrawalLimits({
-    amount: proposedAmounts.usd,
+  const paymentSendResult = await withSpendingLimits({
+    settlementMethod: SettlementMethod.OnChain,
     accountId: senderWalletDescriptor.accountId,
-    priceRatio: priceRatioForLimits,
+    usdPaymentAmount: proposedAmounts.usd,
+    priceRatioForLimits,
+    apiKeyId,
+    btcPaymentAmount: proposedAmounts.btc,
+    execute: async () => {
+      const journalId = await LockService().lockWalletId(
+        senderWalletDescriptor.id,
+        async (signal) =>
+          lockedPaymentViaOnChainSteps({
+            signal,
+
+            builder,
+            speed,
+
+            senderDisplayCurrency,
+            memo,
+            sendAll,
+
+            logger,
+          }),
+      )
+      if (journalId instanceof Error) {
+        return reverseSettlement({ result: journalId })
+      }
+
+      const walletTransaction = await getTransactionForWalletByJournalId({
+        walletId: senderWalletDescriptor.id,
+        journalId,
+      })
+      if (walletTransaction instanceof Error) {
+        return recordSettlement({
+          result: walletTransaction,
+          settlementTransactionId: journalId,
+        })
+      }
+
+      return recordSettlement({
+        result: { status: PaymentSendStatus.Success, transaction: walletTransaction },
+        settlementTransactionId: journalId,
+      })
+    },
   })
-  if (limitCheck instanceof Error) return limitCheck
-
-  const journalId = await LockService().lockWalletId(
-    senderWalletDescriptor.id,
-    async (signal) =>
-      lockedPaymentViaOnChainSteps({
-        signal,
-
-        builder,
-        speed,
-
-        senderDisplayCurrency,
-        memo,
-        sendAll,
-
-        logger,
-      }),
-  )
-  if (journalId instanceof Error) return journalId
-
-  const walletTransaction = await getTransactionForWalletByJournalId({
-    walletId: senderWalletDescriptor.id,
-    journalId,
-  })
-  if (walletTransaction instanceof Error) return walletTransaction
-
-  return { status: PaymentSendStatus.Success, transaction: walletTransaction }
+  return paymentSendResult
 }
 
 const lockedPaymentViaOnChainSteps = async <

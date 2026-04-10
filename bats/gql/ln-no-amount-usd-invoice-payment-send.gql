@@ -3,6 +3,7 @@ mutation lnNoAmountUsdInvoicePaymentSend(
 ) {
   lnNoAmountUsdInvoicePaymentSend(input: $input) {
     errors {
+      code
       message
     }
     status

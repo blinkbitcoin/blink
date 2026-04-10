@@ -5,7 +5,11 @@ import {
   LnSendAttemptResult,
   PaymentSendAttemptResultType,
 } from "./ln-send-result"
-
+import {
+  recordSettlement,
+  reverseSettlement,
+  withSpendingLimits,
+} from "./spending-limits"
 import { reimburseFee } from "./reimburse-fee"
 
 import { AccountValidator } from "@/domain/accounts"
@@ -61,12 +65,7 @@ import {
   recordExceptionInCurrentSpan,
 } from "@/services/tracing"
 
-import {
-  checkIntraledgerLimits,
-  checkTradeIntraAccountLimits,
-  checkWithdrawalLimits,
-  createIntraledgerContact,
-} from "@/app/accounts"
+import { createIntraledgerContact } from "@/app/accounts"
 import { getCurrentPriceAsDisplayPriceRatio } from "@/app/prices"
 import {
   getTransactionForWalletByJournalId,
@@ -80,11 +79,56 @@ import { ResourceExpiredLockServiceError } from "@/domain/lock"
 const dealer = DealerPriceService()
 const paymentFlowRepo = PaymentFlowStateRepository(defaultTimeToExpiryInSeconds)
 
+const getValidatedIntraledgerRecipientAccount = async <
+  S extends WalletCurrency,
+  R extends WalletCurrency,
+>({
+  paymentFlow,
+}: {
+  paymentFlow: PaymentFlow<S, R>
+}): Promise<Account | ApplicationError> => {
+  const { walletDescriptor: recipientWalletDescriptor } = paymentFlow.recipientDetails()
+  if (!recipientWalletDescriptor) {
+    return new InvalidLightningPaymentFlowBuilderStateError(
+      "Expected recipient details missing",
+    )
+  }
+
+  const recipientAccount = await AccountsRepository().findById(
+    recipientWalletDescriptor.accountId,
+  )
+  if (recipientAccount instanceof Error) return recipientAccount
+
+  const accountValidator = AccountValidator(recipientAccount)
+  if (accountValidator instanceof Error) return accountValidator
+
+  return recipientAccount
+}
+
+const addIntraledgerContactIfNeeded = async ({
+  senderAccount,
+  recipientAccount,
+}: {
+  senderAccount: Account
+  recipientAccount: Account
+}): Promise<void> => {
+  if (senderAccount.id === recipientAccount.id) return
+
+  const addContactResult = await createIntraledgerContact({
+    senderAccount,
+    recipientAccount,
+  })
+  if (addContactResult instanceof Error) {
+    recordExceptionInCurrentSpan({ error: addContactResult, level: ErrorLevel.Warn })
+  }
+}
+
 export const payInvoiceByWalletId = async ({
   uncheckedPaymentRequest,
   memo,
   senderWalletId: uncheckedSenderWalletId,
   senderAccount,
+  apiKeyId,
 }: PayInvoiceByWalletIdArgs): Promise<PaymentSendResult | ApplicationError> => {
   addAttributesToCurrentSpan({
     "payment.initiation_method": PaymentInitiationMethod.Lightning,
@@ -121,22 +165,12 @@ export const payInvoiceByWalletId = async ({
       paymentFlow,
       senderAccount,
       memo,
+      apiKeyId,
     })
   }
 
-  const { walletDescriptor: recipientWalletDescriptor } = paymentFlow.recipientDetails()
-  if (!recipientWalletDescriptor) {
-    return new InvalidLightningPaymentFlowBuilderStateError(
-      "Expected recipient details missing",
-    )
-  }
-  const recipientAccount = await AccountsRepository().findById(
-    recipientWalletDescriptor.accountId,
-  )
+  const recipientAccount = await getValidatedIntraledgerRecipientAccount({ paymentFlow })
   if (recipientAccount instanceof Error) return recipientAccount
-
-  const accountValidator = AccountValidator(recipientAccount)
-  if (accountValidator instanceof Error) return accountValidator
 
   const paymentSendResult = await executePaymentViaIntraledger({
     paymentFlow,
@@ -144,18 +178,11 @@ export const payInvoiceByWalletId = async ({
     senderAccount,
     recipientAccount,
     memo,
+    apiKeyId,
   })
   if (paymentSendResult instanceof Error) return paymentSendResult
 
-  if (senderAccount.id !== recipientAccount.id) {
-    const addContactResult = await createIntraledgerContact({
-      senderAccount,
-      recipientAccount,
-    })
-    if (addContactResult instanceof Error) {
-      recordExceptionInCurrentSpan({ error: addContactResult, level: ErrorLevel.Warn })
-    }
-  }
+  await addIntraledgerContactIfNeeded({ senderAccount, recipientAccount })
 
   return paymentSendResult
 }
@@ -166,6 +193,7 @@ const payNoAmountInvoiceByWalletId = async ({
   memo,
   senderWalletId: uncheckedSenderWalletId,
   senderAccount,
+  apiKeyId,
 }: PayNoAmountInvoiceByWalletIdArgs): Promise<PaymentSendResult | ApplicationError> => {
   addAttributesToCurrentSpan({
     "payment.initiation_method": PaymentInitiationMethod.Lightning,
@@ -204,23 +232,12 @@ const payNoAmountInvoiceByWalletId = async ({
       paymentFlow,
       senderAccount,
       memo,
+      apiKeyId,
     })
   }
 
-  const { walletDescriptor: recipientWalletDescriptor } = paymentFlow.recipientDetails()
-  if (!recipientWalletDescriptor) {
-    return new InvalidLightningPaymentFlowBuilderStateError(
-      "Expected recipient details missing",
-    )
-  }
-
-  const recipientAccount = await AccountsRepository().findById(
-    recipientWalletDescriptor.accountId,
-  )
+  const recipientAccount = await getValidatedIntraledgerRecipientAccount({ paymentFlow })
   if (recipientAccount instanceof Error) return recipientAccount
-
-  const accountValidator = AccountValidator(recipientAccount)
-  if (accountValidator instanceof Error) return accountValidator
 
   const paymentSendResult = await executePaymentViaIntraledger({
     paymentFlow,
@@ -228,18 +245,11 @@ const payNoAmountInvoiceByWalletId = async ({
     senderAccount,
     recipientAccount,
     memo,
+    apiKeyId,
   })
   if (paymentSendResult instanceof Error) return paymentSendResult
 
-  if (senderAccount.id !== recipientAccount.id) {
-    const addContactResult = await createIntraledgerContact({
-      senderAccount,
-      recipientAccount,
-    })
-    if (addContactResult instanceof Error) {
-      recordExceptionInCurrentSpan({ error: addContactResult, level: ErrorLevel.Warn })
-    }
-  }
+  await addIntraledgerContactIfNeeded({ senderAccount, recipientAccount })
 
   return paymentSendResult
 }
@@ -432,12 +442,14 @@ const executePaymentViaIntraledger = async <
   senderWalletId,
   recipientAccount,
   memo,
+  apiKeyId,
 }: {
   paymentFlow: PaymentFlow<S, R>
   senderAccount: Account
   senderWalletId: WalletId
   recipientAccount: Account
   memo: string | null
+  apiKeyId?: ApiKeyId
 }): Promise<PaymentSendResult | ApplicationError> => {
   addAttributesToCurrentSpan({
     "payment.settlement_method": SettlementMethod.IntraLedger,
@@ -448,17 +460,6 @@ const executePaymentViaIntraledger = async <
 
   const paymentHash = paymentFlow.paymentHashForFlow()
   if (paymentHash instanceof Error) return paymentHash
-
-  const checkLimits =
-    senderAccount.id === recipientAccount.id
-      ? checkTradeIntraAccountLimits
-      : checkIntraledgerLimits
-  const limitCheck = await checkLimits({
-    amount: paymentFlow.usdPaymentAmount,
-    accountId: senderAccount.id,
-    priceRatio: priceRatioForLimits,
-  })
-  if (limitCheck instanceof Error) return limitCheck
 
   const { walletDescriptor: recipientWalletDescriptor } = paymentFlow.recipientDetails()
   if (!recipientWalletDescriptor) {
@@ -491,65 +492,90 @@ const executePaymentViaIntraledger = async <
     phoneNumber: senderUser.phone,
   }
 
-  const paymentSendAttemptResult = await LockService().lockWalletId(
-    senderWalletId,
-    async (signal) =>
-      lockedPaymentViaIntraledgerSteps({
-        signal,
+  const paymentSendResult = await withSpendingLimits({
+    settlementMethod: SettlementMethod.IntraLedger,
+    accountId: senderAccount.id,
+    recipientAccountId: recipientAccount.id,
+    usdPaymentAmount: paymentFlow.usdPaymentAmount,
+    priceRatioForLimits,
+    apiKeyId,
+    btcPaymentAmount: paymentFlow.btcPaymentAmount,
+    execute: async () => {
+      const paymentSendAttemptResult = await LockService().lockWalletId(
+        senderWalletId,
+        async (signal) =>
+          lockedPaymentViaIntraledgerSteps({
+            signal,
 
-        paymentHash,
-        paymentFlow,
-        senderDisplayCurrency: senderAccount.displayCurrency,
-        senderUsername: senderAccount.username,
-        recipientDisplayCurrency: recipientAccount.displayCurrency,
-        recipientUsername: recipientAccount.username,
+            paymentHash,
+            paymentFlow,
+            senderDisplayCurrency: senderAccount.displayCurrency,
+            senderUsername: senderAccount.username,
+            recipientDisplayCurrency: recipientAccount.displayCurrency,
+            recipientUsername: recipientAccount.username,
 
-        memo,
-      }),
-  )
-  if (paymentSendAttemptResult instanceof Error) return paymentSendAttemptResult
+            memo,
+          }),
+      )
+      if (paymentSendAttemptResult instanceof Error) {
+        return reverseSettlement({ result: paymentSendAttemptResult })
+      }
 
-  switch (paymentSendAttemptResult.type) {
-    case PaymentSendAttemptResultType.Error:
-      return paymentSendAttemptResult.error
+      switch (paymentSendAttemptResult.type) {
+        case PaymentSendAttemptResultType.Error:
+          return reverseSettlement({ result: paymentSendAttemptResult.error })
 
-    case PaymentSendAttemptResultType.AlreadyPaid:
-      return getAlreadyPaidResponse({
-        walletId: senderWalletId,
-        paymentHash,
+        case PaymentSendAttemptResultType.AlreadyPaid: {
+          const result = await getAlreadyPaidResponse({
+            walletId: senderWalletId,
+            paymentHash,
+          })
+          return reverseSettlement({ result })
+        }
+      }
+
+      const { journalId } = paymentSendAttemptResult
+
+      const recipientWalletTransaction = await getTransactionForWalletByJournalId({
+        walletId: recipientWalletDescriptor.id,
+        journalId,
       })
-  }
+      if (recipientWalletTransaction instanceof Error) {
+        return recordSettlement({
+          result: recipientWalletTransaction,
+          settlementTransactionId: journalId,
+        })
+      }
+      NotificationsService().sendTransaction({
+        recipient: recipientAsNotificationRecipient,
+        transaction: recipientWalletTransaction,
+      })
 
-  const { journalId } = paymentSendAttemptResult
+      const senderWalletTransaction = await getTransactionForWalletByJournalId({
+        walletId: senderWalletId,
+        journalId,
+      })
+      if (senderWalletTransaction instanceof Error) {
+        return recordSettlement({
+          result: senderWalletTransaction,
+          settlementTransactionId: journalId,
+        })
+      }
+      NotificationsService().sendTransaction({
+        recipient: senderAsNotificationRecipient,
+        transaction: senderWalletTransaction,
+      })
 
-  const recipientWalletTransaction = await getTransactionForWalletByJournalId({
-    walletId: recipientWalletDescriptor.id,
-    journalId,
+      return recordSettlement({
+        result: {
+          status: PaymentSendStatus.Success,
+          transaction: senderWalletTransaction,
+        },
+        settlementTransactionId: journalId,
+      })
+    },
   })
-  if (recipientWalletTransaction instanceof Error) {
-    return recipientWalletTransaction
-  }
-  NotificationsService().sendTransaction({
-    recipient: recipientAsNotificationRecipient,
-    transaction: recipientWalletTransaction,
-  })
-
-  const senderWalletTransaction = await getTransactionForWalletByJournalId({
-    walletId: senderWalletId,
-    journalId,
-  })
-  if (senderWalletTransaction instanceof Error) {
-    return senderWalletTransaction
-  }
-  NotificationsService().sendTransaction({
-    recipient: senderAsNotificationRecipient,
-    transaction: senderWalletTransaction,
-  })
-
-  return {
-    status: PaymentSendStatus.Success,
-    transaction: senderWalletTransaction,
-  }
+  return paymentSendResult
 }
 
 const lockedPaymentViaIntraledgerSteps = async ({
@@ -727,11 +753,13 @@ const executePaymentViaLn = async ({
   paymentFlow,
   senderAccount,
   memo,
+  apiKeyId,
 }: {
   decodedInvoice: LnInvoice
   paymentFlow: PaymentFlow<WalletCurrency, WalletCurrency>
   senderAccount: Account
   memo: string | null
+  apiKeyId?: ApiKeyId
 }): Promise<PaymentSendResult | ApplicationError> => {
   addAttributesToCurrentSpan({
     "payment.settlement_method": SettlementMethod.Lightning,
@@ -741,13 +769,6 @@ const executePaymentViaLn = async ({
 
   const priceRatioForLimits = await getPriceRatioForLimits(paymentFlow.paymentAmounts())
   if (priceRatioForLimits instanceof Error) return priceRatioForLimits
-
-  const limitCheck = await checkWithdrawalLimits({
-    amount: paymentFlow.usdPaymentAmount,
-    accountId: senderAccount.id,
-    priceRatio: priceRatioForLimits,
-  })
-  if (limitCheck instanceof Error) return limitCheck
 
   const accountWalletDescriptors =
     await WalletsRepository().findAccountWalletsByAccountId(senderAccount.id)
@@ -766,58 +787,94 @@ const executePaymentViaLn = async ({
     phoneNumber: senderUser.phone,
   }
 
-  const paymentSendAttemptResult = await LockService().lockWalletId(
-    senderWalletId,
-    (signal) =>
-      lockedPaymentViaLnSteps({
-        signal,
+  const paymentSendResult = await withSpendingLimits({
+    settlementMethod: SettlementMethod.Lightning,
+    accountId: senderAccount.id,
+    usdPaymentAmount: paymentFlow.usdPaymentAmount,
+    priceRatioForLimits,
+    apiKeyId,
+    btcPaymentAmount: paymentFlow.btcPaymentAmount,
+    execute: async () => {
+      const paymentSendAttemptResult = await LockService().lockWalletId(
+        senderWalletId,
+        (signal) =>
+          lockedPaymentViaLnSteps({
+            signal,
 
-        decodedInvoice,
-        paymentFlow,
-        senderDisplayCurrency: senderAccount.displayCurrency,
-        memo,
+            decodedInvoice,
+            paymentFlow,
+            senderDisplayCurrency: senderAccount.displayCurrency,
+            memo,
 
-        walletIds,
-      }),
-  )
-  if (paymentSendAttemptResult instanceof Error) return paymentSendAttemptResult
-  if (paymentSendAttemptResult.type === PaymentSendAttemptResultType.Error) {
-    return paymentSendAttemptResult.error
-  }
-
-  const walletTransaction = await getTransactionForWalletByJournalId({
-    walletId: senderWalletId,
-    journalId: paymentSendAttemptResult.journalId,
-  })
-  if (walletTransaction instanceof Error) return walletTransaction
-  NotificationsService().sendTransaction({
-    recipient: notificationRecipient,
-    transaction: walletTransaction,
-  })
-
-  const { paymentHash } = decodedInvoice
-  switch (paymentSendAttemptResult.type) {
-    case PaymentSendAttemptResultType.ErrorWithJournal:
-      return paymentSendAttemptResult.error
-
-    case PaymentSendAttemptResultType.Pending:
-      return getPendingPaymentResponse({
-        walletId: senderWalletId,
-        paymentHash,
-      })
-
-    case PaymentSendAttemptResultType.AlreadyPaid:
-      return getAlreadyPaidResponse({
-        walletId: senderWalletId,
-        paymentHash,
-      })
-
-    default:
-      return {
-        status: PaymentSendStatus.Success,
-        transaction: walletTransaction,
+            walletIds,
+          }),
+      )
+      if (paymentSendAttemptResult instanceof Error) {
+        return reverseSettlement({ result: paymentSendAttemptResult })
       }
-  }
+      if (paymentSendAttemptResult.type === PaymentSendAttemptResultType.Error) {
+        return reverseSettlement({ result: paymentSendAttemptResult.error })
+      }
+
+      if (paymentSendAttemptResult.type === PaymentSendAttemptResultType.AlreadyPaid) {
+        const { paymentHash } = decodedInvoice
+        const result = await getAlreadyPaidResponse({
+          walletId: senderWalletId,
+          paymentHash,
+        })
+        return reverseSettlement({ result })
+      }
+
+      const walletTransaction = await getTransactionForWalletByJournalId({
+        walletId: senderWalletId,
+        journalId: paymentSendAttemptResult.journalId,
+      })
+      if (walletTransaction instanceof Error) {
+        if (
+          paymentSendAttemptResult.type === PaymentSendAttemptResultType.ErrorWithJournal
+        ) {
+          return reverseSettlement({ result: walletTransaction })
+        }
+        return recordSettlement({
+          result: walletTransaction,
+          settlementTransactionId: paymentSendAttemptResult.journalId,
+        })
+      }
+
+      NotificationsService().sendTransaction({
+        recipient: notificationRecipient,
+        transaction: walletTransaction,
+      })
+
+      const { paymentHash } = decodedInvoice
+      switch (paymentSendAttemptResult.type) {
+        case PaymentSendAttemptResultType.ErrorWithJournal:
+          return reverseSettlement({ result: paymentSendAttemptResult.error })
+
+        case PaymentSendAttemptResultType.Pending: {
+          const result = await getPendingPaymentResponse({
+            walletId: senderWalletId,
+            paymentHash,
+          })
+
+          return recordSettlement({
+            result,
+            settlementTransactionId: paymentSendAttemptResult.journalId,
+          })
+        }
+
+        default:
+          return recordSettlement({
+            result: {
+              status: PaymentSendStatus.Success,
+              transaction: walletTransaction,
+            },
+            settlementTransactionId: paymentSendAttemptResult.journalId,
+          })
+      }
+    },
+  })
+  return paymentSendResult
 }
 
 const lockedPaymentViaLnSteps = async ({
