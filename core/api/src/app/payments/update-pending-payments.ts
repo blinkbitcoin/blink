@@ -44,8 +44,6 @@ import {
 } from "@/services/tracing"
 import { runInParallel } from "@/utils"
 
-const apiKeys = ApiKeysService()
-
 export const updatePendingPayments = async (logger: Logger): Promise<void> => {
   const ledgerService = LedgerService()
   const walletIdsWithPendingPayments = ledgerService.listWalletIdsWithPendingPayments()
@@ -351,6 +349,7 @@ const lockedPendingPaymentSteps = async ({
       { success: false, id: paymentHash, payment: pendingPayment },
       "payment has failed. reverting transaction",
     )
+    const apiKeys = ApiKeysService()
     if (paymentFlow.senderWalletCurrency === WalletCurrency.Btc) {
       const voided = await ledgerService.revertLightningPayment({
         journalId,

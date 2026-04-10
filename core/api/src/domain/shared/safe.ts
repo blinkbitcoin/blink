@@ -27,5 +27,10 @@ export const safeIntFromBigInt = (
       `BigInt value ${value} exceeds Number.MAX_SAFE_INTEGER and cannot be safely converted to number`,
     )
   }
+  if (value < BigInt(Number.MIN_SAFE_INTEGER)) {
+    return new BigIntToNumberConversionError(
+      `BigInt value ${value} is below Number.MIN_SAFE_INTEGER and cannot be safely converted to number`,
+    )
+  }
   return Number(value)
 }

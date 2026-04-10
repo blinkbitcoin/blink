@@ -1,5 +1,4 @@
 import { ApiKeysService } from "@/services/api-keys"
-const apiKeys = ApiKeysService()
 
 export const ApiKeySpendingSettlementType = {
   Record: "record",
@@ -26,6 +25,7 @@ export const lockApiKeySpending = async ({
 }): Promise<ApiKeySpendingLock | ApplicationError | undefined> => {
   if (!apiKeyId) return undefined
 
+  const apiKeys = ApiKeysService()
   const ephemeralId = await apiKeys.checkAndLockSpending({
     apiKeyId,
     amount,
@@ -47,6 +47,8 @@ export const settleApiKeySpending = async ({
   settlement: ApiKeySpendingSettlement
 }): Promise<true | ApplicationError> => {
   if (!lock) return true
+
+  const apiKeys = ApiKeysService()
 
   if (settlement.type === ApiKeySpendingSettlementType.Reverse) {
     const reverseResult = await apiKeys.reverseSpending({
