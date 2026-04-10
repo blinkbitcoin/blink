@@ -1,0 +1,339 @@
+// package: services.api_keys.v1
+// file: api_keys.proto
+
+/* tslint:disable */
+/* eslint-disable */
+
+import * as jspb from "google-protobuf";
+
+export class CheckSpendingLimitRequest extends jspb.Message { 
+    getApiKeyId(): string;
+    setApiKeyId(value: string): CheckSpendingLimitRequest;
+    getAmountSats(): number;
+    setAmountSats(value: number): CheckSpendingLimitRequest;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): CheckSpendingLimitRequest.AsObject;
+    static toObject(includeInstance: boolean, msg: CheckSpendingLimitRequest): CheckSpendingLimitRequest.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: CheckSpendingLimitRequest, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): CheckSpendingLimitRequest;
+    static deserializeBinaryFromReader(message: CheckSpendingLimitRequest, reader: jspb.BinaryReader): CheckSpendingLimitRequest;
+}
+
+export namespace CheckSpendingLimitRequest {
+    export type AsObject = {
+        apiKeyId: string,
+        amountSats: number,
+    }
+}
+
+export class CheckSpendingLimitResponse extends jspb.Message { 
+    getAllowed(): boolean;
+    setAllowed(value: boolean): CheckSpendingLimitResponse;
+
+    hasDailyLimitSats(): boolean;
+    clearDailyLimitSats(): void;
+    getDailyLimitSats(): number | undefined;
+    setDailyLimitSats(value: number): CheckSpendingLimitResponse;
+
+    hasWeeklyLimitSats(): boolean;
+    clearWeeklyLimitSats(): void;
+    getWeeklyLimitSats(): number | undefined;
+    setWeeklyLimitSats(value: number): CheckSpendingLimitResponse;
+
+    hasMonthlyLimitSats(): boolean;
+    clearMonthlyLimitSats(): void;
+    getMonthlyLimitSats(): number | undefined;
+    setMonthlyLimitSats(value: number): CheckSpendingLimitResponse;
+
+    hasAnnualLimitSats(): boolean;
+    clearAnnualLimitSats(): void;
+    getAnnualLimitSats(): number | undefined;
+    setAnnualLimitSats(value: number): CheckSpendingLimitResponse;
+    getDailySpentSats(): number;
+    setDailySpentSats(value: number): CheckSpendingLimitResponse;
+    getWeeklySpentSats(): number;
+    setWeeklySpentSats(value: number): CheckSpendingLimitResponse;
+    getMonthlySpentSats(): number;
+    setMonthlySpentSats(value: number): CheckSpendingLimitResponse;
+    getAnnualSpentSats(): number;
+    setAnnualSpentSats(value: number): CheckSpendingLimitResponse;
+
+    hasRemainingDailySats(): boolean;
+    clearRemainingDailySats(): void;
+    getRemainingDailySats(): number | undefined;
+    setRemainingDailySats(value: number): CheckSpendingLimitResponse;
+
+    hasRemainingWeeklySats(): boolean;
+    clearRemainingWeeklySats(): void;
+    getRemainingWeeklySats(): number | undefined;
+    setRemainingWeeklySats(value: number): CheckSpendingLimitResponse;
+
+    hasRemainingMonthlySats(): boolean;
+    clearRemainingMonthlySats(): void;
+    getRemainingMonthlySats(): number | undefined;
+    setRemainingMonthlySats(value: number): CheckSpendingLimitResponse;
+
+    hasRemainingAnnualSats(): boolean;
+    clearRemainingAnnualSats(): void;
+    getRemainingAnnualSats(): number | undefined;
+    setRemainingAnnualSats(value: number): CheckSpendingLimitResponse;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): CheckSpendingLimitResponse.AsObject;
+    static toObject(includeInstance: boolean, msg: CheckSpendingLimitResponse): CheckSpendingLimitResponse.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: CheckSpendingLimitResponse, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): CheckSpendingLimitResponse;
+    static deserializeBinaryFromReader(message: CheckSpendingLimitResponse, reader: jspb.BinaryReader): CheckSpendingLimitResponse;
+}
+
+export namespace CheckSpendingLimitResponse {
+    export type AsObject = {
+        allowed: boolean,
+        dailyLimitSats?: number,
+        weeklyLimitSats?: number,
+        monthlyLimitSats?: number,
+        annualLimitSats?: number,
+        dailySpentSats: number,
+        weeklySpentSats: number,
+        monthlySpentSats: number,
+        annualSpentSats: number,
+        remainingDailySats?: number,
+        remainingWeeklySats?: number,
+        remainingMonthlySats?: number,
+        remainingAnnualSats?: number,
+    }
+}
+
+export class CheckAndLockSpendingRequest extends jspb.Message { 
+    getApiKeyId(): string;
+    setApiKeyId(value: string): CheckAndLockSpendingRequest;
+    getAmountSats(): number;
+    setAmountSats(value: number): CheckAndLockSpendingRequest;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): CheckAndLockSpendingRequest.AsObject;
+    static toObject(includeInstance: boolean, msg: CheckAndLockSpendingRequest): CheckAndLockSpendingRequest.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: CheckAndLockSpendingRequest, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): CheckAndLockSpendingRequest;
+    static deserializeBinaryFromReader(message: CheckAndLockSpendingRequest, reader: jspb.BinaryReader): CheckAndLockSpendingRequest;
+}
+
+export namespace CheckAndLockSpendingRequest {
+    export type AsObject = {
+        apiKeyId: string,
+        amountSats: number,
+    }
+}
+
+export class CheckAndLockSpendingResponse extends jspb.Message { 
+    getEphemeralId(): string;
+    setEphemeralId(value: string): CheckAndLockSpendingResponse;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): CheckAndLockSpendingResponse.AsObject;
+    static toObject(includeInstance: boolean, msg: CheckAndLockSpendingResponse): CheckAndLockSpendingResponse.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: CheckAndLockSpendingResponse, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): CheckAndLockSpendingResponse;
+    static deserializeBinaryFromReader(message: CheckAndLockSpendingResponse, reader: jspb.BinaryReader): CheckAndLockSpendingResponse;
+}
+
+export namespace CheckAndLockSpendingResponse {
+    export type AsObject = {
+        ephemeralId: string,
+    }
+}
+
+export class GetSpendingSummaryRequest extends jspb.Message { 
+    getApiKeyId(): string;
+    setApiKeyId(value: string): GetSpendingSummaryRequest;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): GetSpendingSummaryRequest.AsObject;
+    static toObject(includeInstance: boolean, msg: GetSpendingSummaryRequest): GetSpendingSummaryRequest.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: GetSpendingSummaryRequest, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): GetSpendingSummaryRequest;
+    static deserializeBinaryFromReader(message: GetSpendingSummaryRequest, reader: jspb.BinaryReader): GetSpendingSummaryRequest;
+}
+
+export namespace GetSpendingSummaryRequest {
+    export type AsObject = {
+        apiKeyId: string,
+    }
+}
+
+export class GetSpendingSummaryResponse extends jspb.Message { 
+
+    hasDailyLimitSats(): boolean;
+    clearDailyLimitSats(): void;
+    getDailyLimitSats(): number | undefined;
+    setDailyLimitSats(value: number): GetSpendingSummaryResponse;
+
+    hasWeeklyLimitSats(): boolean;
+    clearWeeklyLimitSats(): void;
+    getWeeklyLimitSats(): number | undefined;
+    setWeeklyLimitSats(value: number): GetSpendingSummaryResponse;
+
+    hasMonthlyLimitSats(): boolean;
+    clearMonthlyLimitSats(): void;
+    getMonthlyLimitSats(): number | undefined;
+    setMonthlyLimitSats(value: number): GetSpendingSummaryResponse;
+
+    hasAnnualLimitSats(): boolean;
+    clearAnnualLimitSats(): void;
+    getAnnualLimitSats(): number | undefined;
+    setAnnualLimitSats(value: number): GetSpendingSummaryResponse;
+    getDailySpentSats(): number;
+    setDailySpentSats(value: number): GetSpendingSummaryResponse;
+    getWeeklySpentSats(): number;
+    setWeeklySpentSats(value: number): GetSpendingSummaryResponse;
+    getMonthlySpentSats(): number;
+    setMonthlySpentSats(value: number): GetSpendingSummaryResponse;
+    getAnnualSpentSats(): number;
+    setAnnualSpentSats(value: number): GetSpendingSummaryResponse;
+
+    hasRemainingDailySats(): boolean;
+    clearRemainingDailySats(): void;
+    getRemainingDailySats(): number | undefined;
+    setRemainingDailySats(value: number): GetSpendingSummaryResponse;
+
+    hasRemainingWeeklySats(): boolean;
+    clearRemainingWeeklySats(): void;
+    getRemainingWeeklySats(): number | undefined;
+    setRemainingWeeklySats(value: number): GetSpendingSummaryResponse;
+
+    hasRemainingMonthlySats(): boolean;
+    clearRemainingMonthlySats(): void;
+    getRemainingMonthlySats(): number | undefined;
+    setRemainingMonthlySats(value: number): GetSpendingSummaryResponse;
+
+    hasRemainingAnnualSats(): boolean;
+    clearRemainingAnnualSats(): void;
+    getRemainingAnnualSats(): number | undefined;
+    setRemainingAnnualSats(value: number): GetSpendingSummaryResponse;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): GetSpendingSummaryResponse.AsObject;
+    static toObject(includeInstance: boolean, msg: GetSpendingSummaryResponse): GetSpendingSummaryResponse.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: GetSpendingSummaryResponse, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): GetSpendingSummaryResponse;
+    static deserializeBinaryFromReader(message: GetSpendingSummaryResponse, reader: jspb.BinaryReader): GetSpendingSummaryResponse;
+}
+
+export namespace GetSpendingSummaryResponse {
+    export type AsObject = {
+        dailyLimitSats?: number,
+        weeklyLimitSats?: number,
+        monthlyLimitSats?: number,
+        annualLimitSats?: number,
+        dailySpentSats: number,
+        weeklySpentSats: number,
+        monthlySpentSats: number,
+        annualSpentSats: number,
+        remainingDailySats?: number,
+        remainingWeeklySats?: number,
+        remainingMonthlySats?: number,
+        remainingAnnualSats?: number,
+    }
+}
+
+export class RecordSpendingRequest extends jspb.Message { 
+    getApiKeyId(): string;
+    setApiKeyId(value: string): RecordSpendingRequest;
+    getAmountSats(): number;
+    setAmountSats(value: number): RecordSpendingRequest;
+
+    hasTransactionId(): boolean;
+    clearTransactionId(): void;
+    getTransactionId(): string | undefined;
+    setTransactionId(value: string): RecordSpendingRequest;
+
+    hasEphemeralId(): boolean;
+    clearEphemeralId(): void;
+    getEphemeralId(): string | undefined;
+    setEphemeralId(value: string): RecordSpendingRequest;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): RecordSpendingRequest.AsObject;
+    static toObject(includeInstance: boolean, msg: RecordSpendingRequest): RecordSpendingRequest.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: RecordSpendingRequest, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): RecordSpendingRequest;
+    static deserializeBinaryFromReader(message: RecordSpendingRequest, reader: jspb.BinaryReader): RecordSpendingRequest;
+}
+
+export namespace RecordSpendingRequest {
+    export type AsObject = {
+        apiKeyId: string,
+        amountSats: number,
+        transactionId?: string,
+        ephemeralId?: string,
+    }
+}
+
+export class RecordSpendingResponse extends jspb.Message { 
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): RecordSpendingResponse.AsObject;
+    static toObject(includeInstance: boolean, msg: RecordSpendingResponse): RecordSpendingResponse.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: RecordSpendingResponse, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): RecordSpendingResponse;
+    static deserializeBinaryFromReader(message: RecordSpendingResponse, reader: jspb.BinaryReader): RecordSpendingResponse;
+}
+
+export namespace RecordSpendingResponse {
+    export type AsObject = {
+    }
+}
+
+export class ReverseSpendingRequest extends jspb.Message { 
+    getTransactionId(): string;
+    setTransactionId(value: string): ReverseSpendingRequest;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): ReverseSpendingRequest.AsObject;
+    static toObject(includeInstance: boolean, msg: ReverseSpendingRequest): ReverseSpendingRequest.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: ReverseSpendingRequest, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): ReverseSpendingRequest;
+    static deserializeBinaryFromReader(message: ReverseSpendingRequest, reader: jspb.BinaryReader): ReverseSpendingRequest;
+}
+
+export namespace ReverseSpendingRequest {
+    export type AsObject = {
+        transactionId: string,
+    }
+}
+
+export class ReverseSpendingResponse extends jspb.Message { 
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): ReverseSpendingResponse.AsObject;
+    static toObject(includeInstance: boolean, msg: ReverseSpendingResponse): ReverseSpendingResponse.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: ReverseSpendingResponse, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): ReverseSpendingResponse;
+    static deserializeBinaryFromReader(message: ReverseSpendingResponse, reader: jspb.BinaryReader): ReverseSpendingResponse;
+}
+
+export namespace ReverseSpendingResponse {
+    export type AsObject = {
+    }
+}

@@ -1,4 +1,8 @@
-import { BigIntFloatConversionError, UnknownBigIntConversionError } from "./errors"
+import {
+  BigIntFloatConversionError,
+  BigIntToNumberConversionError,
+  UnknownBigIntConversionError,
+} from "./errors"
 
 export const safeBigInt = (num: number | string): bigint | BigIntConversionError => {
   try {
@@ -13,4 +17,20 @@ export const safeBigInt = (num: number | string): bigint | BigIntConversionError
 
 export const roundToBigInt = (num: number): bigint => {
   return BigInt(Math.round(num))
+}
+
+export const safeIntFromBigInt = (
+  value: bigint,
+): number | BigIntToNumberConversionError => {
+  if (value > BigInt(Number.MAX_SAFE_INTEGER)) {
+    return new BigIntToNumberConversionError(
+      `BigInt value ${value} exceeds Number.MAX_SAFE_INTEGER and cannot be safely converted to number`,
+    )
+  }
+  if (value < BigInt(Number.MIN_SAFE_INTEGER)) {
+    return new BigIntToNumberConversionError(
+      `BigInt value ${value} is below Number.MIN_SAFE_INTEGER and cannot be safely converted to number`,
+    )
+  }
+  return Number(value)
 }
