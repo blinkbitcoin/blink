@@ -86,6 +86,7 @@
           grpcurl
           buf
           netcat
+          redis
         ]
         ++ buck2NativeBuildInputs
         ++ lib.optionals pkgs.stdenv.isLinux [
