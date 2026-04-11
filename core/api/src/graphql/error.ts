@@ -94,6 +94,51 @@ export class QuizClaimedTooEarlyError extends CustomGraphQLError {
   }
 }
 
+export class InvalidPhoneForQuizError extends CustomGraphQLError {
+  constructor(errData: CustomGraphQLErrorData) {
+    super({
+      ...errData,
+      code: "INVALID_PHONE_FOR_QUIZ",
+      forwardToClient: true,
+      message: "Unsupported phone carrier for quiz.",
+    })
+  }
+}
+
+export class InvalidIpMetadataError extends CustomGraphQLError {
+  constructor(errData: CustomGraphQLErrorData) {
+    super({
+      ...errData,
+      code: "INVALID_IP_METADATA",
+      forwardToClient: true,
+      message: "Unsupported IP.",
+    })
+  }
+}
+
+export class NotEnoughBalanceForQuizError extends CustomGraphQLError {
+  constructor(errData: CustomGraphQLErrorData) {
+    super({
+      ...errData,
+      code: "NOT_ENOUGH_BALANCE_FOR_QUIZ",
+      forwardToClient: true,
+      message:
+        "Quiz wallet temporarily depleted. Please contact support if problem persists.",
+    })
+  }
+}
+
+export class InvalidQuizQuestionIdError extends CustomGraphQLError {
+  constructor(errData: CustomGraphQLErrorData) {
+    super({
+      ...errData,
+      code: "INVALID_QUIZ_QUESTION_ID",
+      forwardToClient: true,
+      message: "Invalid quiz question id was passed.",
+    })
+  }
+}
+
 export class ValidationInternalError extends CustomGraphQLError {
   constructor(errData: CustomGraphQLErrorData) {
     super({ code: "INVALID_INPUT", forwardToClient: true, ...errData })
