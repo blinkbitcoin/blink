@@ -1115,8 +1115,8 @@ importers:
         specifier: ^0.7.15
         version: 0.7.15
       '@ip1sms/disposable-phone-numbers':
-        specifier: ^2.1.1497
-        version: 2.1.1497
+        specifier: ^2.1.1499
+        version: 2.1.1499
       '@merqva/telegram-passport':
         specifier: ^1.0.2
         version: 1.0.2
@@ -7481,8 +7481,8 @@ packages:
     resolution: {integrity: sha512-Sx1pU8EM64o2BrqNpEO1CNLtKQwyhuXuqyfH7oGKCk+1a33d2r5saW8zNwm3j6BTExtjrv2BxTgzzkMwts6vGg==}
     dev: false
 
-  /@ip1sms/disposable-phone-numbers@2.1.1497:
-    resolution: {integrity: sha512-+7BlFDdCeZuJCEqrceFiQbZrbW8tvElO5qBD7Z0dksn8lIEfK2cz51Hhfijut8LjiOp/SG1lpmIIMTP8WO6lNw==}
+  /@ip1sms/disposable-phone-numbers@2.1.1499:
+    resolution: {integrity: sha512-p6R80qIjBW2MV1NOd5luTySD+Mp3xbT9Sn7ErOtTS+B29xeKU2wpY+Rmw1JRpg2LOfW0dT1BCWsc2JgYvd+odg==}
     dev: false
 
   /@isaacs/cliui@8.0.2:
@@ -7842,8 +7842,8 @@ packages:
     dependencies:
       sparse-bitfield: 3.0.3
 
-  /@mongodb-js/saslprep@1.4.6:
-    resolution: {integrity: sha512-y+x3H1xBZd38n10NZF/rEBlvDOOMQ6LKUTHqr8R9VkJ+mmQOYtJFxIlkkK8fZrtOiL6VixbOBWMbZGBdal3Z1g==}
+  /@mongodb-js/saslprep@1.4.8:
+    resolution: {integrity: sha512-kpjr2jy2w71w0oqAMI8oibBmiF9lXxWkEQs5gMkW4hVE48bsqINGLxnCSYW62ck/NHXJQpQEfA9WlJ1sY0eqBg==}
     dependencies:
       sparse-bitfield: 3.0.3
     dev: true
@@ -16818,7 +16818,7 @@ packages:
     dependencies:
       baseline-browser-mapping: 2.10.19
       caniuse-lite: 1.0.30001788
-      electron-to-chromium: 1.5.339
+      electron-to-chromium: 1.5.340
       node-releases: 2.0.37
       update-browserslist-db: 1.2.3(browserslist@4.28.2)
     dev: true
@@ -18873,8 +18873,8 @@ packages:
   /electron-to-chromium@1.5.307:
     resolution: {integrity: sha512-5z3uFKBWjiNR44nFcYdkcXjKMbg5KXNdciu7mhTPo9tB7NbqSNP2sSnGR+fqknZSCwKkBN+oxiiajWs4dT6ORg==}
 
-  /electron-to-chromium@1.5.339:
-    resolution: {integrity: sha512-Is+0BBHJ4NrdpAYiperrmp53pLywG/yV/6lIMTAnhxvzj/Cmn5Q/ogSHC6AKe7X+8kPLxxFk0cs5oc/3j/fxIg==}
+  /electron-to-chromium@1.5.340:
+    resolution: {integrity: sha512-908qahOGocRMinT2nM3ajCEM99H4iPdv84eagPP3FfZy/1ZGeOy2CZYzjhms81ckOPCXPlW7LkY4XpxD8r1DrA==}
     dev: true
 
   /elliptic@6.6.1:
@@ -25315,7 +25315,7 @@ packages:
       socks:
         optional: true
     dependencies:
-      '@mongodb-js/saslprep': 1.4.6
+      '@mongodb-js/saslprep': 1.4.8
       bson: 6.10.4
       mongodb-connection-string-url: 3.0.2
       snappy: 7.2.2
