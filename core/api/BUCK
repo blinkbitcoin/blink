@@ -288,6 +288,14 @@ dev_pnpm_task_binary(
 )
 
 dev_pnpm_task_binary(
+  name = "dev-transactions-grpc-stream",
+  command = "dev:api-transactions-grpc-stream",
+  srcs = [":src"],
+  deps = ["//:node_modules"],
+  visibility = ["PUBLIC"],
+)
+
+dev_pnpm_task_binary(
   name = "dev-cron",
   command = "dev:cron",
   srcs = [":src"],
