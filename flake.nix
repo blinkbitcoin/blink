@@ -42,6 +42,7 @@
         (import rust-overlay)
       ];
       pkgs = import nixpkgs {inherit overlays system;};
+      bufPkg = if pkgs.stdenv.isDarwin then dockerPkgs.buf else pkgs.buf;
       rustVersion = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
       rust-toolchain = rustVersion.override {
         extensions = ["rust-analyzer" "rust-src"];
@@ -84,7 +85,7 @@
           reindeer
           gitMinimal
           grpcurl
-          buf
+          bufPkg
           netcat
         ]
         ++ buck2NativeBuildInputs
@@ -299,6 +300,7 @@
           api-trigger = tscDerivation {pkgName = "api-trigger";};
           api-ws-server = tscDerivation {pkgName = "api-ws-server";};
           api-exporter = tscDerivation {pkgName = "api-exporter";};
+          api-transactions-grpc-stream = tscDerivation {pkgName = "api-transactions-grpc-stream";};
           api-cron = tscDerivation {pkgName = "api-cron";};
 
           consent = nextDerivation {pkgName = "consent";};
@@ -365,6 +367,15 @@
 
           BUCK2_VERSION = buck2Version;
           COMPOSE_PROJECT_NAME = "galoy-dev";
+          shellHook = ''
+            if [ -d "$PWD/node_modules/.bin" ]; then
+              export PATH="$PWD/node_modules/.bin:$PATH"
+            fi
+
+            if [ -d "$PWD/core/api/node_modules/.bin" ]; then
+              export PATH="$PWD/core/api/node_modules/.bin:$PATH"
+            fi
+          '';
         };
 
         formatter = alejandra;
