@@ -294,13 +294,14 @@ describe("markAccountForDeletion", () => {
       )
     })
 
-    it("returns InvalidAccountForDeletionError if sweep payment fails", async () => {
+    it("returns payment error directly if sweep payment fails", async () => {
       mockGetBalanceForWallet.mockResolvedValue(500)
-      mockSendWalletId.mockResolvedValue(new Error("payment failed"))
+      const paymentError = new Error("payment failed")
+      mockSendWalletId.mockResolvedValue(paymentError)
 
       const result = await markAccountForDeletion({ accountId, skipChecks: true })
 
-      expect(result).toBeInstanceOf(InvalidAccountForDeletionError)
+      expect(result).toBe(paymentError)
     })
 
     it("skips sweep when balance is zero", async () => {
@@ -429,9 +430,10 @@ describe("markAccountForDeletion", () => {
       )
     })
 
-    it("returns InvalidAccountForDeletionError if sweep payment fails", async () => {
+    it("returns payment error directly if sweep payment fails", async () => {
       mockGetBalanceForWallet.mockResolvedValue(200)
-      mockSendWalletId.mockResolvedValue(new Error("payment failed"))
+      const paymentError = new Error("payment failed")
+      mockSendWalletId.mockResolvedValue(paymentError)
 
       const result = await markAccountForDeletion({
         accountId,
@@ -439,7 +441,7 @@ describe("markAccountForDeletion", () => {
         destinationAccountId,
       })
 
-      expect(result).toBeInstanceOf(InvalidAccountForDeletionError)
+      expect(result).toBe(paymentError)
     })
 
     it("skips sweep when balance is zero", async () => {
