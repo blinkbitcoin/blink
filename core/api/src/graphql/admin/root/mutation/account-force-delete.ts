@@ -13,7 +13,7 @@ const AccountForceDeleteInput = GT.Input({
     },
     skipChecks: {
       type: GT.Boolean,
-      defaultValue: true,
+      defaultValue: false,
     },
   }),
 })
@@ -36,7 +36,7 @@ const AccountForceDeleteMutation = GT.Field<
     input: { type: GT.NonNull(AccountForceDeleteInput) },
   },
   resolve: async (_, args, { privilegedClientId }) => {
-    const { accountId, skipChecks = true } = args.input
+    const { accountId, skipChecks = false } = args.input
 
     if (accountId instanceof Error)
       return { errors: [{ message: accountId.message }], success: false }

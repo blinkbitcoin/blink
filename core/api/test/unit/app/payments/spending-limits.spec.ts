@@ -290,7 +290,29 @@ describe("withSpendingLimits", () => {
     expect(mockCheckTradeIntraAccountLimits).not.toHaveBeenCalled()
   })
 
-  it("bypasses all limits and executes directly when skipChecks=true", async () => {
+  it("bypasses all limits and executes directly when skipChecks=true and no apiKeyId", async () => {
+    const result = await withSpendingLimits({
+      settlementMethod: SettlementMethod.IntraLedger,
+      accountId: "sender-account-id" as AccountId,
+      usdPaymentAmount: { amount: 1000n, currency: "USD" } as UsdPaymentAmount,
+      priceRatioForLimits: {} as WalletPriceRatio,
+      btcPaymentAmount,
+      skipChecks: true,
+      execute: async () =>
+        recordSettlement({
+          result: paymentSendSuccessResult,
+          settlementTransactionId: journalId,
+        }),
+    })
+
+    expect(result).toEqual(paymentSendSuccessResult)
+    expect(mockCheckIntraledgerLimits).not.toHaveBeenCalled()
+    expect(mockCheckTradeIntraAccountLimits).not.toHaveBeenCalled()
+    expect(mockCheckWithdrawalLimits).not.toHaveBeenCalled()
+    expect(mockApiKeys.checkAndLockSpending).not.toHaveBeenCalled()
+  })
+
+  it("still checks limits when skipChecks=true but apiKeyId is present", async () => {
     const result = await withSpendingLimits({
       settlementMethod: SettlementMethod.IntraLedger,
       accountId: "sender-account-id" as AccountId,
@@ -307,10 +329,8 @@ describe("withSpendingLimits", () => {
     })
 
     expect(result).toEqual(paymentSendSuccessResult)
-    expect(mockCheckIntraledgerLimits).not.toHaveBeenCalled()
-    expect(mockCheckTradeIntraAccountLimits).not.toHaveBeenCalled()
-    expect(mockCheckWithdrawalLimits).not.toHaveBeenCalled()
-    expect(mockApiKeys.checkAndLockSpending).not.toHaveBeenCalled()
+    expect(mockCheckIntraledgerLimits).toHaveBeenCalled()
+    expect(mockApiKeys.checkAndLockSpending).toHaveBeenCalled()
   })
 
   it("checks withdrawal limits for non-intraledger settlement method", async () => {

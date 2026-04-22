@@ -104,7 +104,7 @@ export const withSpendingLimits = async ({
   skipChecks?: boolean
   execute: () => Promise<SpendingLimitsExecutionResult>
 }): Promise<PaymentSendResult | ApplicationError> => {
-  if (skipChecks) {
+  if (skipChecks && !apiKeyId) {
     const executionResult = await execute()
     return executionResult.result
   }

@@ -1,10 +1,8 @@
 import { getDefaultAccountsConfig } from "@/config"
 
-import { deleteMerchantByUsername } from "@/app/merchants"
-
-import { getBalanceForWallet, listWalletsByAccountId } from "@/app/wallets"
-
 import { intraledgerPaymentSendWalletId } from "@/app/payments"
+import { deleteMerchantByUsername } from "@/app/merchants"
+import { getBalanceForWallet, listWalletsByAccountId } from "@/app/wallets"
 
 import {
   AccountStatus,
@@ -13,12 +11,21 @@ import {
 } from "@/domain/accounts"
 import { AccountHasPositiveBalanceError } from "@/domain/authentication/errors"
 
+import {
+  AccountsRepository,
+  UsersRepository,
+  WalletsRepository,
+} from "@/services/mongoose"
 import { IdentityRepository } from "@/services/kratos"
 import { addEventToCurrentSpan } from "@/services/tracing"
-import { AccountsRepository, UsersRepository } from "@/services/mongoose"
+import { getBankOwnerWalletId } from "@/services/ledger/caching"
 
 export const markAccountForDeletion = async ({
   accountId,
+  // skipChecks is a privileged admin-only flag. When true it bypasses account
+  // status validation (allowing deletion of locked/inactive accounts) and
+  // spending limits on the balance sweep payment. Must never be set by
+  // end-user-facing code paths.
   skipChecks = false,
   updatedByPrivilegedClientId,
   bypassMaxDeletions = false,
@@ -40,31 +47,56 @@ export const markAccountForDeletion = async ({
   const wallets = await listWalletsByAccountId(account.id)
   if (wallets instanceof Error) return wallets
 
+  let resolvedDestinationAccountId = destinationAccountId
+  if (!resolvedDestinationAccountId) {
+    const bankOwnerWalletId = await getBankOwnerWalletId()
+    const bankOwnerWallet = await WalletsRepository().findById(bankOwnerWalletId)
+    if (bankOwnerWallet instanceof Error) return bankOwnerWallet
+    resolvedDestinationAccountId = bankOwnerWallet.accountId
+  }
+
+  const destinationAccount = await accountsRepo.findById(resolvedDestinationAccountId)
+  if (destinationAccount instanceof Error) return destinationAccount
+
+  const destinationWallets = await listWalletsByAccountId(resolvedDestinationAccountId)
+  if (destinationWallets instanceof Error) return destinationWallets
+
+  const destinationWalletByCurrency = new Map(
+    destinationWallets.map((w) => [w.currency, w.id] as [WalletCurrency, WalletId]),
+  )
+
   for (const wallet of wallets) {
     const balance = await getBalanceForWallet({ walletId: wallet.id })
     if (balance instanceof Error) return balance
-    if (balance > 0 && !skipChecks) {
+
+    // Wallets with zero or negative balance are skipped. Negative balances
+    // (e.g. overdrafts) are not swept — they remain as ledger entries and are
+    // handled separately by the operator if needed.
+    if (balance <= 0) continue
+
+    if (!skipChecks) {
       return new AccountHasPositiveBalanceError(
-        `The new phone is associated with an account with a non empty wallet. walletId: ${wallet.id}, balance: ${balance}, accountId: ${account.id}`,
+        `Cannot delete account with non-empty wallet. walletId: ${wallet.id}, balance: ${balance}, accountId: ${account.id}`,
       )
     }
 
-    const destinationWallets = await listWalletsByAccountId(account.id)
-    if (destinationWallets instanceof Error) return destinationWallets
+    const recipientWalletId =
+      destinationWalletByCurrency.get(wallet.currency) ||
+      destinationAccount.defaultWalletId
 
-    if (balance > 0 && destinationAccountId) {
-      const destinationAccount = await accountsRepo.findById(destinationAccountId)
-      if (destinationAccount instanceof Error) return destinationAccount
+    const payment = await intraledgerPaymentSendWalletId({
+      senderAccount: account,
+      senderWalletId: wallet.id,
+      recipientWalletId,
+      amount: balance,
+      memo: `Closing settlement: ${wallet.currency} balance payout for Account ${account.id}`,
+      skipChecks: true,
+    })
 
-      const payment = await intraledgerPaymentSendWalletId({
-        senderWalletId: wallet.id,
-        recipientWalletId: destinationAccount.defaultWalletId,
-        amount: balance,
-        memo: `Closing settlement: ${wallet.currency} balance payout for Account ${account.id}`,
-        senderAccount: account,
-        skipChecks: true,
-      })
-      if (payment instanceof Error) return payment
+    if (payment instanceof Error) {
+      return new InvalidAccountForDeletionError(
+        `Failed to sweep ${wallet.currency} wallet ${wallet.id} (balance: ${balance}) to destination account ${destinationAccount.id}: ${payment.message}`,
+      )
     }
 
     addEventToCurrentSpan(`deleting_wallet`, {
