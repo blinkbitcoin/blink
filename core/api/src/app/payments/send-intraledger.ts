@@ -56,7 +56,9 @@ export const intraledgerPaymentSendWalletId = async ({
   senderWalletId: uncheckedSenderWalletId,
   apiKeyId,
   skipChecks = false,
-}: IntraLedgerPaymentSendWalletIdArgs): Promise<PaymentSendResult | ApplicationError> => {
+}: IntraLedgerPaymentSendWalletIdAdminArgs): Promise<
+  PaymentSendResult | ApplicationError
+> => {
   const validatedPaymentInputs = await validateIntraledgerPaymentInputs({
     uncheckedSenderWalletId,
     uncheckedRecipientWalletId,
@@ -155,14 +157,18 @@ export const intraledgerPaymentSendWalletIdForBtcWallet = async (
   args: IntraLedgerPaymentSendWalletIdArgs,
 ): Promise<PaymentSendResult | ApplicationError> => {
   const validated = await validateIsBtcWallet(args.senderWalletId)
-  return validated instanceof Error ? validated : intraledgerPaymentSendWalletId(args)
+  return validated instanceof Error
+    ? validated
+    : intraledgerPaymentSendWalletId({ ...args, skipChecks: false })
 }
 
 export const intraledgerPaymentSendWalletIdForUsdWallet = async (
   args: IntraLedgerPaymentSendWalletIdArgs,
 ): Promise<PaymentSendResult | ApplicationError> => {
   const validated = await validateIsUsdWallet(args.senderWalletId)
-  return validated instanceof Error ? validated : intraledgerPaymentSendWalletId(args)
+  return validated instanceof Error
+    ? validated
+    : intraledgerPaymentSendWalletId({ ...args, skipChecks: false })
 }
 
 const validateIntraledgerPaymentInputs = async ({
