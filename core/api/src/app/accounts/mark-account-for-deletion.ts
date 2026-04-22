@@ -4,6 +4,8 @@ import { deleteMerchantByUsername } from "@/app/merchants"
 
 import { getBalanceForWallet, listWalletsByAccountId } from "@/app/wallets"
 
+import { intraledgerPaymentSendWalletId } from "@/app/payments"
+
 import {
   AccountStatus,
   AccountValidator,
@@ -17,19 +19,22 @@ import { AccountsRepository, UsersRepository } from "@/services/mongoose"
 
 export const markAccountForDeletion = async ({
   accountId,
-  cancelIfPositiveBalance = false,
+  skipChecks = false,
   updatedByPrivilegedClientId,
   bypassMaxDeletions = false,
+  destinationAccountId,
 }: {
   accountId: AccountId
-  cancelIfPositiveBalance?: boolean
+  skipChecks?: boolean
   updatedByPrivilegedClientId?: PrivilegedClientId
   bypassMaxDeletions?: boolean
+  destinationAccountId?: AccountId
 }): Promise<true | ApplicationError> => {
   const accountsRepo = AccountsRepository()
   const account = await accountsRepo.findById(accountId)
   if (account instanceof Error) return account
-  const accountValidator = AccountValidator(account)
+
+  const accountValidator = AccountValidator(account, { skipChecks })
   if (accountValidator instanceof Error) return accountValidator
 
   const wallets = await listWalletsByAccountId(account.id)
@@ -38,11 +43,30 @@ export const markAccountForDeletion = async ({
   for (const wallet of wallets) {
     const balance = await getBalanceForWallet({ walletId: wallet.id })
     if (balance instanceof Error) return balance
-    if (balance > 0 && cancelIfPositiveBalance) {
+    if (balance > 0 && !skipChecks) {
       return new AccountHasPositiveBalanceError(
-        `The new phone is associated with an account with a non empty wallet. walletId: ${wallet.id}, balance: ${balance}, accountId: ${account.id}, cancelIfPositiveBalance: ${cancelIfPositiveBalance}`,
+        `The new phone is associated with an account with a non empty wallet. walletId: ${wallet.id}, balance: ${balance}, accountId: ${account.id}`,
       )
     }
+
+    const destinationWallets = await listWalletsByAccountId(account.id)
+    if (destinationWallets instanceof Error) return destinationWallets
+
+    if (balance > 0 && destinationAccountId) {
+      const destinationAccount = await accountsRepo.findById(destinationAccountId)
+      if (destinationAccount instanceof Error) return destinationAccount
+
+      const payment = await intraledgerPaymentSendWalletId({
+        senderWalletId: wallet.id,
+        recipientWalletId: destinationAccount.defaultWalletId,
+        amount: balance,
+        memo: `Closing settlement: ${wallet.currency} balance payout for Account ${account.id}`,
+        senderAccount: account,
+        skipChecks: true,
+      })
+      if (payment instanceof Error) return payment
+    }
+
     addEventToCurrentSpan(`deleting_wallet`, {
       walletId: wallet.id,
       currency: wallet.currency,

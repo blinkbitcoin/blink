@@ -120,6 +120,7 @@ type IntraLedgerPaymentSendUsernameArgs = PaymentSendArgs & {
 type IntraLedgerPaymentSendWalletIdArgs = PaymentSendArgs & {
   recipientWalletId: WalletId
   amount: number
+  skipChecks?: boolean
 }
 
 type PayAllOnChainByWalletIdArgs = {

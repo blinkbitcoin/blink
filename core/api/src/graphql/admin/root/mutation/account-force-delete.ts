@@ -11,7 +11,7 @@ const AccountForceDeleteInput = GT.Input({
     accountId: {
       type: GT.NonNull(AccountId),
     },
-    cancelIfPositiveBalance: {
+    skipChecks: {
       type: GT.Boolean,
       defaultValue: true,
     },
@@ -24,7 +24,7 @@ const AccountForceDeleteMutation = GT.Field<
   {
     input: {
       accountId: AccountId | Error
-      cancelIfPositiveBalance?: boolean
+      skipChecks?: boolean
     }
   }
 >({
@@ -36,14 +36,14 @@ const AccountForceDeleteMutation = GT.Field<
     input: { type: GT.NonNull(AccountForceDeleteInput) },
   },
   resolve: async (_, args, { privilegedClientId }) => {
-    const { accountId, cancelIfPositiveBalance = true } = args.input
+    const { accountId, skipChecks = true } = args.input
 
     if (accountId instanceof Error)
       return { errors: [{ message: accountId.message }], success: false }
 
     const result = await Accounts.markAccountForDeletion({
       accountId,
-      cancelIfPositiveBalance,
+      skipChecks,
       bypassMaxDeletions: true,
       updatedByPrivilegedClientId: privilegedClientId,
     })

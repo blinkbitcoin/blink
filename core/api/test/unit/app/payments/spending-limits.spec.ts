@@ -290,6 +290,29 @@ describe("withSpendingLimits", () => {
     expect(mockCheckTradeIntraAccountLimits).not.toHaveBeenCalled()
   })
 
+  it("bypasses all limits and executes directly when skipChecks=true", async () => {
+    const result = await withSpendingLimits({
+      settlementMethod: SettlementMethod.IntraLedger,
+      accountId: "sender-account-id" as AccountId,
+      usdPaymentAmount: { amount: 1000n, currency: "USD" } as UsdPaymentAmount,
+      priceRatioForLimits: {} as WalletPriceRatio,
+      apiKeyId,
+      btcPaymentAmount,
+      skipChecks: true,
+      execute: async () =>
+        recordSettlement({
+          result: paymentSendSuccessResult,
+          settlementTransactionId: journalId,
+        }),
+    })
+
+    expect(result).toEqual(paymentSendSuccessResult)
+    expect(mockCheckIntraledgerLimits).not.toHaveBeenCalled()
+    expect(mockCheckTradeIntraAccountLimits).not.toHaveBeenCalled()
+    expect(mockCheckWithdrawalLimits).not.toHaveBeenCalled()
+    expect(mockApiKeys.checkAndLockSpending).not.toHaveBeenCalled()
+  })
+
   it("checks withdrawal limits for non-intraledger settlement method", async () => {
     const result = await withSpendingLimits({
       settlementMethod: SettlementMethod.OnChain,
