@@ -48,17 +48,19 @@ import { NotificationsService } from "@/services/notifications"
 
 const dealer = DealerPriceService()
 
-const intraledgerPaymentSendWalletId = async ({
+export const intraledgerPaymentSendWalletId = async ({
   recipientWalletId: uncheckedRecipientWalletId,
   senderAccount,
   amount: uncheckedAmount,
   memo,
   senderWalletId: uncheckedSenderWalletId,
   apiKeyId,
+  skipChecks = false,
 }: IntraLedgerPaymentSendWalletIdArgs): Promise<PaymentSendResult | ApplicationError> => {
   const validatedPaymentInputs = await validateIntraledgerPaymentInputs({
     uncheckedSenderWalletId,
     uncheckedRecipientWalletId,
+    skipChecks,
   })
   if (validatedPaymentInputs instanceof Error) return validatedPaymentInputs
 
@@ -131,6 +133,7 @@ const intraledgerPaymentSendWalletId = async ({
     senderUser,
     memo,
     apiKeyId,
+    skipChecks,
   })
 
   if (paymentSendResult instanceof Error) return paymentSendResult
@@ -165,9 +168,11 @@ export const intraledgerPaymentSendWalletIdForUsdWallet = async (
 const validateIntraledgerPaymentInputs = async ({
   uncheckedSenderWalletId,
   uncheckedRecipientWalletId,
+  skipChecks = false,
 }: {
   uncheckedSenderWalletId: string
   uncheckedRecipientWalletId: string
+  skipChecks: boolean
 }): Promise<
   | {
       senderWallet: Wallet
@@ -187,7 +192,7 @@ const validateIntraledgerPaymentInputs = async ({
   const senderAccount = await AccountsRepository().findById(senderWallet.accountId)
   if (senderAccount instanceof Error) return senderAccount
 
-  const senderAccountValidator = AccountValidator(senderAccount)
+  const senderAccountValidator = AccountValidator(senderAccount, { skipChecks })
   if (senderAccountValidator instanceof Error) return senderAccountValidator
 
   const recipientWalletId = checkedToWalletId(uncheckedRecipientWalletId)
@@ -209,6 +214,7 @@ const validateIntraledgerPaymentInputs = async ({
   if (senderUser instanceof Error) return senderUser
 
   addAttributesToCurrentSpan({
+    "payment.intraLedger.skipChecks": skipChecks,
     "payment.intraLedger.senderWalletId": senderWalletId,
     "payment.intraLedger.senderWalletCurrency": senderWallet.currency,
     "payment.intraLedger.recipientWalletId": recipientWalletId,
@@ -236,6 +242,7 @@ const executePaymentViaIntraledger = async <
   senderUser,
   memo,
   apiKeyId,
+  skipChecks,
 }: {
   paymentFlow: PaymentFlow<S, R>
   senderAccount: Account
@@ -245,6 +252,7 @@ const executePaymentViaIntraledger = async <
   senderUser: User
   memo: string | null
   apiKeyId?: ApiKeyId
+  skipChecks: boolean
 }): Promise<PaymentSendResult | ApplicationError> => {
   addAttributesToCurrentSpan({
     "payment.settlement_method": SettlementMethod.IntraLedger,
@@ -286,17 +294,16 @@ const executePaymentViaIntraledger = async <
     priceRatioForLimits,
     apiKeyId,
     btcPaymentAmount: paymentFlow.btcPaymentAmount,
+    skipChecks,
     execute: async () => {
       const journalId = await LockService().lockWalletId(senderWalletId, async (signal) =>
         lockedPaymentViaIntraledgerSteps({
           signal,
-
           paymentFlow,
           senderDisplayCurrency: senderAccount.displayCurrency,
           senderUsername: senderAccount.username,
           recipientDisplayCurrency: recipientAccount.displayCurrency,
           recipientUsername: recipientAccount.username,
-
           memo,
         }),
       )

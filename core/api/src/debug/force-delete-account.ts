@@ -16,7 +16,7 @@ const main = async () => {
 
   const result = await Accounts.markAccountForDeletion({
     accountId,
-    cancelIfPositiveBalance: true,
+    skipChecks: true,
     bypassMaxDeletions: true,
     updatedByPrivilegedClientId: "admin" as PrivilegedClientId,
   })
