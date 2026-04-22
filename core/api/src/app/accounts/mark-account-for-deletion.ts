@@ -17,9 +17,22 @@ import {
   WalletsRepository,
 } from "@/services/mongoose"
 import { IdentityRepository } from "@/services/kratos"
-import { addEventToCurrentSpan } from "@/services/tracing"
+import { addAttributesToCurrentSpan, addEventToCurrentSpan } from "@/services/tracing"
 import { getBankOwnerWalletId } from "@/services/ledger/caching"
 
+/**
+ * Marks an account for deletion, sweeping any positive wallet balances to a
+ * destination account before closing.
+ *
+ * **Retry / idempotency**: if the function returns an error mid-sweep (e.g. a
+ * payment failure on one wallet), already-swept wallets will have a zero
+ * balance and will be skipped on re-invocation (`balance <= 0` guard). It is
+ * safe to call this function again after a partial failure — it will pick up
+ * from the first wallet that still has a positive balance.
+ *
+ * Note: no atomic rollback is performed. A partial failure leaves the account
+ * open and some wallets already swept. Re-invoke to complete the operation.
+ */
 export const markAccountForDeletion = async ({
   accountId,
   // skipChecks is a privileged admin-only flag. When true it bypasses account
@@ -41,6 +54,13 @@ export const markAccountForDeletion = async ({
   const account = await accountsRepo.findById(accountId)
   if (account instanceof Error) return account
 
+  addAttributesToCurrentSpan({
+    "markAccountForDeletion.privilegedBypass": skipChecks,
+    "markAccountForDeletion.accountId": account.id,
+    "markAccountForDeletion.updatedByPrivilegedClientId":
+      updatedByPrivilegedClientId ?? "unknown",
+  })
+
   const accountValidator = AccountValidator(account, { skipChecks })
   if (accountValidator instanceof Error) return accountValidator
 
@@ -53,6 +73,12 @@ export const markAccountForDeletion = async ({
     const bankOwnerWallet = await WalletsRepository().findById(bankOwnerWalletId)
     if (bankOwnerWallet instanceof Error) return bankOwnerWallet
     resolvedDestinationAccountId = bankOwnerWallet.accountId
+  }
+
+  if (resolvedDestinationAccountId === account.id) {
+    return new InvalidAccountForDeletionError(
+      `Destination account cannot be the same as the account being deleted: ${account.id}`,
+    )
   }
 
   const destinationAccount = await accountsRepo.findById(resolvedDestinationAccountId)
@@ -68,10 +94,6 @@ export const markAccountForDeletion = async ({
   for (const wallet of wallets) {
     const balance = await getBalanceForWallet({ walletId: wallet.id })
     if (balance instanceof Error) return balance
-
-    // Wallets with zero or negative balance are skipped. Negative balances
-    // (e.g. overdrafts) are not swept — they remain as ledger entries and are
-    // handled separately by the operator if needed.
     if (balance <= 0) continue
 
     if (!skipChecks) {
@@ -92,12 +114,7 @@ export const markAccountForDeletion = async ({
       memo: `Closing settlement: ${wallet.currency} balance payout for Account ${account.id}`,
       skipChecks: true,
     })
-
-    if (payment instanceof Error) {
-      return new InvalidAccountForDeletionError(
-        `Failed to sweep ${wallet.currency} wallet ${wallet.id} (balance: ${balance}) to destination account ${destinationAccount.id}: ${payment.message}`,
-      )
-    }
+    if (payment instanceof Error) return payment
 
     addEventToCurrentSpan(`deleting_wallet`, {
       walletId: wallet.id,

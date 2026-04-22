@@ -67,7 +67,7 @@ export type AccountDetailPayload = {
 
 export type AccountForceDeleteInput = {
   readonly accountId: Scalars['AccountId']['input'];
-  readonly cancelIfPositiveBalance?: InputMaybe<Scalars['Boolean']['input']>;
+  readonly skipChecks?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 export type AccountForceDeletePayload = {
@@ -511,10 +511,12 @@ export const NotificationIcon = {
 export type NotificationIcon = typeof NotificationIcon[keyof typeof NotificationIcon];
 export type OpenDeepLinkInput = {
   readonly action?: InputMaybe<DeepLinkAction>;
+  readonly label?: InputMaybe<Scalars['String']['input']>;
   readonly screen?: InputMaybe<DeepLinkScreen>;
 };
 
 export type OpenExternalUrlInput = {
+  readonly label?: InputMaybe<Scalars['String']['input']>;
   readonly url: Scalars['ExternalUrl']['input'];
 };
 

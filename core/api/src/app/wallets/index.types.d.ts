@@ -122,7 +122,7 @@ type IntraLedgerPaymentSendWalletIdArgs = PaymentSendArgs & {
   amount: number
 }
 
-type IntraLedgerPaymentSendWalletIdAdminArgs = IntraLedgerPaymentSendWalletIdArgs & {
+type IntraLedgerPaymentSendWalletIdInternalArgs = IntraLedgerPaymentSendWalletIdArgs & {
   skipChecks: boolean
 }
 
