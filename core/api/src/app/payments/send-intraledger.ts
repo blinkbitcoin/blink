@@ -56,7 +56,7 @@ export const intraledgerPaymentSendWalletId = async ({
   senderWalletId: uncheckedSenderWalletId,
   apiKeyId,
   skipChecks = false,
-}: IntraLedgerPaymentSendWalletIdAdminArgs): Promise<
+}: IntraLedgerPaymentSendWalletIdInternalArgs): Promise<
   PaymentSendResult | ApplicationError
 > => {
   const validatedPaymentInputs = await validateIntraledgerPaymentInputs({

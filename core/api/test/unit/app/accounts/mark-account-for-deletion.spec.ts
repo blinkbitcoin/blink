@@ -40,6 +40,7 @@ jest.mock("@/services/kratos", () => ({
 }))
 
 jest.mock("@/services/tracing", () => ({
+  addAttributesToCurrentSpan: jest.fn(),
   addEventToCurrentSpan: jest.fn(),
 }))
 
@@ -65,12 +66,14 @@ import {
   WalletsRepository,
 } from "@/services/mongoose"
 import { IdentityRepository } from "@/services/kratos"
+import { addAttributesToCurrentSpan } from "@/services/tracing"
 
 const mockListWalletsByAccountId = listWalletsByAccountId as jest.Mock
 const mockGetBalanceForWallet = getBalanceForWallet as jest.Mock
 const mockSendWalletId = intraledgerPaymentSendWalletId as jest.Mock
 const mockAccountValidator = AccountValidator as jest.Mock
 const mockGetBankOwnerWalletId = getBankOwnerWalletId as jest.Mock
+const mockAddAttributesToCurrentSpan = addAttributesToCurrentSpan as jest.Mock
 
 const mockAccountsRepo = {
   findById: jest.fn(),
@@ -307,6 +310,68 @@ describe("markAccountForDeletion", () => {
 
       expect(result).toBe(true)
       expect(mockSendWalletId).not.toHaveBeenCalled()
+    })
+
+    it("returns InvalidAccountForDeletionError when destinationAccountId equals the account being deleted", async () => {
+      mockGetBalanceForWallet.mockResolvedValue(500)
+      // Override destination resolution: bank owner wallet resolves to the same account
+      mockWalletsRepo.findById.mockResolvedValue({ ...bankOwnerWallet, accountId })
+      mockAccountsRepo.findById.mockImplementation((id: AccountId) => {
+        if (id === accountId) return Promise.resolve(baseAccount)
+        return Promise.resolve(new Error("not found"))
+      })
+
+      const result = await markAccountForDeletion({ accountId, skipChecks: true })
+
+      expect(result).toBeInstanceOf(InvalidAccountForDeletionError)
+      expect((result as Error).message).toMatch(
+        /Destination account cannot be the same as the account being deleted/,
+      )
+      expect(mockSendWalletId).not.toHaveBeenCalled()
+    })
+
+    it("returns InvalidAccountForDeletionError when explicit destinationAccountId equals the account being deleted", async () => {
+      mockGetBalanceForWallet.mockResolvedValue(500)
+
+      const result = await markAccountForDeletion({
+        accountId,
+        skipChecks: true,
+        destinationAccountId: accountId,
+      })
+
+      expect(result).toBeInstanceOf(InvalidAccountForDeletionError)
+      expect((result as Error).message).toMatch(
+        /Destination account cannot be the same as the account being deleted/,
+      )
+      expect(mockSendWalletId).not.toHaveBeenCalled()
+    })
+
+    it("emits privilegedBypass span attributes when skipChecks=true", async () => {
+      mockGetBalanceForWallet.mockResolvedValue(0)
+
+      await markAccountForDeletion({
+        accountId,
+        skipChecks: true,
+        updatedByPrivilegedClientId: "admin-client" as PrivilegedClientId,
+      })
+
+      expect(mockAddAttributesToCurrentSpan).toHaveBeenCalledWith(
+        expect.objectContaining({
+          "markAccountForDeletion.privilegedBypass": true,
+          "markAccountForDeletion.accountId": accountId,
+          "markAccountForDeletion.updatedByPrivilegedClientId": "admin-client",
+        }),
+      )
+    })
+
+    it("does not emit privilegedBypass span attributes when skipChecks=false", async () => {
+      mockGetBalanceForWallet.mockResolvedValue(0)
+
+      await markAccountForDeletion({ accountId })
+
+      expect(mockAddAttributesToCurrentSpan).not.toHaveBeenCalledWith(
+        expect.objectContaining({ "markAccountForDeletion.privilegedBypass": true }),
+      )
     })
   })
 
