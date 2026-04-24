@@ -61,7 +61,7 @@
     "next": "14.2.26",
     "next-auth": "^4.24.11",
     "pg": "^8.11.0",
-    "postcss": "8.4.38",
+    "postcss": "8.5.10",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-qrcode-logo": "^3.0.0",
