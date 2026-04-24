@@ -4,10 +4,13 @@ import { InactiveAccountError, InvalidWalletId } from "@/domain/errors"
 
 export const AccountValidator = (
   account: Account,
+  { skipChecks = false }: { skipChecks?: boolean } = {},
 ): AccountValidator | ValidationError => {
-  const allowedStatuses: AccountStatus[] = [AccountStatus.Active, AccountStatus.Invited]
-  if (!allowedStatuses.includes(account.status)) {
-    return new InactiveAccountError(account.id)
+  if (!skipChecks) {
+    const allowedStatuses: AccountStatus[] = [AccountStatus.Active, AccountStatus.Invited]
+    if (!allowedStatuses.includes(account.status)) {
+      return new InactiveAccountError(account.id)
+    }
   }
 
   const validateWalletForAccount = <S extends WalletCurrency>(

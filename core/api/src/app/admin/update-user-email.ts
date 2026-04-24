@@ -41,7 +41,7 @@ export const updateUserEmail = async ({
 
     const result = await markAccountForDeletion({
       accountId: newAccount.id,
-      cancelIfPositiveBalance: true,
+      skipChecks: false,
       bypassMaxDeletions: true,
       updatedByPrivilegedClientId,
     })

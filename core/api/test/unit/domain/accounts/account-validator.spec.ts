@@ -42,6 +42,18 @@ describe("AccountValidator", () => {
     expect(result).toHaveProperty("validateWalletForAccount")
   })
 
+  it("returns validator object for inactive account when skipChecks=true", () => {
+    const inactiveAccount = {
+      ...baseAccountProps,
+      id: "account-id-3" as AccountId,
+      status: AccountStatus.Locked,
+    }
+
+    const result = AccountValidator(inactiveAccount, { skipChecks: true })
+    expect(result).not.toBeInstanceOf(Error)
+    expect(result).toHaveProperty("validateWalletForAccount")
+  })
+
   it("returns error if account status is not active or invited", () => {
     const inactiveAccount = {
       ...baseAccountProps,
