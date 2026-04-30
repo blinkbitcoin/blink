@@ -16,6 +16,7 @@ import * as caching from "./caching"
 import { TransactionsMetadataRepository } from "./services"
 
 import { send } from "./send"
+import { createStreamSettledTransactions } from "./stream-settled-transactions"
 
 import { translateToLedgerTx, translateToLedgerTxWithMetadata } from "./translate"
 
@@ -296,6 +297,10 @@ export const LedgerService = (): ILedgerService => {
     }
   }
 
+  const streamSettledTransactions = createStreamSettledTransactions({
+    transactionModel: Transaction,
+  })
+
   const getPendingPaymentsCount = async (
     walletId: WalletId,
   ): Promise<number | LedgerError> => {
@@ -537,6 +542,7 @@ export const LedgerService = (): ILedgerService => {
       getTransactionsByWalletIdAndContactUsername,
       listPendingPayments,
       listAllPaymentHashes,
+      streamSettledTransactions,
       getPendingPaymentsCount,
       getWalletBalance,
       getWalletBalanceAmount,

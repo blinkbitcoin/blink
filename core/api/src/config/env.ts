@@ -40,11 +40,6 @@ export const env = createEnv({
       .or(z.string())
       .pipe(z.coerce.number())
       .default(8889),
-    TRANSACTIONS_GRPC_STREAM_POLL_INTERVAL_MS: z
-      .number()
-      .or(z.string())
-      .pipe(z.coerce.number())
-      .default(200),
 
     KRATOS_PG_CON: z.string().url(),
     OATHKEEPER_DECISION_ENDPOINT: z.string().url(),
@@ -187,8 +182,6 @@ export const env = createEnv({
     TRANSACTIONS_GRPC_STREAM_PORT: process.env.TRANSACTIONS_GRPC_STREAM_PORT,
     TRANSACTIONS_GRPC_STREAM_HEALTH_PORT:
       process.env.TRANSACTIONS_GRPC_STREAM_HEALTH_PORT,
-    TRANSACTIONS_GRPC_STREAM_POLL_INTERVAL_MS:
-      process.env.TRANSACTIONS_GRPC_STREAM_POLL_INTERVAL_MS,
 
     KRATOS_PG_CON: process.env.KRATOS_PG_CON,
     OATHKEEPER_DECISION_ENDPOINT: process.env.OATHKEEPER_DECISION_ENDPOINT,

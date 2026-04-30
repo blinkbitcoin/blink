@@ -2,11 +2,6 @@ import {
   ledgerTransactionCreditToTransactionsStreamTransactionType,
   ledgerTransactionTypeToTransactionsStreamSettlementVia,
 } from "@/domain/transactions-stream"
-import {
-  LedgerTransactionType,
-  liabilitiesMainAccount,
-  toWalletId,
-} from "@/domain/ledger"
 
 import { TransactionMetadata } from "@/services/ledger/schema"
 import { WalletInvoice } from "@/services/mongoose/schema"
@@ -15,48 +10,14 @@ import { WalletsRepository } from "@/services/mongoose/wallets"
 const PREIMAGE_CACHE_TTL_MS = 5 * 60 * 1000
 const PREIMAGE_CACHE_MAX_SIZE = 10_000
 
-export const LIABILITIES_ACCOUNT_PREFIX = `${liabilitiesMainAccount}:`
-export const LIABILITIES_ACCOUNT_PATTERN = /^Liabilities:/
-
-export const EXCLUDED_LEDGER_TRANSACTION_TYPES: LedgerTransactionType[] = [
-  LedgerTransactionType.Fee,
-  LedgerTransactionType.ToColdStorage,
-  LedgerTransactionType.ToHotWallet,
-  LedgerTransactionType.Escrow,
-  LedgerTransactionType.RoutingRevenue,
-  LedgerTransactionType.Reconciliation,
-]
-
-export const SETTLED_TRANSACTION_FILTER = {
-  accounts: LIABILITIES_ACCOUNT_PATTERN,
-  pending: false,
-  type: { $nin: EXCLUDED_LEDGER_TRANSACTION_TYPES },
-} as const
-
 type TimestampedValue<T> = {
   value: T
   expiresAt: number
 }
 
 type PreimageLoaderArgs = {
-  transactionId: string
-  paymentHash?: string
-}
-
-export type TransactionStreamRecord = Pick<
-  ILedgerTransaction,
-  | "accounts"
-  | "hash"
-  | "type"
-  | "pending"
-  | "currency"
-  | "satsAmount"
-  | "centsAmount"
-  | "credit"
-  | "datetime"
-  | "timestamp"
-> & {
-  _id: ObjectId
+  transactionId: LedgerTransactionId
+  paymentHash?: PaymentHash
 }
 
 export type AccountIdLoader = (walletId: WalletId) => Promise<AccountId | undefined>
@@ -68,7 +29,7 @@ type FindWalletById = (
   walletId: WalletId,
 ) => Promise<{ accountId: AccountId } | Error | undefined>
 type FindTransactionMetadataById = (
-  transactionId: string,
+  transactionId: LedgerTransactionId,
 ) => Promise<Pick<TransactionMetadataRecord, "revealedPreImage"> | null | undefined>
 type FindWalletInvoiceById = (
   paymentHash: string,
@@ -109,27 +70,25 @@ class ExpiringCache<K, V> {
   }
 }
 
-export const parseWalletId = (accounts: string): WalletId | undefined => {
-  if (!accounts.startsWith(LIABILITIES_ACCOUNT_PREFIX)) return undefined
-  return toWalletId(accounts as LiabilitiesWalletId)
+const defaultFindWalletById: FindWalletById = async (walletId) => {
+  return WalletsRepository().findById(walletId)
 }
-
-const defaultFindWalletById: FindWalletById = async (walletId) =>
-  WalletsRepository().findById(walletId)
 
 const defaultFindTransactionMetadataById: FindTransactionMetadataById = async (
   transactionId,
-) =>
-  (await TransactionMetadata.findById(transactionId).lean()) as Pick<
+) => {
+  return (await TransactionMetadata.findById(transactionId).lean()) as Pick<
     TransactionMetadataRecord,
     "revealedPreImage"
   > | null
+}
 
-const defaultFindWalletInvoiceById: FindWalletInvoiceById = async (paymentHash) =>
-  (await WalletInvoice.findById(paymentHash).lean()) as Pick<
+const defaultFindWalletInvoiceById: FindWalletInvoiceById = async (paymentHash) => {
+  return (await WalletInvoice.findById(paymentHash).lean()) as Pick<
     WalletInvoiceRecord,
     "secret"
   > | null
+}
 
 export const createAccountIdLoader = ({
   findWalletById = defaultFindWalletById,
@@ -138,7 +97,8 @@ export const createAccountIdLoader = ({
 } = {}): AccountIdLoader => {
   return async (walletId) => {
     const wallet = await findWalletById(walletId)
-    if (!wallet || wallet instanceof Error) return undefined
+    if (wallet instanceof Error) throw wallet
+    if (!wallet) return undefined
 
     return wallet.accountId
   }
@@ -174,7 +134,7 @@ export const createAccountIdResolver = ({
     }
 
     const accountId = await loadAccountId(walletId)
-    walletToAccountCache.set(walletId, accountId)
+    if (accountId !== undefined) walletToAccountCache.set(walletId, accountId)
 
     return accountId
   }
@@ -211,24 +171,24 @@ export const createTransactionStreamEventMapper = ({
   resolvePreimage?: PreimageResolver
 } = {}) => {
   const mapTransactionStreamEvent = async (
-    ledgerTransaction: TransactionStreamRecord,
+    ledgerTransaction: LedgerTransaction<WalletCurrency>,
   ): Promise<TransactionStreamEvent | undefined> => {
-    const walletId = parseWalletId(ledgerTransaction.accounts)
+    const walletId = ledgerTransaction.walletId
     if (!walletId) return undefined
 
     const [accountId, preimage] = await Promise.all([
       resolveAccountId(walletId),
       resolvePreimage({
-        transactionId: ledgerTransaction._id.toString(),
-        paymentHash: ledgerTransaction.hash,
+        transactionId: ledgerTransaction.id,
+        paymentHash: ledgerTransaction.paymentHash,
       }),
     ])
 
     return {
-      ledgerTransactionId: ledgerTransaction._id.toString() as LedgerTransactionId,
+      ledgerTransactionId: ledgerTransaction.id,
       walletId,
       accountId,
-      paymentHash: ledgerTransaction.hash ?? undefined,
+      paymentHash: ledgerTransaction.paymentHash,
       preimage,
       satsAmount: ledgerTransaction.satsAmount ?? 0,
       centsAmount: ledgerTransaction.centsAmount ?? 0,
@@ -239,8 +199,8 @@ export const createTransactionStreamEventMapper = ({
       settlementVia: ledgerTransactionTypeToTransactionsStreamSettlementVia(
         ledgerTransaction.type,
       ),
-      pending: Boolean(ledgerTransaction.pending),
-      timestamp: ledgerTransaction.datetime ?? ledgerTransaction.timestamp ?? undefined,
+      pending: ledgerTransaction.pendingConfirmation,
+      timestamp: ledgerTransaction.timestamp,
     }
   }
 
