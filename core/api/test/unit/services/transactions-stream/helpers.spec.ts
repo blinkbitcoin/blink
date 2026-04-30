@@ -1,12 +1,27 @@
-import mongoose from "mongoose"
+jest.mock("@/services/ledger/schema", () => ({
+  TransactionMetadata: {
+    findById: jest.fn(),
+  },
+}))
+
+jest.mock("@/services/mongoose/schema", () => ({
+  WalletInvoice: {
+    findById: jest.fn(),
+  },
+}))
+
+jest.mock("@/services/mongoose/wallets", () => ({
+  WalletsRepository: jest.fn(),
+}))
 
 import {
+  createAccountIdLoader,
   createAccountIdResolver,
   createPreimageLoader,
   createPreimageResolver,
   createTransactionStreamEventMapper,
-  parseWalletId,
 } from "@/services/transactions-stream/helpers"
+import { TransactionMetadata } from "@/services/ledger/schema"
 
 import {
   TransactionsStreamSettlementVia,
@@ -16,14 +31,8 @@ import {
 import { LedgerTransactionType } from "@/domain/ledger"
 import { WalletCurrency } from "@/domain/shared"
 
-describe("parseWalletId", () => {
-  it("returns the wallet id for liabilities accounts", () => {
-    expect(parseWalletId("Liabilities:wallet-123")).toBe("wallet-123")
-  })
-
-  it("returns undefined for non-liabilities accounts", () => {
-    expect(parseWalletId("Assets:wallet-123")).toBeUndefined()
-  })
+afterEach(() => {
+  jest.clearAllMocks()
 })
 
 describe("mapLedgerTransactionTypeToSettlementVia", () => {
@@ -59,6 +68,29 @@ describe("createAccountIdResolver", () => {
 
     expect(loadAccountId).toHaveBeenCalledTimes(1)
   })
+
+  it("does not cache unresolved wallet lookups", async () => {
+    const loadAccountId = jest
+      .fn()
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce("account-1")
+    const resolveAccountId = createAccountIdResolver({ loadAccountId })
+
+    await expect(resolveAccountId("wallet-1" as WalletId)).resolves.toBeUndefined()
+    await expect(resolveAccountId("wallet-1" as WalletId)).resolves.toBe("account-1")
+
+    expect(loadAccountId).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe("createAccountIdLoader", () => {
+  it("propagates wallet repository errors", async () => {
+    const lookupError = new Error("wallet lookup failed")
+    const findWalletById = jest.fn().mockResolvedValue(lookupError)
+    const loadAccountId = createAccountIdLoader({ findWalletById })
+
+    await expect(loadAccountId("wallet-1" as WalletId)).rejects.toBe(lookupError)
+  })
 })
 
 describe("createPreimageLoader", () => {
@@ -74,7 +106,10 @@ describe("createPreimageLoader", () => {
     })
 
     await expect(
-      loadPreimage({ transactionId: "tx-1", paymentHash: "hash-1" }),
+      loadPreimage({
+        transactionId: "tx-1" as LedgerTransactionId,
+        paymentHash: "hash-1" as PaymentHash,
+      }),
     ).resolves.toBe("revealed-preimage")
     expect(findWalletInvoiceById).not.toHaveBeenCalled()
   })
@@ -92,9 +127,14 @@ describe("createPreimageLoader", () => {
     })
 
     await expect(
-      loadPreimage({ transactionId: "tx-1", paymentHash: "hash-1" }),
+      loadPreimage({
+        transactionId: "tx-1" as LedgerTransactionId,
+        paymentHash: "hash-1" as PaymentHash,
+      }),
     ).resolves.toBe("invoice-secret")
-    await expect(loadPreimage({ transactionId: "tx-2" })).resolves.toBe("")
+    await expect(
+      loadPreimage({ transactionId: "tx-2" as LedgerTransactionId }),
+    ).resolves.toBe("")
   })
 })
 
@@ -104,10 +144,16 @@ describe("createPreimageResolver", () => {
     const resolvePreimage = createPreimageResolver({ loadPreimage })
 
     await expect(
-      resolvePreimage({ transactionId: "tx-1", paymentHash: "hash-1" }),
+      resolvePreimage({
+        transactionId: "tx-1" as LedgerTransactionId,
+        paymentHash: "hash-1" as PaymentHash,
+      }),
     ).resolves.toBe("preimage-1")
     await expect(
-      resolvePreimage({ transactionId: "tx-1", paymentHash: "hash-1" }),
+      resolvePreimage({
+        transactionId: "tx-1" as LedgerTransactionId,
+        paymentHash: "hash-1" as PaymentHash,
+      }),
     ).resolves.toBe("preimage-1")
 
     expect(loadPreimage).toHaveBeenCalledTimes(1)
@@ -124,18 +170,23 @@ describe("createTransactionStreamEventMapper", () => {
     })
 
     const ledgerTransaction = {
-      _id: new mongoose.Types.ObjectId("661111111111111111111111"),
-      accounts: "Liabilities:wallet-1",
-      hash: "payment-hash-1",
+      id: "661111111111111111111111" as LedgerTransactionId,
+      walletId: "wallet-1" as WalletId,
+      paymentHash: "payment-hash-1" as PaymentHash,
       type: LedgerTransactionType.Payment,
-      pending: false,
+      debit: 321 as Satoshis,
+      credit: -321 as Satoshis,
+      pendingConfirmation: false,
       currency: WalletCurrency.Btc,
-      satsAmount: 321,
-      centsAmount: 654,
-      credit: -321,
-      datetime: new Date("2024-01-01T00:00:05Z"),
+      journalId: "journal-1" as LedgerJournalId,
+      satsAmount: 321 as Satoshis,
+      centsAmount: 654 as UsdCents,
       timestamp: new Date("2024-01-01T00:00:00Z"),
-    }
+      feeKnownInAdvance: false,
+      fee: undefined,
+      usd: undefined,
+      feeUsd: undefined,
+    } as LedgerTransaction<WalletCurrency>
 
     const event = await mapTransactionStreamEvent(ledgerTransaction)
 
@@ -151,7 +202,66 @@ describe("createTransactionStreamEventMapper", () => {
       type: TransactionsStreamTransactionType.Sent,
       settlementVia: TransactionsStreamSettlementVia.Lightning,
       pending: false,
-      timestamp: new Date("2024-01-01T00:00:05Z"),
+      timestamp: new Date("2024-01-01T00:00:00Z"),
     })
+  })
+
+  it("skips ledger transactions without a wallet id", async () => {
+    const { mapTransactionStreamEvent } = createTransactionStreamEventMapper()
+
+    const ledgerTransaction = {
+      id: "661111111111111111111111" as LedgerTransactionId,
+      walletId: undefined,
+      type: LedgerTransactionType.Payment,
+      debit: 0 as Satoshis,
+      credit: 1 as Satoshis,
+      pendingConfirmation: false,
+      currency: WalletCurrency.Btc,
+      journalId: "journal-1" as LedgerJournalId,
+      timestamp: new Date("2024-01-01T00:00:00Z"),
+      feeKnownInAdvance: false,
+      fee: undefined,
+      usd: undefined,
+      feeUsd: undefined,
+    } as LedgerTransaction<WalletCurrency>
+
+    await expect(mapTransactionStreamEvent(ledgerTransaction)).resolves.toBeUndefined()
+  })
+
+  it("maps transactions with the default preimage resolver after ledger schema is loaded", async () => {
+    const findById = TransactionMetadata.findById as jest.Mock
+    findById.mockReturnValueOnce({
+      lean: jest.fn().mockResolvedValue(null),
+    } as never)
+
+    const resolveAccountId = jest.fn().mockResolvedValue("account-1")
+    const { mapTransactionStreamEvent } = createTransactionStreamEventMapper({
+      resolveAccountId,
+    })
+
+    const ledgerTransaction = {
+      id: "661111111111111111111111" as LedgerTransactionId,
+      walletId: "wallet-1" as WalletId,
+      type: LedgerTransactionType.Invoice,
+      debit: 0 as Satoshis,
+      credit: 100 as Satoshis,
+      pendingConfirmation: false,
+      currency: WalletCurrency.Btc,
+      journalId: "journal-1" as LedgerJournalId,
+      satsAmount: 100 as Satoshis,
+      centsAmount: 200 as UsdCents,
+      timestamp: new Date("2024-01-01T00:00:00Z"),
+      feeKnownInAdvance: false,
+      fee: undefined,
+      usd: undefined,
+      feeUsd: undefined,
+    } as LedgerTransaction<WalletCurrency>
+
+    await expect(mapTransactionStreamEvent(ledgerTransaction)).resolves.toMatchObject({
+      ledgerTransactionId: "661111111111111111111111",
+      accountId: "account-1",
+      preimage: "",
+    })
+    expect(findById).toHaveBeenCalledWith("661111111111111111111111")
   })
 })

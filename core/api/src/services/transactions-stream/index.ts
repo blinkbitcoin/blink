@@ -1,46 +1,15 @@
-import mongoose from "mongoose"
+import { createTransactionStreamEventMapper } from "./helpers"
 
-import {
-  createTransactionStreamEventMapper,
-  SETTLED_TRANSACTION_FILTER,
-  TransactionStreamRecord,
-} from "./helpers"
-
-import { TRANSACTIONS_GRPC_STREAM_POLL_INTERVAL_MS } from "@/config"
 import { checkedToLedgerTransactionId } from "@/domain/ledger"
 
-import { Transaction } from "@/services/ledger/schema"
+import { LedgerService } from "@/services/ledger"
 import { baseLogger } from "@/services/logger"
 
 const logger = baseLogger.child({ module: "transactions-stream" })
 
-const DEFAULT_BATCH_SIZE = 100
-
-const TRANSACTION_STREAM_PROJECTION = {
-  _id: 1,
-  accounts: 1,
-  hash: 1,
-  type: 1,
-  pending: 1,
-  currency: 1,
-  satsAmount: 1,
-  centsAmount: 1,
-  credit: 1,
-  datetime: 1,
-  timestamp: 1,
-} as const
-
 const toError = (err: unknown, fallbackMessage: string): Error => {
   if (err instanceof Error) return err
   return new Error(fallbackMessage)
-}
-
-export type TransactionStreamQueries = {
-  listSettledTransactionsAfter: (args: {
-    afterTransactionId: LedgerTransactionId
-    limit: number
-  }) => Promise<TransactionStreamRecord[]>
-  findLatestTransactionId: () => Promise<LedgerTransactionId | undefined>
 }
 
 type SubscribeToTransactionsArgs = {
@@ -54,53 +23,17 @@ export type TransactionsStreamSubscription = {
 }
 
 type TransactionsStreamServiceConfig = {
-  batchSize?: number
-  pollIntervalMs?: number
-  transactionQueries?: TransactionStreamQueries
+  ledgerService?: Pick<ILedgerService, "streamSettledTransactions">
   mapTransactionStreamEvent?: (
-    ledgerTransaction: TransactionStreamRecord,
+    ledgerTransaction: LedgerTransaction<WalletCurrency>,
   ) => Promise<TransactionStreamEvent | undefined>
   logger?: Logger
-}
-
-export const createTransactionStreamQueries = (): TransactionStreamQueries => {
-  const listSettledTransactionsAfter = async ({
-    afterTransactionId,
-    limit,
-  }: {
-    afterTransactionId: LedgerTransactionId
-    limit: number
-  }): Promise<TransactionStreamRecord[]> => {
-    return (await Transaction.find(
-      {
-        _id: { $gt: new mongoose.Types.ObjectId(afterTransactionId) },
-        ...SETTLED_TRANSACTION_FILTER,
-      },
-      TRANSACTION_STREAM_PROJECTION,
-    )
-      .sort({ _id: 1 })
-      .limit(limit)
-      .lean()) as TransactionStreamRecord[]
-  }
-
-  const findLatestTransactionId = async (): Promise<LedgerTransactionId | undefined> => {
-    const latest = (await Transaction.findOne({}, { _id: 1 })
-      .sort({ _id: -1 })
-      .lean()) as { _id?: ObjectId } | null
-
-    return latest?._id?.toString() as LedgerTransactionId | undefined
-  }
-
-  return {
-    listSettledTransactionsAfter,
-    findLatestTransactionId,
-  }
 }
 
 const parseAfterTransactionId = (
   afterTransactionId?: string,
 ): LedgerTransactionId | Error | undefined => {
-  if (!afterTransactionId) return undefined
+  if (afterTransactionId === undefined) return undefined
 
   const checkedLedgerTransactionId = checkedToLedgerTransactionId(afterTransactionId)
   if (checkedLedgerTransactionId instanceof Error) return checkedLedgerTransactionId
@@ -109,9 +42,7 @@ const parseAfterTransactionId = (
 }
 
 export const TransactionsStreamService = ({
-  batchSize = DEFAULT_BATCH_SIZE,
-  pollIntervalMs = TRANSACTIONS_GRPC_STREAM_POLL_INTERVAL_MS,
-  transactionQueries = createTransactionStreamQueries(),
+  ledgerService = LedgerService(),
   mapTransactionStreamEvent = createTransactionStreamEventMapper()
     .mapTransactionStreamEvent,
   logger: serviceLogger = logger,
@@ -124,43 +55,32 @@ export const TransactionsStreamService = ({
     const parsedCursor = parseAfterTransactionId(afterTransactionId)
     if (parsedCursor instanceof Error) return parsedCursor
 
-    let cursor = parsedCursor
     let isClosed = false
-    let pollInFlight = false
-    let interval: NodeJS.Timeout | undefined
+    const abortController = new AbortController()
+    const ledgerTransactions = ledgerService.streamSettledTransactions({
+      afterTransactionId: parsedCursor,
+      signal: abortController.signal,
+    })
 
     const cleanup = () => {
-      if (interval) clearInterval(interval)
-      interval = undefined
+      if (isClosed) return
       isClosed = true
+      abortController.abort()
+      ledgerTransactions.return(undefined).catch(() => undefined)
     }
 
     const streamTransactions = async () => {
-      if (!cursor) return
+      for await (const ledgerTransaction of ledgerTransactions) {
+        if (isClosed) return
+        if (ledgerTransaction instanceof Error) throw ledgerTransaction
 
-      while (!isClosed) {
-        const ledgerTransactions = await transactionQueries.listSettledTransactionsAfter({
-          afterTransactionId: cursor,
-          limit: batchSize,
-        })
+        const event = await mapTransactionStreamEvent(ledgerTransaction)
 
-        if (ledgerTransactions.length === 0) return
-
-        for (const ledgerTransaction of ledgerTransactions) {
-          cursor = ledgerTransaction._id.toString() as LedgerTransactionId
-          const event = await mapTransactionStreamEvent(ledgerTransaction)
-
-          if (event && !isClosed) await onTransaction(event)
-        }
-
-        if (ledgerTransactions.length < batchSize) return
+        if (event && !isClosed) await onTransaction(event)
       }
     }
 
-    const poll = async () => {
-      if (pollInFlight || isClosed) return
-
-      pollInFlight = true
+    ;(async () => {
       try {
         await streamTransactions()
       } catch (err) {
@@ -168,36 +88,8 @@ export const TransactionsStreamService = ({
         serviceLogger.error({ err: error }, "Failed to stream transactions")
         cleanup()
         onError(error)
-      } finally {
-        pollInFlight = false
       }
-    }
-
-    const startPolling = () => {
-      interval = setInterval(() => {
-        poll().catch((err) => {
-          const error = toError(err, "Failed to stream transactions")
-          serviceLogger.error({ err: error }, "Failed to stream transactions")
-          cleanup()
-          onError(error)
-        })
-      }, pollIntervalMs)
-    }
-
-    ;(async () => {
-      if (cursor) await streamTransactions()
-      if (!cursor) {
-        cursor =
-          (await transactionQueries.findLatestTransactionId()) ??
-          (new mongoose.Types.ObjectId().toString() as LedgerTransactionId)
-      }
-      if (!isClosed) startPolling()
-    })().catch((err) => {
-      const error = toError(err, "Failed to initialize transaction stream")
-      serviceLogger.error({ err: error }, "Failed to initialize transaction stream")
-      cleanup()
-      onError(error)
-    })
+    })()
 
     return {
       close: cleanup,
