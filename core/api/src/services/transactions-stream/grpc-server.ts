@@ -12,6 +12,9 @@ import { baseLogger } from "@/services/logger"
 
 const logger = baseLogger.child({ module: "transactions-grpc-stream" })
 
+const requestAfterTransactionId = (request: SubscribeTransactionsRequest) =>
+  request.hasAfterTransactionId() ? request.getAfterTransactionId() : undefined
+
 const toServiceError = ({
   code,
   message,
@@ -49,11 +52,28 @@ export const TransactionsGrpcServer = ({
       subscriptionRef.current?.close()
     }
 
+    const waitForDrainOrTerminalEvent = () =>
+      new Promise<void>((resolve) => {
+        const finish = () => {
+          call.removeListener("drain", finish)
+          call.removeListener("cancelled", finish)
+          call.removeListener("error", finish)
+          resolve()
+        }
+
+        call.once("drain", finish)
+        call.once("cancelled", finish)
+        call.once("error", finish)
+      })
+
     const result = transactionsStreamService.subscribeToTransactions({
-      afterTransactionId: call.request.getAfterTransactionId() || undefined,
+      afterTransactionId: requestAfterTransactionId(call.request),
       onTransaction: async (event) => {
         if (isClosed) return
-        call.write(transactionStreamEventToGrpcTransactionEvent(event))
+        const canContinue = call.write(
+          transactionStreamEventToGrpcTransactionEvent(event),
+        )
+        if (!canContinue && !isClosed) await waitForDrainOrTerminalEvent()
       },
       onError: (err) => {
         serviceLogger.error({ err }, "Failed to stream transactions")
@@ -76,7 +96,6 @@ export const TransactionsGrpcServer = ({
     subscriptionRef.current = result
 
     call.on("cancelled", cleanup)
-    call.on("close", cleanup)
     call.on("error", cleanup)
   }
 
