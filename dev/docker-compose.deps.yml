@@ -173,10 +173,20 @@ services:
       - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
   mongodb:
     image: mongo:7.0.6
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     ports:
       - "27017:27017"
     environment:
       - MONGO_INITDB_DATABASE=galoy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mongosh --quiet --eval 'try { rs.status().ok } catch (e) { rs.initiate({ _id: \"rs0\", members: [{ _id: 0, host: \"localhost:27017\" }] }).ok }' | grep 1",
+        ]
+      interval: 5s
+      timeout: 30s
+      retries: 30
   lnd1:
     image: lightninglabs/lnd:v0.19.3-beta
     ports:

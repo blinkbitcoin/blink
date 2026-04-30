@@ -16,7 +16,7 @@ import { TransactionsStreamService } from "@/services/transactions-stream/proto/
 
 const logger = baseLogger.child({ module: "transactions-grpc-stream-server" })
 
-const startHealthServer = () => {
+const startHealthServer = async () => {
   const app = express()
 
   app.get(
@@ -29,11 +29,15 @@ const startHealthServer = () => {
     }),
   )
 
-  app.listen(TRANSACTIONS_GRPC_STREAM_HEALTH_PORT, () => {
-    logger.info(
-      { port: TRANSACTIONS_GRPC_STREAM_HEALTH_PORT },
-      "Transactions gRPC stream health server listening",
-    )
+  await new Promise<void>((resolve, reject) => {
+    const healthServer = app.listen(TRANSACTIONS_GRPC_STREAM_HEALTH_PORT, () => {
+      logger.info(
+        { port: TRANSACTIONS_GRPC_STREAM_HEALTH_PORT },
+        "Transactions gRPC stream health server listening",
+      )
+      resolve()
+    })
+    healthServer.once("error", reject)
   })
 }
 
@@ -54,12 +58,12 @@ const startGrpcServer = async () => {
 }
 
 const main = async () => {
-  startHealthServer()
-
   await setupMongoConnection({ syncIndexes: false })
   await startGrpcServer()
+  await startHealthServer()
 }
 
 main().catch((err) => {
   logger.error({ err }, "Transactions gRPC stream server failed")
+  process.exit(1)
 })
