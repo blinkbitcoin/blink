@@ -5,7 +5,7 @@
     "eslint-check": "eslint src test --ext .ts",
     "eslint-fix": "eslint src test --ext .ts --fix",
     "circular-deps-check": "madge --circular --extensions ts src",
-    "build": "tsc -p tsconfig-build.json && cp -R src/services/price/protos dist/services/price/ && cp -R src/services/dealer-price/proto dist/services/dealer-price/ && cp -R src/services/bria/proto dist/services/bria/ && cp -R src/services/notifications/proto dist/services/notifications/ && cp -R src/services/api-keys/proto dist/services/api-keys/ && tscpaths --silent -p tsconfig.json -s ./src -o ./dist",
+    "build": "tsc -p tsconfig-build.json && cp -R src/services/price/protos dist/services/price/ && cp -R src/services/dealer-price/proto dist/services/dealer-price/ && cp -R src/services/bria/proto dist/services/bria/ && cp -R src/services/notifications/proto dist/services/notifications/ && cp -R src/services/api-keys/proto dist/services/api-keys/ && cp -R src/services/transactions-stream/proto dist/services/transactions-stream/ && tscpaths --silent -p tsconfig.json -s ./src -o ./dist",
     "trigger": "pnpm run build && node dist/servers/trigger.js | pino-pretty -c -l",
     "ws": "pnpm run build && node dist/servers/ws-server.js | pino-pretty -c -l",
     "watch": "nodemon -V -e ts,graphql -w ./src -x pnpm run start",
@@ -26,6 +26,7 @@
     "dev:api-trigger": "tsx src/servers/trigger.ts",
     "dev:api-exporter": "tsx src/servers/exporter.ts",
     "dev:api-ws-server": "tsx src/servers/ws-server.ts",
+    "dev:api-transactions-grpc-stream": "tsx src/servers/transactions-grpc-stream-server.ts",
     "dev:cron": "tsx src/servers/cron.ts",
     "migrate:create": "migrate-mongo create $MIGRATION_NAME -f src/migrations/migrate-mongo-config.js",
     "migrate:status": "migrate-mongo status -f src/migrations/migrate-mongo-config.js",
@@ -33,7 +34,8 @@
     "migrate:down": "migrate-mongo down -f src/migrations/migrate-mongo-config.js",
     "mongodb-migrate": "pnpm run migrate:status && pnpm run migrate:up && pnpm run migrate:status",
     "codegen:notifications": "cd ./src/services/notifications/proto && buf generate",
-    "codegen:api-keys": "cd ./src/services/api-keys/proto && buf generate"
+    "codegen:api-keys": "cd ./src/services/api-keys/proto && buf generate",
+    "codegen:transactions-stream": "cd ./src/services/transactions-stream/proto && buf generate"
   },
   "engines": {
     "node": "20"

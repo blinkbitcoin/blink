@@ -613,6 +613,31 @@ local_resource(
     ]
 )
 
+api_transactions_grpc_stream_target = "//core/api-transactions-grpc-stream:dev"
+if is_ci:
+  api_transactions_grpc_stream_target = (
+    "//core/api-transactions-grpc-stream:api-transactions-grpc-stream"
+  )
+local_resource(
+    "api-transactions-grpc-stream",
+    labels = ["core"],
+    cmd = "buck2 build {}".format(api_transactions_grpc_stream_target),
+    serve_cmd = "buck2 run {}".format(api_transactions_grpc_stream_target),
+    serve_env = core_serve_env,
+    allow_parallel = True,
+    readiness_probe = probe(
+        period_secs  = 5,
+        http_get = http_get_action(
+            path = "healthz",
+            port = 8889,
+        ),
+    ),
+    deps = _buck2_dep_inputs(api_transactions_grpc_stream_target),
+    resource_deps = [
+        "mongodb",
+    ]
+)
+
 notifications_target = "//core/notifications:notifications"
 local_resource(
     "notifications",
