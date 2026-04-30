@@ -42,7 +42,14 @@
         (import rust-overlay)
       ];
       pkgs = import nixpkgs {inherit overlays system;};
-      bufPkg = if pkgs.stdenv.isDarwin then dockerPkgs.buf else pkgs.buf;
+      bufPkg =
+        if pkgs.stdenv.isDarwin
+        then dockerPkgs.buf
+        else pkgs.buf;
+      grpcurlPkg =
+        if pkgs.stdenv.isDarwin
+        then dockerPkgs.grpcurl
+        else pkgs.grpcurl;
       rustVersion = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
       rust-toolchain = rustVersion.override {
         extensions = ["rust-analyzer" "rust-src"];
@@ -84,7 +91,7 @@
           cargo-watch
           reindeer
           gitMinimal
-          grpcurl
+          grpcurlPkg
           bufPkg
           netcat
         ]
