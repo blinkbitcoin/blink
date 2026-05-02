@@ -68,7 +68,7 @@
     "ssr": "link:@apollo/experimental-nextjs-app-support/ssr",
     "tailwindcss": "3.3.2",
     "tailwindcss-animate": "^1.0.7",
-    "uuid": "^9.0.0",
+    "uuid": "^14.0.0",
     "zod": "^3.21.4"
   },
   "devDependencies": {
