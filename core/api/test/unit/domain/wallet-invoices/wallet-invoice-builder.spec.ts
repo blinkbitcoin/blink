@@ -99,7 +99,8 @@ describe("WalletInvoiceBuilder", () => {
   const WIBWithDescription = WIBWithExternalId.withDescription({
     description: testDescription,
   })
-  const checkDescription = ({ lnInvoice }: WalletInvoice) => {
+  const checkDescription = ({ description, lnInvoice }: WalletInvoice) => {
+    expect(description).toEqual(testDescription)
     expect(lnInvoice.description).toEqual(testDescription)
   }
   const WIBWithDescriptionAndNoExternalId = WIBWithNoExternalId.withDescription({

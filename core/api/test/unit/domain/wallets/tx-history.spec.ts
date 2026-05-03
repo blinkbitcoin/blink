@@ -8,11 +8,6 @@ import {
   WalletTransactionHistory,
 } from "@/domain/wallets/tx-history"
 import { toSats } from "@/domain/bitcoin"
-import {
-  memoSharingConfig,
-  MEMO_SHARING_CENTS_THRESHOLD,
-  MEMO_SHARING_SATS_THRESHOLD,
-} from "@/config"
 import { WalletCurrency } from "@/domain/shared"
 import { UsdDisplayCurrency, priceAmountFromNumber, toCents } from "@/domain/fiat"
 import { LnPaymentState } from "@/domain/ledger/ln-payment-state"
@@ -243,7 +238,6 @@ describe("translates ledger txs to wallet txs", () => {
         const result = WalletTransactionHistory.fromLedger({
           txn: ledgerTransactions[i],
           nonEndUserWalletIds: [],
-          memoSharingConfig,
         })
 
         expect(result).toEqual(expected[i])
@@ -272,7 +266,6 @@ describe("translates ledger txs to wallet txs", () => {
         const result = WalletTransactionHistory.fromLedger({
           txn: ledgerTransactions[i],
           nonEndUserWalletIds: [],
-          memoSharingConfig,
         })
 
         expect(result).toEqual(expected[i])
@@ -332,7 +325,6 @@ describe("translates ledger txs to wallet txs", () => {
         const result = WalletTransactionHistory.fromLedger({
           txn: ledgerTransactionsModified[i],
           nonEndUserWalletIds: [],
-          memoSharingConfig,
         })
 
         expect(result).toEqual(expectedTransactionsModified[i])
@@ -353,12 +345,9 @@ describe("translateDescription", () => {
 
     const result = translateMemo({
       memoFromPayer: "some memo",
-      credit: MEMO_SHARING_SATS_THRESHOLD,
-      currency: WalletCurrency.Btc,
       walletId: journalIdMemoArgs.nonEndUserWalletIds[0],
       journalId,
       nonEndUserWalletIds: journalIdMemoArgs.nonEndUserWalletIds,
-      memoSharingConfig,
     })
     expect(result).toEqual(`JournalId:${journalId}`)
   })
@@ -366,9 +355,6 @@ describe("translateDescription", () => {
   it("returns the memoFromPayer for BTC wallet", () => {
     const result = translateMemo({
       memoFromPayer: "some memo",
-      credit: MEMO_SHARING_SATS_THRESHOLD,
-      currency: WalletCurrency.Btc,
-      memoSharingConfig,
       ...journalIdMemoArgs,
     })
     expect(result).toEqual("some memo")
@@ -377,31 +363,22 @@ describe("translateDescription", () => {
   it("returns memo if there is no memoFromPayer for BTC wallet", () => {
     const result = translateMemo({
       lnMemo: "some memo",
-      credit: MEMO_SHARING_SATS_THRESHOLD,
-      currency: WalletCurrency.Btc,
-      memoSharingConfig,
       ...journalIdMemoArgs,
     })
     expect(result).toEqual("some memo")
   })
 
-  it("returns null under spam thresh for BTC wallet", () => {
+  it("returns memo under old spam threshold for BTC wallet", () => {
     const result = translateMemo({
       memoFromPayer: "some memo",
-      credit: 1 as Satoshis,
-      currency: WalletCurrency.Btc,
-      memoSharingConfig,
       ...journalIdMemoArgs,
     })
-    expect(result).toBeNull()
+    expect(result).toEqual("some memo")
   })
 
-  it("returns memo for debit under spam threshold for BTC wallet", () => {
+  it("returns memo for debit under old spam threshold for BTC wallet", () => {
     const result = translateMemo({
       memoFromPayer: "some memo",
-      credit: 0 as Satoshis,
-      currency: WalletCurrency.Btc,
-      memoSharingConfig,
       ...journalIdMemoArgs,
     })
     expect(result).toEqual("some memo")
@@ -410,9 +387,6 @@ describe("translateDescription", () => {
   it("returns the memoFromPayer for USD wallet", () => {
     const result = translateMemo({
       memoFromPayer: "some memo",
-      credit: MEMO_SHARING_CENTS_THRESHOLD,
-      currency: WalletCurrency.Usd,
-      memoSharingConfig,
       ...journalIdMemoArgs,
     })
     expect(result).toEqual("some memo")
@@ -421,31 +395,22 @@ describe("translateDescription", () => {
   it("returns memo if there is no memoFromPayer for USD wallet", () => {
     const result = translateMemo({
       lnMemo: "some memo",
-      credit: MEMO_SHARING_CENTS_THRESHOLD,
-      currency: WalletCurrency.Usd,
-      memoSharingConfig,
       ...journalIdMemoArgs,
     })
     expect(result).toEqual("some memo")
   })
 
-  it("returns null under spam thresh for USD wallet", () => {
+  it("returns memo under old spam threshold for USD wallet", () => {
     const result = translateMemo({
       memoFromPayer: "some memo",
-      credit: 1 as UsdCents,
-      currency: WalletCurrency.Usd,
-      memoSharingConfig,
       ...journalIdMemoArgs,
     })
-    expect(result).toBeNull()
+    expect(result).toEqual("some memo")
   })
 
-  it("returns memo for debit under spam threshold for USD wallet", () => {
+  it("returns memo for debit under old spam threshold for USD wallet", () => {
     const result = translateMemo({
       memoFromPayer: "some memo",
-      credit: 0 as UsdCents,
-      currency: WalletCurrency.Usd,
-      memoSharingConfig,
       ...journalIdMemoArgs,
     })
     expect(result).toEqual("some memo")
@@ -466,7 +431,6 @@ describe("WalletTransactionHistory.fromLedger", () => {
       const result = WalletTransactionHistory.fromLedger({
         txn,
         nonEndUserWalletIds: [],
-        memoSharingConfig,
       })
       expect(result.status).toEqual(TxStatus.Failure)
     })
