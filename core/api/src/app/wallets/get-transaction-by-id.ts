@@ -1,4 +1,3 @@
-import { memoSharingConfig } from "@/config"
 import { WalletTransactionHistory } from "@/domain/wallets"
 import { checkedToLedgerTransactionId } from "@/domain/ledger"
 
@@ -25,7 +24,6 @@ export const getTransactionForWalletById = async ({
   return WalletTransactionHistory.fromLedger({
     txn: ledgerTransaction,
     nonEndUserWalletIds: Object.values(await getNonEndUserWalletIds()),
-    memoSharingConfig,
   })
 }
 
@@ -43,6 +41,5 @@ export const getTransactionById = async (
   return WalletTransactionHistory.fromLedger({
     txn: ledgerTransaction,
     nonEndUserWalletIds: Object.values(await getNonEndUserWalletIds()),
-    memoSharingConfig,
   })
 }

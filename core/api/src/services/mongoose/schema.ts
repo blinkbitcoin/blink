@@ -98,6 +98,10 @@ const walletInvoiceSchema = new Schema<WalletInvoiceRecord>({
     type: String,
   },
 
+  description: {
+    type: String,
+  },
+
   externalId: {
     required: true,
     type: String,

@@ -103,6 +103,7 @@ type WalletInvoiceWithOptionalLnInvoice = {
   createdAt: Date
   processingCompleted: boolean
   externalId: LedgerExternalId
+  description?: string
   lnInvoice?: LnInvoice // LnInvoice is optional because some older invoices don't have it
 }
 

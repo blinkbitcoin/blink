@@ -1,4 +1,4 @@
-import { MAX_PAGINATION_PAGE_SIZE, memoSharingConfig } from "@/config"
+import { MAX_PAGINATION_PAGE_SIZE } from "@/config"
 
 import { LedgerError } from "@/domain/ledger"
 import { WalletTransactionHistory } from "@/domain/wallets"
@@ -35,7 +35,6 @@ export const getTransactionsForWallets = async ({
     const transaction = WalletTransactionHistory.fromLedger({
       txn: edge.node,
       nonEndUserWalletIds,
-      memoSharingConfig,
     })
 
     return {
