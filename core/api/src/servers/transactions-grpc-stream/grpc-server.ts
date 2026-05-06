@@ -4,10 +4,7 @@ import { transactionStreamEventToGrpcTransactionEvent } from "./convert"
 import { ITransactionsStreamServer } from "./proto/transactions_grpc_pb"
 import { SubscribeTransactionsRequest, TransactionEvent } from "./proto/transactions_pb"
 
-import {
-  TransactionsStreamService,
-  TransactionsStreamSubscription,
-} from "@/services/transactions-stream"
+import { TransactionsStream } from "@/app/transactions-stream"
 import { baseLogger } from "@/services/logger"
 
 const logger = baseLogger.child({ module: "transactions-grpc-stream" })
@@ -19,24 +16,15 @@ const toServiceError = ({
   code,
   message,
   details,
-}: {
-  code: status
-  message: string
-  details: string
-}): ServiceError =>
+}: TransactionsGrpcServiceErrorArgs): ServiceError =>
   Object.assign(new Error(message), {
     code,
     details,
     metadata: new Metadata(),
   })
 
-type TransactionsGrpcServerConfig = {
-  transactionsStreamService?: ReturnType<typeof TransactionsStreamService>
-  logger?: Logger
-}
-
 export const TransactionsGrpcServer = ({
-  transactionsStreamService = TransactionsStreamService(),
+  transactionsStream = TransactionsStream(),
   logger: serviceLogger = logger,
 }: TransactionsGrpcServerConfig = {}): ITransactionsStreamServer => {
   const subscribeTransactions: handleServerStreamingCall<
@@ -44,7 +32,7 @@ export const TransactionsGrpcServer = ({
     TransactionEvent
   > = (call) => {
     let isClosed = false
-    const subscriptionRef: { current?: TransactionsStreamSubscription } = {}
+    const subscriptionRef: TransactionsStreamSubscriptionRef = {}
 
     const cleanup = () => {
       if (isClosed) return
@@ -66,7 +54,7 @@ export const TransactionsGrpcServer = ({
         call.once("error", finish)
       })
 
-    const result = transactionsStreamService.subscribeToTransactions({
+    const result = transactionsStream.subscribeToTransactions({
       afterTransactionId: requestAfterTransactionId(call.request),
       onTransaction: async (event) => {
         if (isClosed) return

@@ -11,8 +11,8 @@ import {
 
 import { baseLogger } from "@/services/logger"
 import { setupMongoConnection } from "@/services/mongodb"
-import { TransactionsGrpcServer } from "@/services/transactions-stream/grpc-server"
-import { TransactionsStreamService } from "@/services/transactions-stream/proto/transactions_grpc_pb"
+import { TransactionsGrpcServer } from "@/servers/transactions-grpc-stream/grpc-server"
+import { TransactionsStreamService as TransactionsGrpcServiceDefinition } from "@/servers/transactions-grpc-stream/proto/transactions_grpc_pb"
 
 const logger = baseLogger.child({ module: "transactions-grpc-stream-server" })
 
@@ -43,7 +43,7 @@ const startHealthServer = async () => {
 
 const startGrpcServer = async () => {
   const server = new Server()
-  server.addService(TransactionsStreamService, TransactionsGrpcServer())
+  server.addService(TransactionsGrpcServiceDefinition, TransactionsGrpcServer())
 
   const address = `0.0.0.0:${TRANSACTIONS_GRPC_STREAM_PORT}`
   await new Promise<void>((resolve, reject) => {

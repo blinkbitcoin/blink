@@ -20,7 +20,7 @@ jest.mock("@/services/mongoose/wallets", () => ({
   WalletsRepository: jest.fn(),
 }))
 
-import { TransactionsStreamService } from "@/services/transactions-stream"
+import { TransactionsStream } from "@/app/transactions-stream"
 
 import {
   TransactionsStreamSettlementVia,
@@ -87,7 +87,7 @@ const subscribe = ({
   service,
   afterTransactionId,
 }: {
-  service: ReturnType<typeof TransactionsStreamService>
+  service: ReturnType<typeof TransactionsStream>
   afterTransactionId?: string
 }) => {
   const onTransaction = jest.fn()
@@ -101,12 +101,12 @@ const subscribe = ({
   return { onTransaction, onError, subscription }
 }
 
-describe("TransactionsStreamService", () => {
+describe("TransactionsStream", () => {
   it("returns an error for malformed cursors", () => {
     const ledgerService = {
       streamSettledTransactions: jest.fn(),
     }
-    const service = TransactionsStreamService({
+    const service = TransactionsStream({
       ledgerService,
       mapTransactionStreamEvent: jest.fn(),
     })
@@ -124,7 +124,7 @@ describe("TransactionsStreamService", () => {
     const ledgerService = {
       streamSettledTransactions: jest.fn(),
     }
-    const service = TransactionsStreamService({
+    const service = TransactionsStream({
       ledgerService,
       mapTransactionStreamEvent: jest.fn(),
     })
@@ -151,7 +151,7 @@ describe("TransactionsStreamService", () => {
       .mockImplementation(async (txn: LedgerTransaction<WalletCurrency>) =>
         createEvent(txn.id),
       )
-    const service = TransactionsStreamService({
+    const service = TransactionsStream({
       ledgerService,
       mapTransactionStreamEvent,
     })
@@ -186,7 +186,7 @@ describe("TransactionsStreamService", () => {
         .fn()
         .mockReturnValue(ledgerTransactionGenerator([])),
     }
-    const service = TransactionsStreamService({
+    const service = TransactionsStream({
       ledgerService,
       mapTransactionStreamEvent: jest.fn(),
     })
@@ -208,7 +208,7 @@ describe("TransactionsStreamService", () => {
         .fn()
         .mockReturnValue(ledgerTransactionGenerator([ledgerTransaction])),
     }
-    const service = TransactionsStreamService({
+    const service = TransactionsStream({
       ledgerService,
       mapTransactionStreamEvent: jest.fn().mockResolvedValue(undefined),
     })
@@ -227,7 +227,7 @@ describe("TransactionsStreamService", () => {
         .fn()
         .mockReturnValue(ledgerTransactionGenerator([ledgerError])),
     }
-    const service = TransactionsStreamService({
+    const service = TransactionsStream({
       ledgerService,
       mapTransactionStreamEvent: jest.fn(),
       logger: { error: jest.fn() } as unknown as Logger,
@@ -247,7 +247,7 @@ describe("TransactionsStreamService", () => {
         .fn()
         .mockReturnValue(ledgerTransactionGenerator([ledgerTransaction])),
     }
-    const service = TransactionsStreamService({
+    const service = TransactionsStream({
       ledgerService,
       mapTransactionStreamEvent: jest.fn().mockRejectedValue(mapperError),
       logger: { error: jest.fn() } as unknown as Logger,
@@ -274,7 +274,7 @@ describe("TransactionsStreamService", () => {
         })()
       }),
     }
-    const service = TransactionsStreamService({
+    const service = TransactionsStream({
       ledgerService,
       mapTransactionStreamEvent: jest.fn(),
     })

@@ -24,9 +24,9 @@ jest.mock("@/services/mongoose/wallets", () => ({
 
 import { status } from "@grpc/grpc-js"
 
-import { TransactionsStreamService } from "@/services/transactions-stream"
-import { TransactionsGrpcServer } from "@/services/transactions-stream/grpc-server"
-import { SubscribeTransactionsRequest } from "@/services/transactions-stream/proto/transactions_pb"
+import { TransactionsStream } from "@/app/transactions-stream"
+import { TransactionsGrpcServer } from "@/servers/transactions-grpc-stream/grpc-server"
+import { SubscribeTransactionsRequest } from "@/servers/transactions-grpc-stream/proto/transactions_pb"
 
 import { LedgerTransactionType } from "@/domain/ledger"
 import {
@@ -98,11 +98,11 @@ async function* ledgerTransactionGenerator(values: LedgerTransaction<WalletCurre
 
 describe("TransactionsGrpcServer", () => {
   it("returns INVALID_ARGUMENT for malformed cursors", () => {
-    const transactionsStreamService = {
+    const transactionsStream = {
       subscribeToTransactions: jest.fn().mockReturnValue(new Error("invalid cursor")),
     }
     const grpcServer = TransactionsGrpcServer({
-      transactionsStreamService: transactionsStreamService as never,
+      transactionsStream: transactionsStream as never,
     })
     const call = createCall("not-an-object-id")
 
@@ -110,7 +110,7 @@ describe("TransactionsGrpcServer", () => {
 
     expect(call.destroy).toHaveBeenCalledTimes(1)
     expect(call.destroy.mock.calls[0][0].code).toBe(status.INVALID_ARGUMENT)
-    expect(transactionsStreamService.subscribeToTransactions).toHaveBeenCalledWith({
+    expect(transactionsStream.subscribeToTransactions).toHaveBeenCalledWith({
       afterTransactionId: "not-an-object-id",
       onTransaction: expect.any(Function),
       onError: expect.any(Function),
@@ -118,11 +118,11 @@ describe("TransactionsGrpcServer", () => {
   })
 
   it("returns INVALID_ARGUMENT for explicitly empty cursors", () => {
-    const transactionsStreamService = {
+    const transactionsStream = {
       subscribeToTransactions: jest.fn().mockReturnValue(new Error("invalid cursor")),
     }
     const grpcServer = TransactionsGrpcServer({
-      transactionsStreamService: transactionsStreamService as never,
+      transactionsStream: transactionsStream as never,
     })
     const call = createCall("")
 
@@ -130,7 +130,7 @@ describe("TransactionsGrpcServer", () => {
 
     expect(call.destroy).toHaveBeenCalledTimes(1)
     expect(call.destroy.mock.calls[0][0].code).toBe(status.INVALID_ARGUMENT)
-    expect(transactionsStreamService.subscribeToTransactions).toHaveBeenCalledWith({
+    expect(transactionsStream.subscribeToTransactions).toHaveBeenCalledWith({
       afterTransactionId: "",
       onTransaction: expect.any(Function),
       onError: expect.any(Function),
@@ -139,14 +139,14 @@ describe("TransactionsGrpcServer", () => {
 
   it("maps domain events to grpc messages", async () => {
     const close = jest.fn()
-    const transactionsStreamService = {
+    const transactionsStream = {
       subscribeToTransactions: jest.fn().mockImplementation(({ onTransaction }) => {
         onTransaction(createEvent())
         return { close }
       }),
     }
     const grpcServer = TransactionsGrpcServer({
-      transactionsStreamService: transactionsStreamService as never,
+      transactionsStream: transactionsStream as never,
     })
     const call = createCall("661111111111111111111110")
 
@@ -176,11 +176,11 @@ describe("TransactionsGrpcServer", () => {
         .mockReturnValue(ledgerTransactionGenerator([ledgerTransaction])),
     }
     const mapTransactionStreamEvent = jest.fn().mockResolvedValue(createEvent())
-    const transactionsStreamService = TransactionsStreamService({
+    const transactionsStream = TransactionsStream({
       ledgerService,
       mapTransactionStreamEvent,
     })
-    const grpcServer = TransactionsGrpcServer({ transactionsStreamService })
+    const grpcServer = TransactionsGrpcServer({ transactionsStream })
     const call = createCall("000000000000000000000000")
 
     grpcServer.subscribeTransactions(call as never)
@@ -197,11 +197,11 @@ describe("TransactionsGrpcServer", () => {
 
   it("does not close the subscription on grpc close", () => {
     const close = jest.fn()
-    const transactionsStreamService = {
+    const transactionsStream = {
       subscribeToTransactions: jest.fn().mockReturnValue({ close }),
     }
     const grpcServer = TransactionsGrpcServer({
-      transactionsStreamService: transactionsStreamService as never,
+      transactionsStream: transactionsStream as never,
     })
     const call = createCall("661111111111111111111110")
 
@@ -213,11 +213,11 @@ describe("TransactionsGrpcServer", () => {
 
   it("closes the subscription on client cancellation", () => {
     const close = jest.fn()
-    const transactionsStreamService = {
+    const transactionsStream = {
       subscribeToTransactions: jest.fn().mockReturnValue({ close }),
     }
     const grpcServer = TransactionsGrpcServer({
-      transactionsStreamService: transactionsStreamService as never,
+      transactionsStream: transactionsStream as never,
     })
     const call = createCall("661111111111111111111110")
 
@@ -229,11 +229,11 @@ describe("TransactionsGrpcServer", () => {
 
   it("closes the subscription on grpc call errors", () => {
     const close = jest.fn()
-    const transactionsStreamService = {
+    const transactionsStream = {
       subscribeToTransactions: jest.fn().mockReturnValue({ close }),
     }
     const grpcServer = TransactionsGrpcServer({
-      transactionsStreamService: transactionsStreamService as never,
+      transactionsStream: transactionsStream as never,
     })
     const call = createCall("661111111111111111111110")
 
@@ -243,18 +243,18 @@ describe("TransactionsGrpcServer", () => {
     expect(close).toHaveBeenCalledTimes(1)
   })
 
-  it("destroys the grpc call on service stream errors", () => {
+  it("destroys the grpc call on app stream errors", () => {
     const close = jest.fn()
     const streamError = new Error("change stream failed")
     let onError: ((err: Error) => void) | undefined
-    const transactionsStreamService = {
+    const transactionsStream = {
       subscribeToTransactions: jest.fn().mockImplementation(({ onError: handler }) => {
         onError = handler
         return { close }
       }),
     }
     const grpcServer = TransactionsGrpcServer({
-      transactionsStreamService: transactionsStreamService as never,
+      transactionsStream: transactionsStream as never,
       logger: { error: jest.fn() } as unknown as Logger,
     })
     const call = createCall("661111111111111111111110")
@@ -268,14 +268,14 @@ describe("TransactionsGrpcServer", () => {
 
   it("waits for grpc drain when writes apply backpressure", async () => {
     let onTransactionResult: Promise<void> | undefined
-    const transactionsStreamService = {
+    const transactionsStream = {
       subscribeToTransactions: jest.fn().mockImplementation(({ onTransaction }) => {
         onTransactionResult = onTransaction(createEvent())
         return { close: jest.fn() }
       }),
     }
     const grpcServer = TransactionsGrpcServer({
-      transactionsStreamService: transactionsStreamService as never,
+      transactionsStream: transactionsStream as never,
     })
     const call = createCall("661111111111111111111110")
     call.write.mockReturnValueOnce(false)

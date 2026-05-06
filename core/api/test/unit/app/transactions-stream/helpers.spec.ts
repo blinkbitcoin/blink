@@ -20,7 +20,7 @@ import {
   createPreimageLoader,
   createPreimageResolver,
   createTransactionStreamEventMapper,
-} from "@/services/transactions-stream/helpers"
+} from "@/app/transactions-stream/helpers"
 import { TransactionMetadata } from "@/services/ledger/schema"
 
 import {

@@ -12,24 +12,6 @@ const toError = (err: unknown, fallbackMessage: string): Error => {
   return new Error(fallbackMessage)
 }
 
-type SubscribeToTransactionsArgs = {
-  afterTransactionId?: string
-  onTransaction: (event: TransactionStreamEvent) => void | Promise<void>
-  onError: (err: Error) => void
-}
-
-export type TransactionsStreamSubscription = {
-  close: () => void
-}
-
-type TransactionsStreamServiceConfig = {
-  ledgerService?: Pick<ILedgerService, "streamSettledTransactions">
-  mapTransactionStreamEvent?: (
-    ledgerTransaction: LedgerTransaction<WalletCurrency>,
-  ) => Promise<TransactionStreamEvent | undefined>
-  logger?: Logger
-}
-
 const parseAfterTransactionId = (
   afterTransactionId?: string,
 ): LedgerTransactionId | Error | undefined => {
@@ -41,12 +23,12 @@ const parseAfterTransactionId = (
   return checkedLedgerTransactionId
 }
 
-export const TransactionsStreamService = ({
+export const TransactionsStream = ({
   ledgerService = LedgerService(),
   mapTransactionStreamEvent = createTransactionStreamEventMapper()
     .mapTransactionStreamEvent,
   logger: serviceLogger = logger,
-}: TransactionsStreamServiceConfig = {}) => {
+}: TransactionsStreamConfig = {}) => {
   const subscribeToTransactions = ({
     afterTransactionId,
     onTransaction,

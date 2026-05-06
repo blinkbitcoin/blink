@@ -3,7 +3,7 @@ source "$(dirname "$CURRENT_FILE")/_common.bash"
 
 export TRANSACTIONS_GRPC_STREAM_ADDRESS="${TRANSACTIONS_GRPC_STREAM_ADDRESS:-localhost:50053}"
 export TRANSACTIONS_GRPC_STREAM_HEALTH_URL="${TRANSACTIONS_GRPC_STREAM_HEALTH_URL:-http://localhost:8889/healthz}"
-export TRANSACTIONS_GRPC_STREAM_PROTO_IMPORT_PATH="${REPO_ROOT}/core/api/src/services/transactions-stream/proto"
+export TRANSACTIONS_GRPC_STREAM_PROTO_IMPORT_PATH="${REPO_ROOT}/core/api/src/servers/transactions-grpc-stream/proto"
 export TRANSACTIONS_GRPC_STREAM_PROTO_FILE="transactions.proto"
 export TRANSACTIONS_GRPC_STREAM_SERVICE_METHOD="services.transactions.v1.TransactionsStream/SubscribeTransactions"
 
