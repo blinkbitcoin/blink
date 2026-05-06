@@ -91,7 +91,7 @@ const createTransactionModel = ({
 }
 
 describe("settled transaction stream query helpers", () => {
-  it("filters settled customer transactions after a cursor", () => {
+  it("filters settled liabilities transactions after a cursor", () => {
     const filter = settledTransactionFilter(
       "661111111111111111111111" as LedgerTransactionId,
     )
@@ -99,24 +99,15 @@ describe("settled transaction stream query helpers", () => {
     expect(filter).toMatchObject({
       accounts: /^Liabilities:/,
       pending: false,
-      voided: { $ne: true },
-      type: {
-        $nin: [
-          LedgerTransactionType.Fee,
-          LedgerTransactionType.ToColdStorage,
-          LedgerTransactionType.ToHotWallet,
-          LedgerTransactionType.Escrow,
-          LedgerTransactionType.RoutingRevenue,
-          LedgerTransactionType.Reconciliation,
-        ],
-      },
     })
+    expect(filter).not.toHaveProperty("voided")
+    expect(filter).not.toHaveProperty("type")
     expect((filter._id as { $gt: mongoose.Types.ObjectId }).$gt.toString()).toBe(
       "661111111111111111111111",
     )
   })
 
-  it("builds the same constraints for live change streams", () => {
+  it("builds liabilities constraints for live change streams", () => {
     const pipeline = settledTransactionChangeStreamPipeline(
       "661111111111111111111111" as LedgerTransactionId,
     )
@@ -124,30 +115,18 @@ describe("settled transaction stream query helpers", () => {
     expect(pipeline).toEqual([
       {
         $match: {
-          "operationType": { $in: ["insert", "replace", "update"] },
-          "$or": [
-            { operationType: { $in: ["insert", "replace"] } },
-            { "updateDescription.updatedFields.pending": false },
-          ],
           "fullDocument.accounts": /^Liabilities:/,
           "fullDocument.pending": false,
-          "fullDocument.voided": { $ne: true },
-          "fullDocument.type": {
-            $nin: [
-              LedgerTransactionType.Fee,
-              LedgerTransactionType.ToColdStorage,
-              LedgerTransactionType.ToHotWallet,
-              LedgerTransactionType.Escrow,
-              LedgerTransactionType.RoutingRevenue,
-              LedgerTransactionType.Reconciliation,
-            ],
-          },
           "fullDocument._id": {
             $gt: new mongoose.Types.ObjectId("661111111111111111111111"),
           },
         },
       },
     ])
+    expect(pipeline[0].$match).not.toHaveProperty("fullDocument.voided")
+    expect(pipeline[0].$match).not.toHaveProperty("fullDocument.type")
+    expect(pipeline[0].$match).not.toHaveProperty("operationType")
+    expect(pipeline[0].$match).not.toHaveProperty("$or")
   })
 })
 

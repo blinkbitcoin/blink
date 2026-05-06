@@ -1,57 +1,11 @@
 import { translateToLedgerTx } from "./translate"
 
-import { LedgerTransactionType } from "@/domain/ledger"
 import { UnknownLedgerError } from "@/domain/ledger/errors"
-import { WalletCurrency } from "@/domain/shared"
 import { toObjectId } from "@/services/mongoose/utils"
 
 const SETTLED_TRANSACTION_STREAM_BATCH_SIZE = 100
 const DEFAULT_REPLAY_DEDUPE_CACHE_SIZE = 10_000
 const LIABILITIES_ACCOUNT_PATTERN = /^Liabilities:/
-const EXCLUDED_SETTLED_TRANSACTION_TYPES: LedgerTransactionType[] = [
-  LedgerTransactionType.Fee,
-  LedgerTransactionType.ToColdStorage,
-  LedgerTransactionType.ToHotWallet,
-  LedgerTransactionType.Escrow,
-  LedgerTransactionType.RoutingRevenue,
-  LedgerTransactionType.Reconciliation,
-]
-const SETTLED_TRANSACTION_CHANGE_OPERATIONS = ["insert", "replace", "update"]
-const SETTLED_TRANSACTION_CHANGE_OPERATION_MATCH = [
-  { operationType: { $in: ["insert", "replace"] } },
-  { "updateDescription.updatedFields.pending": false },
-]
-
-type TransactionCursor = AsyncIterable<ILedgerTransaction> & {
-  close: () => Promise<unknown>
-}
-
-type TransactionFindQuery = {
-  sort: (sort: Record<string, 1 | -1>) => {
-    cursor: (options: { batchSize: number }) => TransactionCursor
-  }
-}
-
-type TransactionChangeStream = {
-  next: () => Promise<unknown>
-  close: () => Promise<unknown>
-}
-
-type SettledTransactionModel = {
-  find: (filter: Record<string, unknown>) => TransactionFindQuery
-  watch: (
-    pipeline: Record<string, unknown>[],
-    options: { fullDocument: "updateLookup" },
-  ) => TransactionChangeStream
-}
-
-type StreamSettledTransactionsConfig = {
-  transactionModel: SettledTransactionModel
-  translateLedgerTransaction?: (
-    tx: ILedgerTransaction,
-  ) => LedgerTransaction<WalletCurrency>
-  maxReplayDedupeCacheSize?: number
-}
 
 export const settledTransactionFilter = (
   afterTransactionId?: LedgerTransactionId,
@@ -59,8 +13,6 @@ export const settledTransactionFilter = (
   const filter: Record<string, unknown> = {
     accounts: LIABILITIES_ACCOUNT_PATTERN,
     pending: false,
-    voided: { $ne: true },
-    type: { $nin: EXCLUDED_SETTLED_TRANSACTION_TYPES },
   }
 
   if (afterTransactionId) {
@@ -74,12 +26,8 @@ export const settledTransactionChangeStreamPipeline = (
   afterTransactionId?: LedgerTransactionId,
 ): Record<string, unknown>[] => {
   const match: Record<string, unknown> = {
-    "operationType": { $in: SETTLED_TRANSACTION_CHANGE_OPERATIONS },
-    "$or": SETTLED_TRANSACTION_CHANGE_OPERATION_MATCH,
     "fullDocument.accounts": LIABILITIES_ACCOUNT_PATTERN,
     "fullDocument.pending": false,
-    "fullDocument.voided": { $ne: true },
-    "fullDocument.type": { $nin: EXCLUDED_SETTLED_TRANSACTION_TYPES },
   }
 
   if (afterTransactionId) {
