@@ -63,7 +63,8 @@ filegroup(
   name = "protos",
   srcs = glob([
     "src/services/**/protos/**",
-    "src/services/**/proto/**"
+    "src/services/**/proto/**",
+    "src/servers/**/proto/**",
   ])
 )
 
