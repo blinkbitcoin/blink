@@ -250,11 +250,11 @@ jobs:
           - get: #@ component_src_resource_name("api")
             trigger: true
             passed:
-              #@ for component in ["api", "api-migrate", "api-ws-server", "api-trigger"]:
+              #@ for component in ["api", "api-migrate", "api-ws-server", "api-trigger", "api-transactions-grpc-stream"]:
               -  #@ build_edge_image_name(component)
           #@ end
           - get: pipeline-tasks
-          #@ for component in ["api", "api-migrate", "api-ws-server", "api-trigger", "notifications"]:
+          #@ for component in ["api", "api-migrate", "api-ws-server", "api-trigger", "api-transactions-grpc-stream", "notifications"]:
           - get: #@ edge_image_resource_name(component)
             passed:
               -  #@ build_edge_image_name(component)
@@ -272,6 +272,7 @@ jobs:
             - name: api-edge-image
             - name: api-migrate-edge-image
             - name: api-trigger-edge-image
+            - name: api-transactions-grpc-stream-edge-image
             - name: notifications-edge-image
             - name: pipeline-tasks
           outputs:
