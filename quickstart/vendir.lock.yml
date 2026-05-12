@@ -2,24 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix: pnpm audit critical protobufjs advisory (#559)'
-      sha: 892bea20b0dde11418feddb0f107aef02092910e
+      commitTitle: 'chore(deps): bump axios from 1.15.0 to 1.15.2 (#561)'
+      sha: 515cff0d4c78e17ccf910b87b401f1fedc68d2cb
       tags:
-      - 0.22.2-1-g892bea20b
+      - 0.22.2-3-g515cff0d4
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'fix: pnpm audit critical protobufjs advisory (#559)'
-      sha: 892bea20b0dde11418feddb0f107aef02092910e
+      commitTitle: 'chore(deps): bump axios from 1.15.0 to 1.15.2 (#561)'
+      sha: 515cff0d4c78e17ccf910b87b401f1fedc68d2cb
       tags:
-      - 0.22.2-1-g892bea20b
+      - 0.22.2-3-g515cff0d4
     path: schemas
   - git:
-      commitTitle: 'fix: pnpm audit critical protobufjs advisory (#559)'
-      sha: 892bea20b0dde11418feddb0f107aef02092910e
+      commitTitle: 'chore(deps): bump axios from 1.15.0 to 1.15.2 (#561)'
+      sha: 515cff0d4c78e17ccf910b87b401f1fedc68d2cb
       tags:
-      - 0.22.2-1-g892bea20b
+      - 0.22.2-3-g515cff0d4
     path: gql
   path: graphql
 kind: LockConfig
