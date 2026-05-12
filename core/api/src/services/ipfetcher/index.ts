@@ -1,6 +1,6 @@
 import https from "https"
 
-import axios from "axios"
+import { create as createAxiosInstance } from "axios"
 import axiosRetry, { linearDelay } from "axios-retry"
 
 import { UnknownIpFetcherServiceError } from "@/domain/ipfetcher"
@@ -18,7 +18,7 @@ type Params = {
   key?: string
 }
 
-export const client = axios.create({
+export const client = createAxiosInstance({
   timeout: 2000,
   httpsAgent: new https.Agent({ keepAlive: true }),
 })
