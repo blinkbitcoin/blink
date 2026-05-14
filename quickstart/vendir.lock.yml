@@ -2,24 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'chore(deps): bump axios from 1.15.0 to 1.15.2 (#561)'
-      sha: 515cff0d4c78e17ccf910b87b401f1fedc68d2cb
+      commitTitle: 'chore: bitcoind update to 28.4 (#558)'
+      sha: 1848a6ffc6235b6796be1c16658d44c169c8a841
       tags:
-      - 0.22.2-3-g515cff0d4
+      - 0.22.3-3-g1848a6ffc
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'chore(deps): bump axios from 1.15.0 to 1.15.2 (#561)'
-      sha: 515cff0d4c78e17ccf910b87b401f1fedc68d2cb
+      commitTitle: 'chore: bitcoind update to 28.4 (#558)'
+      sha: 1848a6ffc6235b6796be1c16658d44c169c8a841
       tags:
-      - 0.22.2-3-g515cff0d4
+      - 0.22.3-3-g1848a6ffc
     path: schemas
   - git:
-      commitTitle: 'chore(deps): bump axios from 1.15.0 to 1.15.2 (#561)'
-      sha: 515cff0d4c78e17ccf910b87b401f1fedc68d2cb
+      commitTitle: 'chore: bitcoind update to 28.4 (#558)'
+      sha: 1848a6ffc6235b6796be1c16658d44c169c8a841
       tags:
-      - 0.22.2-3-g515cff0d4
+      - 0.22.3-3-g1848a6ffc
     path: gql
   path: graphql
 kind: LockConfig
