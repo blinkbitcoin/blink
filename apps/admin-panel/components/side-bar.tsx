@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
 
 import { AdminAccessRight } from "../app/access-rights"
-import { hasAccess } from "../app/authz"
+import { hasAccess } from "../app/scope-access"
 
 import PeopleIcon from "./icons/people.svg"
 import TransactionsIcon from "./icons/transactions.svg"

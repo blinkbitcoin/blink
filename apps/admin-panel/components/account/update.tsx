@@ -1,7 +1,7 @@
 import { revalidatePath } from "next/cache"
 
 import { AdminAccessRight } from "../../app/access-rights"
-import { hasAccess } from "../../app/authz"
+import { hasAccess } from "../../app/scope-access"
 import { getClient } from "../../app/graphql-rsc"
 import {
   AccountDetailsByAccountIdDocument,
