@@ -2,24 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'chore: bitcoind update to 28.4 (#558)'
-      sha: 1848a6ffc6235b6796be1c16658d44c169c8a841
+      commitTitle: 'feat: add RBAC for the admin api (#158)'
+      sha: 2fb978f81ba2d6083bafd1073373e93b84acb573
       tags:
-      - 0.22.3-3-g1848a6ffc
+      - 0.22.4-1-g2fb978f81
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'chore: bitcoind update to 28.4 (#558)'
-      sha: 1848a6ffc6235b6796be1c16658d44c169c8a841
+      commitTitle: 'feat: add RBAC for the admin api (#158)'
+      sha: 2fb978f81ba2d6083bafd1073373e93b84acb573
       tags:
-      - 0.22.3-3-g1848a6ffc
+      - 0.22.4-1-g2fb978f81
     path: schemas
   - git:
-      commitTitle: 'chore: bitcoind update to 28.4 (#558)'
-      sha: 1848a6ffc6235b6796be1c16658d44c169c8a841
+      commitTitle: 'feat: add RBAC for the admin api (#158)'
+      sha: 2fb978f81ba2d6083bafd1073373e93b84acb573
       tags:
-      - 0.22.3-3-g1848a6ffc
+      - 0.22.4-1-g2fb978f81
     path: gql
   path: graphql
 kind: LockConfig
