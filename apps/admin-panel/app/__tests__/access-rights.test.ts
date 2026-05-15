@@ -37,10 +37,9 @@ describe("Access Rights - Multiple Roles Support", () => {
           AdminAccessRight.LOCK_ACCOUNT,
           AdminAccessRight.APPROVE_MERCHANT,
           AdminAccessRight.VIEW_TRANSACTIONS,
-          AdminAccessRight.CHANGELEVEL_ACCOUNT,
         ]),
       )
-      expect(rights).toHaveLength(6)
+      expect(rights).toHaveLength(5)
     })
 
     test("getAccessRightsForRole returns correct rights for SUPPORTLV2", () => {
@@ -92,7 +91,7 @@ describe("Access Rights - Multiple Roles Support", () => {
       )
       expect(hasAccessRight("SUPPORTLV1", AdminAccessRight.APPROVE_MERCHANT)).toBe(true)
       expect(hasAccessRight("SUPPORTLV1", AdminAccessRight.CHANGELEVEL_ACCOUNT)).toBe(
-        true,
+        false,
       )
       expect(hasAccessRight("SUPPORTLV2", AdminAccessRight.CHANGELEVEL_ACCOUNT)).toBe(
         true,

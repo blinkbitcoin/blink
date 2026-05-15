@@ -6,9 +6,11 @@ import {
   AccountDetailsByAccountIdQuery,
   AccountDetailsByAccountIdQueryVariables,
 } from "../../../generated"
+import { getScope } from "../../authz"
 import { getClient } from "../../graphql-rsc"
 
 export default async function AccountDetails({ params }: { params: { uuid: string } }) {
+  const scope = await getScope()
   const { data } = await getClient().query<
     AccountDetailsByAccountIdQuery,
     AccountDetailsByAccountIdQueryVariables
@@ -28,7 +30,7 @@ export default async function AccountDetails({ params }: { params: { uuid: strin
         <div className="grid gap-6 mb-8 md:grid-cols-2 p-6">
           <Details auditedAccount={auditedAccount} />
           <div className="grid grid-cols-1 gap-4">
-            <AccountUpdate auditedAccount={auditedAccount} />
+            <AccountUpdate auditedAccount={auditedAccount} scope={scope} />
           </div>
         </div>
         <Merchants merchants={auditedAccount.merchants} />

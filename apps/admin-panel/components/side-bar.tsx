@@ -6,6 +6,9 @@ import { usePathname } from "next/navigation"
 
 import { signOut } from "next-auth/react"
 
+import { AdminAccessRight } from "../app/access-rights"
+import { hasAccess } from "../app/authz"
+
 import PeopleIcon from "./icons/people.svg"
 import TransactionsIcon from "./icons/transactions.svg"
 import GlobeIcon from "./icons/search-globe.svg"
@@ -17,26 +20,33 @@ const dashboardRoutes = [
     name: "Account details",
     icon: PeopleIcon,
     path: "/account",
+    accessRight: AdminAccessRight.VIEW_ACCOUNTS,
   },
   {
     name: "Transactions",
     icon: TransactionsIcon,
     path: "/transactions",
+    accessRight: AdminAccessRight.VIEW_TRANSACTIONS,
   },
   {
     name: "Merchants",
     icon: GlobeIcon,
     path: "/merchants",
+    accessRight: AdminAccessRight.VIEW_MERCHANTS,
   },
   {
     name: "Notifications",
     icon: ComposeIcon,
     path: "/notifications",
+    accessRight: AdminAccessRight.SEND_NOTIFICATIONS,
   },
 ]
 
-function SideBar() {
+function SideBar({ scope }: { scope: string }) {
   const pathname = usePathname()
+  const visibleRoutes = dashboardRoutes.filter((route) =>
+    hasAccess(scope, route.accessRight),
+  )
 
   return (
     <aside className="z-30 flex-shrink-0 hidden w-64 overflow-y-auto bg-white lg:block">
@@ -57,7 +67,7 @@ function SideBar() {
           Admin Panel
         </Link>
         <ul className="mt-6">
-          {dashboardRoutes.map((route) => (
+          {visibleRoutes.map((route) => (
             <li className="relative px-6 py-3" key={route.name}>
               <Link
                 href={route.path}
