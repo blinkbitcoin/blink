@@ -33,9 +33,12 @@ const SUPPORTLV1_RIGHTS = [
   ...VIEWER_RIGHTS,
   AdminAccessRight.LOCK_ACCOUNT,
   AdminAccessRight.APPROVE_MERCHANT,
-  AdminAccessRight.CHANGELEVEL_ACCOUNT,
 ]
-const SUPPORTLV2_RIGHTS = [...SUPPORTLV1_RIGHTS, AdminAccessRight.CHANGECONTACTS_ACCOUNT]
+const SUPPORTLV2_RIGHTS = [
+  ...SUPPORTLV1_RIGHTS,
+  AdminAccessRight.CHANGELEVEL_ACCOUNT,
+  AdminAccessRight.CHANGECONTACTS_ACCOUNT,
+]
 
 // ADMIN has all rights
 const ADMIN_RIGHTS = Object.values(AdminAccessRight)
