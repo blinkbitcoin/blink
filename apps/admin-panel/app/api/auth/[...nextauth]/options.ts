@@ -24,6 +24,7 @@ const DEV_CREDENTIALS: Record<string, { id: string; name: string; email: string 
   admin: { id: "1", name: "admin", email: "admintest@blinkbitcoin.test" },
   alice: { id: "2", name: "alice", email: "alicetest@blinkbitcoin.test" },
   bob: { id: "3", name: "bob", email: "bobtest@blinkbitcoin.test" },
+  carol: { id: "4", name: "carol", email: "caroltest@blinkbitcoin.test" },
 }
 
 const DEV_ROLE_MAPPING: Record<string, string[]> = {
@@ -33,19 +34,23 @@ const DEV_ROLE_MAPPING: Record<string, string[]> = {
   "caroltest@blinkbitcoin.test": ["SUPPORTLV2", "MARKETING_GLOBAL"],
 }
 
-const providers: Provider[] = [
-  GoogleProvider({
-    clientId: env.GOOGLE_CLIENT_ID ?? "",
-    clientSecret: env.GOOGLE_CLIENT_SECRET ?? "",
-    authorization: {
-      params: {
-        prompt: "consent",
-        access_type: "offline",
-        response_type: "code",
+const providers: Provider[] = []
+
+if (env.NODE_ENV !== "development") {
+  providers.push(
+    GoogleProvider({
+      clientId: env.GOOGLE_CLIENT_ID ?? "",
+      clientSecret: env.GOOGLE_CLIENT_SECRET ?? "",
+      authorization: {
+        params: {
+          prompt: "consent",
+          access_type: "offline",
+          response_type: "code",
+        },
       },
-    },
-  }),
-]
+    }),
+  )
+}
 
 if (env.NODE_ENV === "development") {
   providers.push(
