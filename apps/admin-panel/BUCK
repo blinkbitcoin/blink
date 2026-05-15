@@ -107,10 +107,17 @@ eslint(
     dev_deps_srcs=dev_deps_srcs,
 )
 
+dev_pnpm_task_test(
+    name="unit-test",
+    command="test",
+    deps = ["//:node_modules"],
+)
+
 test_suite(
     name="test",
     tests=[
         ":audit",
         ":lint",
+        ":unit-test",
     ],
 )

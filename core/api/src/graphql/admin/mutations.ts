@@ -10,23 +10,54 @@ import AccountForceDeleteMutation from "./root/mutation/account-force-delete"
 
 import TriggerMarketingNotificationMutation from "./root/mutation/marketing-notification-trigger"
 
+import { accessRules, extractFields, buildPermissionMappings } from "./access-rules"
+
 import { GT } from "@/graphql/index"
 
+// Mutation fields with embedded access rules
 export const mutationFields = {
   unauthed: {},
   authed: {
-    userUpdatePhone: UserUpdatePhoneMutation,
-    userUpdateEmail: UserUpdateEmailMutation,
-    accountUpdateLevel: AccountUpdateLevelMutation,
-    accountUpdateStatus: AccountUpdateStatusMutation,
-    accountForceDelete: AccountForceDeleteMutation,
-    merchantMapValidate: MerchantMapValidateMutation,
-    merchantMapDelete: MerchantMapDeleteMutation,
-    marketingNotificationTrigger: TriggerMarketingNotificationMutation,
+    accountUpdateLevel: {
+      field: AccountUpdateLevelMutation,
+      rule: accessRules.changeLevelAccount,
+    },
+    accountUpdateStatus: {
+      field: AccountUpdateStatusMutation,
+      rule: accessRules.lockAccount,
+    },
+    userUpdateEmail: {
+      field: UserUpdateEmailMutation,
+      rule: accessRules.changeContactsAccount,
+    },
+    userUpdatePhone: {
+      field: UserUpdatePhoneMutation,
+      rule: accessRules.changeContactsAccount,
+    },
+    merchantMapValidate: {
+      field: MerchantMapValidateMutation,
+      rule: accessRules.approveMerchant,
+    },
+    merchantMapDelete: {
+      field: MerchantMapDeleteMutation,
+      rule: accessRules.approveMerchant,
+    },
+    accountForceDelete: {
+      field: AccountForceDeleteMutation,
+      rule: accessRules.deleteAccounts,
+    },
+    marketingNotificationTrigger: {
+      field: TriggerMarketingNotificationMutation,
+      rule: accessRules.sendNotifications,
+    },
   },
 }
 
+const extractedMutationFields = extractFields(mutationFields.authed)
+
+export const mutationPermissions = buildPermissionMappings(mutationFields.authed)
+
 export const MutationType = GT.Object<null, GraphQLAdminContext>({
   name: "Mutation",
-  fields: () => ({ ...mutationFields.authed }),
+  fields: () => ({ ...extractedMutationFields }),
 })
