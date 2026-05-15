@@ -20,6 +20,19 @@ declare module "next-auth" {
   }
 }
 
+const DEV_CREDENTIALS: Record<string, { id: string; name: string; email: string }> = {
+  admin: { id: "1", name: "admin", email: "admintest@blinkbitcoin.test" },
+  alice: { id: "2", name: "alice", email: "alicetest@blinkbitcoin.test" },
+  bob: { id: "3", name: "bob", email: "bobtest@blinkbitcoin.test" },
+}
+
+const DEV_ROLE_MAPPING: Record<string, string[]> = {
+  "admintest@blinkbitcoin.test": ["ADMIN"],
+  "alicetest@blinkbitcoin.test": ["VIEWER"],
+  "bobtest@blinkbitcoin.test": ["SUPPORTLV1"],
+  "caroltest@blinkbitcoin.test": ["SUPPORTLV2", "MARKETING_GLOBAL"],
+}
+
 const providers: Provider[] = [
   GoogleProvider({
     clientId: env.GOOGLE_CLIENT_ID ?? "",
@@ -43,16 +56,9 @@ if (env.NODE_ENV === "development") {
         password: { label: "Password", type: "password" },
       },
       authorize: async (credentials) => {
-        if (credentials?.username === "admin" && credentials?.password === "admin") {
-          return { id: "1", name: "admin", email: "admintest@blinkbitcoin.test" }
-        }
-        if (credentials?.username === "alice" && credentials?.password === "alice") {
-          return { id: "2", name: "alice", email: "alicetest@blinkbitcoin.test" }
-        }
-        if (credentials?.username === "bob" && credentials?.password === "bob") {
-          return { id: "2", name: "bob", email: "bobtest@blinkbitcoin.test" }
-        }
-        return null
+        const username = credentials?.username ?? ""
+        const match = DEV_CREDENTIALS[username]
+        return match && credentials?.password === username ? match : null
       },
     }),
   )
@@ -64,18 +70,11 @@ const callbacks: Partial<CallbacksOptions> = {
       return !!user
     }
 
-    if (!account || !profile) {
-      return false
-    }
-
     const email = profile?.email
-    if (!email) {
-      return false
-    }
+    if (!account || !profile || !email) return false
 
-    // eslint-disable-next-line no-new-wrappers
-    const verified = new Boolean("email_verified" in profile && profile.email_verified)
-    return verified && env.AUTHORIZED_EMAILS.includes(email)
+    const isVerified = "email_verified" in profile && !!profile.email_verified
+    return isVerified && env.AUTHORIZED_EMAILS.includes(email)
   },
   // https://next-auth.js.org/configuration/callbacks#jwt-callback
   async jwt({ token, user }) {
@@ -83,38 +82,23 @@ const callbacks: Partial<CallbacksOptions> = {
 
     return tracer.startActiveSpan("jwt-callback", (span) => {
       span.setAttributes({
-        "auth.user_email": user?.email || token.email || "notSet",
+        "auth.user_email": user?.email ?? token.email ?? "notSet",
         "auth.has_user": !!user,
       })
 
-      let role_mapping: { [key: string]: string[] }
-      if (env.NODE_ENV === "development") {
-        role_mapping = {
-          "admintest@blinkbitcoin.test": ["ADMIN"],
-          "alicetest@blinkbitcoin.test": ["VIEWER"],
-          "bobtest@blinkbitcoin.test": ["SUPPORTLV1"],
-          "caroltest@blinkbitcoin.test": ["SUPPORTLV2", "MARKETING_GLOBAL"],
-        }
-      } else {
-        role_mapping = env.USER_ROLE_MAP
-      }
+      const roleMapping =
+        env.NODE_ENV === "development" ? DEV_ROLE_MAPPING : env.USER_ROLE_MAP
 
-      if (user) {
-        const userRoles = role_mapping[user.email as keyof typeof role_mapping] || [
-          "VIEWER",
-        ]
+      const nextScope = (() => {
+        if (!user) return token.email && token.scope ? String(token.scope) : ""
 
-        if (areValidAdminRoles(userRoles)) {
-          const accessRights = getAccessRightsForRoles(userRoles as AdminRole[])
-          token.scope = accessRights.join(" ")
-        } else {
-          token.scope = ""
-        }
-      } else {
-        if (!(token.email && token.scope)) {
-          token.scope = ""
-        }
-      }
+        const userRoles = roleMapping[user.email as string] ?? ["VIEWER"]
+        return areValidAdminRoles(userRoles)
+          ? getAccessRightsForRoles(userRoles as AdminRole[]).join(" ")
+          : ""
+      })()
+
+      token.scope = nextScope
 
       span.setAttributes({
         "auth.has_scope": !!token.scope,

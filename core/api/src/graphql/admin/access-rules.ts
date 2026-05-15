@@ -1,8 +1,7 @@
 import { rule } from "graphql-shield"
 import { Rule } from "graphql-shield/typings/rules"
-import { GraphQLFieldConfig } from "graphql"
 
-import { AdminFieldDefinitions } from "./types"
+import { AdminFieldDefinitions, AdminGraphQLFieldConfig } from "./types"
 
 /**
  * Admin Access Rules for GraphQL Shield
@@ -71,15 +70,12 @@ export const accessRules = {
 */
 export function extractFields<T extends AdminFieldDefinitions>(
   fieldsWithRules: T,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-): Record<keyof T, GraphQLFieldConfig<any, any, any>> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const result: Record<string, GraphQLFieldConfig<any, any, any>> = {}
+): Record<keyof T, AdminGraphQLFieldConfig> {
+  const result: Record<string, AdminGraphQLFieldConfig> = {}
   for (const [key, value] of Object.entries(fieldsWithRules)) {
     result[key] = value.field
   }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return result as Record<keyof T, GraphQLFieldConfig<any, any, any>>
+  return result as Record<keyof T, AdminGraphQLFieldConfig>
 }
 
 /**

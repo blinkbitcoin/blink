@@ -7,13 +7,15 @@ import UsdWallet from "@/graphql/shared/types/object/usd-wallet"
 
 export const ALL_INTERFACE_TYPES = [GraphQLApplicationError, BtcWallet, UsdWallet]
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AdminGraphQLFieldConfig = GraphQLFieldConfig<any, GraphQLAdminContext, any>
+
 /**
  * Represents a GraphQL field configuration paired with its access rule.
  * Used to define both the field behavior and authorization requirements in one place.
  */
 export type AdminFieldDefinition = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  field: GraphQLFieldConfig<any, any, any>
+  field: AdminGraphQLFieldConfig
   rule: Rule
 }
 

@@ -18,34 +18,38 @@ export const env = createEnv({
       .default("test@galoy.io"),
     USER_ROLE_MAP: z
       .string()
+      .default("{}")
       .transform((str) => {
+        let parsed: unknown
+
         try {
-          const parsed = JSON.parse(str)
-          // Normalize the parsed object to support both single roles and arrays
-          const normalized: { [key: string]: string[] } = {}
-          for (const [email, roles] of Object.entries(parsed)) {
-            if (typeof roles === "string") {
-              // Convert single role string to array
-              normalized[email] = [roles]
-            } else if (Array.isArray(roles)) {
-              // Keep arrays as is
-              normalized[email] = roles
-            } else {
-              throw new Error(
-                `Invalid role format for ${email}: must be string or array of strings`,
-              )
-            }
-          }
-          return normalized
+          parsed = JSON.parse(str)
         } catch (error) {
           throw new Error(
-            `Invalid JSON in USER_ROLE_MAP environment variable: ${
-              error instanceof Error ? error.message : "Unknown parsing error"
+            `USER_ROLE_MAP is not valid JSON: ${
+              error instanceof Error ? error.message : String(error)
             }`,
           )
         }
-      })
-      .default("{}"),
+
+        if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+          throw new Error("USER_ROLE_MAP must be a JSON object")
+        }
+
+        return Object.fromEntries(
+          Object.entries(parsed).map(([email, roles]) => {
+            if (typeof roles === "string") return [email, [roles]]
+
+            if (Array.isArray(roles) && roles.every((role) => typeof role === "string")) {
+              return [email, roles]
+            }
+
+            throw new Error(
+              `USER_ROLE_MAP: invalid roles for "${email}", expected string or string[]`,
+            )
+          }),
+        )
+      }),
   },
   /*
    * Environment variables available on the client (and server).
