@@ -1,5 +1,7 @@
 import { revalidatePath } from "next/cache"
 
+import { AdminAccessRight } from "../../app/access-rights"
+import { hasAccess } from "../../app/authz"
 import { getClient } from "../../app/graphql-rsc"
 import {
   AccountDetailsByAccountIdDocument,
@@ -20,6 +22,7 @@ import { AuditedAccountMainValues } from "../../app/types"
 
 type PropType = {
   auditedAccount: AuditedAccountMainValues
+  scope: string
 }
 
 const updateLevel = async (formData: FormData) => {
@@ -78,9 +81,11 @@ const updateStatus = async (formData: FormData) => {
   revalidatePath("/account")
 }
 
-const AccountUpdate: React.FC<PropType> = ({ auditedAccount }) => {
+const AccountUpdate: React.FC<PropType> = ({ auditedAccount, scope }) => {
   const isActiveStatus = auditedAccount.status === "ACTIVE"
   const statusButtonLabel = isActiveStatus ? "Lock" : "Activate"
+  const canChangeLevel = hasAccess(scope, AdminAccessRight.CHANGELEVEL_ACCOUNT)
+  const canLockAccount = hasAccess(scope, AdminAccessRight.LOCK_ACCOUNT)
 
   return (
     <div className="shadow p-6 min-w-0 rounded-lg shadow-xs overflow-hidden bg-white grid grid-cols-2 gap-4">
@@ -95,7 +100,10 @@ const AccountUpdate: React.FC<PropType> = ({ auditedAccount }) => {
             >
               <input type="hidden" name="id" value={auditedAccount.id} />
               <input type="hidden" name="level" value={AccountLevel.Two} />
-              <button className="text-sm mx-4 bg-green-500 hover:bg-green-700 text-white font-bold p-2 border border-green-700 rounded disabled:opacity-50">
+              <button
+                disabled={!canChangeLevel}
+                className="text-sm mx-4 bg-green-500 hover:bg-green-700 text-white font-bold p-2 border border-green-700 rounded disabled:opacity-50"
+              >
                 {"Upgrade"}
               </button>
             </ConfirmForm>
@@ -113,7 +121,10 @@ const AccountUpdate: React.FC<PropType> = ({ auditedAccount }) => {
                   auditedAccount.level === "THREE" ? AccountLevel.Two : AccountLevel.One
                 }
               />
-              <button className="text-sm mx-4 bg-green-500 hover:bg-green-700 text-white font-bold p-2 border border-green-700 rounded disabled:opacity-50">
+              <button
+                disabled={!canChangeLevel}
+                className="text-sm mx-4 bg-green-500 hover:bg-green-700 text-white font-bold p-2 border border-green-700 rounded disabled:opacity-50"
+              >
                 {"Downgrade"}
               </button>
             </ConfirmForm>
@@ -131,6 +142,7 @@ const AccountUpdate: React.FC<PropType> = ({ auditedAccount }) => {
             >
               <input type="hidden" name="id" value={auditedAccount.id} />
               <button
+                disabled={!canLockAccount}
                 className={`text-sm mx-4 ${
                   isActiveStatus
                     ? "bg-red-500 hover:bg-red-700 border-red-700"

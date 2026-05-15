@@ -5,12 +5,15 @@ import { Metadata } from "next"
 
 import SideBar from "../components/side-bar"
 
+import { getScope } from "./authz"
+
 export const metadata: Metadata = {
   title: "Admin Panel",
   description: "Welcome to Galoy Admin Panel",
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const scope = await getScope()
   const year = new Date().getFullYear()
   return (
     <html lang="en">
@@ -18,7 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
       <body>
         <div className="flex h-screen bg-gray-50">
-          <SideBar />
+          <SideBar scope={scope} />
           <div className="flex flex-col flex-1 w-full">
             <main className="h-full overflow-y-auto">
               <div className="container grid mx-auto">{children}</div>
