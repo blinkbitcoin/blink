@@ -16,6 +16,40 @@ export const env = createEnv({
       .string()
       .transform((x) => x.split(",").map((email) => email.trim()))
       .default("test@galoy.io"),
+    USER_ROLE_MAP: z
+      .string()
+      .default("{}")
+      .transform((str) => {
+        let parsed: unknown
+
+        try {
+          parsed = JSON.parse(str)
+        } catch (error) {
+          throw new Error(
+            `USER_ROLE_MAP is not valid JSON: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          )
+        }
+
+        if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+          throw new Error("USER_ROLE_MAP must be a JSON object")
+        }
+
+        return Object.fromEntries(
+          Object.entries(parsed).map(([email, roles]) => {
+            if (typeof roles === "string") return [email, [roles]]
+
+            if (Array.isArray(roles) && roles.every((role) => typeof role === "string")) {
+              return [email, roles]
+            }
+
+            throw new Error(
+              `USER_ROLE_MAP: invalid roles for "${email}", expected string or string[]`,
+            )
+          }),
+        )
+      }),
   },
   /*
    * Environment variables available on the client (and server).
@@ -40,5 +74,6 @@ export const env = createEnv({
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
     NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
     AUTHORIZED_EMAILS: process.env.AUTHORIZED_EMAILS,
+    USER_ROLE_MAP: process.env.USER_ROLE_MAP || "{}",
   },
 })
