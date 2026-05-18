@@ -1,34 +1,16 @@
 import { EventEmitter } from "events"
 
-jest.mock("@/services/ledger", () => ({
-  LedgerService: jest.fn(() => ({
-    streamSettledTransactions: jest.fn(),
-  })),
-}))
-
-jest.mock("@/services/ledger/schema", () => ({
-  TransactionMetadata: {
-    findById: jest.fn(),
+jest.mock("@/app", () => ({
+  TransactionsStream: {
+    subscribeToTransactions: jest.fn(),
   },
-}))
-
-jest.mock("@/services/mongoose/schema", () => ({
-  WalletInvoice: {
-    findById: jest.fn(),
-  },
-}))
-
-jest.mock("@/services/mongoose/wallets", () => ({
-  WalletsRepository: jest.fn(),
 }))
 
 import { status } from "@grpc/grpc-js"
 
-import { TransactionsStream } from "@/app/transactions-stream"
 import { TransactionsGrpcServer } from "@/servers/transactions-grpc-stream/grpc-server"
 import { SubscribeTransactionsRequest } from "@/servers/transactions-grpc-stream/proto/transactions_pb"
 
-import { LedgerTransactionType } from "@/domain/ledger"
 import {
   TransactionsStreamSettlementVia,
   TransactionsStreamTransactionType,
@@ -62,7 +44,6 @@ const createEvent = (): TransactionStreamEvent => ({
   walletId: "wallet-1" as WalletId,
   accountId: "account-1" as AccountId,
   paymentHash: "payment-hash",
-  preimage: "preimage",
   satsAmount: 100,
   centsAmount: 200,
   currency: WalletCurrency.Btc,
@@ -72,34 +53,10 @@ const createEvent = (): TransactionStreamEvent => ({
   timestamp: new Date("2024-01-01T00:00:05Z"),
 })
 
-const createLedgerTransaction = (id: string): LedgerTransaction<WalletCurrency> =>
-  ({
-    id: id as LedgerTransactionId,
-    walletId: "wallet-1" as WalletId,
-    paymentHash: "payment-hash" as PaymentHash,
-    type: LedgerTransactionType.Invoice,
-    debit: 0 as Satoshis,
-    credit: 100 as Satoshis,
-    pendingConfirmation: false,
-    currency: WalletCurrency.Btc,
-    journalId: "journal-1" as LedgerJournalId,
-    satsAmount: 100 as Satoshis,
-    centsAmount: 200 as UsdCents,
-    timestamp: new Date("2024-01-01T00:00:05Z"),
-    feeKnownInAdvance: false,
-    fee: undefined,
-    usd: undefined,
-    feeUsd: undefined,
-  }) as LedgerTransaction<WalletCurrency>
-
-async function* ledgerTransactionGenerator(values: LedgerTransaction<WalletCurrency>[]) {
-  for (const value of values) yield value
-}
-
 describe("TransactionsGrpcServer", () => {
-  it("returns INVALID_ARGUMENT for malformed cursors", () => {
+  it("returns INVALID_ARGUMENT for malformed cursors", async () => {
     const transactionsStream = {
-      subscribeToTransactions: jest.fn().mockReturnValue(new Error("invalid cursor")),
+      subscribeToTransactions: jest.fn().mockResolvedValue(new Error("invalid cursor")),
     }
     const grpcServer = TransactionsGrpcServer({
       transactionsStream: transactionsStream as never,
@@ -107,6 +64,7 @@ describe("TransactionsGrpcServer", () => {
     const call = createCall("not-an-object-id")
 
     grpcServer.subscribeTransactions(call as never)
+    await flushMicrotasks()
 
     expect(call.destroy).toHaveBeenCalledTimes(1)
     expect(call.destroy.mock.calls[0][0].code).toBe(status.INVALID_ARGUMENT)
@@ -117,9 +75,9 @@ describe("TransactionsGrpcServer", () => {
     })
   })
 
-  it("returns INVALID_ARGUMENT for explicitly empty cursors", () => {
+  it("returns INVALID_ARGUMENT for explicitly empty cursors", async () => {
     const transactionsStream = {
-      subscribeToTransactions: jest.fn().mockReturnValue(new Error("invalid cursor")),
+      subscribeToTransactions: jest.fn().mockResolvedValue(new Error("invalid cursor")),
     }
     const grpcServer = TransactionsGrpcServer({
       transactionsStream: transactionsStream as never,
@@ -127,6 +85,7 @@ describe("TransactionsGrpcServer", () => {
     const call = createCall("")
 
     grpcServer.subscribeTransactions(call as never)
+    await flushMicrotasks()
 
     expect(call.destroy).toHaveBeenCalledTimes(1)
     expect(call.destroy.mock.calls[0][0].code).toBe(status.INVALID_ARGUMENT)
@@ -160,7 +119,6 @@ describe("TransactionsGrpcServer", () => {
     expect(call.write.mock.calls[0][0].getWalletId()).toBe("wallet-1")
     expect(call.write.mock.calls[0][0].getAccountId()).toBe("account-1")
     expect(call.write.mock.calls[0][0].getPaymentHash()).toBe("payment-hash")
-    expect(call.write.mock.calls[0][0].getPreimage()).toBe("preimage")
     expect(call.write.mock.calls[0][0].getSatsAmount()).toBe(100)
     expect(call.write.mock.calls[0][0].getCentsAmount()).toBe(200)
     expect(call.write.mock.calls[0][0].getCurrency()).toBe(WalletCurrency.Btc)
@@ -169,36 +127,33 @@ describe("TransactionsGrpcServer", () => {
   })
 
   it("replays transactions through grpc even if close fires during stream setup", async () => {
-    const ledgerTransaction = createLedgerTransaction("661111111111111111111111")
-    const ledgerService = {
-      streamSettledTransactions: jest
-        .fn()
-        .mockReturnValue(ledgerTransactionGenerator([ledgerTransaction])),
+    const transactionsStream = {
+      subscribeToTransactions: jest.fn().mockImplementation(({ onTransaction }) => {
+        onTransaction(createEvent())
+        return { close: jest.fn() }
+      }),
     }
-    const mapTransactionStreamEvent = jest.fn().mockResolvedValue(createEvent())
-    const transactionsStream = TransactionsStream({
-      ledgerService,
-      mapTransactionStreamEvent,
+    const grpcServer = TransactionsGrpcServer({
+      transactionsStream: transactionsStream as never,
     })
-    const grpcServer = TransactionsGrpcServer({ transactionsStream })
     const call = createCall("000000000000000000000000")
 
     grpcServer.subscribeTransactions(call as never)
     call.emit("close")
     await flushMicrotasks()
 
-    expect(ledgerService.streamSettledTransactions).toHaveBeenCalledWith({
+    expect(transactionsStream.subscribeToTransactions).toHaveBeenCalledWith({
       afterTransactionId: "000000000000000000000000",
-      signal: expect.any(AbortSignal),
+      onTransaction: expect.any(Function),
+      onError: expect.any(Function),
     })
-    expect(mapTransactionStreamEvent).toHaveBeenCalledWith(ledgerTransaction)
     expect(call.write).toHaveBeenCalledTimes(1)
   })
 
-  it("does not close the subscription on grpc close", () => {
+  it("does not close the subscription on grpc close", async () => {
     const close = jest.fn()
     const transactionsStream = {
-      subscribeToTransactions: jest.fn().mockReturnValue({ close }),
+      subscribeToTransactions: jest.fn().mockResolvedValue({ close }),
     }
     const grpcServer = TransactionsGrpcServer({
       transactionsStream: transactionsStream as never,
@@ -206,15 +161,16 @@ describe("TransactionsGrpcServer", () => {
     const call = createCall("661111111111111111111110")
 
     grpcServer.subscribeTransactions(call as never)
+    await flushMicrotasks()
     call.emit("close")
 
     expect(close).not.toHaveBeenCalled()
   })
 
-  it("closes the subscription on client cancellation", () => {
+  it("closes the subscription on client cancellation", async () => {
     const close = jest.fn()
     const transactionsStream = {
-      subscribeToTransactions: jest.fn().mockReturnValue({ close }),
+      subscribeToTransactions: jest.fn().mockResolvedValue({ close }),
     }
     const grpcServer = TransactionsGrpcServer({
       transactionsStream: transactionsStream as never,
@@ -222,15 +178,16 @@ describe("TransactionsGrpcServer", () => {
     const call = createCall("661111111111111111111110")
 
     grpcServer.subscribeTransactions(call as never)
+    await flushMicrotasks()
     call.emit("cancelled")
 
     expect(close).toHaveBeenCalledTimes(1)
   })
 
-  it("closes the subscription on grpc call errors", () => {
+  it("closes the subscription on grpc call errors", async () => {
     const close = jest.fn()
     const transactionsStream = {
-      subscribeToTransactions: jest.fn().mockReturnValue({ close }),
+      subscribeToTransactions: jest.fn().mockResolvedValue({ close }),
     }
     const grpcServer = TransactionsGrpcServer({
       transactionsStream: transactionsStream as never,
@@ -238,19 +195,20 @@ describe("TransactionsGrpcServer", () => {
     const call = createCall("661111111111111111111110")
 
     grpcServer.subscribeTransactions(call as never)
+    await flushMicrotasks()
     call.emit("error", new Error("client stream failed"))
 
     expect(close).toHaveBeenCalledTimes(1)
   })
 
-  it("destroys the grpc call on app stream errors", () => {
+  it("destroys the grpc call on app stream errors", async () => {
     const close = jest.fn()
     const streamError = new Error("change stream failed")
     let onError: ((err: Error) => void) | undefined
     const transactionsStream = {
       subscribeToTransactions: jest.fn().mockImplementation(({ onError: handler }) => {
         onError = handler
-        return { close }
+        return Promise.resolve({ close })
       }),
     }
     const grpcServer = TransactionsGrpcServer({
@@ -260,6 +218,7 @@ describe("TransactionsGrpcServer", () => {
     const call = createCall("661111111111111111111110")
 
     grpcServer.subscribeTransactions(call as never)
+    await flushMicrotasks()
     onError?.(streamError)
 
     expect(close).toHaveBeenCalledTimes(1)

@@ -1,3 +1,5 @@
+import { Server as HttpServer } from "http"
+
 import express from "express"
 
 import { Server, ServerCredentials } from "@grpc/grpc-js"
@@ -16,7 +18,10 @@ import { TransactionsStreamService as TransactionsGrpcServiceDefinition } from "
 
 const logger = baseLogger.child({ module: "transactions-grpc-stream-server" })
 
-const startHealthServer = async () => {
+let grpcServer: Server | undefined
+let healthServer: HttpServer | undefined
+
+const startHealthServer = async (): Promise<HttpServer> => {
   const app = express()
 
   app.get(
@@ -29,19 +34,19 @@ const startHealthServer = async () => {
     }),
   )
 
-  await new Promise<void>((resolve, reject) => {
-    const healthServer = app.listen(TRANSACTIONS_GRPC_STREAM_HEALTH_PORT, () => {
+  return new Promise<HttpServer>((resolve, reject) => {
+    const server = app.listen(TRANSACTIONS_GRPC_STREAM_HEALTH_PORT, () => {
       logger.info(
         { port: TRANSACTIONS_GRPC_STREAM_HEALTH_PORT },
         "Transactions gRPC stream health server listening",
       )
-      resolve()
+      resolve(server)
     })
-    healthServer.once("error", reject)
+    server.once("error", reject)
   })
 }
 
-const startGrpcServer = async () => {
+const startGrpcServer = async (): Promise<Server> => {
   const server = new Server()
   server.addService(TransactionsGrpcServiceDefinition, TransactionsGrpcServer())
 
@@ -55,15 +60,37 @@ const startGrpcServer = async () => {
 
   server.start()
   logger.info({ address }, "Transactions gRPC stream listening")
+  return server
 }
 
-const main = async () => {
+export const startServer = async () => {
   await setupMongoConnection({ syncIndexes: false })
-  await startGrpcServer()
-  await startHealthServer()
+  grpcServer = await startGrpcServer()
+  healthServer = await startHealthServer()
 }
 
-main().catch((err) => {
-  logger.error({ err }, "Transactions gRPC stream server failed")
-  process.exit(1)
-})
+const shutdown = () => {
+  healthServer?.close()
+
+  if (!grpcServer) {
+    process.exit(0)
+  }
+
+  grpcServer.tryShutdown((err) => {
+    if (err) {
+      logger.error({ err }, "Error shutting down transactions gRPC stream server")
+      process.exit(1)
+    }
+    process.exit(0)
+  })
+}
+
+if (require.main === module) {
+  startServer().catch((err) => {
+    logger.error({ err }, "Transactions gRPC stream server failed")
+    process.exit(1)
+  })
+}
+
+process.on("SIGINT", shutdown)
+process.on("SIGTERM", shutdown)

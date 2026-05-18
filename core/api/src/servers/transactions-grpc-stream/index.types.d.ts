@@ -9,8 +9,9 @@ type TransactionsStreamSubscriptionRef = {
 }
 
 type TransactionsGrpcServerConfig = {
-  transactionsStream?: ReturnType<
-    typeof import("@/app/transactions-stream").TransactionsStream
+  transactionsStream?: Pick<
+    typeof import("@/app/transactions-stream"),
+    "subscribeToTransactions"
   >
   logger?: Logger
 }

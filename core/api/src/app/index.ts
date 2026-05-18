@@ -8,6 +8,7 @@ import * as LightningMod from "./lightning"
 import * as OnChainMod from "./on-chain"
 import * as PricesMod from "./prices"
 import * as TransactionsMod from "./transactions"
+import * as TransactionsStreamMod from "./transactions-stream"
 import * as UsersMod from "./users"
 import * as WalletsMod from "./wallets"
 import * as PaymentsMod from "./payments"
@@ -27,6 +28,7 @@ const allFunctions = {
   OnChain: { ...OnChainMod },
   Prices: { ...PricesMod },
   Transactions: { ...TransactionsMod },
+  TransactionsStream: { ...TransactionsStreamMod },
   Users: { ...UsersMod },
   Wallets: { ...WalletsMod },
   Payments: { ...PaymentsMod },
@@ -58,6 +60,7 @@ export const {
   OnChain,
   Prices,
   Transactions,
+  TransactionsStream,
   Users,
   Wallets,
   Payments,
