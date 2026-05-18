@@ -14,7 +14,6 @@ import MerchantsPendingApprovalQuery from "./root/query/merchants-pending-approv
 import InactiveMerchantsQuery from "./root/query/inactive-merchants-listing"
 import FilteredUserCountQuery from "./root/query/filtered-user-count"
 import MigrationFlowQuery from "./root/query/migration-flow"
-import RedisKeysSearchQuery from "./root/query/redis-keys-search"
 
 import { accessRules, extractFields, buildPermissionMappings } from "./access-rules"
 
@@ -88,10 +87,6 @@ export const queryFields = {
 
     allLevels: {
       field: AllLevelsQuery,
-      rule: accessRules.systemConfig,
-    },
-    redisKeysSearch: {
-      field: RedisKeysSearchQuery,
       rule: accessRules.systemConfig,
     },
   },

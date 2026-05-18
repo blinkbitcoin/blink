@@ -11,7 +11,7 @@ import AccountForceDeleteMutation from "./root/mutation/account-force-delete"
 import MigrationRetryGrantMutation from "./root/mutation/migration-retry-grant"
 
 import TriggerMarketingNotificationMutation from "./root/mutation/marketing-notification-trigger"
-import RedisKeyRemoveMutation from "./root/mutation/redis-key-remove"
+import PhoneRateLimitResetMutation from "./root/mutation/phone-rate-limit-reset"
 
 import { accessRules, extractFields, buildPermissionMappings } from "./access-rules"
 
@@ -57,8 +57,8 @@ export const mutationFields = {
       field: TriggerMarketingNotificationMutation,
       rule: accessRules.sendNotifications,
     },
-    redisKeyRemove: {
-      field: RedisKeyRemoveMutation,
+    phoneRateLimitReset: {
+      field: PhoneRateLimitResetMutation,
       rule: accessRules.systemConfig,
     },
   },
