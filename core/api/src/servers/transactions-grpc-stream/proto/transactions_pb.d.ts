@@ -38,8 +38,6 @@ export class TransactionEvent extends jspb.Message {
     setAccountId(value: string): TransactionEvent;
     getPaymentHash(): string;
     setPaymentHash(value: string): TransactionEvent;
-    getPreimage(): string;
-    setPreimage(value: string): TransactionEvent;
     getSatsAmount(): number;
     setSatsAmount(value: number): TransactionEvent;
     getCentsAmount(): number;
@@ -71,7 +69,6 @@ export namespace TransactionEvent {
         walletId: string,
         accountId: string,
         paymentHash: string,
-        preimage: string,
         satsAmount: number,
         centsAmount: number,
         currency: string,

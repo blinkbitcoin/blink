@@ -251,14 +251,13 @@ ledgerTransactionId: jspb.Message.getFieldWithDefault(msg, 1, ""),
 walletId: jspb.Message.getFieldWithDefault(msg, 2, ""),
 accountId: jspb.Message.getFieldWithDefault(msg, 3, ""),
 paymentHash: jspb.Message.getFieldWithDefault(msg, 4, ""),
-preimage: jspb.Message.getFieldWithDefault(msg, 5, ""),
-satsAmount: jspb.Message.getFieldWithDefault(msg, 6, 0),
-centsAmount: jspb.Message.getFieldWithDefault(msg, 7, 0),
-currency: jspb.Message.getFieldWithDefault(msg, 8, ""),
-type: jspb.Message.getFieldWithDefault(msg, 9, 0),
-settlementVia: jspb.Message.getFieldWithDefault(msg, 10, 0),
-pending: jspb.Message.getBooleanFieldWithDefault(msg, 11, false),
-timestamp: jspb.Message.getFieldWithDefault(msg, 12, 0)
+satsAmount: jspb.Message.getFieldWithDefault(msg, 5, 0),
+centsAmount: jspb.Message.getFieldWithDefault(msg, 6, 0),
+currency: jspb.Message.getFieldWithDefault(msg, 7, ""),
+type: jspb.Message.getFieldWithDefault(msg, 8, 0),
+settlementVia: jspb.Message.getFieldWithDefault(msg, 9, 0),
+pending: jspb.Message.getBooleanFieldWithDefault(msg, 10, false),
+timestamp: jspb.Message.getFieldWithDefault(msg, 11, 0)
   };
 
   if (includeInstance) {
@@ -312,34 +311,30 @@ proto.services.transactions.v1.TransactionEvent.deserializeBinaryFromReader = fu
       msg.setPaymentHash(value);
       break;
     case 5:
-      var value = /** @type {string} */ (reader.readString());
-      msg.setPreimage(value);
-      break;
-    case 6:
       var value = /** @type {number} */ (reader.readInt64());
       msg.setSatsAmount(value);
       break;
-    case 7:
+    case 6:
       var value = /** @type {number} */ (reader.readInt64());
       msg.setCentsAmount(value);
       break;
-    case 8:
+    case 7:
       var value = /** @type {string} */ (reader.readString());
       msg.setCurrency(value);
       break;
-    case 9:
+    case 8:
       var value = /** @type {!proto.services.transactions.v1.TransactionType} */ (reader.readEnum());
       msg.setType(value);
       break;
-    case 10:
+    case 9:
       var value = /** @type {!proto.services.transactions.v1.SettlementViaType} */ (reader.readEnum());
       msg.setSettlementVia(value);
       break;
-    case 11:
+    case 10:
       var value = /** @type {boolean} */ (reader.readBool());
       msg.setPending(value);
       break;
-    case 12:
+    case 11:
       var value = /** @type {number} */ (reader.readUint64());
       msg.setTimestamp(value);
       break;
@@ -400,59 +395,52 @@ proto.services.transactions.v1.TransactionEvent.serializeBinaryToWriter = functi
       f
     );
   }
-  f = message.getPreimage();
-  if (f.length > 0) {
-    writer.writeString(
-      5,
-      f
-    );
-  }
   f = message.getSatsAmount();
   if (f !== 0) {
     writer.writeInt64(
-      6,
+      5,
       f
     );
   }
   f = message.getCentsAmount();
   if (f !== 0) {
     writer.writeInt64(
-      7,
+      6,
       f
     );
   }
   f = message.getCurrency();
   if (f.length > 0) {
     writer.writeString(
-      8,
+      7,
       f
     );
   }
   f = message.getType();
   if (f !== 0.0) {
     writer.writeEnum(
-      9,
+      8,
       f
     );
   }
   f = message.getSettlementVia();
   if (f !== 0.0) {
     writer.writeEnum(
-      10,
+      9,
       f
     );
   }
   f = message.getPending();
   if (f) {
     writer.writeBool(
-      11,
+      10,
       f
     );
   }
   f = message.getTimestamp();
   if (f !== 0) {
     writer.writeUint64(
-      12,
+      11,
       f
     );
   }
@@ -532,29 +520,11 @@ proto.services.transactions.v1.TransactionEvent.prototype.setPaymentHash = funct
 
 
 /**
- * optional string preimage = 5;
- * @return {string}
- */
-proto.services.transactions.v1.TransactionEvent.prototype.getPreimage = function() {
-  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 5, ""));
-};
-
-
-/**
- * @param {string} value
- * @return {!proto.services.transactions.v1.TransactionEvent} returns this
- */
-proto.services.transactions.v1.TransactionEvent.prototype.setPreimage = function(value) {
-  return jspb.Message.setProto3StringField(this, 5, value);
-};
-
-
-/**
- * optional int64 sats_amount = 6;
+ * optional int64 sats_amount = 5;
  * @return {number}
  */
 proto.services.transactions.v1.TransactionEvent.prototype.getSatsAmount = function() {
-  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 6, 0));
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 5, 0));
 };
 
 
@@ -563,16 +533,16 @@ proto.services.transactions.v1.TransactionEvent.prototype.getSatsAmount = functi
  * @return {!proto.services.transactions.v1.TransactionEvent} returns this
  */
 proto.services.transactions.v1.TransactionEvent.prototype.setSatsAmount = function(value) {
-  return jspb.Message.setProto3IntField(this, 6, value);
+  return jspb.Message.setProto3IntField(this, 5, value);
 };
 
 
 /**
- * optional int64 cents_amount = 7;
+ * optional int64 cents_amount = 6;
  * @return {number}
  */
 proto.services.transactions.v1.TransactionEvent.prototype.getCentsAmount = function() {
-  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 7, 0));
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 6, 0));
 };
 
 
@@ -581,16 +551,16 @@ proto.services.transactions.v1.TransactionEvent.prototype.getCentsAmount = funct
  * @return {!proto.services.transactions.v1.TransactionEvent} returns this
  */
 proto.services.transactions.v1.TransactionEvent.prototype.setCentsAmount = function(value) {
-  return jspb.Message.setProto3IntField(this, 7, value);
+  return jspb.Message.setProto3IntField(this, 6, value);
 };
 
 
 /**
- * optional string currency = 8;
+ * optional string currency = 7;
  * @return {string}
  */
 proto.services.transactions.v1.TransactionEvent.prototype.getCurrency = function() {
-  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 8, ""));
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 7, ""));
 };
 
 
@@ -599,16 +569,16 @@ proto.services.transactions.v1.TransactionEvent.prototype.getCurrency = function
  * @return {!proto.services.transactions.v1.TransactionEvent} returns this
  */
 proto.services.transactions.v1.TransactionEvent.prototype.setCurrency = function(value) {
-  return jspb.Message.setProto3StringField(this, 8, value);
+  return jspb.Message.setProto3StringField(this, 7, value);
 };
 
 
 /**
- * optional TransactionType type = 9;
+ * optional TransactionType type = 8;
  * @return {!proto.services.transactions.v1.TransactionType}
  */
 proto.services.transactions.v1.TransactionEvent.prototype.getType = function() {
-  return /** @type {!proto.services.transactions.v1.TransactionType} */ (jspb.Message.getFieldWithDefault(this, 9, 0));
+  return /** @type {!proto.services.transactions.v1.TransactionType} */ (jspb.Message.getFieldWithDefault(this, 8, 0));
 };
 
 
@@ -617,16 +587,16 @@ proto.services.transactions.v1.TransactionEvent.prototype.getType = function() {
  * @return {!proto.services.transactions.v1.TransactionEvent} returns this
  */
 proto.services.transactions.v1.TransactionEvent.prototype.setType = function(value) {
-  return jspb.Message.setProto3EnumField(this, 9, value);
+  return jspb.Message.setProto3EnumField(this, 8, value);
 };
 
 
 /**
- * optional SettlementViaType settlement_via = 10;
+ * optional SettlementViaType settlement_via = 9;
  * @return {!proto.services.transactions.v1.SettlementViaType}
  */
 proto.services.transactions.v1.TransactionEvent.prototype.getSettlementVia = function() {
-  return /** @type {!proto.services.transactions.v1.SettlementViaType} */ (jspb.Message.getFieldWithDefault(this, 10, 0));
+  return /** @type {!proto.services.transactions.v1.SettlementViaType} */ (jspb.Message.getFieldWithDefault(this, 9, 0));
 };
 
 
@@ -635,16 +605,16 @@ proto.services.transactions.v1.TransactionEvent.prototype.getSettlementVia = fun
  * @return {!proto.services.transactions.v1.TransactionEvent} returns this
  */
 proto.services.transactions.v1.TransactionEvent.prototype.setSettlementVia = function(value) {
-  return jspb.Message.setProto3EnumField(this, 10, value);
+  return jspb.Message.setProto3EnumField(this, 9, value);
 };
 
 
 /**
- * optional bool pending = 11;
+ * optional bool pending = 10;
  * @return {boolean}
  */
 proto.services.transactions.v1.TransactionEvent.prototype.getPending = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 11, false));
+  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 10, false));
 };
 
 
@@ -653,16 +623,16 @@ proto.services.transactions.v1.TransactionEvent.prototype.getPending = function(
  * @return {!proto.services.transactions.v1.TransactionEvent} returns this
  */
 proto.services.transactions.v1.TransactionEvent.prototype.setPending = function(value) {
-  return jspb.Message.setProto3BooleanField(this, 11, value);
+  return jspb.Message.setProto3BooleanField(this, 10, value);
 };
 
 
 /**
- * optional uint64 timestamp = 12;
+ * optional uint64 timestamp = 11;
  * @return {number}
  */
 proto.services.transactions.v1.TransactionEvent.prototype.getTimestamp = function() {
-  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 12, 0));
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 11, 0));
 };
 
 
@@ -671,7 +641,7 @@ proto.services.transactions.v1.TransactionEvent.prototype.getTimestamp = functio
  * @return {!proto.services.transactions.v1.TransactionEvent} returns this
  */
 proto.services.transactions.v1.TransactionEvent.prototype.setTimestamp = function(value) {
-  return jspb.Message.setProto3IntField(this, 12, value);
+  return jspb.Message.setProto3IntField(this, 11, value);
 };
 
 

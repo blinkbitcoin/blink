@@ -44,7 +44,6 @@ export const transactionStreamEventToGrpcTransactionEvent = (
   grpcEvent.setWalletId(event.walletId)
   grpcEvent.setAccountId(event.accountId ?? "")
   grpcEvent.setPaymentHash(event.paymentHash ?? "")
-  grpcEvent.setPreimage(event.preimage ?? "")
   grpcEvent.setSatsAmount(event.satsAmount)
   grpcEvent.setCentsAmount(event.centsAmount)
   grpcEvent.setCurrency(event.currency)

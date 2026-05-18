@@ -29,12 +29,11 @@ message TransactionEvent {
   string wallet_id = 2;
   string account_id = 3;
   string payment_hash = 4;
-  string preimage = 5;
-  int64 sats_amount = 6;
-  int64 cents_amount = 7;
-  string currency = 8;
-  TransactionType type = 9;
-  SettlementViaType settlement_via = 10;
-  bool pending = 11;
-  uint64 timestamp = 12;
+  int64 sats_amount = 5;
+  int64 cents_amount = 6;
+  string currency = 7;
+  TransactionType type = 8;
+  SettlementViaType settlement_via = 9;
+  bool pending = 10;
+  uint64 timestamp = 11;
 }
