@@ -9,7 +9,6 @@ type TransactionStreamEvent = {
   readonly walletId: WalletId
   readonly accountId: AccountId | undefined
   readonly paymentHash: string | undefined
-  readonly preimage: string | undefined
   readonly satsAmount: number
   readonly centsAmount: number
   readonly currency: WalletCurrency
@@ -17,4 +16,9 @@ type TransactionStreamEvent = {
   readonly settlementVia: TransactionsStreamSettlementVia
   readonly pending: boolean
   readonly timestamp: Date | undefined
+}
+
+type LedgerTransactionToTransactionStreamEventArgs = {
+  ledgerTransaction: LedgerTransaction<WalletCurrency>
+  accountId: AccountId | undefined
 }

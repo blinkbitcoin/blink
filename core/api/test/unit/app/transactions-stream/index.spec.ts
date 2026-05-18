@@ -1,26 +1,19 @@
 jest.mock("@/services/ledger", () => ({
-  LedgerService: jest.fn(() => ({
-    streamSettledTransactions: jest.fn(),
-  })),
+  LedgerService: jest.fn(),
 }))
 
-jest.mock("@/services/ledger/schema", () => ({
-  TransactionMetadata: {
-    findById: jest.fn(),
-  },
+jest.mock("@/services/cache", () => ({
+  LocalCacheService: jest.fn(),
 }))
 
-jest.mock("@/services/mongoose/schema", () => ({
-  WalletInvoice: {
-    findById: jest.fn(),
-  },
-}))
-
-jest.mock("@/services/mongoose/wallets", () => ({
+jest.mock("@/services/mongoose", () => ({
   WalletsRepository: jest.fn(),
 }))
 
-import { TransactionsStream } from "@/app/transactions-stream"
+import { subscribeToTransactions } from "@/app/transactions-stream"
+import { LedgerService } from "@/services/ledger"
+import { LocalCacheService } from "@/services/cache"
+import { WalletsRepository } from "@/services/mongoose"
 
 import {
   TransactionsStreamSettlementVia,
@@ -67,7 +60,6 @@ const createEvent = (ledgerTransactionId: string): TransactionStreamEvent => ({
   walletId: "wallet-1" as WalletId,
   accountId: "account-1" as AccountId,
   paymentHash: "payment-hash",
-  preimage: "preimage",
   satsAmount: 100,
   centsAmount: 200,
   currency: WalletCurrency.Btc,
@@ -83,16 +75,39 @@ async function* ledgerTransactionGenerator(
   for (const value of values) yield value
 }
 
-const subscribe = ({
-  service,
-  afterTransactionId,
+const mockDependencies = ({
+  ledgerValues = [],
+  cachedAccountId = new Error("cache miss"),
+  walletResult = { accountId: "account-1" as AccountId },
 }: {
-  service: ReturnType<typeof TransactionsStream>
-  afterTransactionId?: string
-}) => {
+  ledgerValues?: Array<LedgerTransaction<WalletCurrency> | LedgerError>
+  cachedAccountId?: AccountId | Error
+  walletResult?: Pick<Wallet, "accountId"> | Error
+} = {}) => {
+  const ledgerService = {
+    streamSettledTransactions: jest
+      .fn()
+      .mockReturnValue(ledgerTransactionGenerator(ledgerValues)),
+  }
+  const cacheService = {
+    get: jest.fn().mockResolvedValue(cachedAccountId),
+    set: jest.fn().mockResolvedValue("account-1"),
+  }
+  const walletsRepository = {
+    findById: jest.fn().mockResolvedValue(walletResult),
+  }
+
+  ;(LedgerService as jest.Mock).mockReturnValue(ledgerService)
+  ;(LocalCacheService as jest.Mock).mockReturnValue(cacheService)
+  ;(WalletsRepository as jest.Mock).mockReturnValue(walletsRepository)
+
+  return { ledgerService, cacheService, walletsRepository }
+}
+
+const subscribe = async (afterTransactionId?: string) => {
   const onTransaction = jest.fn()
   const onError = jest.fn()
-  const subscription = service.subscribeToTransactions({
+  const subscription = await subscribeToTransactions({
     afterTransactionId,
     onTransaction,
     onError,
@@ -101,38 +116,20 @@ const subscribe = ({
   return { onTransaction, onError, subscription }
 }
 
-describe("TransactionsStream", () => {
-  it("returns an error for malformed cursors", () => {
-    const ledgerService = {
-      streamSettledTransactions: jest.fn(),
-    }
-    const service = TransactionsStream({
-      ledgerService,
-      mapTransactionStreamEvent: jest.fn(),
-    })
+describe("subscribeToTransactions", () => {
+  it("returns an error for malformed cursors", async () => {
+    const { ledgerService } = mockDependencies()
 
-    const { subscription } = subscribe({
-      service,
-      afterTransactionId: "not-an-object-id",
-    })
+    const { subscription } = await subscribe("not-an-object-id")
 
     expect(subscription).toBeInstanceOf(Error)
     expect(ledgerService.streamSettledTransactions).not.toHaveBeenCalled()
   })
 
-  it("returns an error for explicitly empty cursors", () => {
-    const ledgerService = {
-      streamSettledTransactions: jest.fn(),
-    }
-    const service = TransactionsStream({
-      ledgerService,
-      mapTransactionStreamEvent: jest.fn(),
-    })
+  it("returns an error for explicitly empty cursors", async () => {
+    const { ledgerService } = mockDependencies()
 
-    const { subscription } = subscribe({
-      service,
-      afterTransactionId: "",
-    })
+    const { subscription } = await subscribe("")
 
     expect(subscription).toBeInstanceOf(Error)
     expect(ledgerService.streamSettledTransactions).not.toHaveBeenCalled()
@@ -141,25 +138,11 @@ describe("TransactionsStream", () => {
   it("streams translated ledger transactions from the ledger service", async () => {
     const replayTxn = createLedgerTransaction("661111111111111111111112")
     const liveTxn = createLedgerTransaction("661111111111111111111113")
-    const ledgerService = {
-      streamSettledTransactions: jest
-        .fn()
-        .mockReturnValue(ledgerTransactionGenerator([replayTxn, liveTxn])),
-    }
-    const mapTransactionStreamEvent = jest
-      .fn()
-      .mockImplementation(async (txn: LedgerTransaction<WalletCurrency>) =>
-        createEvent(txn.id),
-      )
-    const service = TransactionsStream({
-      ledgerService,
-      mapTransactionStreamEvent,
+    const { ledgerService, cacheService, walletsRepository } = mockDependencies({
+      ledgerValues: [replayTxn, liveTxn],
     })
 
-    const { onTransaction, onError } = subscribe({
-      service,
-      afterTransactionId: "661111111111111111111111",
-    })
+    const { onTransaction, onError } = await subscribe("661111111111111111111111")
     await flushMicrotasks()
 
     expect(ledgerService.streamSettledTransactions).toHaveBeenCalledTimes(1)
@@ -167,8 +150,10 @@ describe("TransactionsStream", () => {
       afterTransactionId: "661111111111111111111111",
       signal: expect.any(AbortSignal),
     })
-    expect(mapTransactionStreamEvent).toHaveBeenNthCalledWith(1, replayTxn)
-    expect(mapTransactionStreamEvent).toHaveBeenNthCalledWith(2, liveTxn)
+    expect(cacheService.get).toHaveBeenCalledWith({
+      key: "transactions-stream:wallet-account-id:wallet-1",
+    })
+    expect(walletsRepository.findById).toHaveBeenCalledWith("wallet-1")
     expect(onTransaction).toHaveBeenNthCalledWith(
       1,
       createEvent("661111111111111111111112"),
@@ -180,18 +165,24 @@ describe("TransactionsStream", () => {
     expect(onError).not.toHaveBeenCalled()
   })
 
-  it("starts at the ledger service live stream when no cursor is provided", async () => {
-    const ledgerService = {
-      streamSettledTransactions: jest
-        .fn()
-        .mockReturnValue(ledgerTransactionGenerator([])),
-    }
-    const service = TransactionsStream({
-      ledgerService,
-      mapTransactionStreamEvent: jest.fn(),
+  it("uses cached account ids for wallet lookups", async () => {
+    const ledgerTransaction = createLedgerTransaction("661111111111111111111112")
+    const { walletsRepository } = mockDependencies({
+      ledgerValues: [ledgerTransaction],
+      cachedAccountId: "account-1" as AccountId,
     })
 
-    const { onTransaction } = subscribe({ service })
+    const { onTransaction } = await subscribe()
+    await flushMicrotasks()
+
+    expect(walletsRepository.findById).not.toHaveBeenCalled()
+    expect(onTransaction).toHaveBeenCalledWith(createEvent("661111111111111111111112"))
+  })
+
+  it("starts at the ledger service live stream when no cursor is provided", async () => {
+    const { ledgerService } = mockDependencies()
+
+    const { onTransaction } = await subscribe()
     await flushMicrotasks()
 
     expect(ledgerService.streamSettledTransactions).toHaveBeenCalledWith({
@@ -201,63 +192,45 @@ describe("TransactionsStream", () => {
     expect(onTransaction).not.toHaveBeenCalled()
   })
 
-  it("does not emit when the mapper skips a ledger transaction", async () => {
-    const ledgerTransaction = createLedgerTransaction("661111111111111111111112")
-    const ledgerService = {
-      streamSettledTransactions: jest
-        .fn()
-        .mockReturnValue(ledgerTransactionGenerator([ledgerTransaction])),
-    }
-    const service = TransactionsStream({
-      ledgerService,
-      mapTransactionStreamEvent: jest.fn().mockResolvedValue(undefined),
+  it("does not emit when the ledger transaction has no wallet id", async () => {
+    const ledgerTransaction = createLedgerTransaction("661111111111111111111112", {
+      walletId: undefined,
+    })
+    const { walletsRepository } = mockDependencies({
+      ledgerValues: [ledgerTransaction],
     })
 
-    const { onTransaction, onError } = subscribe({ service })
+    const { onTransaction, onError } = await subscribe()
     await flushMicrotasks()
 
+    expect(walletsRepository.findById).not.toHaveBeenCalled()
     expect(onTransaction).not.toHaveBeenCalled()
     expect(onError).not.toHaveBeenCalled()
   })
 
   it("surfaces ledger errors from the stream", async () => {
     const ledgerError = new UnknownLedgerError("stream failed")
-    const ledgerService = {
-      streamSettledTransactions: jest
-        .fn()
-        .mockReturnValue(ledgerTransactionGenerator([ledgerError])),
-    }
-    const service = TransactionsStream({
-      ledgerService,
-      mapTransactionStreamEvent: jest.fn(),
-      logger: { error: jest.fn() } as unknown as Logger,
-    })
+    mockDependencies({ ledgerValues: [ledgerError] })
 
-    const { onError } = subscribe({ service })
+    const { onError } = await subscribe()
     await flushMicrotasks()
 
     expect(onError).toHaveBeenCalledWith(ledgerError)
   })
 
-  it("surfaces mapper errors from the stream", async () => {
+  it("surfaces wallet lookup errors from the stream", async () => {
     const ledgerTransaction = createLedgerTransaction("661111111111111111111112")
-    const mapperError = new Error("wallet lookup failed")
-    const ledgerService = {
-      streamSettledTransactions: jest
-        .fn()
-        .mockReturnValue(ledgerTransactionGenerator([ledgerTransaction])),
-    }
-    const service = TransactionsStream({
-      ledgerService,
-      mapTransactionStreamEvent: jest.fn().mockRejectedValue(mapperError),
-      logger: { error: jest.fn() } as unknown as Logger,
+    const lookupError = new Error("wallet lookup failed")
+    mockDependencies({
+      ledgerValues: [ledgerTransaction],
+      walletResult: lookupError,
     })
 
-    const { onTransaction, onError } = subscribe({ service })
+    const { onTransaction, onError } = await subscribe()
     await flushMicrotasks()
 
     expect(onTransaction).not.toHaveBeenCalled()
-    expect(onError).toHaveBeenCalledWith(mapperError)
+    expect(onError).toHaveBeenCalledWith(lookupError)
   })
 
   it("aborts the ledger stream when the subscription is closed", async () => {
@@ -274,12 +247,16 @@ describe("TransactionsStream", () => {
         })()
       }),
     }
-    const service = TransactionsStream({
-      ledgerService,
-      mapTransactionStreamEvent: jest.fn(),
+    ;(LedgerService as jest.Mock).mockReturnValue(ledgerService)
+    ;(LocalCacheService as jest.Mock).mockReturnValue({
+      get: jest.fn().mockResolvedValue(new Error("cache miss")),
+      set: jest.fn(),
+    })
+    ;(WalletsRepository as jest.Mock).mockReturnValue({
+      findById: jest.fn().mockResolvedValue({ accountId: "account-1" }),
     })
 
-    const { subscription } = subscribe({ service })
+    const { subscription } = await subscribe()
     await flushMicrotasks()
 
     expect(subscription).not.toBeInstanceOf(Error)

@@ -1,11 +1,16 @@
-import { createTransactionStreamEventMapper } from "./helpers"
-
 import { checkedToLedgerTransactionId } from "@/domain/ledger"
+import {
+  ledgerTransactionToTransactionStreamEvent,
+  transactionsStreamWalletAccountIdCacheKey,
+} from "@/domain/transactions-stream"
 
 import { LedgerService } from "@/services/ledger"
+import { LocalCacheService } from "@/services/cache"
 import { baseLogger } from "@/services/logger"
+import { WalletsRepository } from "@/services/mongoose"
 
 const logger = baseLogger.child({ module: "transactions-stream" })
+const WALLET_ACCOUNT_ID_CACHE_TTL_SECS = (10 * 60) as Seconds
 
 const toError = (err: unknown, fallbackMessage: string): Error => {
   if (err instanceof Error) return err
@@ -23,60 +28,88 @@ const parseAfterTransactionId = (
   return checkedLedgerTransactionId
 }
 
-export const TransactionsStream = ({
-  ledgerService = LedgerService(),
-  mapTransactionStreamEvent = createTransactionStreamEventMapper()
-    .mapTransactionStreamEvent,
-  logger: serviceLogger = logger,
-}: TransactionsStreamConfig = {}) => {
-  const subscribeToTransactions = ({
-    afterTransactionId,
-    onTransaction,
-    onError,
-  }: SubscribeToTransactionsArgs): TransactionsStreamSubscription | Error => {
-    const parsedCursor = parseAfterTransactionId(afterTransactionId)
-    if (parsedCursor instanceof Error) return parsedCursor
+const accountIdForWalletId = async ({
+  walletId,
+  cacheService,
+  walletsRepository,
+}: TransactionsStreamAccountIdForWalletIdArgs): Promise<AccountId | ApplicationError> => {
+  const cacheKey = transactionsStreamWalletAccountIdCacheKey(walletId)
+  const cachedAccountId = await cacheService.get<AccountId>({ key: cacheKey })
+  if (!(cachedAccountId instanceof Error)) return cachedAccountId
 
-    let isClosed = false
-    const abortController = new AbortController()
-    const ledgerTransactions = ledgerService.streamSettledTransactions({
-      afterTransactionId: parsedCursor,
-      signal: abortController.signal,
-    })
+  const wallet = await walletsRepository.findById(walletId)
+  if (wallet instanceof Error) return wallet
 
-    const cleanup = () => {
+  await cacheService.set<AccountId>({
+    key: cacheKey,
+    value: wallet.accountId,
+    ttlSecs: WALLET_ACCOUNT_ID_CACHE_TTL_SECS,
+  })
+
+  return wallet.accountId
+}
+
+export const subscribeToTransactions = async ({
+  afterTransactionId,
+  onTransaction,
+  onError,
+}: SubscribeToTransactionsArgs): Promise<TransactionsStreamSubscription | Error> => {
+  const parsedCursor = parseAfterTransactionId(afterTransactionId)
+  if (parsedCursor instanceof Error) return parsedCursor
+
+  const ledgerService = LedgerService()
+  const cacheService = LocalCacheService()
+  const walletsRepository = WalletsRepository()
+  let isClosed = false
+  const abortController = new AbortController()
+  const ledgerTransactions = ledgerService.streamSettledTransactions({
+    afterTransactionId: parsedCursor,
+    signal: abortController.signal,
+  })
+
+  const cleanup = () => {
+    if (isClosed) return
+    isClosed = true
+    abortController.abort()
+    ledgerTransactions.return(undefined).catch(() => undefined)
+  }
+
+  const streamTransactions = async () => {
+    for await (const ledgerTransaction of ledgerTransactions) {
       if (isClosed) return
-      isClosed = true
-      abortController.abort()
-      ledgerTransactions.return(undefined).catch(() => undefined)
-    }
+      if (ledgerTransaction instanceof Error) throw ledgerTransaction
 
-    const streamTransactions = async () => {
-      for await (const ledgerTransaction of ledgerTransactions) {
-        if (isClosed) return
-        if (ledgerTransaction instanceof Error) throw ledgerTransaction
+      const walletId = ledgerTransaction.walletId
+      if (!walletId) continue
 
-        const event = await mapTransactionStreamEvent(ledgerTransaction)
+      const accountId = await accountIdForWalletId({
+        walletId,
+        cacheService,
+        walletsRepository,
+      })
+      if (accountId instanceof Error) throw accountId
 
-        if (event && !isClosed) await onTransaction(event)
-      }
-    }
+      const event = ledgerTransactionToTransactionStreamEvent({
+        ledgerTransaction,
+        accountId,
+      })
 
-    ;(async () => {
-      try {
-        await streamTransactions()
-      } catch (err) {
-        const error = toError(err, "Failed to stream transactions")
-        serviceLogger.error({ err: error }, "Failed to stream transactions")
-        cleanup()
-        onError(error)
-      }
-    })()
-
-    return {
-      close: cleanup,
+      if (event && !isClosed) await onTransaction(event)
     }
   }
 
-  return { subscribeToTransactions }
+  ;(async () => {
+    try {
+      await streamTransactions()
+    } catch (err) {
+      const error = toError(err, "Failed to stream transactions")
+      logger.error({ err: error }, "Failed to stream transactions")
+      cleanup()
+      onError(error)
+    }
+  })()
+
+  return {
+    close: cleanup,
+  }
 }

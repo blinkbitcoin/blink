@@ -1,4 +1,5 @@
 import { LedgerTransactionType } from "@/domain/ledger"
+import { CacheKeys } from "@/domain/cache"
 
 export const TransactionsStreamTransactionType = {
   Sent: "sent",
@@ -40,3 +41,32 @@ export const ledgerTransactionCreditToTransactionsStreamTransactionType = (
   credit > 0
     ? TransactionsStreamTransactionType.Received
     : TransactionsStreamTransactionType.Sent
+
+export const transactionsStreamWalletAccountIdCacheKey = (walletId: WalletId) =>
+  `${CacheKeys.TransactionsStreamWalletAccountId}:${walletId}`
+
+export const ledgerTransactionToTransactionStreamEvent = ({
+  ledgerTransaction,
+  accountId,
+}: LedgerTransactionToTransactionStreamEventArgs): TransactionStreamEvent | undefined => {
+  const walletId = ledgerTransaction.walletId
+  if (!walletId) return undefined
+
+  return {
+    ledgerTransactionId: ledgerTransaction.id,
+    walletId,
+    accountId,
+    paymentHash: ledgerTransaction.paymentHash,
+    satsAmount: ledgerTransaction.satsAmount ?? 0,
+    centsAmount: ledgerTransaction.centsAmount ?? 0,
+    currency: ledgerTransaction.currency,
+    type: ledgerTransactionCreditToTransactionsStreamTransactionType(
+      ledgerTransaction.credit,
+    ),
+    settlementVia: ledgerTransactionTypeToTransactionsStreamSettlementVia(
+      ledgerTransaction.type,
+    ),
+    pending: ledgerTransaction.pendingConfirmation,
+    timestamp: ledgerTransaction.timestamp,
+  }
+}
