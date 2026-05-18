@@ -63,7 +63,8 @@ filegroup(
   name = "protos",
   srcs = glob([
     "src/services/**/protos/**",
-    "src/services/**/proto/**"
+    "src/services/**/proto/**",
+    "src/servers/**/proto/**",
   ])
 )
 
@@ -282,6 +283,14 @@ dev_pnpm_task_binary(
 dev_pnpm_task_binary(
   name = "dev-ws-server",
   command = "dev:api-ws-server",
+  srcs = [":src"],
+  deps = ["//:node_modules"],
+  visibility = ["PUBLIC"],
+)
+
+dev_pnpm_task_binary(
+  name = "dev-transactions-grpc-stream",
+  command = "dev:api-transactions-grpc-stream",
   srcs = [":src"],
   deps = ["//:node_modules"],
   visibility = ["PUBLIC"],

@@ -2,6 +2,7 @@
 
 export REPO_ROOT=$(git rev-parse --show-toplevel)
 source "${REPO_ROOT}/bats/helpers/_common.bash"
+source "${REPO_ROOT}/bats/helpers/transactions-grpc-stream.bash"
 
 TILT_PID_FILE="${BATS_ROOT_DIR}/.tilt_pid"
 
@@ -11,6 +12,7 @@ setup_suite() {
   await_notifications_is_up
   await_api_keys_is_up
   await_api_is_up
+  await_transactions_grpc_stream_is_up
   await_pay_is_up
 }
 
@@ -54,4 +56,8 @@ await_notifications_is_up() {
   }
 
   retry 360 2 notifications_is_up
+}
+
+await_transactions_grpc_stream_is_up() {
+  retry 360 2 transactions_grpc_stream_is_up
 }

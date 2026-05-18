@@ -220,6 +220,7 @@ grpcurl_request() {
   local address="$3"
   local service_method="$4"
   local data="${5:-""}"
+  shift 5
 
   echo "gRPCurl request - import-path ${import_path} - proto: ${proto_file} - address: ${address} - service/method: ${service_method} - data: ${data}"
 
@@ -228,7 +229,7 @@ grpcurl_request() {
     run_cmd="run"
   fi
 
-  cmd=(${run_cmd} grpcurl -plaintext -import-path ${import_path} -proto "${proto_file}")
+  cmd=(${run_cmd} grpcurl -plaintext "$@" -import-path ${import_path} -proto "${proto_file}")
 
   if [[ -n "$data" ]]; then
     cmd+=(-d "${data}")

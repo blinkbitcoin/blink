@@ -2,6 +2,7 @@
 
 #@ galoy_api_image_digest = "sha256@4327f55ed841c7c53da31a9b7e9cd1a041a2ee57e2c6d55cbc7a5546b190abfd"
 #@ galoy_trigger_image_digest = "sha256@db5426b25553925409be5e5156c240b38975b2539b65f9f2ae13336e1cdb9a96"
+#@ galoy_transactions_grpc_stream_image_digest = "edge"
 #@ mongodb_migrate_image_digest = "sha256@a6620355ee18f8858c8dfbbf65d222542fe60b55d4676590b2c13d71bee9f4a6"
 #@ galoy_notifications_image_digest = "sha256@93f907d79a87ac3b856f030b9eb84dee301ddea599f6efd47f7774e790433a28"
 #@ galoy_api_keys_image_digest = "sha256@4b0b7bee8441dfaf623a1693dd60e24669db0b9e37baa30ecd8925cbe6590a1e"
@@ -56,6 +57,7 @@ services:
       - kratos
       - galoy
       - trigger
+      - transactions-grpc-stream
       - redis
       - mongodb
       - mongodb-migrate
@@ -126,6 +128,23 @@ services:
     environment: #@ core_env
     depends_on:
     - galoy
+
+  transactions-grpc-stream:
+#@ if galoy_transactions_grpc_stream_image_digest == "local":
+    build:
+      context: ..
+      dockerfile: core/api-transactions-grpc-stream/Dockerfile
+#@ elif galoy_transactions_grpc_stream_image_digest.startswith("sha256@"):
+    image: #@ "us.gcr.io/galoy-org/galoy-api-transactions-grpc-stream@" + galoy_transactions_grpc_stream_image_digest.replace("@",":")
+#@ else:
+    image: #@ "us.gcr.io/galoy-org/galoy-api-transactions-grpc-stream:" + galoy_transactions_grpc_stream_image_digest
+#@ end
+    environment: #@ core_env
+    ports:
+    - 50053:50053
+    - 8889:8889
+    depends_on:
+    - mongodb
 
   notifications:
 #@ if galoy_notifications_image_digest == "local":

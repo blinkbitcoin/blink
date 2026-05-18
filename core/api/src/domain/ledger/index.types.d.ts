@@ -240,6 +240,11 @@ type IsOnChainReceiptTxRecordedForWalletResult = {
   newAddressRequestId: OnChainAddressRequestId | undefined
 }
 
+type StreamSettledTransactionsArgs = {
+  afterTransactionId?: LedgerTransactionId
+  signal?: AbortSignal
+}
+
 interface ILedgerService {
   updateMetadataByHash(
     ledgerTxMetadata:
@@ -302,6 +307,10 @@ interface ILedgerService {
   ): Promise<LedgerTransaction<WalletCurrency>[] | LedgerServiceError>
 
   listAllPaymentHashes(): AsyncGenerator<PaymentHash | LedgerError>
+
+  streamSettledTransactions(
+    args?: StreamSettledTransactionsArgs,
+  ): AsyncGenerator<LedgerTransaction<WalletCurrency> | LedgerError>
 
   getPendingPaymentsCount(walletId: WalletId): Promise<number | LedgerServiceError>
 
