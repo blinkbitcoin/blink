@@ -1,6 +1,8 @@
 import { ApolloServer } from "@apollo/server"
 
+import { RateLimitConfig } from "@/domain/rate-limit"
 import { gqlAdminSchema } from "@/graphql/admin"
+import { RedisRateLimitService, resetLimiter } from "@/services/rate-limit"
 
 const PHONE_RATE_LIMIT_RESET_MUTATION = `
   mutation PhoneRateLimitReset($input: PhoneRateLimitResetInput!) {
@@ -22,6 +24,11 @@ type PhoneRateLimitResetData = {
 
 describe("PhoneRateLimitReset GraphQL", () => {
   let server: ApolloServer<GraphQLAdminContext>
+  const phone = "+14155550123" as PhoneNumber
+  const phoneRateLimitConfigs = [
+    RateLimitConfig.requestCodeAttemptPerPhoneNumber,
+    RateLimitConfig.loginAttemptPerLoginIdentifier,
+  ]
 
   beforeAll(async () => {
     server = new ApolloServer<GraphQLAdminContext>({
@@ -34,16 +41,38 @@ describe("PhoneRateLimitReset GraphQL", () => {
     await server.stop()
   })
 
-  it("resets rate limit via GraphQL", async () => {
+  beforeEach(async () => {
+    for (const rateLimitConfig of phoneRateLimitConfigs) {
+      await resetLimiter({
+        rateLimitConfig,
+        keyToConsume: phone,
+      })
+    }
+  })
+
+  it("resets phone auth rate limits via GraphQL", async () => {
+    for (const rateLimitConfig of phoneRateLimitConfigs) {
+      const rateLimit = RedisRateLimitService({
+        keyPrefix: rateLimitConfig.key,
+        limitOptions: rateLimitConfig.limits,
+      })
+
+      for (let i = 0; i < rateLimitConfig.limits.points; i++) {
+        await rateLimit.consume(phone)
+      }
+
+      const exceededResult = await rateLimit.consume(phone)
+      expect(exceededResult).toBeInstanceOf(Error)
+    }
+
     const result = await server.executeOperation(
       {
         query: PHONE_RATE_LIMIT_RESET_MUTATION,
         variables: {
           input: {
-            phone: "+14155550123",
+            phone,
           },
         },
-        // Resolver does not use context; this keeps the schema-level test focused.
       },
       {
         contextValue: {} as GraphQLAdminContext,
@@ -56,6 +85,16 @@ describe("PhoneRateLimitReset GraphQL", () => {
     const data = result.body.singleResult.data as PhoneRateLimitResetData
     expect(data.phoneRateLimitReset.success).toBe(true)
     expect(data.phoneRateLimitReset.errors).toHaveLength(0)
+
+    for (const rateLimitConfig of phoneRateLimitConfigs) {
+      const rateLimit = RedisRateLimitService({
+        keyPrefix: rateLimitConfig.key,
+        limitOptions: rateLimitConfig.limits,
+      })
+
+      const afterResetResult = await rateLimit.consume(phone)
+      expect(afterResetResult).not.toBeInstanceOf(Error)
+    }
   })
 
   it("returns error for invalid phone", async () => {
