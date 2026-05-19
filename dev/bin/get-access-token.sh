@@ -41,10 +41,6 @@ if [[ -z "$ADMIN_API_CLIENT_ID" || -z "$ADMIN_API_CLIENT_SECRET" ]]; then
     exit 1
 fi
 
-echo "Client ID: $ADMIN_API_CLIENT_ID"
-echo "Client Secret: $ADMIN_API_CLIENT_SECRET"
-echo ""
-
 response=$(curl -s -w "HTTP_CODE:%{http_code}" -X POST http://localhost:4444/oauth2/token \
   -H 'Content-Type: application/x-www-form-urlencoded' \
   -u "$ADMIN_API_CLIENT_ID:$ADMIN_API_CLIENT_SECRET" \
@@ -83,4 +79,3 @@ echo "  -H \"Oauth2-Token: \$admin_token\" \\"
 echo "  -d '{"
 echo "    \"query\": \"mutation { phoneRateLimitReset(input: { phone: \\\"+1234567890\\\" }) { success errors { message } } }\""
 echo "  }'"
-

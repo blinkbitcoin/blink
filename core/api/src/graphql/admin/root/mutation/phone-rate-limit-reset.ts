@@ -1,7 +1,8 @@
 import { GT } from "@/graphql/index"
 import { Admin } from "@/app"
 import PhoneRateLimitResetInput from "@/graphql/admin/types/object/phone-rate-limit-reset-input"
-import PhoneRateLimitResetPayload from "@/graphql/admin/types/payload/phone-rate-limit-reset"
+import SuccessPayload from "@/graphql/shared/types/payload/success-payload"
+import { mapAndParseErrorForGqlResponse } from "@/graphql/error-map"
 
 const PhoneRateLimitResetMutation = GT.Field<
   null,
@@ -11,7 +12,7 @@ const PhoneRateLimitResetMutation = GT.Field<
   extensions: {
     complexity: 120,
   },
-  type: GT.NonNull(PhoneRateLimitResetPayload),
+  type: GT.NonNull(SuccessPayload),
   args: {
     input: { type: GT.NonNull(PhoneRateLimitResetInput) },
   },
@@ -29,7 +30,7 @@ const PhoneRateLimitResetMutation = GT.Field<
 
     if (result instanceof Error) {
       return {
-        errors: [{ message: `Phone rate limit could not be reset: ${result.message}` }],
+        errors: [mapAndParseErrorForGqlResponse(result)],
         success: false,
       }
     }
