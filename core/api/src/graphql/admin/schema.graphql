@@ -405,7 +405,7 @@ type Mutation {
   merchantMapDelete(input: MerchantMapDeleteInput!): MerchantPayload!
   merchantMapValidate(input: MerchantMapValidateInput!): MerchantPayload!
   migrationRetryGrant(input: MigrationRetryGrantInput!): MigrationRetryGrantPayload!
-  phoneRateLimitReset(input: PhoneRateLimitResetInput!): PhoneRateLimitResetPayload!
+  phoneRateLimitReset(input: PhoneRateLimitResetInput!): SuccessPayload!
   userUpdateEmail(input: UserUpdateEmailInput!): AccountDetailPayload!
   userUpdatePhone(input: UserUpdatePhoneInput!): AccountDetailPayload!
 }
@@ -502,11 +502,6 @@ scalar Phone
 
 input PhoneRateLimitResetInput {
   phone: Phone!
-}
-
-type PhoneRateLimitResetPayload {
-  errors: [Error!]!
-  success: Boolean
 }
 
 interface PriceInterface {

@@ -1,12 +1,9 @@
 import { resetLimiter } from "@/services/rate-limit"
 import { RateLimitConfig } from "@/domain/rate-limit"
-import { addAttributesToCurrentSpan } from "@/services/tracing"
 
 export const resetPhoneRateLimit = async (
   phone: PhoneNumber,
 ): Promise<boolean | ApplicationError> => {
-  addAttributesToCurrentSpan({ "rateLimit.phone": phone })
-
   const phoneRateLimits = [
     RateLimitConfig.requestCodeAttemptPerPhoneNumber,
     RateLimitConfig.loginAttemptPerLoginIdentifier,
