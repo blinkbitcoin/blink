@@ -138,6 +138,7 @@ export const WalletInvoicesRepository = (): IWalletInvoicesRepository => {
     paid,
     usdAmount,
     externalId,
+    description,
     lnInvoice,
   }: WalletInvoicesPersistNewArgs): Promise<WalletInvoice | RepositoryError> => {
     try {
@@ -152,6 +153,7 @@ export const WalletInvoicesRepository = (): IWalletInvoicesRepository => {
         cents: usdAmount ? Number(usdAmount.amount) : undefined,
         currency: recipientWalletDescriptor.currency,
         paymentRequest: lnInvoice.paymentRequest,
+        ...(description !== undefined ? { description } : {}),
         externalId,
       }).save()
       return ensureWalletInvoiceHasLnInvoice(walletInvoiceFromRaw(walletInvoice))
@@ -307,6 +309,7 @@ const walletInvoiceFromRaw = (
     createdAt: new Date(result.timestamp.getTime()),
     processingCompleted: result.processingCompleted,
     externalId: result.externalId as LedgerExternalId,
+    ...(result.description !== undefined ? { description: result.description } : {}),
     lnInvoice,
   }
 }

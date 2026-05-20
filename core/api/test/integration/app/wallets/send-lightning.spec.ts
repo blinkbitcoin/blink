@@ -1092,6 +1092,7 @@ describe("initiated via lightning", () => {
 
       const externalId = randomLedgerExternalId()
       if (externalId instanceof Error) throw externalId
+      const invoiceDescription = `lnurl comment ${randomUUID()}`
 
       // Persist invoice as self-invoice
       const persisted = await WalletInvoicesRepository().persistNew({
@@ -1104,6 +1105,7 @@ describe("initiated via lightning", () => {
         lnInvoice,
         processingCompleted: false,
         externalId,
+        description: invoiceDescription,
       })
       if (persisted instanceof Error) throw persisted
 
@@ -1131,6 +1133,8 @@ describe("initiated via lightning", () => {
       expect(lnIntraledgerLedgerMetadataSpy).toHaveBeenCalledTimes(1)
       const args = recordIntraledgerSpy.mock.calls[0][0]
       expect(args.metadata.type).toBe(LedgerTransactionType.LnIntraLedger)
+      expect(args.description).toBe(invoiceDescription)
+      expect(args.description).not.toBe(memo)
     })
   })
 })

@@ -1,4 +1,4 @@
-import { MAX_PAGINATION_PAGE_SIZE, memoSharingConfig } from "@/config"
+import { MAX_PAGINATION_PAGE_SIZE } from "@/config"
 import { LedgerError } from "@/domain/ledger"
 import { checkedToPaginatedQueryArgs } from "@/domain/primitives"
 import { WalletTransactionHistory } from "@/domain/wallets"
@@ -40,7 +40,6 @@ export const getAccountTransactionsForContact = async ({
     const transaction = WalletTransactionHistory.fromLedger({
       txn: edge.node,
       nonEndUserWalletIds,
-      memoSharingConfig,
     })
 
     return {

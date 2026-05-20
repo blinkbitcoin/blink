@@ -14,15 +14,12 @@ import { AdminLedgerTransactionType, LedgerTransactionType } from "@/domain/ledg
 const translateLedgerTxnToWalletTxn = <S extends WalletCurrency>({
   txn,
   nonEndUserWalletIds,
-  memoSharingConfig,
 }: {
   txn: LedgerTransaction<S>
   nonEndUserWalletIds: WalletId[]
-  memoSharingConfig: MemoSharingConfig
 }): WalletTransaction => {
   const {
     type,
-    credit,
     currency,
     satsAmount: satsAmountRaw,
     satsFee: satsFeeRaw,
@@ -65,12 +62,9 @@ const translateLedgerTxnToWalletTxn = <S extends WalletCurrency>({
   const memo = translateMemo({
     memoFromPayer,
     lnMemo,
-    credit,
-    currency,
     walletId,
     nonEndUserWalletIds,
     journalId,
-    memoSharingConfig,
   })
 
   const baseTransaction: BaseWalletTransaction = {
@@ -205,26 +199,6 @@ const translateLedgerTxnToWalletTxn = <S extends WalletCurrency>({
   return walletTransaction
 }
 
-const shouldDisplayMemo = ({
-  memo,
-  credit,
-  currency,
-  memoSharingConfig,
-}: {
-  memo: string | undefined
-  credit: CurrencyBaseAmount
-  currency: WalletCurrency
-  memoSharingConfig: MemoSharingConfig
-}) => {
-  if ((!!memo && memoSharingConfig.authorizedMemos.includes(memo)) || credit === 0)
-    return true
-
-  if (currency === WalletCurrency.Btc)
-    return credit >= memoSharingConfig.memoSharingSatsThreshold
-
-  return credit >= memoSharingConfig.memoSharingCentsThreshold
-}
-
 const statusFromTxn = (txn: LedgerTransaction<WalletCurrency>): TxStatus => {
   switch (txn.lnPaymentState) {
     case undefined:
@@ -251,32 +225,22 @@ const statusFromTxn = (txn: LedgerTransaction<WalletCurrency>): TxStatus => {
 export const translateMemo = ({
   memoFromPayer,
   lnMemo,
-  credit,
-  currency,
   walletId,
   nonEndUserWalletIds,
   journalId,
-  memoSharingConfig,
 }: {
   memoFromPayer?: string
   lnMemo?: string
-  credit: CurrencyBaseAmount
-  currency: WalletCurrency
   walletId: WalletId | undefined
   nonEndUserWalletIds: WalletId[]
   journalId: LedgerJournalId
-  memoSharingConfig: MemoSharingConfig
 }): string | null => {
   if (walletId && nonEndUserWalletIds.includes(walletId)) {
     return `JournalId:${journalId}`
   }
 
   const memo = memoFromPayer || lnMemo
-  if (shouldDisplayMemo({ memo, credit, currency, memoSharingConfig })) {
-    return memo || null
-  }
-
-  return null
+  return memo || null
 }
 
 export const WalletTransactionHistory = {

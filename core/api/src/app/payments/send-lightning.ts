@@ -714,7 +714,7 @@ const lockedPaymentViaIntraledgerSteps = async ({
   }
 
   const journal = await LedgerFacade.recordIntraledger({
-    description: paymentFlow.descriptionFromInvoice,
+    description: walletInvoice.description || paymentFlow.descriptionFromInvoice,
     amount: {
       btc: paymentFlow.btcPaymentAmount,
       usd: paymentFlow.usdPaymentAmount,

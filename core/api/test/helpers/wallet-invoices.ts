@@ -25,5 +25,6 @@ export const createMockWalletInvoice = (
     createdAt: new Date(),
     processingCompleted: false,
     externalId,
+    description: "mock invoice description",
   }
 }

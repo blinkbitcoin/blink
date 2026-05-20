@@ -173,6 +173,7 @@ export const WIBWithAmount = (state: WIBWithAmountState): WIBWithAmount => {
       lnInvoice: registeredInvoice.invoice,
       processingCompleted: false,
       externalId,
+      description: state.description,
     }
     return walletInvoice
   }

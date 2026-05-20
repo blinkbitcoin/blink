@@ -72,6 +72,7 @@ interface WalletInvoiceRecord {
   pubkey: string
   paid: boolean
   paymentRequest?: string // optional because we historically did not store it
+  description?: string // optional because we historically did not store it
   externalId: string
 }
 
