@@ -256,4 +256,36 @@ describe("TransactionsGrpcServer", () => {
 
     expect(didFinish).toBe(true)
   })
+
+  it("closes the subscription when cancellation fires while waiting for drain", async () => {
+    const close = jest.fn()
+    const call = createCall("661111111111111111111110")
+    call.write.mockReturnValueOnce(false)
+
+    let onTransaction:
+      | ((event: TransactionStreamEvent) => void | Promise<void>)
+      | undefined
+    let onTransactionResult: void | Promise<void> | undefined
+    const transactionsStream = {
+      subscribeToTransactions: jest
+        .fn()
+        .mockImplementation(({ onTransaction: handler }) => {
+          onTransaction = handler
+          onTransactionResult = handler(createEvent())
+          call.emit("cancelled")
+          return { close }
+        }),
+    }
+    const grpcServer = TransactionsGrpcServer({
+      transactionsStream: transactionsStream as never,
+    })
+
+    grpcServer.subscribeTransactions(call as never)
+    await flushMicrotasks()
+    await onTransactionResult
+    await onTransaction?.(createEvent())
+
+    expect(close).toHaveBeenCalledTimes(1)
+    expect(call.write).toHaveBeenCalledTimes(1)
+  })
 })

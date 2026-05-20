@@ -48,15 +48,21 @@ export const TransactionsGrpcServer = ({
       const waitForDrainOrTerminalEvent = () =>
         new Promise<void>((resolve) => {
           const finish = () => {
-            call.removeListener("drain", finish)
-            call.removeListener("cancelled", finish)
-            call.removeListener("error", finish)
+            call.removeListener("drain", onDrain)
+            call.removeListener("cancelled", onTerminal)
+            call.removeListener("error", onTerminal)
             resolve()
           }
 
-          call.once("drain", finish)
-          call.once("cancelled", finish)
-          call.once("error", finish)
+          const onDrain = () => finish()
+          const onTerminal = () => {
+            cleanup()
+            finish()
+          }
+
+          call.once("drain", onDrain)
+          call.once("cancelled", onTerminal)
+          call.once("error", onTerminal)
         })
 
       const result = await transactionsStream.subscribeToTransactions({
@@ -83,6 +89,11 @@ export const TransactionsGrpcServer = ({
             details: "after_transaction_id must be a valid Mongo ObjectId",
           }),
         )
+        return
+      }
+
+      if (isClosed) {
+        result.close()
         return
       }
 
