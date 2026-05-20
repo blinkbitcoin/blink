@@ -60,7 +60,7 @@ export const createStreamSettledTransactions = ({
       if (replayedTransactionIds.size <= maxReplayDedupeCacheSize) return
 
       const oldestReplayedTransactionId = replayedTransactionIds.values().next().value
-      if (oldestReplayedTransactionId) {
+      if (oldestReplayedTransactionId !== undefined) {
         replayedTransactionIds.delete(oldestReplayedTransactionId)
       }
     }
