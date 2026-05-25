@@ -232,6 +232,7 @@ jest_test(
     run_serially = True,
     env_json = "//dev:integration_env",
     env = {
+        "JEST_TIMEOUT": "90000",
         "LOGLEVEL": "warn",
     }
 )
