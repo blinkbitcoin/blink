@@ -15,4 +15,5 @@ export const CacheKeys = {
   ClosedChannels: "lnd:closedChannels",
   TelegramPassportNonce: "auth:tg:passport",
   BlockInfo: "bitcoin:blockInfo",
+  TransactionsStreamWalletAccountId: "transactions-stream:wallet-account-id",
 } as const

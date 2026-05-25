@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package services.transactions.v1;
+
+service TransactionsStream {
+  rpc SubscribeTransactions(SubscribeTransactionsRequest)
+      returns (stream TransactionEvent) {}
+}
+
+message SubscribeTransactionsRequest {
+  optional string after_transaction_id = 1;
+}
+
+enum TransactionType {
+  TRANSACTION_TYPE_UNSPECIFIED = 0;
+  SENT = 1;
+  RECEIVED = 2;
+}
+
+enum SettlementViaType {
+  SETTLEMENT_VIA_UNSPECIFIED = 0;
+  LIGHTNING = 1;
+  INTRA_LEDGER = 2;
+  ONCHAIN = 3;
+}
+
+message TransactionEvent {
+  string ledger_transaction_id = 1;
+  string wallet_id = 2;
+  string account_id = 3;
+  string payment_hash = 4;
+  int64 sats_amount = 5;
+  int64 cents_amount = 6;
+  string currency = 7;
+  TransactionType type = 8;
+  SettlementViaType settlement_via = 9;
+  bool pending = 10;
+  uint64 timestamp = 11;
+}

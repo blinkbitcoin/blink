@@ -63,7 +63,8 @@ filegroup(
   name = "protos",
   srcs = glob([
     "src/services/**/protos/**",
-    "src/services/**/proto/**"
+    "src/services/**/proto/**",
+    "src/servers/**/proto/**",
   ])
 )
 
@@ -231,6 +232,7 @@ jest_test(
     run_serially = True,
     env_json = "//dev:integration_env",
     env = {
+        "JEST_TIMEOUT": "90000",
         "LOGLEVEL": "warn",
     }
 )
@@ -282,6 +284,14 @@ dev_pnpm_task_binary(
 dev_pnpm_task_binary(
   name = "dev-ws-server",
   command = "dev:api-ws-server",
+  srcs = [":src"],
+  deps = ["//:node_modules"],
+  visibility = ["PUBLIC"],
+)
+
+dev_pnpm_task_binary(
+  name = "dev-transactions-grpc-stream",
+  command = "dev:api-transactions-grpc-stream",
   srcs = [":src"],
   deps = ["//:node_modules"],
   visibility = ["PUBLIC"],

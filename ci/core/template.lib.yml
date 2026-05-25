@@ -1,6 +1,6 @@
 #@ load("@ytt:data", "data")
 
-#@ core_bundle_components = ["api", "api-cron", "api-trigger", "api-ws-server", "api-exporter"]
+#@ core_bundle_components = ["api", "api-cron", "api-trigger", "api-transactions-grpc-stream", "api-ws-server", "api-exporter"]
 
 #@ def galoy_dev_image():
 #@   return data.values.docker_registry + "/galoy-dev"
