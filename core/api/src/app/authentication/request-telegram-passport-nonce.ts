@@ -5,13 +5,16 @@ import { checkedToChannel, ChannelType } from "@/domain/phone-provider"
 
 import { RedisCacheService } from "@/services/cache"
 import { consumeLimiter } from "@/services/rate-limit"
-import { SECS_PER_10_MINS } from "@/config"
+import { getAccountsOnboardConfig, SECS_PER_10_MINS } from "@/config"
 import {
   createTelegramPassportNonce,
   telegramPassportRequestKey,
 } from "@/domain/authentication"
 
+import { getPhoneProviderVerifyService } from "@/services/phone-provider"
+
 const redisCache = RedisCacheService()
+const { phoneMetadataValidationSettings } = getAccountsOnboardConfig()
 
 export const requestTelegramPassportNonce = async ({
   phone,
@@ -25,6 +28,14 @@ export const requestTelegramPassportNonce = async ({
 
   const isValidPhoneForChannel = checkedToChannel(phone, ChannelType.Telegram)
   if (isValidPhoneForChannel instanceof Error) return isValidPhoneForChannel
+
+  if (phoneMetadataValidationSettings.enabled) {
+    const verifyService = getPhoneProviderVerifyService()
+    if (verifyService instanceof Error) return verifyService
+
+    const validationResult = await verifyService.validateDestination(checkedPhoneNumber)
+    if (validationResult instanceof Error) return validationResult
+  }
 
   const ipLimitOk = await checkRequestTelegramPassportNonceAttemptPerIpLimits(ip)
   if (ipLimitOk instanceof Error) return ipLimitOk
