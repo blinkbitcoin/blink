@@ -153,6 +153,46 @@ getEmailCode() {
   [[ "$refetched_id" == "$id" ]] || exit 1
 }
 
+@test "admin: can reset phone auth rate limits" {
+  admin_token="$(read_value 'admin.token')"
+  phone="$(random_phone)"
+  request_code_key="request_phone_number_id:${phone}"
+  login_attempt_key="login_attempt_id:${phone}"
+
+  redis_cli SET "$request_code_key" 1 EX 60
+  redis_cli SET "$login_attempt_key" 1 EX 60
+
+  [[ "$(redis_cli EXISTS "$request_code_key")" == "1" ]] || exit 1
+  [[ "$(redis_cli EXISTS "$login_attempt_key")" == "1" ]] || exit 1
+
+  variables=$(
+    jq -n \
+    --arg phone "$phone" \
+    '{input: {phone: $phone}}'
+  )
+  exec_admin_graphql "$admin_token" 'phone-rate-limit-reset' "$variables"
+
+  success="$(graphql_output '.data.phoneRateLimitReset.success')"
+  num_errors="$(graphql_output '.data.phoneRateLimitReset.errors | length')"
+  [[ "$success" == "true" ]] || exit 1
+  [[ "$num_errors" == "0" ]] || exit 1
+
+  [[ "$(redis_cli EXISTS "$request_code_key")" == "0" ]] || exit 1
+  [[ "$(redis_cli EXISTS "$login_attempt_key")" == "0" ]] || exit 1
+}
+
+@test "admin: phone rate limit reset returns error for invalid phone" {
+  admin_token="$(read_value 'admin.token')"
+  variables='{"input": {"phone": "invalid-phone"}}'
+
+  exec_admin_graphql "$admin_token" 'phone-rate-limit-reset' "$variables"
+
+  success="$(graphql_output '.data.phoneRateLimitReset.success')"
+  num_errors="$(graphql_output '.data.phoneRateLimitReset.errors | length')"
+  [[ "$success" == "false" ]] || exit 1
+  [[ "$num_errors" == "1" ]] || exit 1
+}
+
 
 @test "admin: can update user email" {
   email="$(read_value tester.username)@blink.sv"
