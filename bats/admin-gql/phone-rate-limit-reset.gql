@@ -1,0 +1,8 @@
+mutation phoneRateLimitReset($input: PhoneRateLimitResetInput!) {
+  phoneRateLimitReset(input: $input) {
+    errors {
+      message
+    }
+    success
+  }
+}
