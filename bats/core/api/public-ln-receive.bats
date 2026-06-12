@@ -27,6 +27,24 @@ teardown() {
 btc_amount=1000
 usd_amount=50
 
+assert_terminal_invoice_webhook() {
+  local payment_hash=$1
+  local payment_request=$2
+  local preimage=$3
+  local wallet_id=$4
+
+  retry 15 1 grep "callback │ .*$payment_hash" "$TILT_LOG_FILE"
+  retry 15 1 grep "callback │ .*$payment_request" "$TILT_LOG_FILE"
+  retry 15 1 grep "callback │ .*PAID" "$TILT_LOG_FILE"
+  retry 15 1 grep "callback │ .*$preimage" "$TILT_LOG_FILE"
+
+  ! cat_callback | grep "$payment_hash" | grep -q "accountId" || exit 1
+  ! cat_callback | grep "$payment_hash" | grep -q "walletId" || exit 1
+  ! cat_callback | grep "$payment_hash" | grep -q "transaction" || exit 1
+  ! cat_callback | grep "$payment_hash" | grep -q "externalId" || exit 1
+  ! cat_callback | grep "$payment_hash" | grep -q "$wallet_id" || exit 1
+}
+
 @test "public-ln-receive: account details - can fetch with btc default wallet-id from username" {
   token_name=$ALICE
   btc_wallet_name="$token_name.btc_wallet_id"
@@ -315,16 +333,109 @@ usd_amount=50
   preimage="$(echo "$payment_result" | jq -r '.payment_preimage')"
 
   retry 15 1 check_ln_payment_settled_by_hash "$payment_request" "$payment_hash"
-  retry 15 1 grep "callback │ .*$payment_hash" "$TILT_LOG_FILE"
-  retry 15 1 grep "callback │ .*$payment_request" "$TILT_LOG_FILE"
-  retry 15 1 grep "callback │ .*PAID" "$TILT_LOG_FILE"
-  retry 15 1 grep "callback │ .*$preimage" "$TILT_LOG_FILE"
+  assert_terminal_invoice_webhook \
+    "$payment_hash" \
+    "$payment_request" \
+    "$preimage" \
+    "$btc_wallet_id"
+}
 
-  ! cat_callback | grep "$payment_hash" | grep -q "accountId" || exit 1
-  ! cat_callback | grep "$payment_hash" | grep -q "walletId" || exit 1
-  ! cat_callback | grep "$payment_hash" | grep -q "transaction" || exit 1
-  ! cat_callback | grep "$payment_hash" | grep -q "externalId" || exit 1
-  ! cat_callback | grep "$payment_hash" | grep -q "$btc_wallet_id" || exit 1
+@test "public-ln-receive: receive via usd invoice - sends terminal invoice webhook" {
+  token_name="$ALICE"
+  usd_wallet_name="$token_name.usd_wallet_id"
+  usd_wallet_id="$(read_value $usd_wallet_name)"
+
+  variables=$(
+    jq -n \
+    --arg wallet_id "$usd_wallet_id" \
+    --arg amount "$usd_amount" \
+    --arg webhook_url "$SVIX_CALLBACK_URL" \
+    '{input: {recipientWalletId: $wallet_id, amount: $amount, webhookUrl: $webhook_url}}'
+  )
+  exec_graphql 'anon' 'ln-usd-invoice-create-on-behalf-of-recipient' "$variables"
+  invoice="$(graphql_output '.data.lnUsdInvoiceCreateOnBehalfOfRecipient.invoice')"
+
+  payment_request="$(echo $invoice | jq -r '.paymentRequest')"
+  [[ "${payment_request}" != "null" ]] || exit 1
+
+  payment_hash="$(echo $invoice | jq -r '.paymentHash')"
+  [[ "${payment_hash}" != "null" ]] || exit 1
+
+  payment_result="$(lnd_outside_cli payinvoice -f --pay_req "$payment_request" --json)"
+  preimage="$(echo "$payment_result" | jq -r '.payment_preimage')"
+
+  retry 15 1 check_ln_payment_settled_by_hash "$payment_request" "$payment_hash"
+  assert_terminal_invoice_webhook \
+    "$payment_hash" \
+    "$payment_request" \
+    "$preimage" \
+    "$usd_wallet_id"
+}
+
+@test "public-ln-receive: receive via usd sats-denominated invoice - sends terminal invoice webhook" {
+  token_name="$ALICE"
+  usd_wallet_name="$token_name.usd_wallet_id"
+  usd_wallet_id="$(read_value $usd_wallet_name)"
+
+  variables=$(
+    jq -n \
+    --arg wallet_id "$usd_wallet_id" \
+    --arg amount "$btc_amount" \
+    --arg webhook_url "$SVIX_CALLBACK_URL" \
+    '{input: {recipientWalletId: $wallet_id, amount: $amount, webhookUrl: $webhook_url}}'
+  )
+  exec_graphql \
+    'anon' \
+    'ln-usd-invoice-btc-denominated-create-on-behalf-of-recipient' \
+    "$variables"
+  invoice="$(graphql_output '.data.lnUsdInvoiceBtcDenominatedCreateOnBehalfOfRecipient.invoice')"
+
+  payment_request="$(echo $invoice | jq -r '.paymentRequest')"
+  [[ "${payment_request}" != "null" ]] || exit 1
+
+  payment_hash="$(echo $invoice | jq -r '.paymentHash')"
+  [[ "${payment_hash}" != "null" ]] || exit 1
+
+  payment_result="$(lnd_outside_cli payinvoice -f --pay_req "$payment_request" --json)"
+  preimage="$(echo "$payment_result" | jq -r '.payment_preimage')"
+
+  retry 15 1 check_ln_payment_settled_by_hash "$payment_request" "$payment_hash"
+  assert_terminal_invoice_webhook \
+    "$payment_hash" \
+    "$payment_request" \
+    "$preimage" \
+    "$usd_wallet_id"
+}
+
+@test "public-ln-receive: receive via no amount invoice - sends terminal invoice webhook" {
+  token_name="$ALICE"
+  btc_wallet_name="$token_name.btc_wallet_id"
+  btc_wallet_id="$(read_value $btc_wallet_name)"
+
+  variables=$(
+    jq -n \
+    --arg wallet_id "$btc_wallet_id" \
+    --arg webhook_url "$SVIX_CALLBACK_URL" \
+    '{input: {recipientWalletId: $wallet_id, webhookUrl: $webhook_url}}'
+  )
+  exec_graphql 'anon' 'ln-no-amount-invoice-create-on-behalf-of-recipient' "$variables"
+  invoice="$(graphql_output '.data.lnNoAmountInvoiceCreateOnBehalfOfRecipient.invoice')"
+
+  payment_request="$(echo $invoice | jq -r '.paymentRequest')"
+  [[ "${payment_request}" != "null" ]] || exit 1
+
+  payment_hash="$(echo $invoice | jq -r '.paymentHash')"
+  [[ "${payment_hash}" != "null" ]] || exit 1
+
+  payment_result="$(lnd_outside_cli payinvoice -f --pay_req "$payment_request" --amt "$btc_amount" --json)"
+  preimage="$(echo "$payment_result" | jq -r '.payment_preimage')"
+
+  retry 15 1 check_ln_payment_settled_by_hash "$payment_request" "$payment_hash"
+  assert_terminal_invoice_webhook \
+    "$payment_hash" \
+    "$payment_request" \
+    "$preimage" \
+    "$btc_wallet_id"
 }
 
 @test "public-ln-receive: receive via invoice - can receive on usd invoice" {
