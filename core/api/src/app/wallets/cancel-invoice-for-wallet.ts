@@ -1,3 +1,5 @@
+import { sendTerminalInvoiceWebhook } from "./invoice-webhooks"
+
 import { InvoiceAlreadyProcessedError } from "@/domain/wallet-invoices/errors"
 import { AccountValidator } from "@/domain/accounts"
 import { checkedToWalletId } from "@/domain/wallets"
@@ -59,6 +61,8 @@ export const cancelInvoiceForWallet = async ({
 
     const updatedInvoice = await walletInvoices.markAsProcessingCompleted(paymentHash)
     if (updatedInvoice instanceof Error) return result
+
+    sendTerminalInvoiceWebhook({ walletInvoice: updatedInvoice })
 
     return true
   })

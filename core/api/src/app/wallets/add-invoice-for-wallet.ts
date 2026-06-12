@@ -1,5 +1,6 @@
 import { validateIsBtcWallet, validateIsUsdWallet } from "./validate"
 
+import { getCallbackServiceConfig } from "@/config"
 import { AccountValidator } from "@/domain/accounts"
 import { checkedToLedgerExternalId } from "@/domain/ledger"
 import { checkedToWalletId } from "@/domain/wallets"
@@ -8,11 +9,13 @@ import { checkedToMinutes, secondsToMinutes } from "@/domain/primitives"
 import { RateLimiterExceededError } from "@/domain/rate-limit/errors"
 import { INVOICE_EXPIRATIONS } from "@/domain/bitcoin/lightning/invoice-expiration"
 import { WalletInvoiceBuilder } from "@/domain/wallet-invoices/wallet-invoice-builder"
+import { WalletInvoiceWebhookStatus } from "@/domain/wallet-invoices"
 import { checkedToBtcPaymentAmount, checkedToUsdPaymentAmount } from "@/domain/shared"
 
 import { LndService } from "@/services/lnd"
 import { consumeLimiter } from "@/services/rate-limit"
 import { DealerPriceService } from "@/services/dealer-price"
+import { CallbackService } from "@/services/svix"
 import {
   AccountsRepository,
   WalletInvoicesRepository,
@@ -168,9 +171,11 @@ const addInvoiceForRecipient = async ({
   descriptionHash,
   expiresIn,
   externalId,
+  webhookUrl,
 }: AddInvoiceForRecipientArgs): Promise<WalletInvoice | ApplicationError> => {
   return addInvoice({
     walletId: recipientWalletId,
+    webhookUrl,
     limitCheckFn: checkRecipientWalletIdRateLimits,
     buildWIBWithAmountFn: ({
       walletInvoiceBuilder,
@@ -213,6 +218,7 @@ export const addInvoiceForRecipientForBtcWallet = async (
     descriptionHash: args.descriptionHash,
     memo: args.memo,
     externalId,
+    webhookUrl: args.webhookUrl,
   })
 }
 
@@ -243,6 +249,7 @@ export const addInvoiceForRecipientForUsdWallet = async (
     descriptionHash: args.descriptionHash,
     memo: args.memo,
     externalId,
+    webhookUrl: args.webhookUrl,
   })
 }
 
@@ -273,6 +280,7 @@ export const addInvoiceForRecipientForUsdWalletAndBtcAmount = async (
     descriptionHash: args.descriptionHash,
     memo: args.memo,
     externalId,
+    webhookUrl: args.webhookUrl,
   })
 }
 
@@ -281,9 +289,11 @@ const addInvoiceNoAmountForRecipient = async ({
   memo = "",
   expiresIn,
   externalId,
+  webhookUrl,
 }: AddInvoiceNoAmountForRecipientArgs): Promise<WalletInvoice | ApplicationError> => {
   return addInvoice({
     walletId: recipientWalletId,
+    webhookUrl,
     limitCheckFn: checkRecipientWalletIdRateLimits,
     buildWIBWithAmountFn: ({
       walletInvoiceBuilder,
@@ -324,11 +334,13 @@ export const addInvoiceNoAmountForRecipientForAnyWallet = async (
     expiresIn,
     memo: args.memo,
     externalId,
+    webhookUrl: args.webhookUrl,
   })
 }
 
 const addInvoice = async ({
   walletId,
+  webhookUrl,
   limitCheckFn,
   buildWIBWithAmountFn,
 }: AddInvoiceArgs): Promise<WalletInvoice | ApplicationError> => {
@@ -363,8 +375,21 @@ const addInvoice = async ({
   const invoice = await walletIBWithAmount.registerInvoice()
   if (invoice instanceof Error) return invoice
 
+  if (webhookUrl) {
+    invoice.webhookUrl = webhookUrl
+    invoice.webhookStatus = WalletInvoiceWebhookStatus.Pending
+  }
+
   const persistedInvoice = await WalletInvoicesRepository().persistNew(invoice)
   if (persistedInvoice instanceof Error) return persistedInvoice
+
+  if (webhookUrl) {
+    const endpointId = await CallbackService(getCallbackServiceConfig()).addInvoiceEndpoint({
+      paymentHash: invoice.paymentHash,
+      url: webhookUrl,
+    })
+    if (endpointId instanceof Error) return endpointId
+  }
 
   return invoice
 }

@@ -43,6 +43,9 @@ export const CallbackService = (config: SvixConfig): ICallbackService => {
       addEndpoint: nullFn,
       listEndpoints: nullFn,
       deleteEndpoint: nullFn,
+      addInvoiceEndpoint: nullFn,
+      sendInvoiceMessage: nullFn,
+      deleteInvoiceApplication: nullFn,
     }
   }
 
@@ -53,11 +56,14 @@ export const CallbackService = (config: SvixConfig): ICallbackService => {
   const getAccountCallbackId = (accountId: AccountId): AccountCallbackId =>
     `account.${accountId}` as AccountCallbackId
 
-  const createApplication = async (accountCallbackId: AccountCallbackId) => {
+  const getInvoiceCallbackId = (paymentHash: PaymentHash): InvoiceCallbackId =>
+    `invoice.${paymentHash}` as InvoiceCallbackId
+
+  const createApplication = async (callbackId: AccountCallbackId | InvoiceCallbackId) => {
     try {
       const application: ApplicationIn = {
-        name: accountCallbackId,
-        uid: accountCallbackId,
+        name: callbackId,
+        uid: callbackId,
       }
 
       await svix.application.create(application)
@@ -180,9 +186,87 @@ export const CallbackService = (config: SvixConfig): ICallbackService => {
     }
   }
 
+  const addInvoiceEndpoint = async ({
+    paymentHash,
+    url,
+  }: {
+    paymentHash: PaymentHash
+    url: string
+  }) => {
+    const invoiceCallbackId = getInvoiceCallbackId(paymentHash)
+
+    const res = await createApplication(invoiceCallbackId)
+    if (res instanceof Error) return res
+
+    try {
+      const res = await svix.endpoint.create(invoiceCallbackId, { url })
+      return res.id
+    } catch (err) {
+      return handleCommonErrors(err)
+    }
+  }
+
+  const sendInvoiceMessage = async ({
+    paymentHash,
+    eventType,
+    payload,
+  }: {
+    paymentHash: PaymentHash
+    eventType: string
+    payload: Record<string, JSONValue>
+  }): Promise<CallbackError | true> => {
+    const invoiceCallbackId = getInvoiceCallbackId(paymentHash)
+    addAttributesToCurrentSpan({ "callback.application": invoiceCallbackId })
+    try {
+      const result = await createApplication(invoiceCallbackId)
+      if (result instanceof Error) return result
+
+      const safePayload = JSON.parse(
+        JSON.stringify(payload, (_key, value) =>
+          typeof value === "bigint" ? value.toString() : value,
+        ),
+      )
+      const res = await svix.message.create(invoiceCallbackId, {
+        eventType,
+        payload: safePayload,
+      })
+
+      const prefixedPayload = prefixObjectKeys(safePayload, "callback.payload")
+      addAttributesToCurrentSpan({
+        ...prefixedPayload,
+        ["callback.paymentHash"]: paymentHash,
+        ["callback.eventType"]: eventType,
+      })
+      baseLogger.info({ res }, `message sent successfully to ${invoiceCallbackId}`)
+      return true
+    } catch (err) {
+      return handleCommonErrors(err)
+    }
+  }
+
+  const deleteInvoiceApplication = async (paymentHash: PaymentHash) => {
+    const invoiceCallbackId = getInvoiceCallbackId(paymentHash)
+
+    try {
+      await svix.application.delete(invoiceCallbackId)
+      return true
+    } catch (err) {
+      return handleCommonErrors(err)
+    }
+  }
+
   return wrapAsyncFunctionsToRunInSpan({
     namespace: "services.callback",
-    fns: { sendMessage, getPortalUrl, addEndpoint, listEndpoints, deleteEndpoint },
+    fns: {
+      sendMessage,
+      getPortalUrl,
+      addEndpoint,
+      listEndpoints,
+      deleteEndpoint,
+      addInvoiceEndpoint,
+      sendInvoiceMessage,
+      deleteInvoiceApplication,
+    },
   })
 }
 

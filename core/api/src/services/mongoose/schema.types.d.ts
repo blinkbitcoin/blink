@@ -73,6 +73,8 @@ interface WalletInvoiceRecord {
   paid: boolean
   paymentRequest?: string // optional because we historically did not store it
   externalId: string
+  webhookUrl?: string
+  webhookStatus?: string
 }
 
 interface AccountRecord {

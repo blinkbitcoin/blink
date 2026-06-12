@@ -6,6 +6,7 @@ import { getDefaultAccountsConfig, Levels } from "@/config"
 import { AccountIdRegex, AccountStatus, UsernameRegex } from "@/domain/accounts"
 import { WalletIdRegex, WalletType } from "@/domain/wallets"
 import { WalletCurrency } from "@/domain/shared"
+import { WalletInvoiceWebhookStatus } from "@/domain/wallet-invoices"
 
 import { Languages } from "@/domain/users"
 import { ContactType } from "@/domain/contacts"
@@ -103,11 +104,21 @@ const walletInvoiceSchema = new Schema<WalletInvoiceRecord>({
     type: String,
     validator: (v: string) => !(checkedToLedgerExternalId(v) instanceof Error),
   },
+
+  webhookUrl: {
+    type: String,
+  },
+
+  webhookStatus: {
+    type: String,
+    enum: Object.values(WalletInvoiceWebhookStatus),
+  },
 })
 
 walletInvoiceSchema.index({ walletId: 1, paid: 1 })
 walletInvoiceSchema.index({ paid: 1, processingCompleted: 1 })
 walletInvoiceSchema.index({ accountId: 1, externalId: 1 }, { unique: true })
+walletInvoiceSchema.index({ webhookStatus: 1 })
 
 export const WalletInvoice = mongoose.model<WalletInvoiceRecord>(
   "InvoiceUser",
