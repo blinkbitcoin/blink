@@ -2,24 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat(api): add public invoice webhooks (#618)...'
-      sha: 27d1141d989263e8c7a5d5b6c0f864d2bd7fc59e
+      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1555
+        (#620)...'
+      sha: d634cdae749e4eada7d50923028436210184b370
       tags:
-      - 0.22.7-2-g27d1141d9
+      - 0.22.8-2-gd634cdae7
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat(api): add public invoice webhooks (#618)...'
-      sha: 27d1141d989263e8c7a5d5b6c0f864d2bd7fc59e
+      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1555
+        (#620)...'
+      sha: d634cdae749e4eada7d50923028436210184b370
       tags:
-      - 0.22.7-2-g27d1141d9
+      - 0.22.8-2-gd634cdae7
     path: schemas
   - git:
-      commitTitle: 'feat(api): add public invoice webhooks (#618)...'
-      sha: 27d1141d989263e8c7a5d5b6c0f864d2bd7fc59e
+      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1555
+        (#620)...'
+      sha: d634cdae749e4eada7d50923028436210184b370
       tags:
-      - 0.22.7-2-g27d1141d9
+      - 0.22.8-2-gd634cdae7
     path: gql
   path: graphql
 kind: LockConfig
