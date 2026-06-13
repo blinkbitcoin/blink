@@ -8,5 +8,5 @@ export const WalletInvoiceStatus = {
 
 export const WalletInvoiceWebhookStatus = {
   Pending: "pending",
-  FinalSent: "final_sent",
+  Sent: "sent",
 } as const

@@ -1,4 +1,4 @@
-import { sendTerminalInvoiceWebhook } from "@/app/wallets/invoice-webhooks"
+import { sendInvoiceWebhook } from "@/app/wallets/send-invoice-webhook"
 import { WalletInvoiceWebhookStatus } from "@/domain/wallet-invoices"
 import { PaymentStatusCheckerByHash } from "@/app/lightning/payment-status-checker"
 import { CallbackService } from "@/services/svix"
@@ -20,8 +20,8 @@ jest.mock("@/services/mongoose", () => ({
   WalletInvoicesRepository: jest.fn(),
 }))
 
-jest.mock("@/services/logger", () => ({
-  baseLogger: { warn: jest.fn(), error: jest.fn() },
+jest.mock("@/services/tracing", () => ({
+  recordExceptionInCurrentSpan: jest.fn(),
 }))
 
 const paymentHash = "0".repeat(64) as PaymentHash
@@ -36,24 +36,23 @@ const walletInvoice = {
 
 const sendInvoiceMessage = jest.fn()
 const deleteInvoiceApplication = jest.fn()
-const markWebhookFinalSent = jest.fn()
+const markWebhookAsSent = jest.fn()
 
 beforeEach(() => {
   jest.resetAllMocks()
-
   ;(CallbackService as jest.Mock).mockReturnValue({
     sendInvoiceMessage,
     deleteInvoiceApplication,
   })
   ;(WalletInvoicesRepository as jest.Mock).mockReturnValue({
-    markWebhookFinalSent,
+    markWebhookAsSent,
   })
   sendInvoiceMessage.mockResolvedValue(true)
   deleteInvoiceApplication.mockResolvedValue(true)
-  markWebhookFinalSent.mockResolvedValue(walletInvoice)
+  markWebhookAsSent.mockResolvedValue(walletInvoice)
 })
 
-describe("sendTerminalInvoiceWebhook", () => {
+describe("sendInvoiceWebhook", () => {
   it("does not send for pending invoices", async () => {
     ;(PaymentStatusCheckerByHash as jest.Mock).mockResolvedValue({
       paymentRequest,
@@ -61,11 +60,11 @@ describe("sendTerminalInvoiceWebhook", () => {
       invoiceIsPaid: jest.fn().mockResolvedValue(false),
     })
 
-    const result = await sendTerminalInvoiceWebhook({ walletInvoice })
+    const result = await sendInvoiceWebhook({ walletInvoice })
 
     expect(result).toBe(true)
     expect(sendInvoiceMessage).not.toHaveBeenCalled()
-    expect(markWebhookFinalSent).not.toHaveBeenCalled()
+    expect(markWebhookAsSent).not.toHaveBeenCalled()
     expect(deleteInvoiceApplication).not.toHaveBeenCalled()
   })
 
@@ -77,7 +76,7 @@ describe("sendTerminalInvoiceWebhook", () => {
       getPreImage: jest.fn().mockResolvedValue(paymentPreimage),
     })
 
-    const result = await sendTerminalInvoiceWebhook({ walletInvoice })
+    const result = await sendInvoiceWebhook({ walletInvoice })
 
     expect(result).toBe(true)
     expect(sendInvoiceMessage).toHaveBeenCalledWith({
@@ -93,7 +92,7 @@ describe("sendTerminalInvoiceWebhook", () => {
     expect(sendInvoiceMessage.mock.calls[0][0].payload).not.toHaveProperty("accountId")
     expect(sendInvoiceMessage.mock.calls[0][0].payload).not.toHaveProperty("walletId")
     expect(sendInvoiceMessage.mock.calls[0][0].payload).not.toHaveProperty("transaction")
-    expect(markWebhookFinalSent).toHaveBeenCalledWith(paymentHash)
+    expect(markWebhookAsSent).toHaveBeenCalledWith(paymentHash)
     expect(deleteInvoiceApplication).toHaveBeenCalledWith(paymentHash)
   })
 
@@ -104,7 +103,7 @@ describe("sendTerminalInvoiceWebhook", () => {
       invoiceIsPaid: jest.fn().mockResolvedValue(false),
     })
 
-    const result = await sendTerminalInvoiceWebhook({ walletInvoice })
+    const result = await sendInvoiceWebhook({ walletInvoice })
 
     expect(result).toBe(true)
     expect(sendInvoiceMessage).toHaveBeenCalledWith({
@@ -119,6 +118,6 @@ describe("sendTerminalInvoiceWebhook", () => {
     expect(sendInvoiceMessage.mock.calls[0][0].payload).not.toHaveProperty(
       "paymentPreimage",
     )
-    expect(markWebhookFinalSent).toHaveBeenCalledWith(paymentHash)
+    expect(markWebhookAsSent).toHaveBeenCalledWith(paymentHash)
   })
 })

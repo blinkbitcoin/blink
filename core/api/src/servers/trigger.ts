@@ -185,7 +185,7 @@ const watchHeldInvoices = () => {
 
 const watchInvoiceWebhooks = () => {
   return setInterval(async () => {
-    await Wallets.sendPendingTerminalInvoiceWebhooks({ logger })
+    await Wallets.sendPendingInvoiceWebhooks()
   }, MS_PER_5_MINS)
 }
 

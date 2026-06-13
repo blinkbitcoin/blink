@@ -27,7 +27,7 @@ teardown() {
 btc_amount=1000
 usd_amount=50
 
-assert_terminal_invoice_webhook() {
+assert_invoice_webhook() {
   local payment_hash=$1
   local payment_request=$2
   local preimage=$3
@@ -308,7 +308,7 @@ assert_terminal_invoice_webhook() {
   stop_subscriber
 }
 
-@test "public-ln-receive: receive via invoice - sends terminal invoice webhook" {
+@test "public-ln-receive: receive via invoice - sends invoice webhook" {
   token_name="$ALICE"
   btc_wallet_name="$token_name.btc_wallet_id"
   btc_wallet_id="$(read_value $btc_wallet_name)"
@@ -333,14 +333,14 @@ assert_terminal_invoice_webhook() {
   preimage="$(echo "$payment_result" | jq -r '.payment_preimage')"
 
   retry 15 1 check_ln_payment_settled_by_hash "$payment_request" "$payment_hash"
-  assert_terminal_invoice_webhook \
+  assert_invoice_webhook \
     "$payment_hash" \
     "$payment_request" \
     "$preimage" \
     "$btc_wallet_id"
 }
 
-@test "public-ln-receive: receive via usd invoice - sends terminal invoice webhook" {
+@test "public-ln-receive: receive via usd invoice - sends invoice webhook" {
   token_name="$ALICE"
   usd_wallet_name="$token_name.usd_wallet_id"
   usd_wallet_id="$(read_value $usd_wallet_name)"
@@ -365,14 +365,14 @@ assert_terminal_invoice_webhook() {
   preimage="$(echo "$payment_result" | jq -r '.payment_preimage')"
 
   retry 15 1 check_ln_payment_settled_by_hash "$payment_request" "$payment_hash"
-  assert_terminal_invoice_webhook \
+  assert_invoice_webhook \
     "$payment_hash" \
     "$payment_request" \
     "$preimage" \
     "$usd_wallet_id"
 }
 
-@test "public-ln-receive: receive via usd sats-denominated invoice - sends terminal invoice webhook" {
+@test "public-ln-receive: receive via usd sats-denominated invoice - sends invoice webhook" {
   token_name="$ALICE"
   usd_wallet_name="$token_name.usd_wallet_id"
   usd_wallet_id="$(read_value $usd_wallet_name)"
@@ -400,14 +400,14 @@ assert_terminal_invoice_webhook() {
   preimage="$(echo "$payment_result" | jq -r '.payment_preimage')"
 
   retry 15 1 check_ln_payment_settled_by_hash "$payment_request" "$payment_hash"
-  assert_terminal_invoice_webhook \
+  assert_invoice_webhook \
     "$payment_hash" \
     "$payment_request" \
     "$preimage" \
     "$usd_wallet_id"
 }
 
-@test "public-ln-receive: receive via no amount invoice - sends terminal invoice webhook" {
+@test "public-ln-receive: receive via no amount invoice - sends invoice webhook" {
   token_name="$ALICE"
   btc_wallet_name="$token_name.btc_wallet_id"
   btc_wallet_id="$(read_value $btc_wallet_name)"
@@ -431,7 +431,7 @@ assert_terminal_invoice_webhook() {
   preimage="$(echo "$payment_result" | jq -r '.payment_preimage')"
 
   retry 15 1 check_ln_payment_settled_by_hash "$payment_request" "$payment_hash"
-  assert_terminal_invoice_webhook \
+  assert_invoice_webhook \
     "$payment_hash" \
     "$payment_request" \
     "$preimage" \

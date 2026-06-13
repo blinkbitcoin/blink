@@ -205,13 +205,13 @@ export const WalletInvoicesRepository = (): IWalletInvoicesRepository => {
     }
   }
 
-  const markWebhookFinalSent = async (
+  const markWebhookAsSent = async (
     paymentHash: PaymentHash,
   ): Promise<WalletInvoiceWithOptionalLnInvoice | RepositoryError> => {
     try {
       const walletInvoice = await WalletInvoice.findOneAndUpdate(
         { _id: paymentHash },
-        { webhookStatus: WalletInvoiceWebhookStatus.FinalSent },
+        { webhookStatus: WalletInvoiceWebhookStatus.Sent },
         { new: true },
       )
       if (!walletInvoice) {
@@ -319,7 +319,7 @@ export const WalletInvoicesRepository = (): IWalletInvoicesRepository => {
     persistNew,
     markAsPaid,
     markAsProcessingCompleted,
-    markWebhookFinalSent,
+    markWebhookAsSent,
     findByPaymentHash,
     findForWalletByPaymentHash,
     yieldPending,

@@ -384,7 +384,9 @@ const addInvoice = async ({
   if (persistedInvoice instanceof Error) return persistedInvoice
 
   if (webhookUrl) {
-    const endpointId = await CallbackService(getCallbackServiceConfig()).addInvoiceEndpoint({
+    const endpointId = await CallbackService(
+      getCallbackServiceConfig(),
+    ).addInvoiceEndpoint({
       paymentHash: invoice.paymentHash,
       url: webhookUrl,
     })
