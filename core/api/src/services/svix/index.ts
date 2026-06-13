@@ -244,7 +244,11 @@ export const CallbackService = (config: SvixConfig): ICallbackService => {
     }
   }
 
-  const deleteInvoiceApplication = async (paymentHash: PaymentHash) => {
+  const deleteInvoiceApplication = async ({
+    paymentHash,
+  }: {
+    paymentHash: PaymentHash
+  }) => {
     const invoiceCallbackId = getInvoiceCallbackId(paymentHash)
 
     try {

@@ -21,6 +21,7 @@ import {
   WalletInvoicesRepository,
   WalletsRepository,
 } from "@/services/mongoose"
+import { recordExceptionInCurrentSpan } from "@/services/tracing"
 
 const defaultBtcExpiration = secondsToMinutes(INVOICE_EXPIRATIONS["BTC"].defaultValue)
 const defaultNoAmountBtcExpiration = secondsToMinutes(
@@ -375,22 +376,29 @@ const addInvoice = async ({
   const invoice = await walletIBWithAmount.registerInvoice()
   if (invoice instanceof Error) return invoice
 
+  const callbackService = CallbackService(getCallbackServiceConfig())
   if (webhookUrl) {
     invoice.webhookUrl = webhookUrl
     invoice.webhookStatus = WalletInvoiceWebhookStatus.Pending
-  }
 
-  const persistedInvoice = await WalletInvoicesRepository().persistNew(invoice)
-  if (persistedInvoice instanceof Error) return persistedInvoice
-
-  if (webhookUrl) {
-    const endpointId = await CallbackService(
-      getCallbackServiceConfig(),
-    ).addInvoiceEndpoint({
+    const endpointId = await callbackService.addInvoiceEndpoint({
       paymentHash: invoice.paymentHash,
       url: webhookUrl,
     })
     if (endpointId instanceof Error) return endpointId
+  }
+
+  const persistedInvoice = await WalletInvoicesRepository().persistNew(invoice)
+  if (persistedInvoice instanceof Error) {
+    if (webhookUrl) {
+      const deleted = await callbackService.deleteInvoiceApplication({
+        paymentHash: invoice.paymentHash,
+      })
+      if (deleted instanceof Error) {
+        recordExceptionInCurrentSpan({ error: deleted })
+      }
+    }
+    return persistedInvoice
   }
 
   return invoice

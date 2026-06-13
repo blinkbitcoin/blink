@@ -37,7 +37,7 @@ interface ICallbackService {
     payload: Record<string, JSONValue>
   }) => Promise<CallbackServiceError | true>
 
-  deleteInvoiceApplication: (
-    paymentHash: PaymentHash,
-  ) => Promise<CallbackServiceError | true>
+  deleteInvoiceApplication: (args: {
+    paymentHash: PaymentHash
+  }) => Promise<CallbackServiceError | true>
 }

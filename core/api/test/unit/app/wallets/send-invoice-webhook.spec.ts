@@ -93,7 +93,7 @@ describe("sendInvoiceWebhook", () => {
     expect(sendInvoiceMessage.mock.calls[0][0].payload).not.toHaveProperty("walletId")
     expect(sendInvoiceMessage.mock.calls[0][0].payload).not.toHaveProperty("transaction")
     expect(markWebhookAsSent).toHaveBeenCalledWith(paymentHash)
-    expect(deleteInvoiceApplication).toHaveBeenCalledWith(paymentHash)
+    expect(deleteInvoiceApplication).toHaveBeenCalledWith({ paymentHash })
   })
 
   it("sends expired invoice payload without preimage", async () => {

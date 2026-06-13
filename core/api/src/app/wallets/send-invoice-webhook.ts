@@ -67,7 +67,7 @@ export const sendInvoiceWebhook = async ({
   const marked = await WalletInvoicesRepository().markWebhookAsSent(paymentHash)
   if (marked instanceof Error) return marked
 
-  const deleted = await callbackService.deleteInvoiceApplication(paymentHash)
+  const deleted = await callbackService.deleteInvoiceApplication({ paymentHash })
   if (deleted instanceof Error) {
     recordExceptionInCurrentSpan({ error: deleted })
   }
