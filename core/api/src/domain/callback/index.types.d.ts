@@ -4,6 +4,7 @@ type CallbackEventType =
   (typeof import("./index").CallbackEventType)[keyof typeof import("./index").CallbackEventType]
 
 type AccountCallbackId = string & { readonly brand: unique symbol }
+type InvoiceCallbackId = string & { readonly brand: unique symbol }
 
 interface ICallbackService {
   sendMessage: (args: {
@@ -23,5 +24,20 @@ interface ICallbackService {
   deleteEndpoint: (args: {
     accountId: AccountId
     endpointId: string
+  }) => Promise<CallbackServiceError | true>
+
+  addInvoiceEndpoint: (args: {
+    paymentHash: PaymentHash
+    url: string
+  }) => Promise<CallbackServiceError | string>
+
+  sendInvoiceMessage: (args: {
+    paymentHash: PaymentHash
+    eventType: string
+    payload: Record<string, JSONValue>
+  }) => Promise<CallbackServiceError | true>
+
+  deleteInvoiceApplication: (args: {
+    paymentHash: PaymentHash
   }) => Promise<CallbackServiceError | true>
 }

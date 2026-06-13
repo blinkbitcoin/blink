@@ -3,6 +3,7 @@ import { WalletInvoice } from "./schema"
 import { parseRepositoryError } from "./utils"
 
 import { decodeInvoice } from "@/domain/bitcoin/lightning"
+import { WalletInvoiceWebhookStatus } from "@/domain/wallet-invoices"
 
 import {
   CouldNotFindWalletInvoiceError,
@@ -138,6 +139,8 @@ export const WalletInvoicesRepository = (): IWalletInvoicesRepository => {
     paid,
     usdAmount,
     externalId,
+    webhookUrl,
+    webhookStatus,
     lnInvoice,
   }: WalletInvoicesPersistNewArgs): Promise<WalletInvoice | RepositoryError> => {
     try {
@@ -153,6 +156,8 @@ export const WalletInvoicesRepository = (): IWalletInvoicesRepository => {
         currency: recipientWalletDescriptor.currency,
         paymentRequest: lnInvoice.paymentRequest,
         externalId,
+        webhookUrl,
+        webhookStatus,
       }).save()
       return ensureWalletInvoiceHasLnInvoice(walletInvoiceFromRaw(walletInvoice))
     } catch (err) {
@@ -190,6 +195,24 @@ export const WalletInvoicesRepository = (): IWalletInvoicesRepository => {
         {
           new: true,
         },
+      )
+      if (!walletInvoice) {
+        return new CouldNotFindWalletInvoiceError()
+      }
+      return walletInvoiceFromRaw(walletInvoice)
+    } catch (err) {
+      return parseRepositoryError(err)
+    }
+  }
+
+  const markWebhookAsSent = async (
+    paymentHash: PaymentHash,
+  ): Promise<WalletInvoiceWithOptionalLnInvoice | RepositoryError> => {
+    try {
+      const walletInvoice = await WalletInvoice.findOneAndUpdate(
+        { _id: paymentHash },
+        { webhookStatus: WalletInvoiceWebhookStatus.Sent },
+        { new: true },
       )
       if (!walletInvoice) {
         return new CouldNotFindWalletInvoiceError()
@@ -251,6 +274,26 @@ export const WalletInvoicesRepository = (): IWalletInvoicesRepository => {
     }
   }
 
+  async function* yieldPendingWebhooks():
+    | AsyncGenerator<WalletInvoiceWithOptionalLnInvoice>
+    | RepositoryError {
+    let pending
+    try {
+      pending = WalletInvoice.find({
+        webhookUrl: { $exists: true },
+        webhookStatus: WalletInvoiceWebhookStatus.Pending,
+      }).cursor({
+        batchSize: 100,
+      })
+    } catch (error) {
+      return new UnknownRepositoryError(error)
+    }
+
+    for await (const walletInvoice of pending) {
+      yield walletInvoiceFromRaw(walletInvoice)
+    }
+  }
+
   const findInvoicesForWallets = async ({
     walletIds,
     paginationArgs,
@@ -276,9 +319,11 @@ export const WalletInvoicesRepository = (): IWalletInvoicesRepository => {
     persistNew,
     markAsPaid,
     markAsProcessingCompleted,
+    markWebhookAsSent,
     findByPaymentHash,
     findForWalletByPaymentHash,
     yieldPending,
+    yieldPendingWebhooks,
     findInvoicesForWallets,
   }
 }
@@ -307,6 +352,8 @@ const walletInvoiceFromRaw = (
     createdAt: new Date(result.timestamp.getTime()),
     processingCompleted: result.processingCompleted,
     externalId: result.externalId as LedgerExternalId,
+    webhookUrl: result.webhookUrl,
+    webhookStatus: result.webhookStatus as WalletInvoiceWebhookStatus | undefined,
     lnInvoice,
   }
 }

@@ -183,6 +183,12 @@ const watchHeldInvoices = () => {
   }, MS_PER_5_MINS)
 }
 
+const watchInvoiceWebhooks = () => {
+  return setInterval(async () => {
+    await Wallets.sendPendingInvoiceWebhooks()
+  }, MS_PER_5_MINS)
+}
+
 const listenerOnchain = (lnd: AuthenticatedLnd) => {
   const subTransactions = subscribeToTransactions({ lnd })
   const onChainTxHandler = wrapAsyncToRunInSpan({
@@ -456,6 +462,7 @@ const main = () => {
   activateLndHealthCheck()
   publishCurrentPrice()
   watchHeldInvoices()
+  watchInvoiceWebhooks()
 
   console.log("trigger server ready")
 }

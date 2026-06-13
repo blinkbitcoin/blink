@@ -13,6 +13,9 @@ type WalletInvoiceChecker = {
 type WalletInvoiceStatus =
   (typeof import("./index").WalletInvoiceStatus)[keyof typeof import("./index").WalletInvoiceStatus]
 
+type WalletInvoiceWebhookStatus =
+  (typeof import("./index").WalletInvoiceWebhookStatus)[keyof typeof import("./index").WalletInvoiceWebhookStatus]
+
 type WalletInvoiceStatusChecker = {
   status: (currentTime: Date) => WalletInvoiceStatus
 }
@@ -103,6 +106,8 @@ type WalletInvoiceWithOptionalLnInvoice = {
   createdAt: Date
   processingCompleted: boolean
   externalId: LedgerExternalId
+  webhookUrl?: string
+  webhookStatus?: WalletInvoiceWebhookStatus
   lnInvoice?: LnInvoice // LnInvoice is optional because some older invoices don't have it
 }
 
@@ -207,4 +212,12 @@ interface IWalletInvoicesRepository {
   markAsProcessingCompleted: (
     paymentHash: PaymentHash,
   ) => Promise<WalletInvoiceWithOptionalLnInvoice | RepositoryError>
+
+  markWebhookAsSent: (
+    paymentHash: PaymentHash,
+  ) => Promise<WalletInvoiceWithOptionalLnInvoice | RepositoryError>
+
+  yieldPendingWebhooks: () =>
+    | AsyncGenerator<WalletInvoiceWithOptionalLnInvoice>
+    | RepositoryError
 }

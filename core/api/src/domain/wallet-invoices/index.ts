@@ -5,3 +5,8 @@ export const WalletInvoiceStatus = {
   Paid: "Paid",
   Expired: "Expired",
 } as const
+
+export const WalletInvoiceWebhookStatus = {
+  Pending: "pending",
+  Sent: "sent",
+} as const

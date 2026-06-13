@@ -37,6 +37,7 @@ type AddInvoiceForRecipientArgs = {
   descriptionHash?: string
   expiresIn: Minutes
   externalId: LedgerExternalId | undefined
+  webhookUrl?: string
 }
 
 type AddInvoiceForRecipientForBtcWalletArgs = {
@@ -46,6 +47,7 @@ type AddInvoiceForRecipientForBtcWalletArgs = {
   descriptionHash?: string
   expiresIn?: number
   externalId: string | undefined
+  webhookUrl?: string
 }
 
 type AddInvoiceForRecipientForUsdWalletArgs = AddInvoiceForRecipientForBtcWalletArgs
@@ -55,6 +57,7 @@ type AddInvoiceNoAmountForRecipientArgs = {
   memo?: string
   expiresIn: Minutes
   externalId: LedgerExternalId | undefined
+  webhookUrl?: string
 }
 
 type AddInvoiceNoAmountForRecipientForAnyWalletArgs = {
@@ -62,6 +65,7 @@ type AddInvoiceNoAmountForRecipientForAnyWalletArgs = {
   memo?: string
   expiresIn?: number
   externalId: string | undefined
+  webhookUrl?: string
 }
 
 type CancelInvoiceForWalletArgs = {
@@ -76,6 +80,7 @@ type BuildWIBWithAmountFnArgs = {
 
 type AddInvoiceArgs = {
   walletId: WalletId
+  webhookUrl?: string
   limitCheckFn: (accountId: AccountId) => Promise<true | RateLimitServiceError>
   buildWIBWithAmountFn: (
     buildWIBWithAmountFnArgs: BuildWIBWithAmountFnArgs,
