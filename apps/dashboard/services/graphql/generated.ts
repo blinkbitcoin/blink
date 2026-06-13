@@ -841,6 +841,7 @@ export type LnInvoiceCreateOnBehalfOfRecipientInput = {
   readonly memo?: InputMaybe<Scalars['Memo']['input']>;
   /** Wallet ID for a BTC wallet which belongs to any account. */
   readonly recipientWalletId: Scalars['WalletId']['input'];
+  readonly webhookUrl?: InputMaybe<Scalars['EndpointUrl']['input']>;
 };
 
 export type LnInvoiceFeeProbeInput = {
@@ -920,6 +921,7 @@ export type LnNoAmountInvoiceCreateOnBehalfOfRecipientInput = {
   readonly memo?: InputMaybe<Scalars['Memo']['input']>;
   /** ID for either a USD or BTC wallet which belongs to the account of any user. */
   readonly recipientWalletId: Scalars['WalletId']['input'];
+  readonly webhookUrl?: InputMaybe<Scalars['EndpointUrl']['input']>;
 };
 
 export type LnNoAmountInvoiceFeeProbeInput = {
@@ -983,6 +985,7 @@ export type LnUsdInvoiceBtcDenominatedCreateOnBehalfOfRecipientInput = {
   readonly memo?: InputMaybe<Scalars['Memo']['input']>;
   /** Wallet ID for a USD wallet which belongs to the account of any user. */
   readonly recipientWalletId: Scalars['WalletId']['input'];
+  readonly webhookUrl?: InputMaybe<Scalars['EndpointUrl']['input']>;
 };
 
 export type LnUsdInvoiceCreateInput = {
@@ -1008,6 +1011,7 @@ export type LnUsdInvoiceCreateOnBehalfOfRecipientInput = {
   readonly memo?: InputMaybe<Scalars['Memo']['input']>;
   /** Wallet ID for a USD wallet which belongs to the account of any user. */
   readonly recipientWalletId: Scalars['WalletId']['input'];
+  readonly webhookUrl?: InputMaybe<Scalars['EndpointUrl']['input']>;
 };
 
 export type LnUsdInvoiceFeeProbeInput = {

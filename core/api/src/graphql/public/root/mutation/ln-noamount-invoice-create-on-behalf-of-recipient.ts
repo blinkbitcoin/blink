@@ -9,6 +9,7 @@ import TxExternalId from "@/graphql/shared/types/scalar/tx-external-id"
 import WalletId from "@/graphql/shared/types/scalar/wallet-id"
 import { mapAndParseErrorForGqlResponse } from "@/graphql/error-map"
 import LnNoAmountInvoicePayload from "@/graphql/public/types/payload/ln-noamount-invoice"
+import EndpointUrl from "@/graphql/public/types/scalar/endpoint-url"
 
 const LnNoAmountInvoiceCreateOnBehalfOfRecipientInput = GT.Input({
   name: "LnNoAmountInvoiceCreateOnBehalfOfRecipientInput",
@@ -24,6 +25,7 @@ const LnNoAmountInvoiceCreateOnBehalfOfRecipientInput = GT.Input({
       description: "Optional invoice expiration time in minutes.",
     },
     externalId: { type: TxExternalId },
+    webhookUrl: { type: EndpointUrl },
   }),
 })
 
@@ -39,9 +41,9 @@ const LnNoAmountInvoiceCreateOnBehalfOfRecipientMutation = GT.Field({
     input: { type: GT.NonNull(LnNoAmountInvoiceCreateOnBehalfOfRecipientInput) },
   },
   resolve: async (_, args) => {
-    const { recipientWalletId, memo, expiresIn, externalId } = args.input
+    const { recipientWalletId, memo, expiresIn, externalId, webhookUrl } = args.input
 
-    for (const input of [recipientWalletId, memo, expiresIn, externalId]) {
+    for (const input of [recipientWalletId, memo, expiresIn, externalId, webhookUrl]) {
       if (input instanceof Error) {
         return { errors: [{ message: input.message }] }
       }
@@ -52,6 +54,7 @@ const LnNoAmountInvoiceCreateOnBehalfOfRecipientMutation = GT.Field({
       memo,
       expiresIn,
       externalId,
+      webhookUrl,
     })
 
     if (invoice instanceof Error) {

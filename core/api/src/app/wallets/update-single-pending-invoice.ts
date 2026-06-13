@@ -1,4 +1,5 @@
 import { getTransactionForWalletByJournalId } from "./get-transaction-by-journal-id"
+import { sendInvoiceWebhook } from "./send-invoice-webhook"
 
 import { processPendingInvoiceForDecline } from "./decline-single-pending-invoice"
 
@@ -80,6 +81,9 @@ export const updatePendingInvoice = wrapAsyncToRunInSpan({
           pendingInvoiceLogger.error("Unable to mark invoice as processingCompleted")
           return marked
         }
+        sendInvoiceWebhook({
+          walletInvoice: marked,
+        })
         return true
 
       case ProcessPendingInvoiceResultType.MarkProcessedAsPaid:
@@ -90,6 +94,11 @@ export const updatePendingInvoice = wrapAsyncToRunInSpan({
           !(marked instanceof CouldNotFindWalletInvoiceError)
         ) {
           return marked
+        }
+        if (!(marked instanceof Error)) {
+          sendInvoiceWebhook({
+            walletInvoice: marked,
+          })
         }
         return "error" in result ? result.error : true
 

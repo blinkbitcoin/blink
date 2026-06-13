@@ -23,6 +23,7 @@ export * from "./get-invoice-for-wallet-by-hash"
 export * from "./get-pending-incoming-on-chain-transactions-for-wallets"
 export * from "./get-pending-incoming-on-chain-transactions-by-addresses"
 export * from "./get-invoices-for-wallets"
+export * from "./send-invoice-webhook"
 
 import { WalletsRepository } from "@/services/mongoose"
 
