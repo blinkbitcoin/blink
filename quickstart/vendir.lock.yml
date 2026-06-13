@@ -2,27 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix(api): validate phone with verify service before telegram passport
-        nonce (#602)...'
-      sha: 1584890057ab082ae65a9a519830d5e77689c54a
+      commitTitle: 'feat(api): add public invoice webhooks (#618)...'
+      sha: 27d1141d989263e8c7a5d5b6c0f864d2bd7fc59e
       tags:
-      - 0.22.7
+      - 0.22.7-2-g27d1141d9
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'fix(api): validate phone with verify service before telegram passport
-        nonce (#602)...'
-      sha: 1584890057ab082ae65a9a519830d5e77689c54a
+      commitTitle: 'feat(api): add public invoice webhooks (#618)...'
+      sha: 27d1141d989263e8c7a5d5b6c0f864d2bd7fc59e
       tags:
-      - 0.22.7
+      - 0.22.7-2-g27d1141d9
     path: schemas
   - git:
-      commitTitle: 'fix(api): validate phone with verify service before telegram passport
-        nonce (#602)...'
-      sha: 1584890057ab082ae65a9a519830d5e77689c54a
+      commitTitle: 'feat(api): add public invoice webhooks (#618)...'
+      sha: 27d1141d989263e8c7a5d5b6c0f864d2bd7fc59e
       tags:
-      - 0.22.7
+      - 0.22.7-2-g27d1141d9
     path: gql
   path: graphql
 kind: LockConfig
