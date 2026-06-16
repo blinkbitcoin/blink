@@ -659,24 +659,24 @@ export const configSchema = {
       additionalProperties: false,
       default: {
         requestCodePerEmail: {
-          points: 4,
+          points: 6,
           duration: 3600,
-          blockDuration: 10800,
+          blockDuration: 3600,
         },
         requestCodePerPhoneNumber: {
-          points: 4,
-          duration: 259200,
-          blockDuration: 259200,
+          points: 6,
+          duration: 3600,
+          blockDuration: 3600,
         },
         requestCodePerIp: {
-          points: 16,
+          points: 30,
           duration: 3600,
-          blockDuration: 86400,
+          blockDuration: 3600,
         },
         requestTelegramPassportNoncePerPhoneNumber: {
           points: 5,
           duration: 3600,
-          blockDuration: 86400,
+          blockDuration: 14400,
         },
         requestTelegramPassportNoncePerIp: {
           points: 25,
@@ -684,14 +684,14 @@ export const configSchema = {
           blockDuration: 3600,
         },
         loginAttemptPerLoginIdentifier: {
-          points: 6,
+          points: 8,
           duration: 3600,
-          blockDuration: 7200,
+          blockDuration: 3600,
         },
         failedLoginAttemptPerIp: {
-          points: 20,
+          points: 40,
           duration: 21600,
-          blockDuration: 86400,
+          blockDuration: 14400,
         },
         invoiceCreateAttempt: {
           points: 60,
@@ -714,9 +714,9 @@ export const configSchema = {
           blockDuration: 86400,
         },
         requestCodePerAppcheckJti: {
-          points: 6,
+          points: 10,
           duration: 86400,
-          blockDuration: 86400,
+          blockDuration: 14400,
         },
         addQuizPerIp: {
           points: 50,
