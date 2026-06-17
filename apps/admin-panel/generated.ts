@@ -511,10 +511,12 @@ export const NotificationIcon = {
 export type NotificationIcon = typeof NotificationIcon[keyof typeof NotificationIcon];
 export type OpenDeepLinkInput = {
   readonly action?: InputMaybe<DeepLinkAction>;
+  readonly label?: InputMaybe<Scalars['String']['input']>;
   readonly screen?: InputMaybe<DeepLinkScreen>;
 };
 
 export type OpenExternalUrlInput = {
+  readonly label?: InputMaybe<Scalars['String']['input']>;
   readonly url: Scalars['ExternalUrl']['input'];
 };
 
