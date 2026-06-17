@@ -1,3 +1,4 @@
+# This file documents the defaults:
 exchanges:
   okex:
     weight: 1.0
@@ -6,6 +7,21 @@ price_server:
   enabled: true
   server:
     listen_port: 3325
+  health:
+    unhealthy_msg_interval_price: 20
+  fees:
+    base_fee_rate: 0.0005
+    immediate_fee_rate: 0.0005
+    delayed_fee_rate: 0.0007
+  price_cache:
+    dev_mock_price_btc_in_usd: 20000
+
+quotes_server:
+  enabled: true
+  server:
+    listen_port: 3326
+  health:
+    unhealthy_msg_interval_price: 20
   fees:
     base_fee_rate: 0.0005
     immediate_fee_rate: 0.0005

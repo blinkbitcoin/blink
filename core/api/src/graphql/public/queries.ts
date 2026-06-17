@@ -19,6 +19,7 @@ import LnInvoicePaymentStatusQuery from "@/graphql/public/root/query/ln-invoice-
 import LnInvoicePaymentStatusByHashQuery from "@/graphql/public/root/query/ln-invoice-payment-status-by-hash"
 import LnInvoicePaymentStatusByPaymentRequestQuery from "@/graphql/public/root/query/ln-invoice-payment-status-by-payment-request"
 import CurrencyConversionEstimationQuery from "@/graphql/public/root/query/currency-conversion-estimation"
+import StableSatsGetQuoteQuery from "@/graphql/public/root/query/stablesats-get-quote"
 
 export const queryFields = {
   unauthed: {
@@ -46,6 +47,7 @@ export const queryFields = {
       onChainTxFee: OnChainTxFeeQuery,
       onChainUsdTxFee: OnChainUsdTxFeeQuery,
       onChainUsdTxFeeAsBtcDenominated: OnChainUsdTxFeeAsBtcDenominatedQuery,
+      stableSatsGetQuote: StableSatsGetQuoteQuery,
     },
   },
 } as const
