@@ -262,6 +262,11 @@ export const getTestAccounts = (config = yamlConfig): TestAccount[] =>
     code: account.code as PhoneCode,
   }))
 
+export const getTestAccountsCaptcha = (config = yamlConfig): { phone: PhoneNumber }[] =>
+  config.test_accounts_captcha.map((account) => ({
+    phone: account.phone as PhoneNumber,
+  }))
+
 export const getCronConfig = (config = yamlConfig): CronConfig => config.cronConfig
 
 export const getCaptcha = (config = yamlConfig): CaptchaConfig => config.captcha
