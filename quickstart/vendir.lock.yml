@@ -2,24 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'chore(core): update default limits (#625)'
-      sha: 1bbb66ccbcbfa09c5f2d39ff9a99e2758141fb0e
+      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1559
+        (#630)...'
+      sha: d4ceec7cfb8770fc5b520e9227615e6027642fbc
       tags:
-      - 0.22.9-2-g1bbb66ccb
+      - 0.22.10-2-gd4ceec7cf
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'chore(core): update default limits (#625)'
-      sha: 1bbb66ccbcbfa09c5f2d39ff9a99e2758141fb0e
+      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1559
+        (#630)...'
+      sha: d4ceec7cfb8770fc5b520e9227615e6027642fbc
       tags:
-      - 0.22.9-2-g1bbb66ccb
+      - 0.22.10-2-gd4ceec7cf
     path: schemas
   - git:
-      commitTitle: 'chore(core): update default limits (#625)'
-      sha: 1bbb66ccbcbfa09c5f2d39ff9a99e2758141fb0e
+      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1559
+        (#630)...'
+      sha: d4ceec7cfb8770fc5b520e9227615e6027642fbc
       tags:
-      - 0.22.9-2-g1bbb66ccb
+      - 0.22.10-2-gd4ceec7cf
     path: gql
   path: graphql
 kind: LockConfig
