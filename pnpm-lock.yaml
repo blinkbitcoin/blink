@@ -30,8 +30,8 @@ importers:
         specifier: 1.9.0
         version: 1.9.0
       '@opentelemetry/core':
-        specifier: 1.26.0
-        version: 1.26.0(@opentelemetry/api@1.9.0)
+        specifier: 2.8.0
+        version: 2.8.0(@opentelemetry/api@1.9.0)
       '@opentelemetry/exporter-trace-otlp-http':
         specifier: 0.53.0
         version: 0.53.0(@opentelemetry/api@1.9.0)
@@ -166,8 +166,8 @@ importers:
         specifier: 1.9.0
         version: 1.9.0
       '@opentelemetry/core':
-        specifier: 1.26.0
-        version: 1.26.0(@opentelemetry/api@1.9.0)
+        specifier: 2.8.0
+        version: 2.8.0(@opentelemetry/api@1.9.0)
       '@opentelemetry/exporter-trace-otlp-http':
         specifier: 0.53.0
         version: 0.53.0(@opentelemetry/api@1.9.0)
@@ -320,8 +320,8 @@ importers:
         specifier: 1.9.0
         version: 1.9.0
       '@opentelemetry/core':
-        specifier: 1.26.0
-        version: 1.26.0(@opentelemetry/api@1.9.0)
+        specifier: 2.8.0
+        version: 2.8.0(@opentelemetry/api@1.9.0)
       '@opentelemetry/exporter-trace-otlp-http':
         specifier: 0.53.0
         version: 0.53.0(@opentelemetry/api@1.9.0)
@@ -471,8 +471,8 @@ importers:
         specifier: 1.9.0
         version: 1.9.0
       '@opentelemetry/core':
-        specifier: 1.26.0
-        version: 1.26.0(@opentelemetry/api@1.9.0)
+        specifier: 2.8.0
+        version: 2.8.0(@opentelemetry/api@1.9.0)
       '@opentelemetry/exporter-trace-otlp-http':
         specifier: 0.53.0
         version: 0.53.0(@opentelemetry/api@1.9.0)
@@ -601,8 +601,8 @@ importers:
         specifier: 1.9.0
         version: 1.9.0
       '@opentelemetry/core':
-        specifier: 1.26.0
-        version: 1.26.0(@opentelemetry/api@1.9.0)
+        specifier: 2.8.0
+        version: 2.8.0(@opentelemetry/api@1.9.0)
       '@opentelemetry/exporter-trace-otlp-http':
         specifier: 0.53.0
         version: 0.53.0(@opentelemetry/api@1.9.0)
@@ -884,8 +884,8 @@ importers:
         specifier: 1.9.0
         version: 1.9.0
       '@opentelemetry/core':
-        specifier: 1.26.0
-        version: 1.26.0(@opentelemetry/api@1.9.0)
+        specifier: 2.8.0
+        version: 2.8.0(@opentelemetry/api@1.9.0)
       '@opentelemetry/exporter-trace-otlp-http':
         specifier: 0.53.0
         version: 0.53.0(@opentelemetry/api@1.9.0)
@@ -1125,8 +1125,8 @@ importers:
         specifier: 1.9.0
         version: 1.9.0
       '@opentelemetry/core':
-        specifier: 1.26.0
-        version: 1.26.0(@opentelemetry/api@1.9.0)
+        specifier: 2.8.0
+        version: 2.8.0(@opentelemetry/api@1.9.0)
       '@opentelemetry/exporter-trace-otlp-http':
         specifier: 0.53.0
         version: 0.53.0(@opentelemetry/api@1.9.0)
@@ -2926,7 +2926,7 @@ packages:
       '@babel/traverse': 7.27.7
       '@babel/types': 7.27.7
       convert-source-map: 1.9.0
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       gensync: 1.0.0-beta.2
       json5: 2.2.3
       semver: 6.3.1
@@ -2949,7 +2949,7 @@ packages:
       '@babel/traverse': 7.27.7
       '@babel/types': 7.27.7
       convert-source-map: 2.0.0
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       gensync: 1.0.0-beta.2
       json5: 2.2.3
       semver: 6.3.1
@@ -5628,7 +5628,7 @@ packages:
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
     dependencies:
       ajv: 6.12.6
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       espree: 9.6.1
       globals: 13.24.0
       ignore: 5.3.2
@@ -5644,7 +5644,7 @@ packages:
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
     dependencies:
       ajv: 6.12.6
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       espree: 10.4.0
       globals: 14.0.0
       ignore: 5.3.2
@@ -7327,7 +7327,7 @@ packages:
       '@types/js-yaml': 4.0.9
       '@whatwg-node/fetch': 0.10.8
       chalk: 4.1.2
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       dotenv: 16.6.1
       graphql: 16.11.0
       graphql-request: 6.1.0(graphql@16.11.0)
@@ -7626,7 +7626,7 @@ packages:
     deprecated: Use @eslint/config-array instead
     dependencies:
       '@humanwhocodes/object-schema': 2.0.3
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       minimatch: 3.1.2
     transitivePeerDependencies:
       - supports-color
@@ -8501,7 +8501,7 @@ packages:
     dependencies:
       '@types/node': 22.16.0
       async-exit-hook: 2.0.1
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       uuid: 11.1.0
     transitivePeerDependencies:
       - supports-color
@@ -8692,6 +8692,16 @@ packages:
     dependencies:
       '@opentelemetry/api': 1.9.0
       '@opentelemetry/semantic-conventions': 1.28.0
+    dev: false
+
+  /@opentelemetry/core@2.8.0(@opentelemetry/api@1.9.0):
+    resolution: {integrity: sha512-hd1Lfh8p545nNz+jq1Ejfz+Mn1hyLuxYn1YzTfFNrxr8urEWMNQLPf1Th8kjOH+HxwawCrtgBp8JpBUR4ZSgww==}
+    engines: {node: ^18.19.0 || >=20.6.0}
+    peerDependencies:
+      '@opentelemetry/api': '>=1.0.0 <1.10.0'
+    dependencies:
+      '@opentelemetry/api': 1.9.0
+      '@opentelemetry/semantic-conventions': 1.41.1
     dev: false
 
   /@opentelemetry/exporter-logs-otlp-grpc@0.53.0(@opentelemetry/api@1.9.0):
@@ -9074,6 +9084,11 @@ packages:
 
   /@opentelemetry/semantic-conventions@1.28.0:
     resolution: {integrity: sha512-lp4qAiMTD4sNWW4DbKLBkfiMZ4jbAboJIGOQr5DvciMRI494OapieI9qiODpOt0XBr1LjIDy1xAGAnVs5supTA==}
+    engines: {node: '>=14'}
+    dev: false
+
+  /@opentelemetry/semantic-conventions@1.41.1:
+    resolution: {integrity: sha512-/UhIkaZgPutTFmQ7RnIJGgDXZmtEJ7Dvi86xNTFWcnRxVRNk/aotsqDJYeEvDP+FSMB2SdW+pQzNMcWP0rwuNA==}
     engines: {node: '>=14'}
     dev: false
 
@@ -14145,7 +14160,7 @@ packages:
       '@typescript-eslint/scope-manager': 5.62.0
       '@typescript-eslint/type-utils': 5.62.0(eslint@8.57.0)(typescript@5.6.3)
       '@typescript-eslint/utils': 5.62.0(eslint@8.57.0)(typescript@5.6.3)
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       eslint: 8.57.0
       graphemer: 1.4.0
       ignore: 5.3.2
@@ -14173,7 +14188,7 @@ packages:
       '@typescript-eslint/scope-manager': 5.62.0
       '@typescript-eslint/type-utils': 5.62.0(eslint@8.57.0)(typescript@5.6.3)
       '@typescript-eslint/utils': 5.62.0(eslint@8.57.0)(typescript@5.6.3)
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       eslint: 8.57.0
       graphemer: 1.4.0
       ignore: 5.3.2
@@ -14289,7 +14304,7 @@ packages:
       '@typescript-eslint/scope-manager': 5.62.0
       '@typescript-eslint/types': 5.62.0
       '@typescript-eslint/typescript-estree': 5.62.0(typescript@5.8.3)
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       eslint: 8.40.0
       typescript: 5.8.3
     transitivePeerDependencies:
@@ -14309,7 +14324,7 @@ packages:
       '@typescript-eslint/scope-manager': 5.62.0
       '@typescript-eslint/types': 5.62.0
       '@typescript-eslint/typescript-estree': 5.62.0(typescript@5.6.3)
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       eslint: 8.57.0
       typescript: 5.6.3
     transitivePeerDependencies:
@@ -14330,7 +14345,7 @@ packages:
       '@typescript-eslint/types': 6.21.0
       '@typescript-eslint/typescript-estree': 6.21.0(typescript@5.2.2)
       '@typescript-eslint/visitor-keys': 6.21.0
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       eslint: 8.57.0
       typescript: 5.2.2
     transitivePeerDependencies:
@@ -14351,7 +14366,7 @@ packages:
       '@typescript-eslint/types': 6.21.0
       '@typescript-eslint/typescript-estree': 6.21.0(typescript@5.3.3)
       '@typescript-eslint/visitor-keys': 6.21.0
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       eslint: 8.57.0
       typescript: 5.3.3
     transitivePeerDependencies:
@@ -14372,7 +14387,7 @@ packages:
       '@typescript-eslint/types': 6.21.0
       '@typescript-eslint/typescript-estree': 6.21.0(typescript@5.6.3)
       '@typescript-eslint/visitor-keys': 6.21.0
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       eslint: 8.57.0
       typescript: 5.6.3
     transitivePeerDependencies:
@@ -14393,7 +14408,7 @@ packages:
       '@typescript-eslint/types': 6.21.0
       '@typescript-eslint/typescript-estree': 6.21.0(typescript@5.8.3)
       '@typescript-eslint/visitor-keys': 6.21.0
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       eslint: 8.57.0
       typescript: 5.8.3
     transitivePeerDependencies:
@@ -14414,7 +14429,7 @@ packages:
       '@typescript-eslint/types': 7.18.0
       '@typescript-eslint/typescript-estree': 7.18.0(typescript@5.2.2)
       '@typescript-eslint/visitor-keys': 7.18.0
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       eslint: 8.57.0
       typescript: 5.2.2
     transitivePeerDependencies:
@@ -14435,7 +14450,7 @@ packages:
       '@typescript-eslint/types': 7.18.0
       '@typescript-eslint/typescript-estree': 7.18.0(typescript@5.6.3)
       '@typescript-eslint/visitor-keys': 7.18.0
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       eslint: 8.57.0
       typescript: 5.6.3
     transitivePeerDependencies:
@@ -14456,7 +14471,7 @@ packages:
       '@typescript-eslint/types': 7.18.0
       '@typescript-eslint/typescript-estree': 7.18.0(typescript@5.8.3)
       '@typescript-eslint/visitor-keys': 7.18.0
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       eslint: 8.57.0
       typescript: 5.8.3
     transitivePeerDependencies:
@@ -14474,7 +14489,7 @@ packages:
       '@typescript-eslint/types': 8.35.1
       '@typescript-eslint/typescript-estree': 8.35.1(typescript@5.8.3)
       '@typescript-eslint/visitor-keys': 8.35.1
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       eslint: 9.30.1
       typescript: 5.8.3
     transitivePeerDependencies:
@@ -14593,7 +14608,7 @@ packages:
     dependencies:
       '@typescript-eslint/typescript-estree': 5.62.0(typescript@5.6.3)
       '@typescript-eslint/utils': 5.62.0(eslint@8.57.0)(typescript@5.6.3)
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       eslint: 8.57.0
       tsutils: 3.21.0(typescript@5.6.3)
       typescript: 5.6.3
@@ -14613,7 +14628,7 @@ packages:
     dependencies:
       '@typescript-eslint/typescript-estree': 7.18.0(typescript@5.2.2)
       '@typescript-eslint/utils': 7.18.0(eslint@8.57.0)(typescript@5.2.2)
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       eslint: 8.57.0
       ts-api-utils: 1.4.3(typescript@5.2.2)
       typescript: 5.2.2
@@ -14633,7 +14648,7 @@ packages:
     dependencies:
       '@typescript-eslint/typescript-estree': 7.18.0(typescript@5.8.3)
       '@typescript-eslint/utils': 7.18.0(eslint@8.57.0)(typescript@5.8.3)
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       eslint: 8.57.0
       ts-api-utils: 1.4.3(typescript@5.8.3)
       typescript: 5.8.3
@@ -14865,7 +14880,7 @@ packages:
     dependencies:
       '@typescript-eslint/types': 7.18.0
       '@typescript-eslint/visitor-keys': 7.18.0
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       globby: 11.1.0
       is-glob: 4.0.3
       minimatch: 9.0.5
@@ -14887,7 +14902,7 @@ packages:
     dependencies:
       '@typescript-eslint/types': 7.18.0
       '@typescript-eslint/visitor-keys': 7.18.0
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       globby: 11.1.0
       is-glob: 4.0.3
       minimatch: 9.0.5
@@ -14909,7 +14924,7 @@ packages:
     dependencies:
       '@typescript-eslint/types': 7.18.0
       '@typescript-eslint/visitor-keys': 7.18.0
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       globby: 11.1.0
       is-glob: 4.0.3
       minimatch: 9.0.5
@@ -18402,7 +18417,6 @@ packages:
     dependencies:
       ms: 2.1.3
       supports-color: 5.5.0
-    dev: true
 
   /debug@4.4.1(supports-color@8.1.1):
     resolution: {integrity: sha512-KcKCqiftBJcZr++7ykoDIEwSa3XWowTfNPo92BYxjXiyYEVrUQh2aLyhxBCwww+heortUFxEJYcRzosstTEBYQ==}
@@ -18415,6 +18429,7 @@ packages:
     dependencies:
       ms: 2.1.3
       supports-color: 8.1.1
+    dev: true
 
   /debug@4.4.3(supports-color@8.1.1):
     resolution: {integrity: sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==}
@@ -19643,7 +19658,7 @@ packages:
         optional: true
     dependencies:
       '@nolyfill/is-core-module': 1.0.39
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       eslint: 8.40.0
       eslint-plugin-import: 2.32.0(@typescript-eslint/parser@5.62.0)(eslint-import-resolver-typescript@3.10.1)(eslint@8.40.0)
       get-tsconfig: 4.10.1
@@ -19669,7 +19684,7 @@ packages:
         optional: true
     dependencies:
       '@nolyfill/is-core-module': 1.0.39
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       eslint: 8.57.0
       eslint-plugin-import: 2.32.0(@typescript-eslint/parser@6.21.0)(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.0)
       get-tsconfig: 4.10.1
@@ -20382,7 +20397,7 @@ packages:
       ajv: 6.12.6
       chalk: 4.1.2
       cross-spawn: 7.0.6
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       doctrine: 3.0.0
       escape-string-regexp: 4.0.0
       eslint-scope: 7.2.2
@@ -20433,7 +20448,7 @@ packages:
       ajv: 6.12.6
       chalk: 4.1.2
       cross-spawn: 7.0.6
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       doctrine: 3.0.0
       escape-string-regexp: 4.0.0
       eslint-scope: 7.2.2
@@ -20490,7 +20505,7 @@ packages:
       ajv: 6.12.6
       chalk: 4.1.2
       cross-spawn: 7.0.6
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       escape-string-regexp: 4.0.0
       eslint-scope: 8.4.0
       eslint-visitor-keys: 4.2.1
@@ -22381,7 +22396,6 @@ packages:
   /has-flag@3.0.0:
     resolution: {integrity: sha512-sKJf1+ceQBr4SMkvQnBDNDtf4TXpVhVGateu0t918bl30FnbE2m4vNLX+VWe/dpjlb+HugGYzW7uQXH98HPEYw==}
     engines: {node: '>=4'}
-    dev: true
 
   /has-flag@4.0.0:
     resolution: {integrity: sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ==}
@@ -22956,7 +22970,7 @@ packages:
     dependencies:
       '@ioredis/commands': 1.2.0
       cluster-key-slot: 1.1.2
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       denque: 2.1.0
       lodash.defaults: 4.2.0
       lodash.isarguments: 3.1.0
@@ -24398,7 +24412,7 @@ packages:
     dependencies:
       '@types/express': 4.17.23
       '@types/jsonwebtoken': 9.0.10
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       jose: 4.15.9
       limiter: 1.1.5
       lru-memoizer: 2.3.0
@@ -24966,7 +24980,7 @@ packages:
       chalk: 4.1.2
       commander: 7.2.0
       commondir: 1.0.1
-      debug: 4.4.1(supports-color@8.1.1)
+      debug: 4.4.1(supports-color@5.5.0)
       dependency-tree: 9.0.0
       detective-amd: 4.2.0
       detective-cjs: 4.1.0
@@ -29714,7 +29728,6 @@ packages:
     engines: {node: '>=4'}
     dependencies:
       has-flag: 3.0.0
-    dev: true
 
   /supports-color@7.2.0:
     resolution: {integrity: sha512-qpCAvRl9stuOHveKsn7HncJRvv501qIacKzQlO/+Lwxc9+0q2wLyv4Dfvt80/DPn2pqOBsJdDiogXGR9+OvwRw==}
