@@ -2,27 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1559
-        (#630)...'
-      sha: d4ceec7cfb8770fc5b520e9227615e6027642fbc
+      commitTitle: 'feat(api): add allowUsernameSetup config flag (#634)'
+      sha: b2b58ea6d618cd984b16fb286ce1b734cdddad46
       tags:
-      - 0.22.10-2-gd4ceec7cf
+      - 0.22.12
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1559
-        (#630)...'
-      sha: d4ceec7cfb8770fc5b520e9227615e6027642fbc
+      commitTitle: 'feat(api): add allowUsernameSetup config flag (#634)'
+      sha: b2b58ea6d618cd984b16fb286ce1b734cdddad46
       tags:
-      - 0.22.10-2-gd4ceec7cf
+      - 0.22.12
     path: schemas
   - git:
-      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1559
-        (#630)...'
-      sha: d4ceec7cfb8770fc5b520e9227615e6027642fbc
+      commitTitle: 'feat(api): add allowUsernameSetup config flag (#634)'
+      sha: b2b58ea6d618cd984b16fb286ce1b734cdddad46
       tags:
-      - 0.22.10-2-gd4ceec7cf
+      - 0.22.12
     path: gql
   path: graphql
 kind: LockConfig
