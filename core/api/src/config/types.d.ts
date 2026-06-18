@@ -41,6 +41,7 @@ type AccountsConfig = {
 }
 
 type AccountsOnboardConfig = {
+  allowUsernameSetup: boolean
   phoneMetadataValidationSettings: AccountsOnboardPhoneMetadataConfig
   ipMetadataValidationSettings: AccountsOnboardIpMetadataConfig
 }

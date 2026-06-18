@@ -5,13 +5,9 @@ import * as yaml from "js-yaml"
 
 import mergeWith from "lodash.mergewith"
 
+import { configSchema } from "@/config/schema"
+import { getAccountLimits, yamlConfig, getOnchainNetworkConfig } from "@/config/yaml"
 import { toCents } from "@/domain/fiat"
-import {
-  configSchema,
-  getAccountLimits,
-  yamlConfig,
-  getOnchainNetworkConfig,
-} from "@/config"
 
 const ajv = new Ajv({ discriminator: true, $data: true })
 

@@ -93,6 +93,7 @@ accounts:
     - BTC
     - USD
   enablePhoneCheck: false
+  allowUsernameSetup: true
   enableIpCheck: false
   enableIpProxyCheck: false
   allowPhoneCountries: []
