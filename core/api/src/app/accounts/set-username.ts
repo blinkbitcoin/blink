@@ -1,10 +1,12 @@
 import { usernameAvailable } from "./username-available"
 
+import { getDefaultAccountsConfig } from "@/config"
 import {
   checkedToAccountId,
   checkedToUsername,
   UsernameIsImmutableError,
   UsernameNotAvailableError,
+  UsernameSetupNotAllowedError,
 } from "@/domain/accounts"
 import { InvalidUsername } from "@/domain/errors"
 import { checkedToPhoneNumber } from "@/domain/users"
@@ -18,6 +20,10 @@ export const setUsername = async ({
   accountId: string
   username: string
 }): Promise<Account | ApplicationError> => {
+  if (!getDefaultAccountsConfig().allowUsernameSetup) {
+    return new UsernameSetupNotAllowedError()
+  }
+
   const checkedUsername = checkedToUsername(username)
   if (checkedUsername instanceof Error) return checkedUsername
 

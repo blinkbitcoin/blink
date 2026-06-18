@@ -742,6 +742,7 @@ export const configSchema = {
           },
         },
         enablePhoneCheck: { type: "boolean" },
+        allowUsernameSetup: { type: "boolean" },
         enableIpCheck: { type: "boolean" },
         enableIpProxyCheck: { type: "boolean" },
         allowPhoneCountries: {
@@ -780,6 +781,7 @@ export const configSchema = {
         "initialStatus",
         "initialWallets",
         "enablePhoneCheck",
+        "allowUsernameSetup",
         "enableIpCheck",
         "enableIpProxyCheck",
         "allowPhoneCountries",
@@ -795,6 +797,7 @@ export const configSchema = {
         initialStatus: "active",
         initialWallets: ["BTC", "USD"],
         enablePhoneCheck: false,
+        allowUsernameSetup: true,
         enableIpCheck: false,
         enableIpProxyCheck: false,
         allowPhoneCountries: [],

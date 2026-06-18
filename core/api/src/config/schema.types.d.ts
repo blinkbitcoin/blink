@@ -212,6 +212,7 @@ type YamlSchema = {
     initialStatus: string
     initialWallets: WalletCurrency[]
     enablePhoneCheck: boolean
+    allowUsernameSetup: boolean
     enableIpCheck: boolean
     enableIpProxyCheck: boolean
     denyPhoneCountries: string[]
