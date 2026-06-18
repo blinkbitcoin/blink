@@ -294,15 +294,11 @@ export const getDefaultAccountsConfig = (config = yamlConfig): AccountsConfig =>
   initialWallets: config.accounts.initialWallets,
   initialLevel: AccountLevel.One,
   maxDeletions: config.accounts.maxDeletions || 2,
+  allowUsernameSetup: config.accounts.allowUsernameSetup,
 })
 
 export const getAccountsOnboardConfig = (config = yamlConfig): AccountsOnboardConfig => {
-  const {
-    enablePhoneCheck,
-    allowUsernameSetup,
-    enableIpCheck,
-    enableIpProxyCheck,
-  } = config.accounts
+  const { enablePhoneCheck, enableIpCheck, enableIpProxyCheck } = config.accounts
 
   const denyPhoneCountries = config.accounts.denyPhoneCountries || []
   const allowPhoneCountries = config.accounts.allowPhoneCountries || []
@@ -312,7 +308,6 @@ export const getAccountsOnboardConfig = (config = yamlConfig): AccountsOnboardCo
   const allowASNs = config.accounts.allowASNs || []
 
   return {
-    allowUsernameSetup,
     phoneMetadataValidationSettings: {
       enabled: enablePhoneCheck,
       denyCountries: denyPhoneCountries.map((c) => c.toUpperCase()),

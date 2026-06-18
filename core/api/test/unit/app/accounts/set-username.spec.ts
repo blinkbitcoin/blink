@@ -1,5 +1,5 @@
 jest.mock("@/config", () => ({
-  getAccountsOnboardConfig: jest.fn(),
+  getDefaultAccountsConfig: jest.fn(),
 }))
 
 jest.mock("@/services/mongoose", () => ({
@@ -8,12 +8,12 @@ jest.mock("@/services/mongoose", () => ({
 
 import { setUsername } from "@/app/accounts/set-username"
 
-import { getAccountsOnboardConfig } from "@/config"
+import { getDefaultAccountsConfig } from "@/config"
 import { UsernameSetupNotAllowedError } from "@/domain/accounts"
 import { AccountsRepository } from "@/services/mongoose"
 
-const mockGetAccountsOnboardConfig = getAccountsOnboardConfig as jest.MockedFunction<
-  typeof getAccountsOnboardConfig
+const mockGetDefaultAccountsConfig = getDefaultAccountsConfig as jest.MockedFunction<
+  typeof getDefaultAccountsConfig
 >
 const mockAccountsRepository = AccountsRepository as jest.MockedFunction<
   typeof AccountsRepository
@@ -22,21 +22,12 @@ const mockAccountsRepository = AccountsRepository as jest.MockedFunction<
 describe("Set username", () => {
   beforeEach(() => {
     jest.resetAllMocks()
-    mockGetAccountsOnboardConfig.mockReturnValue({
+    mockGetDefaultAccountsConfig.mockReturnValue({
+      initialStatus: "active" as AccountStatus,
+      initialWallets: [] as WalletCurrency[],
+      initialLevel: 1 as AccountLevel,
+      maxDeletions: 2,
       allowUsernameSetup: false,
-      phoneMetadataValidationSettings: {
-        enabled: false,
-        denyCountries: [],
-        allowCountries: [],
-      },
-      ipMetadataValidationSettings: {
-        enabled: false,
-        denyCountries: [],
-        allowCountries: [],
-        denyASNs: [],
-        allowASNs: [],
-        checkProxy: false,
-      },
     })
   })
 

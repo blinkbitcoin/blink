@@ -1,6 +1,6 @@
 import { usernameAvailable } from "./username-available"
 
-import { getAccountsOnboardConfig } from "@/config"
+import { getDefaultAccountsConfig } from "@/config"
 import {
   checkedToAccountId,
   checkedToUsername,
@@ -20,7 +20,7 @@ export const setUsername = async ({
   accountId: string
   username: string
 }): Promise<Account | ApplicationError> => {
-  if (!getAccountsOnboardConfig().allowUsernameSetup) {
+  if (!getDefaultAccountsConfig().allowUsernameSetup) {
     return new UsernameSetupNotAllowedError()
   }
 
