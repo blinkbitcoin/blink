@@ -451,6 +451,10 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       message = "username is immutable"
       return new UsernameError({ message, logger: baseLogger })
 
+    case "UsernameSetupNotAllowedError":
+      message = "username setup not allowed"
+      return new UsernameError({ message, logger: baseLogger })
+
     case "InvalidWalletId":
       message = "Invalid walletId for account."
       return new ValidationInternalError({ message, logger: baseLogger })

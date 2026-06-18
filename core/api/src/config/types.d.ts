@@ -38,6 +38,7 @@ type AccountsConfig = {
   initialWallets: WalletCurrency[]
   initialLevel: AccountLevel
   maxDeletions: number
+  allowUsernameSetup: boolean
 }
 
 type AccountsOnboardConfig = {
