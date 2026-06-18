@@ -25,6 +25,7 @@ describe("createAccountWithPhoneIdentifier", () => {
           initialStatus: AccountStatus.Active,
           initialWallets,
           maxDeletions: 2,
+          allowUsernameSetup: true,
         },
       })
       if (account instanceof Error) throw account
@@ -61,6 +62,7 @@ describe("createAccountWithPhoneIdentifier", () => {
             initialStatus: AccountStatus.Active,
             initialWallets,
             maxDeletions: 2,
+            allowUsernameSetup: true,
           },
         })
       if (account instanceof Error) throw account
@@ -97,6 +99,7 @@ describe("createAccountWithPhoneIdentifier", () => {
             initialStatus: AccountStatus.Active,
             initialWallets,
             maxDeletions: 2,
+            allowUsernameSetup: true,
           },
         })
       if (account instanceof Error) throw account
@@ -134,6 +137,7 @@ describe("createAccountWithPhoneIdentifier", () => {
             initialStatus: AccountStatus.Active,
             initialWallets,
             maxDeletions: 2,
+            allowUsernameSetup: true,
           },
           phoneMetadata: {
             carrier: {
@@ -172,6 +176,7 @@ describe("createAccountWithPhoneIdentifier", () => {
             initialStatus: AccountStatus.Active,
             initialWallets,
             maxDeletions: 2,
+            allowUsernameSetup: true,
           },
           phoneMetadata: {
             carrier: {
@@ -211,6 +216,7 @@ describe("createAccountWithPhoneIdentifier", () => {
             initialStatus: AccountStatus.Active,
             initialWallets,
             maxDeletions: 2,
+            allowUsernameSetup: true,
           },
           phoneMetadata: {
             carrier: {
