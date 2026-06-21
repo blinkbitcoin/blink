@@ -33,7 +33,7 @@ export const LnurlServerService = ():
       }
 
       const { data } = await lnurlServerClient.post<LnurlServerCreateBlinkAccountRaw>(
-        "/blink/accounts",
+        "/internal/blink/accounts",
         request,
         { baseURL: LNURL_SERVER_INTERNAL_URL },
       )
@@ -54,7 +54,7 @@ export const LnurlServerService = ():
       }
 
       const { data } = await lnurlServerClient.patch<LnurlServerUpdatedDefaultWalletRaw>(
-        `/blink/accounts/${encodeURIComponent(args.accountId)}`,
+        `/internal/blink/accounts/${encodeURIComponent(args.accountId)}`,
         request,
         { baseURL: LNURL_SERVER_INTERNAL_URL },
       )
@@ -74,7 +74,7 @@ export const LnurlServerService = ():
   > => {
     try {
       const { data } = await lnurlServerClient.get<LnurlServerIdentifierRaw>(
-        `/domains/${encodeURIComponent(domain)}/identifiers/${encodeURIComponent(identifier)}`,
+        `/internal/domains/${encodeURIComponent(domain)}/identifiers/${encodeURIComponent(identifier)}`,
         { baseURL: LNURL_SERVER_INTERNAL_URL },
       )
 
@@ -100,7 +100,7 @@ export const LnurlServerService = ():
       }
 
       const { data } = await lnurlServerClient.post<LnurlServerTransferToSparkResultRaw>(
-        "/identifiers/transfer-to-spark",
+        "/internal/identifiers/transfer-to-spark",
         request,
         { baseURL: LNURL_SERVER_INTERNAL_URL },
       )

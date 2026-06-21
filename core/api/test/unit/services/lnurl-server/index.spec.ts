@@ -1,6 +1,6 @@
 import MockAdapter from "axios-mock-adapter"
 
-let lnurlServerInternalUrl = "http://localhost:4455/lnurl-internal/internal"
+let lnurlServerInternalUrl = "http://localhost:4455/lnurl-internal"
 
 jest.mock("@/config", () => ({
   get LNURL_SERVER_INTERNAL_URL() {
@@ -27,7 +27,7 @@ beforeAll(() => {
 afterEach(() => {
   // @ts-ignore-next-line no-implicit-any error
   mock.reset()
-  lnurlServerInternalUrl = "http://localhost:4455/lnurl-internal/internal"
+  lnurlServerInternalUrl = "http://localhost:4455/lnurl-internal"
 })
 
 const lnurlServerService = (): ILnurlServerService => {
@@ -64,7 +64,7 @@ describe("LnurlServerService", () => {
       identifiers: [{ identifier: "alice", kind: "username", description: "Alice" }],
     }
 
-    mock.onPost("/blink/accounts").reply((config: { data?: string }) => {
+    mock.onPost("/internal/blink/accounts").reply((config: { data?: string }) => {
       expect(JSON.parse(config.data ?? "{}")).toEqual({
         domain: "example.com",
         blink_account_id: "blink_account_123",
@@ -101,7 +101,7 @@ describe("LnurlServerService", () => {
   })
 
   it("updates a Blink account default wallet and URL-encodes the account id", async () => {
-    const encodedPath = "/blink/accounts/blink_account_123%2Fusd"
+    const encodedPath = "/internal/blink/accounts/blink_account_123%2Fusd"
 
     mock.onPatch(encodedPath).reply((config: { data?: string }) => {
       expect(JSON.parse(config.data ?? "{}")).toEqual({
@@ -133,7 +133,7 @@ describe("LnurlServerService", () => {
   })
 
   it("gets an identifier and URL-encodes domain and identifier", async () => {
-    const encodedPath = "/domains/example.com%3A4088/identifiers/alice%2Busd"
+    const encodedPath = "/internal/domains/example.com%3A4088/identifiers/alice%2Busd"
     mock.onGet(encodedPath).reply(200, {
       provider: "blink",
       account_id: "acct_blink_123",
@@ -173,28 +173,30 @@ describe("LnurlServerService", () => {
   })
 
   it("transfers an identifier to Spark and maps request/response fields", async () => {
-    mock.onPost("/identifiers/transfer-to-spark").reply((config: { data?: string }) => {
-      expect(JSON.parse(config.data ?? "{}")).toEqual({
-        domain: "example.com",
-        identifier: "alice",
-        destination_spark_pubkey:
-          "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
-        description: "Moved to Spark",
-      })
-
-      return [
-        200,
-        {
+    mock
+      .onPost("/internal/identifiers/transfer-to-spark")
+      .reply((config: { data?: string }) => {
+        expect(JSON.parse(config.data ?? "{}")).toEqual({
           domain: "example.com",
           identifier: "alice",
-          provider: "spark",
-          spark_pubkey:
+          destination_spark_pubkey:
             "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
-          lightning_address: "alice@example.com",
-          lnurl: "lnurlp://example.com/lnurlp/alice",
-        },
-      ]
-    })
+          description: "Moved to Spark",
+        })
+
+        return [
+          200,
+          {
+            domain: "example.com",
+            identifier: "alice",
+            provider: "spark",
+            spark_pubkey:
+              "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+            lightning_address: "alice@example.com",
+            lnurl: "lnurlp://example.com/lnurlp/alice",
+          },
+        ]
+      })
 
     const result = await lnurlServerService().transferIdentifierToSpark({
       domain: "example.com",
@@ -215,7 +217,7 @@ describe("LnurlServerService", () => {
   })
 
   it("maps a 400 response to LnurlServerBadRequestError", async () => {
-    mock.onPost("/blink/accounts").reply(400, { error: "invalid_request" })
+    mock.onPost("/internal/blink/accounts").reply(400, { error: "invalid_request" })
 
     const result = await lnurlServerService().createBlinkAccount({
       domain: "example.com",
@@ -232,7 +234,9 @@ describe("LnurlServerService", () => {
   })
 
   it("maps patch 404 responses to LnurlServerNotFoundError", async () => {
-    mock.onPatch("/blink/accounts/blink_account_123").reply(404, { error: "not_found" })
+    mock.onPatch("/internal/blink/accounts/blink_account_123").reply(404, {
+      error: "not_found",
+    })
 
     const result = await lnurlServerService().updateDefaultWallet({
       accountId: "blink_account_123" as AccountId,
@@ -244,7 +248,7 @@ describe("LnurlServerService", () => {
   })
 
   it("maps a 503 response to LnurlServerUnavailableError", async () => {
-    mock.onGet("/domains/example.com/identifiers/alice").reply(503, {
+    mock.onGet("/internal/domains/example.com/identifiers/alice").reply(503, {
       error: "provider_disabled",
     })
 
@@ -258,7 +262,7 @@ describe("LnurlServerService", () => {
   })
 
   it("maps network failures to UnknownLnurlServerServiceError", async () => {
-    mock.onGet("/domains/example.com/identifiers/alice").networkError()
+    mock.onGet("/internal/domains/example.com/identifiers/alice").networkError()
 
     const result = await lnurlServerService().getIdentifier({
       domain: "example.com",
