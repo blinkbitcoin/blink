@@ -107,3 +107,19 @@
     - handler: id_token
       config: #! TODO: add aud: {"aud": ["https://api/admin/graphql"] }
         claims: '{"sub": "{{ print .Subject }}", "scope": "{{ print .Extra.scope }}" }'
+
+- id: blink-lnurl-server-internal
+  upstream:
+    url: "http://lnurl-server:8080"
+    strip_path: /lnurl-internal
+  match:
+    url: "<(http|https)>://<[a-zA-Z0-9-.:]+>/lnurl-internal/<.*>"
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"]
+  authenticators:
+    - handler: anonymous
+  authorizer:
+    handler: allow
+  mutators:
+    - handler: id_token
+      config:
+        claims: '{"sub":"galoy-api","aud":"blink-lnurl-server","scope":"blink:accounts:create blink:accounts:read blink:accounts:update blink:transfers:write"}'

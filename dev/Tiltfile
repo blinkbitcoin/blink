@@ -698,6 +698,7 @@ docker_groups = {
     ],
     "core": [
         "apollo-router",
+        "lnurl-server",
         "mongodb",
         "notifications-pg",
         "oathkeeper",
