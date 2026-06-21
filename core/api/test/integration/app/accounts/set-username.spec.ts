@@ -1,9 +1,11 @@
 import { setUsername } from "@/app/accounts"
 
+import { LnurlServerMissingInternalUrlError } from "@/domain/lnurl-server"
 import { InvalidUsername } from "@/domain/errors"
 import { UsernameIsImmutableError, UsernameNotAvailableError } from "@/domain/accounts"
 
 import * as MongooseImpl from "@/services/mongoose"
+import * as LnurlServerImpl from "@/services/lnurl-server"
 
 afterEach(() => {
   jest.restoreAllMocks()
@@ -18,6 +20,9 @@ describe("Set username", () => {
       findById: () => true,
       findByUsername: () => true,
     })
+    jest
+      .spyOn(LnurlServerImpl, "LnurlServerService")
+      .mockReturnValue(new LnurlServerMissingInternalUrlError("missing"))
 
     const res = await setUsername({ accountId: crypto.randomUUID(), username: "alice" })
     expect(res).toBeInstanceOf(UsernameNotAvailableError)
@@ -30,6 +35,9 @@ describe("Set username", () => {
       ...AccountsRepositoryOrig(),
       findById: () => ({ username: "alice" }),
     })
+    jest
+      .spyOn(LnurlServerImpl, "LnurlServerService")
+      .mockReturnValue(new LnurlServerMissingInternalUrlError("missing"))
 
     const res = await setUsername({ accountId: crypto.randomUUID(), username: "alice" })
     expect(res).toBeInstanceOf(UsernameIsImmutableError)

@@ -1,3 +1,5 @@
+import { usernameAvailableForLnurlServer } from "./lnurl-server"
+
 import { CouldNotFindError } from "@/domain/errors"
 import { checkedToUsername } from "@/domain/accounts"
 import { checkedToPhoneNumber } from "@/domain/users"
@@ -18,8 +20,11 @@ export const usernameAvailable = async (
     return false
   }
 
-  const accountsRepo = AccountsRepository()
+  const externalAvailable = await usernameAvailableForLnurlServer(checkedUsername)
+  if (externalAvailable instanceof Error) return externalAvailable
+  if (!externalAvailable) return false
 
+  const accountsRepo = AccountsRepository()
   const account = await accountsRepo.findByUsername(checkedUsername)
   if (account instanceof CouldNotFindError) return true
   if (account instanceof Error) return account
