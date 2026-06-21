@@ -14,6 +14,7 @@
     "BRIA_HOST": "dummy",
     "BRIA_API_KEY": "dummy",
     "NOTIFICATIONS_HOST": "dummy",
+    "LNURL_SERVER_INTERNAL_URL": "http://dummy/internal",
     "MONGODB_CON": "mongodb://dummy",
     "REDIS_MASTER_NAME": "dummy",
     "REDIS_PASSWORD": "dummy",
