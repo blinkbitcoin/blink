@@ -519,6 +519,7 @@ local_resource(
         "lnd2",
         "redis",
         "mongodb",
+        "lnurl-server",
         "oathkeeper",
         "svix",
         "notifications",
