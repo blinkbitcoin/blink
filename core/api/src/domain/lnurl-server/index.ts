@@ -2,7 +2,7 @@ import { WalletCurrency } from "@/domain/shared"
 
 export * from "./errors"
 
-export function lnurlWalletFromCurrency(currency: WalletCurrency): LnurlServerWallet {
+export const lnurlWalletFromCurrency = (currency: WalletCurrency): LnurlServerWallet => {
   if (currency === WalletCurrency.Btc) {
     return "btc"
   }

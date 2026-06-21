@@ -5,13 +5,13 @@ import { LNURL_SERVER_LN_ADDRESS_DOMAIN } from "@/config"
 import { lnurlWalletFromCurrency, LnurlServerNotFoundError } from "@/domain/lnurl-server"
 import { AccountsRepository, WalletsRepository } from "@/services/mongoose"
 
-export async function updateDefaultWalletId({
+export const updateDefaultWalletId = async ({
   accountId,
   walletId,
 }: {
   accountId: AccountId
   walletId: WalletId
-}): Promise<Account | ApplicationError> {
+}): Promise<Account | ApplicationError> => {
   const accountsRepo = AccountsRepository()
   const walletsRepo = WalletsRepository()
 

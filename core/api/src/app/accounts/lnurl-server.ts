@@ -5,7 +5,7 @@ import {
 } from "@/domain/lnurl-server"
 import { LnurlServerService } from "@/services/lnurl-server"
 
-export function getLnurlServerService(): ILnurlServerService | null {
+export const getLnurlServerService = (): ILnurlServerService | null => {
   const service = LnurlServerService()
 
   if (service instanceof LnurlServerMissingInternalUrlError) return null
@@ -13,9 +13,9 @@ export function getLnurlServerService(): ILnurlServerService | null {
   return service
 }
 
-export async function usernameAvailableForLnurlServer(
+export const usernameAvailableForLnurlServer = async (
   username: Username,
-): Promise<boolean | ApplicationError> {
+): Promise<boolean | ApplicationError> => {
   const service = getLnurlServerService()
   if (service === null) return true
 

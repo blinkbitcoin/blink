@@ -16,13 +16,13 @@ import { checkedToPhoneNumber } from "@/domain/users"
 
 import { AccountsRepository, WalletsRepository } from "@/services/mongoose"
 
-export async function setUsername({
+export const setUsername = async ({
   accountId: accountIdRaw,
   username,
 }: {
   accountId: string
   username: string
-}): Promise<Account | ApplicationError> {
+}): Promise<Account | ApplicationError> => {
   if (!getDefaultAccountsConfig().allowUsernameSetup) {
     return new UsernameSetupNotAllowedError()
   }

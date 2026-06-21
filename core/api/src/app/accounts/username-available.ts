@@ -6,9 +6,9 @@ import { checkedToPhoneNumber } from "@/domain/users"
 
 import { AccountsRepository } from "@/services/mongoose"
 
-export async function usernameAvailable(
+export const usernameAvailable = async (
   username: Username,
-): Promise<boolean | ApplicationError> {
+): Promise<boolean | ApplicationError> => {
   const checkedUsername = checkedToUsername(username)
   if (checkedUsername instanceof Error) {
     return false
