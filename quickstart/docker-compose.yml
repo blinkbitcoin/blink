@@ -18,6 +18,7 @@ services:
     - lnd-outside-1
     - bria
     - fulcrum
+    - lnurl-server
     - stablesats
     - svix
     - hydra
@@ -99,7 +100,7 @@ services:
     - POSTGRES_PASSWORD=secret
     - POSTGRES_DB=hydra
   galoy:
-    image: us.gcr.io/galoy-org/galoy-api@sha256:ab22bae9d5ffeeeba36ddacedc7638df222ccfd9978919a203bee2373e59d568
+    image: us.gcr.io/galoy-org/galoy-api@sha256:4da93956bbaa6c4e090fb16225313241dbceba11e030919f2dce6e81e4c9ea1c
     environment:
     - HELMREVISION=dev
     - NETWORK=regtest
@@ -158,7 +159,7 @@ services:
         aliases:
         - bats-tests
   trigger:
-    image: us.gcr.io/galoy-org/galoy-api-trigger@sha256:79fb57eebbc52909c6550372f84fbb8c1236cbc2ca23765e5969337e893f14fd
+    image: us.gcr.io/galoy-org/galoy-api-trigger@sha256:bdc1f7a7e9b367189c654e0cb9ab703bbdb5b8d01346c6f86f9b6778336a1590
     environment:
     - HELMREVISION=dev
     - NETWORK=regtest
@@ -270,7 +271,7 @@ services:
     environment:
     - MONGO_INITDB_DATABASE=galoy
   mongodb-migrate:
-    image: us.gcr.io/galoy-org/galoy-api-migrate@sha256:6ddd24a812daa49fbf56da4bc443401c360c5c39a3658909d4c4d30a2b51dcea
+    image: us.gcr.io/galoy-org/galoy-api-migrate@sha256:b76fff41c2327befa0157e7803106774a3f9bf1d5a6c56640ac14ca360df733a
     depends_on:
     - mongodb
     environment:
@@ -450,6 +451,27 @@ services:
     command:
     - Fulcrum
     - /fulcrum.conf
+  lnurl-server:
+    image: us.gcr.io/galoy-org/blink-lnurl-server:latest
+    user: "0:0"
+    ports:
+    - 4088:8080
+    volumes:
+    - ${HOST_PROJECT_PATH:-.}/${GALOY_QUICKSTART_PATH:-vendor/blink-quickstart}/dev/.data/:/data/
+    environment:
+    - DEPLOYMENT_ENV=local
+    - LNURL_ADDRESS=0.0.0.0:8080
+    - LNURL_AUTO_MIGRATE=true
+    - LNURL_BLINK_GRAPHQL_ENDPOINT=http://oathkeeper:4455/graphql
+    - LNURL_DB_URL=sqlite:///data/lnurl.db?mode=rwc
+    - LNURL_DOMAINS=localhost:4088,127.0.0.1:4088,lnurl-server:8080
+    - LNURL_INTERNAL_JWKS_URL=http://oathkeeper:4456/.well-known/jwks.json
+    - LNURL_INTERNAL_JWT_ISSUER=galoy.io
+    - LNURL_INTERNAL_JWT_AUDIENCE=blink-lnurl-server
+    - LNURL_SCHEME=http
+    - LNURL_WEBHOOK_DOMAIN=lnurl-server:4088
+    depends_on:
+    - galoy
   stablesats:
     image: us.gcr.io/galoy-org/stablesats-rs:latest
     ports:

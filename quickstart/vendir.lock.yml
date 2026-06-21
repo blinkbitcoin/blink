@@ -2,24 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat(api): add allowUsernameSetup config flag (#634)'
-      sha: b2b58ea6d618cd984b16fb286ce1b734cdddad46
+      commitTitle: 'feat(api): sync usernames and default wallets to lnurl server
+        (#637)'
+      sha: 4b1094739266cd8b980c866ecb3d93213c4e5c33
       tags:
-      - 0.22.12
+      - 0.22.12-2-g4b1094739
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat(api): add allowUsernameSetup config flag (#634)'
-      sha: b2b58ea6d618cd984b16fb286ce1b734cdddad46
+      commitTitle: 'feat(api): sync usernames and default wallets to lnurl server
+        (#637)'
+      sha: 4b1094739266cd8b980c866ecb3d93213c4e5c33
       tags:
-      - 0.22.12
+      - 0.22.12-2-g4b1094739
     path: schemas
   - git:
-      commitTitle: 'feat(api): add allowUsernameSetup config flag (#634)'
-      sha: b2b58ea6d618cd984b16fb286ce1b734cdddad46
+      commitTitle: 'feat(api): sync usernames and default wallets to lnurl server
+        (#637)'
+      sha: 4b1094739266cd8b980c866ecb3d93213c4e5c33
       tags:
-      - 0.22.12
+      - 0.22.12-2-g4b1094739
     path: gql
   path: graphql
 kind: LockConfig
