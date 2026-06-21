@@ -2,7 +2,10 @@ import { AxiosError, isAxiosError } from "axios"
 
 import {
   LnurlServerBadRequestError,
+  LnurlServerBlinkAccountExistsError,
+  LnurlServerConflictError,
   LnurlServerForbiddenError,
+  LnurlServerIdentifierConflictError,
   LnurlServerNotFoundError,
   LnurlServerUnauthorizedError,
   LnurlServerUnavailableError,
@@ -37,6 +40,14 @@ export const handleLnurlServerErrors = (err: Error | string | unknown) => {
         return new LnurlServerForbiddenError(errMsg)
       case 404:
         return new LnurlServerNotFoundError(errMsg)
+      case 409:
+        if (errMsg === "identifier_conflict") {
+          return new LnurlServerIdentifierConflictError(errMsg)
+        }
+        if (errMsg === "blink_account_exists") {
+          return new LnurlServerBlinkAccountExistsError(errMsg)
+        }
+        return new LnurlServerConflictError(errMsg)
       case 503:
         return new LnurlServerUnavailableError(errMsg)
       default:

@@ -22,6 +22,12 @@ export class LnurlServerUnavailableError extends LnurlServerServiceError {
   level = ErrorLevel.Critical
 }
 
+export class LnurlServerConflictError extends LnurlServerServiceError {}
+
+export class LnurlServerIdentifierConflictError extends LnurlServerConflictError {}
+
+export class LnurlServerBlinkAccountExistsError extends LnurlServerConflictError {}
+
 export class LnurlServerMissingInternalUrlError extends LnurlServerServiceError {}
 
 export class UnknownLnurlServerServiceError extends LnurlServerServiceError {

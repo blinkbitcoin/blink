@@ -16,13 +16,18 @@ import { setUsername } from "@/app/accounts/set-username"
 
 import { getDefaultAccountsConfig } from "@/config"
 import {
+  LnurlServerIdentifierConflictError,
   LnurlServerMissingInternalUrlError,
   LnurlServerNotFoundError,
   LnurlServerUnavailableError,
 } from "@/domain/lnurl-server"
 import { CouldNotFindError } from "@/domain/errors"
 import { WalletCurrency } from "@/domain/shared"
-import { UsernameIsImmutableError, UsernameSetupNotAllowedError } from "@/domain/accounts"
+import {
+  UsernameIsImmutableError,
+  UsernameNotAvailableError,
+  UsernameSetupNotAllowedError,
+} from "@/domain/accounts"
 import { LnurlServerService } from "@/services/lnurl-server"
 import { AccountsRepository, WalletsRepository } from "@/services/mongoose"
 
@@ -229,6 +234,84 @@ describe("Set username", () => {
     const result = await setUsername({ accountId: account.id, username: "alice" })
 
     expect(result).toBe(lnurlError)
+    expect(update).not.toHaveBeenCalled()
+  })
+
+  it("returns username unavailable when lnurl pre-create availability check finds the identifier", async () => {
+    mockGetDefaultAccountsConfig.mockReturnValue({
+      initialStatus: "active" as AccountStatus,
+      initialWallets: [] as WalletCurrency[],
+      initialLevel: 1 as AccountLevel,
+      maxDeletions: 2,
+      allowUsernameSetup: true,
+    })
+
+    const update = jest.fn()
+    const findById = jest.fn().mockResolvedValue({ ...account })
+    const findByUsername = jest.fn().mockResolvedValue(new CouldNotFindError())
+    const findAccountWalletsByAccountId = jest.fn()
+    const createBlinkAccount = jest.fn()
+    const getIdentifier = jest
+      .fn()
+      .mockResolvedValueOnce(new LnurlServerNotFoundError("not_found"))
+      .mockResolvedValueOnce({ identifier: "alice" })
+
+    mockAccountsRepository.mockReturnValue({
+      findById,
+      findByUsername,
+      update,
+    } as unknown as ReturnType<typeof AccountsRepository>)
+    mockWalletsRepository.mockReturnValue({
+      findAccountWalletsByAccountId,
+    } as unknown as ReturnType<typeof WalletsRepository>)
+    mockLnurlServerService.mockReturnValue(
+      lnurlServerService({ getIdentifier, createBlinkAccount }),
+    )
+
+    const result = await setUsername({ accountId: account.id, username: "alice" })
+
+    expect(result).toBeInstanceOf(UsernameNotAvailableError)
+    expect(getIdentifier).toHaveBeenCalledTimes(2)
+    expect(findAccountWalletsByAccountId).not.toHaveBeenCalled()
+    expect(createBlinkAccount).not.toHaveBeenCalled()
+    expect(update).not.toHaveBeenCalled()
+  })
+
+  it("returns username unavailable when lnurl account creation races with identifier conflict", async () => {
+    mockGetDefaultAccountsConfig.mockReturnValue({
+      initialStatus: "active" as AccountStatus,
+      initialWallets: [] as WalletCurrency[],
+      initialLevel: 1 as AccountLevel,
+      maxDeletions: 2,
+      allowUsernameSetup: true,
+    })
+
+    const update = jest.fn()
+    const findById = jest.fn().mockResolvedValue({ ...account })
+    const findByUsername = jest.fn().mockResolvedValue(new CouldNotFindError())
+    const findAccountWalletsByAccountId = jest.fn().mockResolvedValue(accountWallets)
+    const createBlinkAccount = jest
+      .fn()
+      .mockResolvedValue(new LnurlServerIdentifierConflictError("identifier_conflict"))
+    const getIdentifier = jest
+      .fn()
+      .mockResolvedValue(new LnurlServerNotFoundError("not_found"))
+
+    mockAccountsRepository.mockReturnValue({
+      findById,
+      findByUsername,
+      update,
+    } as unknown as ReturnType<typeof AccountsRepository>)
+    mockWalletsRepository.mockReturnValue({
+      findAccountWalletsByAccountId,
+    } as unknown as ReturnType<typeof WalletsRepository>)
+    mockLnurlServerService.mockReturnValue(
+      lnurlServerService({ getIdentifier, createBlinkAccount }),
+    )
+
+    const result = await setUsername({ accountId: account.id, username: "alice" })
+
+    expect(result).toBeInstanceOf(UsernameNotAvailableError)
     expect(update).not.toHaveBeenCalled()
   })
 

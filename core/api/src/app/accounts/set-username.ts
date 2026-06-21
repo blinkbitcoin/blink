@@ -1,5 +1,5 @@
 import { usernameAvailable } from "./username-available"
-import { getLnurlServerService } from "./lnurl-server"
+import { getLnurlServerService, usernameAvailableForLnurlServer } from "./lnurl-server"
 
 import { getDefaultAccountsConfig, LNURL_SERVER_LN_ADDRESS_DOMAIN } from "@/config"
 import {
@@ -9,7 +9,10 @@ import {
   UsernameNotAvailableError,
   UsernameSetupNotAllowedError,
 } from "@/domain/accounts"
-import { lnurlWalletFromCurrency } from "@/domain/lnurl-server"
+import {
+  LnurlServerIdentifierConflictError,
+  lnurlWalletFromCurrency,
+} from "@/domain/lnurl-server"
 import { WalletCurrency } from "@/domain/shared"
 import { InvalidUsername } from "@/domain/errors"
 import { checkedToPhoneNumber } from "@/domain/users"
@@ -50,6 +53,10 @@ export const setUsername = async ({
 
   const lnurlServer = getLnurlServerService()
   if (lnurlServer !== null) {
+    const isLnurlAvailable = await usernameAvailableForLnurlServer(checkedUsername)
+    if (isLnurlAvailable instanceof Error) return isLnurlAvailable
+    if (!isLnurlAvailable) return new UsernameNotAvailableError()
+
     const walletsRepo = WalletsRepository()
     const accountWallets = await walletsRepo.findAccountWalletsByAccountId(account.id)
     if (accountWallets instanceof Error) return accountWallets
@@ -68,6 +75,9 @@ export const setUsername = async ({
       description: checkedUsername,
       identifiers: [checkedUsername],
     })
+    if (lnurlAccount instanceof LnurlServerIdentifierConflictError) {
+      return new UsernameNotAvailableError()
+    }
     if (lnurlAccount instanceof Error) return lnurlAccount
   }
 

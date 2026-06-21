@@ -11,6 +11,9 @@ jest.mock("@/config", () => ({
 import { LnurlServerService, lnurlServerClient } from "@/services/lnurl-server"
 import {
   LnurlServerBadRequestError,
+  LnurlServerBlinkAccountExistsError,
+  LnurlServerConflictError,
+  LnurlServerIdentifierConflictError,
   LnurlServerMissingInternalUrlError,
   LnurlServerNotFoundError,
   LnurlServerUnavailableError,
@@ -259,6 +262,69 @@ describe("LnurlServerService", () => {
 
     expect(result).toBeInstanceOf(LnurlServerUnavailableError)
     expect((result as LnurlServerUnavailableError).message).toBe("provider_disabled")
+  })
+
+  it("maps identifier 409 responses to LnurlServerIdentifierConflictError", async () => {
+    mock.onPost("/internal/blink/accounts").reply(409, {
+      error: "identifier_conflict",
+    })
+
+    const result = await lnurlServerService().createBlinkAccount({
+      domain: "example.com",
+      blinkAccountId: "blink_account_123" as AccountId,
+      btcWalletId: "btc_wallet_123" as WalletId,
+      usdWalletId: "usd_wallet_123" as WalletId,
+      defaultWallet: "usd",
+      description: "Alice",
+      identifiers: ["alice"],
+    })
+
+    expect(result).toBeInstanceOf(LnurlServerIdentifierConflictError)
+    expect((result as LnurlServerIdentifierConflictError).message).toBe(
+      "identifier_conflict",
+    )
+  })
+
+  it("maps blink account 409 responses to LnurlServerBlinkAccountExistsError", async () => {
+    mock.onPost("/internal/blink/accounts").reply(409, {
+      error: "blink_account_exists",
+    })
+
+    const result = await lnurlServerService().createBlinkAccount({
+      domain: "example.com",
+      blinkAccountId: "blink_account_123" as AccountId,
+      btcWalletId: "btc_wallet_123" as WalletId,
+      usdWalletId: "usd_wallet_123" as WalletId,
+      defaultWallet: "usd",
+      description: "Alice",
+      identifiers: ["alice"],
+    })
+
+    expect(result).toBeInstanceOf(LnurlServerBlinkAccountExistsError)
+    expect((result as LnurlServerBlinkAccountExistsError).message).toBe(
+      "blink_account_exists",
+    )
+  })
+
+  it("maps unknown 409 responses to LnurlServerConflictError", async () => {
+    mock.onPost("/internal/blink/accounts").reply(409, {
+      error: "other_conflict",
+    })
+
+    const result = await lnurlServerService().createBlinkAccount({
+      domain: "example.com",
+      blinkAccountId: "blink_account_123" as AccountId,
+      btcWalletId: "btc_wallet_123" as WalletId,
+      usdWalletId: "usd_wallet_123" as WalletId,
+      defaultWallet: "usd",
+      description: "Alice",
+      identifiers: ["alice"],
+    })
+
+    expect(result).toBeInstanceOf(LnurlServerConflictError)
+    expect(result).not.toBeInstanceOf(LnurlServerIdentifierConflictError)
+    expect(result).not.toBeInstanceOf(LnurlServerBlinkAccountExistsError)
+    expect((result as LnurlServerConflictError).message).toBe("other_conflict")
   })
 
   it("maps network failures to UnknownLnurlServerServiceError", async () => {
