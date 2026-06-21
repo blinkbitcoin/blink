@@ -67,6 +67,9 @@ export const env = createEnv({
     API_KEYS_HOST: z.string().min(1).default("localhost"),
     API_KEYS_PORT: z.number().min(1).or(z.string()).pipe(z.coerce.number()).default(6686),
 
+    LNURL_SERVER_INTERNAL_URL: z.union([z.string().url(), z.literal("")]).default(""),
+    LNURL_SERVER_LN_ADDRESS_DOMAIN: z.string().min(1).default("localhost:4088"),
+
     GEETEST_ID: z.string().min(1).optional(),
     GEETEST_KEY: z.string().min(1).optional(),
 
@@ -202,6 +205,9 @@ export const env = createEnv({
 
     API_KEYS_HOST: process.env.API_KEYS_HOST,
     API_KEYS_PORT: process.env.API_KEYS_PORT,
+
+    LNURL_SERVER_INTERNAL_URL: process.env.LNURL_SERVER_INTERNAL_URL,
+    LNURL_SERVER_LN_ADDRESS_DOMAIN: process.env.LNURL_SERVER_LN_ADDRESS_DOMAIN,
 
     GEETEST_ID: process.env.GEETEST_ID,
     GEETEST_KEY: process.env.GEETEST_KEY,

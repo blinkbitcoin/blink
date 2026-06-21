@@ -66,6 +66,7 @@ services:
       - lnd-outside-1
       - bria
       - fulcrum
+      - lnurl-server
       - stablesats
       - svix
       - hydra
@@ -212,6 +213,27 @@ services:
   bria: #@ data.values.services["bria"]
   bria-pg: #@ data.values.services["bria-pg"]
   fulcrum: #@ data.values.services["fulcrum"]
+  lnurl-server:
+    image: us.gcr.io/galoy-org/blink-lnurl-server:latest
+    user: "0:0"
+    ports:
+    - 4088:8080
+    volumes:
+    - ${HOST_PROJECT_PATH:-.}/.data/:/data/
+    environment:
+    - DEPLOYMENT_ENV=local
+    - LNURL_ADDRESS=0.0.0.0:8080
+    - LNURL_AUTO_MIGRATE=true
+    - LNURL_BLINK_GRAPHQL_ENDPOINT=http://oathkeeper:4455/graphql
+    - "LNURL_DB_URL=sqlite:///data/lnurl.db?mode=rwc"
+    - LNURL_DOMAINS=localhost:4088,127.0.0.1:4088,lnurl-server:8080
+    - LNURL_INTERNAL_JWKS_URL=http://oathkeeper:4456/.well-known/jwks.json
+    - LNURL_INTERNAL_JWT_ISSUER=galoy.io
+    - LNURL_INTERNAL_JWT_AUDIENCE=blink-lnurl-server
+    - LNURL_SCHEME=http
+    - LNURL_WEBHOOK_DOMAIN=lnurl-server:4088
+    depends_on:
+    - galoy
 
   #! Stablesats
   stablesats: #@ data.values.services["stablesats"]
