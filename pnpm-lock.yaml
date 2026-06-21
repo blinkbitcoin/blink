@@ -1012,7 +1012,7 @@ importers:
         version: 4.6.1(graphql@16.11.0)
       '@graphql-codegen/typescript-react-apollo':
         specifier: ^3.3.7
-        version: 3.3.7(graphql-tag@2.12.6)(graphql@16.11.0)
+        version: 3.3.7(graphql-tag@2.12.7)(graphql@16.11.0)
       '@types/jest':
         specifier: ^29.5.3
         version: 29.5.14
@@ -1116,8 +1116,8 @@ importers:
         specifier: ^0.7.15
         version: 0.7.15
       '@ip1sms/disposable-phone-numbers':
-        specifier: ^2.1.1559
-        version: 2.1.1559
+        specifier: ^2.1.1563
+        version: 2.1.1563
       '@merqva/telegram-passport':
         specifier: ^1.0.2
         version: 1.0.2
@@ -6279,7 +6279,7 @@ packages:
       - encoding
     dev: true
 
-  /@graphql-codegen/typescript-react-apollo@3.3.7(graphql-tag@2.12.6)(graphql@16.11.0):
+  /@graphql-codegen/typescript-react-apollo@3.3.7(graphql-tag@2.12.7)(graphql@16.11.0):
     resolution: {integrity: sha512-9DUiGE8rcwwEkf/S1kpBT/Py/UUs9Qak14bOnTT1JHWs1MWhiDA7vml+A8opU7YFI1EVbSSaE5jjRv11WHoikQ==}
     peerDependencies:
       graphql: ^0.8.0 || ^0.9.0 || ^0.10.0 || ^0.11.0 || ^0.12.0 || ^0.13.0 || ^14.0.0 || ^15.0.0 || ^16.0.0
@@ -6290,7 +6290,7 @@ packages:
       auto-bind: 4.0.0
       change-case-all: 1.0.14
       graphql: 16.11.0
-      graphql-tag: 2.12.6(graphql@16.11.0)
+      graphql-tag: 2.12.7(graphql@16.11.0)
       tslib: 2.4.1
     transitivePeerDependencies:
       - encoding
@@ -7653,8 +7653,8 @@ packages:
     resolution: {integrity: sha512-Sx1pU8EM64o2BrqNpEO1CNLtKQwyhuXuqyfH7oGKCk+1a33d2r5saW8zNwm3j6BTExtjrv2BxTgzzkMwts6vGg==}
     dev: false
 
-  /@ip1sms/disposable-phone-numbers@2.1.1559:
-    resolution: {integrity: sha512-w8BVRI8O6YXepSFtnzHeJyqXOogdyRn9Lfh2fCtZQ8xN4PztuKUurLYpeAEjTh+mTIb50zP56lrnCgEQIjHmpw==}
+  /@ip1sms/disposable-phone-numbers@2.1.1563:
+    resolution: {integrity: sha512-biHnaqYF63YnoO3Sp47RuYW4QngfaHZTfwsSikISDs7TVRpeN6ck2DmwMdRZN8XTTxQDD8VtDlrR+QIBeSt4vA==}
     dev: false
 
   /@isaacs/cliui@8.0.2:
@@ -16658,8 +16658,8 @@ packages:
     hasBin: true
     dev: true
 
-  /baseline-browser-mapping@2.10.37:
-    resolution: {integrity: sha512-girxaJ7WZssDOFhzCGZTDKoTa1gk6A1TbflaYTpykLJ4UU9Fz9kx1aREM8JCuoVHbL8X8T/mJg7w2oYSq72Oig==}
+  /baseline-browser-mapping@2.10.38:
+    resolution: {integrity: sha512-31/02mVB4yuQU6adKk5SlY6m+mxDwUq5KZkyYgnLrrKl7TEm1+3PyDtDBz2kOv/wxZz41GHsvV1A/u6RmiyBvw==}
     engines: {node: '>=6.0.0'}
     hasBin: true
 
@@ -17005,10 +17005,10 @@ packages:
     engines: {node: ^6 || ^7 || ^8 || ^9 || ^10 || ^11 || ^12 || >=13.7}
     hasBin: true
     dependencies:
-      baseline-browser-mapping: 2.10.37
+      baseline-browser-mapping: 2.10.38
       caniuse-lite: 1.0.30001799
-      electron-to-chromium: 1.5.375
-      node-releases: 2.0.47
+      electron-to-chromium: 1.5.376
+      node-releases: 2.0.48
       update-browserslist-db: 1.2.3(browserslist@4.28.2)
 
   /bs-logger@0.2.6:
@@ -19062,8 +19062,8 @@ packages:
     resolution: {integrity: sha512-5z3uFKBWjiNR44nFcYdkcXjKMbg5KXNdciu7mhTPo9tB7NbqSNP2sSnGR+fqknZSCwKkBN+oxiiajWs4dT6ORg==}
     dev: true
 
-  /electron-to-chromium@1.5.375:
-    resolution: {integrity: sha512-ZWP5eB4BVPW/ZYo9252hQZHZ5XavtsTgpbhcmMmRwymavC5AsLWQWBPaKMeNd2LW0KGby5HPXvj7+sr4ta5j/Q==}
+  /electron-to-chromium@1.5.376:
+    resolution: {integrity: sha512-cUVA7/RvbFTEuw/i3obUwDTRIXojaxkResf+ibByPFxjc6XK3VNtcQXV0NSbAlJ0FMjcJGgftVVB4Qo184EXvA==}
 
   /elliptic@6.6.1:
     resolution: {integrity: sha512-RaddvvMatK2LJHqFJ+YA4WysVN5Ita9E35botqIYspQ4TkRAlCicdzKOjlyv/1Za5RyTNn7di//eEV0uTAfe3g==}
@@ -22068,6 +22068,16 @@ packages:
     dependencies:
       graphql: 16.11.0
       tslib: 2.8.1
+
+  /graphql-tag@2.12.7(graphql@16.11.0):
+    resolution: {integrity: sha512-xnE/NFzy+0eIesvAsREJZ284zTl/wYuBAvpsFSDhRGRdRHdnE90M21Q3xAWyYInb0J756c6x0pIQ62+vtvOs1Q==}
+    engines: {node: '>=10'}
+    peerDependencies:
+      graphql: ^0.9.0 || ^0.10.0 || ^0.11.0 || ^0.12.0 || ^0.13.0 || ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
+    dependencies:
+      graphql: 16.11.0
+      tslib: 2.8.1
+    dev: true
 
   /graphql-ws@5.16.2(graphql@16.11.0):
     resolution: {integrity: sha512-E1uccsZxt/96jH/OwmLPuXMACILs76pKF2i3W861LpKBCYtGIyPQGtWLuBLkND4ox1KHns70e83PS4te50nvPQ==}
@@ -25914,8 +25924,8 @@ packages:
     resolution: {integrity: sha512-TdC8FSgHz8Mwtw9g5L4gR/Sh9XhSP/0DEkQxfEFXOpiul5IiHgHan2VhYYb6agDSfp4KuvltmGApc8HMgUrIkA==}
     dev: true
 
-  /node-releases@2.0.47:
-    resolution: {integrity: sha512-Uzmd6LXpouKo8EUK68IjH4+E01w/hXyV3R3g/geCJo+rXLNfh1xucB+LOzYEOQPSiUK3h/xZf0cQGcSsmyL2Og==}
+  /node-releases@2.0.48:
+    resolution: {integrity: sha512-1uz8041X6LoI6ZSdZacM9lVY28vuzDlSKitnpbSNK0RfKoIJkX29NBPVEFXhnuSuEOA9Ww0xnPJ+ILWbGAv8DA==}
     engines: {node: '>=18'}
 
   /node-source-walk@4.3.0:
