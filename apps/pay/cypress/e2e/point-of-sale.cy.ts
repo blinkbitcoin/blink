@@ -1,8 +1,71 @@
 import { testData } from "../support/test-config"
 
 const username = "test_user_a"
+const usernamePhone = "+16505554320"
 const cashRegisterUrl = `/${username}?amount=0&display=USD`
+
+const setUsernameMutation = `
+  mutation UserUpdateUsername($input: UserUpdateUsernameInput!) {
+    userUpdateUsername(input: $input) {
+      errors {
+        message
+      }
+      user {
+        id
+      }
+    }
+  }
+`
+
+const accountDefaultWalletQuery = `
+  query AccountDefaultWallet($username: Username!) {
+    accountDefaultWallet(username: $username) {
+      id
+    }
+  }
+`
+
 describe("Point of Sale", () => {
+  before(() => {
+    cy.request({
+      method: "POST",
+      url: "http://localhost:4455/auth/phone/login",
+      body: {
+        phone: usernamePhone,
+        code: testData.CODE,
+      },
+    })
+      .then((response) => {
+        expect(response.body).to.have.property("authToken")
+
+        return cy.request({
+          method: "POST",
+          url: "http://localhost:4455/graphql",
+          headers: {
+            Authorization: `Bearer ${response.body.authToken}`,
+          },
+          body: {
+            query: setUsernameMutation,
+            variables: {
+              input: { username },
+            },
+          },
+        })
+      })
+      .then(() => {
+        cy.request({
+          method: "POST",
+          url: "http://localhost:4455/graphql",
+          body: {
+            query: accountDefaultWalletQuery,
+            variables: { username },
+          },
+        }).then((response) => {
+          expect(response.body.data.accountDefaultWallet.id).to.be.a("string")
+        })
+      })
+  })
+
   it("should navigate to user cash register", () => {
     cy.visit("/")
 
