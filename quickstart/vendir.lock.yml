@@ -2,27 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat(api): sync usernames and default wallets to lnurl server
-        (#637)'
-      sha: 4b1094739266cd8b980c866ecb3d93213c4e5c33
+      commitTitle: 'fix(api): set LNURL payment description (#641)'
+      sha: 1ae3db99a34c82148c8b1ecbd39b767a66c2886f
       tags:
-      - 0.22.12-2-g4b1094739
+      - 0.22.13-1-g1ae3db99a
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat(api): sync usernames and default wallets to lnurl server
-        (#637)'
-      sha: 4b1094739266cd8b980c866ecb3d93213c4e5c33
+      commitTitle: 'fix(api): set LNURL payment description (#641)'
+      sha: 1ae3db99a34c82148c8b1ecbd39b767a66c2886f
       tags:
-      - 0.22.12-2-g4b1094739
+      - 0.22.13-1-g1ae3db99a
     path: schemas
   - git:
-      commitTitle: 'feat(api): sync usernames and default wallets to lnurl server
-        (#637)'
-      sha: 4b1094739266cd8b980c866ecb3d93213c4e5c33
+      commitTitle: 'fix(api): set LNURL payment description (#641)'
+      sha: 1ae3db99a34c82148c8b1ecbd39b767a66c2886f
       tags:
-      - 0.22.12-2-g4b1094739
+      - 0.22.13-1-g1ae3db99a
     path: gql
   path: graphql
 kind: LockConfig
