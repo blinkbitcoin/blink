@@ -191,7 +191,7 @@ describe("Set username", () => {
       btcWalletId: accountWallets.BTC.id,
       usdWalletId: accountWallets.USD.id,
       defaultWallet: "btc",
-      description: "alice",
+      description: "Payment to alice",
       identifiers: ["alice"],
     })
     expect(update.mock.invocationCallOrder[0]).toBeGreaterThan(

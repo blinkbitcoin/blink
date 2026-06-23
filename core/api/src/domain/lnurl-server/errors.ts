@@ -14,9 +14,7 @@ export class LnurlServerForbiddenError extends LnurlServerServiceError {
   level = ErrorLevel.Critical
 }
 
-export class LnurlServerNotFoundError extends LnurlServerServiceError {
-  level = ErrorLevel.Critical
-}
+export class LnurlServerNotFoundError extends LnurlServerServiceError {}
 
 export class LnurlServerUnavailableError extends LnurlServerServiceError {
   level = ErrorLevel.Critical
