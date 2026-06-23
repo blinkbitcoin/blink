@@ -290,6 +290,7 @@ paymentNetworks:
       skipFeeProbe:
         pubkeys: []
         chanIds: []
+      reserveRetentionEnabled: false
     historicalPubkeys: []
   intraledger:
     receive:
