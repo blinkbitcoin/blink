@@ -72,7 +72,7 @@ export const setUsername = async ({
       btcWalletId: accountWallets.BTC.id,
       usdWalletId: accountWallets.USD.id,
       defaultWallet: lnurlWalletFromCurrency(defaultWalletCurrency),
-      description: checkedUsername,
+      description: `Payment to ${checkedUsername}`,
       identifiers: [checkedUsername],
     })
     if (lnurlAccount instanceof LnurlServerIdentifierConflictError) {
