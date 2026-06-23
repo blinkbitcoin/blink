@@ -147,6 +147,9 @@ export const getValuesToSkipProbe = (): SkipFeeProbeConfig => {
   }
 }
 
+export const getLnFeeReserveRetentionEnabled = (): boolean =>
+  yamlConfig.paymentNetworks.lightning.send.reserveRetentionEnabled || false
+
 export const getDisplayCurrencyConfig = (): {
   code: DisplayCurrency
   symbol: string
@@ -438,6 +441,7 @@ export const getLightningNetworkConfig = (): LightningNetworkConfig => {
         pubkeys: (lightning.send.skipFeeProbe.pubkeys || []) as Pubkey[],
         chanIds: (lightning.send.skipFeeProbe.chanIds || []) as ChanId[],
       },
+      reserveRetentionEnabled: lightning.send.reserveRetentionEnabled || false,
     },
     historicalPubkeys: (lightning.historicalPubkeys || []) as Pubkey[],
   }

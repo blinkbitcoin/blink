@@ -112,6 +112,7 @@ type LightningNetworkConfig = {
       pubkeys: Pubkey[]
       chanIds: ChanId[]
     }
+    reserveRetentionEnabled?: boolean
   }
   historicalPubkeys: Pubkey[]
 }
