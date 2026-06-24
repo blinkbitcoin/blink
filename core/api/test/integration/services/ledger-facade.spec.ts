@@ -498,6 +498,34 @@ describe("Facade", () => {
         expect(liabilitiesTxn.type).toBe(LedgerTransactionType.OnchainPayment)
       })
     })
+
+    describe("recordLnFeeReserveRetained", () => {
+      it("recordLnFeeReserveRetained", async () => {
+        const paymentHash = crypto.randomUUID() as PaymentHash
+        const paymentAmount = { amount: 80n, currency: WalletCurrency.Btc }
+
+        const res = await LedgerFacade.recordLnFeeReserveRetained({
+          paymentHash,
+          paymentAmount,
+        })
+        if (res instanceof Error) throw res
+
+        // Balanced two-leg journal: debit Assets:Reserve:Lightning, credit the
+        // bank-owner. A BTC-only entry adds no dealer legs, so exactly 2 transactions.
+        expect(res.transactionIds).toHaveLength(2)
+
+        // getTransactionsByHash returns the liabilities-side leg(s): just the
+        // bank-owner credit (the Assets reserve leg is excluded from the query).
+        const txns = await LedgerService().getTransactionsByHash(paymentHash)
+        if (txns instanceof Error) throw txns
+        expect(txns).toHaveLength(1)
+
+        const txn = txns[0]
+        expect(txn.type).toBe(LedgerTransactionType.LnReserveRetained)
+        expect(txn.credit).toBe(Number(paymentAmount.amount))
+        expect(txn.paymentHash).toBe(paymentHash)
+      })
+    })
   })
 
   describe("TxVolumeAmountSinceFactory", () => {
