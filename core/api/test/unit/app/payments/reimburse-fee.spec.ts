@@ -113,9 +113,9 @@ describe("reimburseFee", () => {
       "fee reimbursement",
     )
     // Reimburses exactly the fee difference (100 - 20 = 80) to the sender wallet.
-    expect(recordReceiveOffChainSpy.mock.calls[0][0].amountToCreditReceiver.btc.amount).toBe(
-      80n,
-    )
+    expect(
+      recordReceiveOffChainSpy.mock.calls[0][0].amountToCreditReceiver.btc.amount,
+    ).toBe(80n)
     expect(recordReceiveOffChainSpy.mock.calls[0][0].recipientWalletDescriptor.id).toBe(
       "walletId",
     )
