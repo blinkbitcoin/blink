@@ -906,3 +906,13 @@ export const LnRoutingRevenue = (collectedOn: Date) => {
 
   return metadata
 }
+
+export const LnReserveRetained = (paymentHash: PaymentHash) => {
+  const metadata: LnReserveRetainedLedgerMetadata = {
+    type: LedgerTransactionType.LnReserveRetained,
+    hash: paymentHash,
+    pending: false,
+  }
+
+  return metadata
+}
