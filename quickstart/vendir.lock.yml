@@ -2,24 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix(api): set LNURL payment description (#641)'
-      sha: 1ae3db99a34c82148c8b1ecbd39b767a66c2886f
+      commitTitle: 'feat: add profit transfer debug script (#648)'
+      sha: 54665919300d38e4adf7bbacd344f2282e334be2
       tags:
-      - 0.22.13-1-g1ae3db99a
+      - 0.22.14-1-g546659193
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'fix(api): set LNURL payment description (#641)'
-      sha: 1ae3db99a34c82148c8b1ecbd39b767a66c2886f
+      commitTitle: 'feat: add profit transfer debug script (#648)'
+      sha: 54665919300d38e4adf7bbacd344f2282e334be2
       tags:
-      - 0.22.13-1-g1ae3db99a
+      - 0.22.14-1-g546659193
     path: schemas
   - git:
-      commitTitle: 'fix(api): set LNURL payment description (#641)'
-      sha: 1ae3db99a34c82148c8b1ecbd39b767a66c2886f
+      commitTitle: 'feat: add profit transfer debug script (#648)'
+      sha: 54665919300d38e4adf7bbacd344f2282e334be2
       tags:
-      - 0.22.13-1-g1ae3db99a
+      - 0.22.14-1-g546659193
     path: gql
   path: graphql
 kind: LockConfig
