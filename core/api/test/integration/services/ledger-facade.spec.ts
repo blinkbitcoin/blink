@@ -502,11 +502,15 @@ describe("Facade", () => {
     describe("recordLnFeeReserveRetained", () => {
       it("recordLnFeeReserveRetained", async () => {
         const paymentHash = crypto.randomUUID() as PaymentHash
-        const paymentAmount = { amount: 80n, currency: WalletCurrency.Btc }
+        const btcAmount = { amount: 80n, currency: WalletCurrency.Btc }
+        const usdAmount = { amount: 5n, currency: WalletCurrency.Usd }
 
         const res = await LedgerFacade.recordLnFeeReserveRetained({
-          paymentAmount,
-          metadata: LedgerFacade.LnReserveRetained(paymentHash),
+          paymentAmount: btcAmount,
+          metadata: LedgerFacade.LnReserveRetained({
+            paymentAmount: { btc: btcAmount, usd: usdAmount },
+            paymentHash,
+          }),
         })
         if (res instanceof Error) throw res
 
@@ -518,7 +522,9 @@ describe("Facade", () => {
 
         const txn = txns[0]
         expect(txn.type).toBe(LedgerTransactionType.LnReserveRetained)
-        expect(txn.credit).toBe(Number(paymentAmount.amount))
+        expect(txn.credit).toBe(Number(btcAmount.amount))
+        // centsAmount is retrieved from metadata and for analytical purpose
+        expect(txn.centsAmount).toBe(Number(usdAmount.amount))
         expect(txn.paymentHash).toBe(paymentHash)
       })
     })

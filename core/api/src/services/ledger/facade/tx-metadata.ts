@@ -907,11 +907,22 @@ export const LnRoutingRevenue = (collectedOn: Date) => {
   return metadata
 }
 
-export const LnReserveRetained = (paymentHash: PaymentHash) => {
+export const LnReserveRetained = ({
+  paymentAmount,
+  paymentHash,
+}: {
+  paymentAmount: PaymentAmountInAllCurrencies
+  paymentHash: PaymentHash
+}) => {
   const metadata: LnReserveRetainedLedgerMetadata = {
     type: LedgerTransactionType.LnReserveRetained,
     hash: paymentHash,
     pending: false,
+
+    satsAmount: toSats(paymentAmount.btc.amount),
+    centsAmount: toCents(paymentAmount.usd.amount),
+    satsFee: toSats(0),
+    centsFee: toCents(0),
   }
 
   return metadata
