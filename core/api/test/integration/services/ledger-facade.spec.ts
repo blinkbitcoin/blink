@@ -505,8 +505,8 @@ describe("Facade", () => {
         const paymentAmount = { amount: 80n, currency: WalletCurrency.Btc }
 
         const res = await LedgerFacade.recordLnFeeReserveRetained({
-          paymentHash,
           paymentAmount,
+          metadata: LedgerFacade.LnReserveRetained(paymentHash),
         })
         if (res instanceof Error) throw res
 

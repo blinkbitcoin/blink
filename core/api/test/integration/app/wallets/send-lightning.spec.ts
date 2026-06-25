@@ -39,6 +39,7 @@ import { WalletInvoice } from "@/services/mongoose/schema"
 import { LnPayment } from "@/services/lnd/schema"
 import * as LndImpl from "@/services/lnd"
 import * as LedgerFacadeImpl from "@/services/ledger/facade"
+import * as ConfigImpl from "@/config"
 
 import {
   createMandatoryUsers,
@@ -605,6 +606,140 @@ describe("initiated via lightning", () => {
       // Note: 1st call is funding balance in test, 2nd call is fee reimbursement
       const args = recordOffChainReceiveSpy.mock.calls[1][0]
       expect(args.metadata.type).toBe(LedgerTransactionType.LnFeeReimbursement)
+    })
+
+    it("retains the reserve to the bank-owner (no sender reimbursement) when the retention flag is enabled", async () => {
+      jest.spyOn(ConfigImpl, "getLnFeeReserveRetentionEnabled").mockReturnValue(true)
+
+      // Setup mocks: actual routing fee is 0, so the full prepaid reserve is unused
+      const { LndService: LnServiceOrig } = jest.requireActual("@/services/lnd")
+      jest.spyOn(LndImpl, "LndService").mockReturnValue({
+        ...LnServiceOrig(),
+        defaultPubkey: (): Pubkey => DEFAULT_PUBKEY,
+        listAllPubkeys: () => [],
+        payInvoiceViaPaymentDetails: () => ({
+          roundedUpFee: toSats(0),
+          revealedPreImage: "revealedPreImage" as RevealedPreImage,
+          sentFromPubkey: DEFAULT_PUBKEY,
+        }),
+      })
+
+      const recordLnFeeReserveRetainedSpy = jest.spyOn(
+        LedgerFacadeImpl,
+        "recordLnFeeReserveRetained",
+      )
+      const recordOffChainReceiveSpy = jest.spyOn(
+        LedgerFacadeImpl,
+        "recordReceiveOffChain",
+      )
+
+      const newWalletDescriptor = await createRandomUserAndBtcWallet()
+      const newAccount = await AccountsRepository().findById(
+        newWalletDescriptor.accountId,
+      )
+      if (newAccount instanceof Error) throw newAccount
+
+      // Fund balance for send
+      const receive = await recordReceiveLnPayment({
+        walletDescriptor: newWalletDescriptor,
+        paymentAmount: receiveAmounts,
+        bankFee: receiveBankFee,
+        displayAmounts: receiveDisplayAmounts,
+        memo,
+      })
+      if (receive instanceof Error) throw receive
+
+      // Execute pay
+      await Payments.payNoAmountInvoiceByWalletIdForBtcWallet({
+        uncheckedPaymentRequest: noAmountLnInvoice.paymentRequest,
+        memo,
+        senderWalletId: newWalletDescriptor.id,
+        senderAccount: newAccount,
+        amount,
+      })
+
+      expect(recordLnFeeReserveRetainedSpy).toHaveBeenCalledTimes(1)
+      const args = recordLnFeeReserveRetainedSpy.mock.calls[0][0]
+      expect(args.metadata.type).toBe(LedgerTransactionType.LnReserveRetained)
+      expect(args.metadata.hash).toBe(noAmountLnInvoice.paymentHash)
+
+      // The one call is from the funding balance
+      expect(recordOffChainReceiveSpy).toHaveBeenCalledTimes(1)
+
+      // The sender is not reimbursed: no fee-reimbursement receive entry is recorded
+      const reimbursementReceives = recordOffChainReceiveSpy.mock.calls.filter(
+        ([callArgs]) =>
+          callArgs.metadata.type === LedgerTransactionType.LnFeeReimbursement,
+      )
+      expect(reimbursementReceives).toHaveLength(0)
+    })
+
+    it("does not retain the reserve when the fee is known in advance (probed), even with the flag enabled", async () => {
+      jest.spyOn(ConfigImpl, "getLnFeeReserveRetentionEnabled").mockReturnValue(true)
+
+      const { LndService: LnServiceOrig } = jest.requireActual("@/services/lnd")
+      jest.spyOn(LndImpl, "LndService").mockReturnValue({
+        ...LnServiceOrig(),
+        defaultPubkey: (): Pubkey => DEFAULT_PUBKEY,
+        listAllPubkeys: () => [],
+        payInvoiceViaRoutes: () => ({
+          roundedUpFee: toSats(0),
+          revealedPreImage: "revealedPreImage" as RevealedPreImage,
+          sentFromPubkey: DEFAULT_PUBKEY,
+        }),
+      })
+
+      const recordLnFeeReserveRetainedSpy = jest.spyOn(
+        LedgerFacadeImpl,
+        "recordLnFeeReserveRetained",
+      )
+      const recordOffChainReceiveSpy = jest.spyOn(
+        LedgerFacadeImpl,
+        "recordReceiveOffChain",
+      )
+
+      const newWalletDescriptor = await createRandomUserAndBtcWallet()
+      const newAccount = await AccountsRepository().findById(
+        newWalletDescriptor.accountId,
+      )
+      if (newAccount instanceof Error) throw newAccount
+
+      // Fund balance for send
+      const receive = await recordReceiveLnPayment({
+        walletDescriptor: newWalletDescriptor,
+        paymentAmount: receiveAmounts,
+        bankFee: receiveBankFee,
+        displayAmounts: receiveDisplayAmounts,
+        memo,
+      })
+      if (receive instanceof Error) throw receive
+
+      // Probe ("get exact fee") stores a payment flow with a fixed route
+      const { error } = await Payments.getNoAmountLightningFeeEstimationForBtcWallet({
+        walletId: newWalletDescriptor.id,
+        uncheckedPaymentRequest: noAmountLnInvoice.paymentRequest,
+        amount,
+      })
+      expect(error).toBeUndefined()
+
+      // Pay via the probed route (fee known in advance) so reimburseFee is skipped
+      await Payments.payNoAmountInvoiceByWalletIdForBtcWallet({
+        uncheckedPaymentRequest: noAmountLnInvoice.paymentRequest,
+        memo,
+        senderWalletId: newWalletDescriptor.id,
+        senderAccount: newAccount,
+        amount,
+      })
+
+      // Probed payments skip reimburseFee entirely: the reserve is neither retained
+      // nor reimbursed; the sender is charged the exact probed fee.
+      expect(recordLnFeeReserveRetainedSpy).not.toHaveBeenCalled()
+
+      const reimbursementReceives = recordOffChainReceiveSpy.mock.calls.filter(
+        ([callArgs]) =>
+          callArgs.metadata.type === LedgerTransactionType.LnFeeReimbursement,
+      )
+      expect(reimbursementReceives).toHaveLength(0)
     })
 
     it("delete payment flow when lightning service returns TemporaryChannelFailureError", async () => {

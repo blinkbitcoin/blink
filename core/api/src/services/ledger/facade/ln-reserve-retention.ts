@@ -6,16 +6,14 @@ import { persistAndReturnEntry } from "../helpers"
 
 import { staticAccountIds } from "./static-account-ids"
 
-import { LnReserveRetained } from "./tx-metadata"
-
 import { WalletCurrency, ZERO_BANK_FEE, ZERO_CENTS } from "@/domain/shared"
 
 export const recordLnFeeReserveRetained = async ({
-  paymentHash,
   paymentAmount,
+  metadata,
 }: {
-  paymentHash: PaymentHash
   paymentAmount: BtcPaymentAmount
+  metadata: LnReserveRetainedLedgerMetadata
 }) => {
   const accountIds = await staticAccountIds()
   if (accountIds instanceof Error) return accountIds
@@ -24,8 +22,6 @@ export const recordLnFeeReserveRetained = async ({
     id: accountIds.bankOwnerAccountId,
     currency: WalletCurrency.Btc,
   }
-
-  const metadata = LnReserveRetained(paymentHash)
 
   let entry = MainBook.entry("ln fee reserve retained")
   const builder = EntryBuilder({
@@ -44,5 +40,5 @@ export const recordLnFeeReserveRetained = async ({
       additionalMetadata: {},
     })
 
-  return persistAndReturnEntry({ entry, hash: paymentHash })
+  return persistAndReturnEntry({ entry, hash: metadata.hash })
 }

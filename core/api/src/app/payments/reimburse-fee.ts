@@ -69,8 +69,8 @@ export const reimburseFee = async <S extends WalletCurrency, R extends WalletCur
     if (paymentHash instanceof Error) return paymentHash
 
     const result = await LedgerFacade.recordLnFeeReserveRetained({
-      paymentHash,
       paymentAmount: feeDifference.btc,
+      metadata: LedgerFacade.LnReserveRetained(paymentHash),
     })
     if (result instanceof Error) return result
 
