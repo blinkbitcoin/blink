@@ -108,7 +108,6 @@ describe("WithdrawalFeeCalculator", () => {
         return {
           netInVolumeAmountInboundNetworkFn: mockNetInVolumeAmountInboundNetworkFn,
           netInVolumeAmountOutboundNetworkFn: mockNetInVolumeAmountOutboundNetworkFn,
-          priceRatio,
         }
       }
 
@@ -155,6 +154,7 @@ describe("WithdrawalFeeCalculator", () => {
           wallet,
           networkFee: { amount: networkFee, feeRate: 1 },
           speed: "fast",
+          priceRatio,
           imbalanceFns: createImbalanceFns(0n, 0n),
         })
         expect(fee).not.toBeInstanceOf(Error)
@@ -175,6 +175,7 @@ describe("WithdrawalFeeCalculator", () => {
           wallet,
           networkFee: { amount: networkFee, feeRate: 1 },
           speed: "fast",
+          priceRatio,
           imbalanceFns: createImbalanceFns(0n, 2_000_000n),
         })
 
@@ -196,6 +197,7 @@ describe("WithdrawalFeeCalculator", () => {
           wallet,
           networkFee: { amount: networkFee, feeRate: 1 },
           speed: "fast",
+          priceRatio,
           imbalanceFns: createImbalanceFns(500_000n, 0n),
         })
 
@@ -217,6 +219,7 @@ describe("WithdrawalFeeCalculator", () => {
           wallet,
           networkFee: { amount: networkFee, feeRate: 1 },
           speed: "fast",
+          priceRatio,
           imbalanceFns: createImbalanceFns(0n, 2_000_000n),
         })
 
@@ -243,6 +246,7 @@ describe("WithdrawalFeeCalculator", () => {
           wallet,
           networkFee: { amount: networkFee, feeRate: 1 },
           speed: "fast",
+          priceRatio,
           imbalanceFns: createImbalanceFns(500_000n, 0n),
         })
 
@@ -266,6 +270,7 @@ describe("WithdrawalFeeCalculator", () => {
           wallet,
           networkFee: { amount: networkFee, feeRate: 1 },
           speed: "fast",
+          priceRatio,
           imbalanceFns: createImbalanceFns(2_000_000n, 0n),
         })
 
@@ -288,6 +293,7 @@ describe("WithdrawalFeeCalculator", () => {
           wallet,
           networkFee: { amount: networkFee, feeRate: 1 },
           speed: "fast",
+          priceRatio,
           imbalanceFns: createImbalanceFns(2_000_000n, 0n),
         })
 
@@ -354,7 +360,7 @@ describe("WithdrawalFeeCalculator", () => {
           accountId,
           wallet,
           networkFee: { amount: networkFee, feeRate: 1 },
-          imbalanceFns: { priceRatio } as unknown as ImbalanceFns,
+          priceRatio,
         })
 
         expect(fee).not.toBeInstanceOf(Error)
@@ -375,7 +381,7 @@ describe("WithdrawalFeeCalculator", () => {
           accountId,
           wallet,
           networkFee: { amount: networkFee, feeRate: 1 },
-          imbalanceFns: { priceRatio } as unknown as ImbalanceFns,
+          priceRatio,
         })
 
         expect(fee).not.toBeInstanceOf(Error)

@@ -63,7 +63,7 @@ describe("PercentageAboveThresholdFeeStrategy", () => {
       previousFee: {} as FeeDetails,
       paymentAmount,
       wallet,
-      imbalanceFns: priceRatio ? ({ priceRatio } as unknown as ImbalanceFns) : undefined,
+      priceRatio,
     })
   }
 

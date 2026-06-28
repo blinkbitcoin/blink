@@ -24,19 +24,14 @@ export const PercentageAboveThresholdFeeStrategy = (
 
   const calculate = async ({
     paymentAmount,
-    imbalanceFns,
+    priceRatio,
   }: FeeCalculationArgs): Promise<BtcPaymentAmount | ValidationError> => {
-    // Fail closed: the threshold is evaluated in USD, so without a price ratio
-    // we cannot know whether the payment is above the threshold.
-    const priceRatio = imbalanceFns?.priceRatio
     if (!priceRatio) {
       return new ValidationError(
         "Price ratio required to evaluate percentageAboveThreshold fee",
       )
     }
 
-    // Floor so that an amount converting to exactly `thresholdInCents` does not
-    // tip over the strictly-above gate.
     const amountInCents = priceRatio.convertFromBtcToFloor(paymentAmount)
     if (amountInCents.amount <= BigInt(config.thresholdInCents)) {
       return ZERO_SATS

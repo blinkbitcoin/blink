@@ -614,7 +614,7 @@ const LPFBWithConversion = <S extends WalletCurrency, R extends WalletCurrency>(
         accountId: state.senderAccountId,
       },
       networkFee: { amount: ZERO_SATS, feeRate: 0 },
-      imbalanceFns: { priceRatio },
+      priceRatio,
     })
     if (feeAmounts instanceof Error) return feeAmounts
 

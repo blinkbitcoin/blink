@@ -112,6 +112,7 @@ export const ImbalanceFeeStrategy = (
 
   const calculate = async ({
     paymentAmount,
+    priceRatio,
     imbalanceFns,
     wallet,
   }: FeeCalculationArgs): Promise<BtcPaymentAmount | ValidationError> => {
@@ -121,27 +122,19 @@ export const ImbalanceFeeStrategy = (
     })
     if (zeroAmount instanceof Error) return zeroAmount
 
-    let actualImbalance: BtcPaymentAmount | undefined
-    if (
-      imbalanceFns?.netInVolumeAmountInboundNetworkFn &&
-      imbalanceFns?.netInVolumeAmountOutboundNetworkFn
-    ) {
-      const imbalanceCalculator = ImbalanceCalculator({
-        netInVolumeAmountInboundNetworkFn: imbalanceFns.netInVolumeAmountInboundNetworkFn,
-        netInVolumeAmountOutboundNetworkFn:
-          imbalanceFns.netInVolumeAmountOutboundNetworkFn,
-        priceRatio: imbalanceFns.priceRatio,
-        sinceDaysAgo: config.daysLookback,
-      })
-      const swapOutImbalance =
-        await imbalanceCalculator.getSwapOutImbalanceBtcAmount(wallet)
-      if (swapOutImbalance instanceof Error) return swapOutImbalance
-      actualImbalance = swapOutImbalance
+    if (!imbalanceFns || !priceRatio) {
+      return new ValidationError(
+        "ImbalanceFeeStrategy requires priceRatio and volume fns",
+      )
     }
 
-    if (!actualImbalance) {
-      return zeroAmount
-    }
+    const imbalanceCalculator = ImbalanceCalculator({
+      ...imbalanceFns,
+      priceRatio,
+      sinceDaysAgo: config.daysLookback,
+    })
+    const actualImbalance = await imbalanceCalculator.getSwapOutImbalanceBtcAmount(wallet)
+    if (actualImbalance instanceof Error) return actualImbalance
 
     const amountWithImbalanceCalcs = calc.sub(
       calc.add(actualImbalance, paymentAmount),

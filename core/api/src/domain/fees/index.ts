@@ -41,6 +41,7 @@ export const calculateCompositeFee = async ({
   paymentAmount,
   networkFee,
   strategies,
+  priceRatio,
   imbalanceFns,
   isValidatedMerchant,
 }: CalculateCompositeFeeArgs): Promise<FeeDetails | ValidationError> => {
@@ -59,6 +60,7 @@ export const calculateCompositeFee = async ({
     accountId,
     accountRole,
     wallet,
+    priceRatio,
     imbalanceFns,
     isValidatedMerchant,
   }
@@ -166,6 +168,7 @@ export const WithdrawalFeeCalculator = (): WithdrawalFeeCalculator => {
     wallet,
     networkFee,
     speed,
+    priceRatio,
     imbalanceFns,
   }: OnChainWithdrawalFeeArgs): Promise<WithdrawalFeeResult | ValidationError> => {
     const { send: onchainSendConfig } = getOnchainNetworkConfig()
@@ -177,6 +180,7 @@ export const WithdrawalFeeCalculator = (): WithdrawalFeeCalculator => {
       paymentAmount,
       networkFee,
       strategies,
+      priceRatio,
       imbalanceFns,
       isValidatedMerchant: false,
     })
@@ -188,6 +192,7 @@ export const WithdrawalFeeCalculator = (): WithdrawalFeeCalculator => {
     accountRole,
     wallet,
     networkFee,
+    priceRatio,
     imbalanceFns,
   }: LightningWithdrawalFeeArgs): Promise<WithdrawalFeeResult | ValidationError> => {
     const { send: lightningSendConfig } = getLightningNetworkConfig()
@@ -199,6 +204,7 @@ export const WithdrawalFeeCalculator = (): WithdrawalFeeCalculator => {
       paymentAmount,
       networkFee,
       strategies,
+      priceRatio,
       imbalanceFns,
       isValidatedMerchant: false,
     })
