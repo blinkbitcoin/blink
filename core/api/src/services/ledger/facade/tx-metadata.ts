@@ -144,12 +144,6 @@ export const LnSendLedgerMetadata = ({
     usdProtocolAndBankFee: { amount: centsFee },
   } = paymentAmounts
 
-  // Model 2: btcProtocolAndBankFee is the accounting TOTAL (routing reserve +
-  // service fee), so satsFee/centsFee already include the 0.3% service fee with
-  // no extra math (warehouse USD revenue = sats_fee / sats_per_cent is correct).
-  // The service-fee breakdown is NOT persisted as a separate field — it is
-  // self-identified by the bank-owner credit leg and recovered at reimbursement
-  // reconstruction (reserve = total − bank-owner leg), exactly like on-chain.
   const metadata: AddLnSendLedgerMetadata = {
     type: LedgerTransactionType.Payment,
     pending: true,

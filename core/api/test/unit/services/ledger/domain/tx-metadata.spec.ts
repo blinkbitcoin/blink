@@ -43,8 +43,6 @@ describe("Tx metadata", () => {
     usdPaymentAmount: { amount: 10n, currency: WalletCurrency.Usd },
     btcProtocolAndBankFee: ZERO_SATS,
     usdProtocolAndBankFee: ZERO_CENTS,
-    btcBankFee: ZERO_SATS,
-    usdBankFee: ZERO_CENTS,
   }
 
   const startingMetadataArgs = {
@@ -530,35 +528,6 @@ describe("Tx metadata", () => {
               expect(internalAccountsAdditionalMetadata).not.toHaveProperty(["memoPayer"])
             })
           }
-
-          it("satsFee is the routing-reserve+service TOTAL; no serviceFee field (Model 2, leg-recovery)", () => {
-            // total (400) = routing reserve (360) + service fee (40)
-            const model2PaymentAmounts = {
-              btcPaymentAmount: { amount: 2000n, currency: WalletCurrency.Btc },
-              usdPaymentAmount: { amount: 10n, currency: WalletCurrency.Usd },
-              btcProtocolAndBankFee: { amount: 400n, currency: WalletCurrency.Btc },
-              usdProtocolAndBankFee: { amount: 20n, currency: WalletCurrency.Usd },
-              btcBankFee: { amount: 40n, currency: WalletCurrency.Btc },
-              usdBankFee: { amount: 2n, currency: WalletCurrency.Usd },
-            }
-
-            const { metadata } = LnSendLedgerMetadata({
-              ...commonCrcMetadataArgs,
-              ...sendMetadataArgs,
-              ...lnMetadataArgs,
-              paymentAmounts: model2PaymentAmounts,
-              feeKnownInAdvance: true,
-            })
-
-            // satsFee/centsFee = btcProtocolAndBankFee/usdProtocolAndBankFee
-            // (the accounting TOTAL), NOT total + bankFee.
-            expect(metadata.satsFee).toEqual(toSats(400))
-            expect(metadata.centsFee).toEqual(toCents(20))
-            // The service-fee breakdown is NOT persisted on the metadata — it is
-            // recovered from the self-identifying bank-owner credit leg at
-            // reimbursement reconstruction (mirrors on-chain).
-            expect(metadata).not.toHaveProperty("serviceFee")
-          })
         })
       })
     })
