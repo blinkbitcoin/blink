@@ -2,7 +2,12 @@
 
 import { Entry, IJournal } from "medici"
 
-import { WalletCurrency, AmountCalculator, ZERO_BANK_FEE } from "@/domain/shared"
+import {
+  WalletCurrency,
+  AmountCalculator,
+  ZERO_BANK_FEE,
+  ZERO_CENTS,
+} from "@/domain/shared"
 
 import {
   lndLedgerAccountId,
@@ -1053,6 +1058,72 @@ describe("EntryBuilder", () => {
           }),
         )
       })
+    })
+  })
+
+  // Entry shape of the #07 async-USD-failure service-fee reversal
+  // (recordLnFailedSendServiceFeeReversal): a BTC-only bank-owner → offchain
+  // entry that reverses the orphaned service-fee credit. Mirrors the facade's
+  // exact wiring: withTotalAmount({ usd: ZERO }) so NO dealer legs are created,
+  // withBankFee(ZERO), debitAccount(bankOwner), creditOffChain().
+  describe("Ln failed-send service-fee reversal (bank-owner → offchain, BTC-only)", () => {
+    const bankOwnerAccountDescriptor = {
+      id: staticAccountIds.bankOwnerAccountId,
+      currency: WalletCurrency.Btc,
+    } as LedgerAccountDescriptor<"BTC">
+
+    const serviceFeeAmount = {
+      currency: WalletCurrency.Btc,
+      amount: 3000n,
+    } as BtcPaymentAmount
+
+    const buildReversal = () => {
+      const entry = createEntry()
+      const builder = EntryBuilder({
+        staticAccountIds,
+        entry,
+        metadata,
+        additionalInternalMetadata,
+      })
+      return builder
+        .withTotalAmount({ usdWithFees: ZERO_CENTS, btcWithFees: serviceFeeAmount })
+        .withBankFee(ZERO_BANK_FEE)
+        .debitAccount({
+          accountDescriptor: bankOwnerAccountDescriptor,
+          additionalMetadata: {},
+        })
+        .creditOffChain()
+    }
+
+    it("debits bank-owner and credits offchain the service-fee sats, balanced", () => {
+      const result = buildReversal()
+
+      const credits = result.transactions.filter((t) => t.credit > 0)
+      const debits = result.transactions.filter((t) => t.debit > 0)
+
+      expectJournalToBeBalanced(result)
+      expectEntryToEqual(
+        findEntry(debits, staticAccountIds.bankOwnerAccountId),
+        serviceFeeAmount,
+      )
+      expectEntryToEqual(findEntry(credits, lndLedgerAccountId), serviceFeeAmount)
+    })
+
+    it("creates NO dealer legs (BTC-only, usd = ZERO)", () => {
+      const result = buildReversal()
+
+      // Exactly two legs: bank-owner debit + lnd credit. No dealer conversion.
+      expect(result.transactions).toHaveLength(2)
+      expect(
+        result.transactions.find(
+          (t) => t.accounts === staticAccountIds.dealerBtcAccountId,
+        ),
+      ).toBeUndefined()
+      expect(
+        result.transactions.find(
+          (t) => t.accounts === staticAccountIds.dealerUsdAccountId,
+        ),
+      ).toBeUndefined()
     })
   })
 })

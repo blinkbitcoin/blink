@@ -4,8 +4,8 @@ type NetworkFee = {
 }
 
 type ImbalanceFns = {
-  netInVolumeAmountInboundNetworkFn: NewGetVolumeAmountSinceFn
-  netInVolumeAmountOutboundNetworkFn: NewGetVolumeAmountSinceFn
+  netInVolumeAmountInboundNetworkFn?: NewGetVolumeAmountSinceFn
+  netInVolumeAmountOutboundNetworkFn?: NewGetVolumeAmountSinceFn
   priceRatio: WalletPriceRatio
 }
 

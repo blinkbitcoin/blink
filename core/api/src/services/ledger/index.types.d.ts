@@ -40,6 +40,11 @@ type RecordBankownerReconciliationArgs = {
   }
 }
 
+type RecordLnFailedSendServiceFeeReversalArgs = {
+  paymentHash: PaymentHash
+  btcBankFee: BtcPaymentAmount
+}
+
 type RecordIntraledgerArgs = {
   description: string
   senderWalletDescriptor: WalletDescriptor<WalletCurrency>

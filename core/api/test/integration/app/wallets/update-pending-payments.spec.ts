@@ -3,7 +3,7 @@ import { updatePendingPaymentByHash } from "@/app/payments"
 import { LedgerTransactionType } from "@/domain/ledger"
 import { FAILED_USD_MEMO } from "@/domain/ledger/ln-payment-state"
 import { PaymentStatus } from "@/domain/bitcoin/lightning"
-import { AmountCalculator, WalletCurrency } from "@/domain/shared"
+import { AmountCalculator, WalletCurrency, ZERO_CENTS, ZERO_SATS } from "@/domain/shared"
 import * as DisplayAmountsConverterImpl from "@/domain/fiat"
 
 import { baseLogger } from "@/services/logger"
@@ -118,5 +118,103 @@ describe("update pending payments", () => {
     const args = recordOffChainReceiveSpy.mock.calls[0][0]
     expect(args.metadata.type).toBe(LedgerTransactionType.Payment)
     expect(args.description).toBe(FAILED_USD_MEMO)
+  })
+
+  // round-2 regression (#07 / AC5 on the USD-failure path): an async USD-wallet
+  // external send carrying a 0.3% service fee that later FAILS must reverse the
+  // bank-owner service-fee credit (no orphan revenue). Unlike the BTC path which
+  // VOIDs the journal, the USD path settles + reimburses, so the reversal is
+  // explicit. Mirrors the BTC "no revenue on failure" case for the USD path.
+  const runUsdFailureUpdate = async ({
+    btcBankFee,
+    usdBankFee,
+  }: {
+    btcBankFee: BtcPaymentAmount
+    usdBankFee: UsdPaymentAmount
+  }) => {
+    const { LndService: LnServiceOrig } = jest.requireActual("@/services/lnd")
+    jest.spyOn(LndImpl, "LndService").mockReturnValue({
+      ...LnServiceOrig(),
+      lookupPayment: () => ({ status: PaymentStatus.Failed }),
+    })
+
+    const { LnPaymentsRepository: LnPaymentsRepositoryOrig } =
+      jest.requireActual("@/services/mongoose")
+    jest.spyOn(MongooseImpl, "LnPaymentsRepository").mockReturnValue({
+      ...LnPaymentsRepositoryOrig(),
+      findByPaymentHash: () => ({ paymentRequest: samplePaymentRequest }),
+    })
+
+    const reversalSpy = jest.spyOn(
+      LedgerFacadeImpl,
+      "recordLnFailedSendServiceFeeReversal",
+    )
+
+    const newWalletDescriptor = await createRandomUserAndBtcWallet()
+
+    const { paymentHash } = await recordSendLnPayment({
+      walletDescriptor: newWalletDescriptor,
+      paymentAmount: sendAmount,
+      bankFee,
+      displayAmounts: displaySendEurAmounts,
+    })
+
+    // USD-denominated sender flow carrying the service-fee breakdown in
+    // btcBankFee/usdBankFee (Model 2).
+    const mockedPaymentFlow = {
+      senderWalletCurrency: WalletCurrency.Usd,
+      paymentHashForFlow: () => paymentHash,
+      senderWalletDescriptor: () => newWalletDescriptor,
+
+      btcPaymentAmount: sendAmount.btc,
+      usdPaymentAmount: sendAmount.usd,
+      btcProtocolAndBankFee: bankFee.btc,
+      usdProtocolAndBankFee: bankFee.usd,
+      btcBankFee,
+      usdBankFee,
+      totalAmountsForPayment: () => ({
+        btc: calc.add(sendAmount.btc, bankFee.btc),
+        usd: calc.add(sendAmount.usd, bankFee.usd),
+      }),
+    }
+
+    const { PaymentFlowStateRepository: PaymentFlowStateRepositoryOrig } =
+      jest.requireActual("@/services/mongoose")
+    jest.spyOn(MongooseImpl, "PaymentFlowStateRepository").mockReturnValue({
+      ...PaymentFlowStateRepositoryOrig(),
+      markLightningPaymentFlowNotPending: () => mockedPaymentFlow,
+    })
+
+    await updatePendingPaymentByHash({ paymentHash, logger: baseLogger })
+
+    return { reversalSpy, paymentHash }
+  }
+
+  it("reverses the bank-owner service-fee credit on an async USD failure carrying a service fee", async () => {
+    const serviceFee = { amount: 30n, currency: WalletCurrency.Btc } as BtcPaymentAmount
+    const usdServiceFee = {
+      amount: 10n,
+      currency: WalletCurrency.Usd,
+    } as UsdPaymentAmount
+
+    const { reversalSpy, paymentHash } = await runUsdFailureUpdate({
+      btcBankFee: serviceFee,
+      usdBankFee: usdServiceFee,
+    })
+
+    expect(reversalSpy).toHaveBeenCalledTimes(1)
+    expect(reversalSpy).toHaveBeenCalledWith({
+      paymentHash,
+      btcBankFee: serviceFee,
+    })
+  })
+
+  it("does not reverse when the failed USD send carried no service fee", async () => {
+    const { reversalSpy } = await runUsdFailureUpdate({
+      btcBankFee: ZERO_SATS,
+      usdBankFee: ZERO_CENTS,
+    })
+
+    expect(reversalSpy).not.toHaveBeenCalled()
   })
 })

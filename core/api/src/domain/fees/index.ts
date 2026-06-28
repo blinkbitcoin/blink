@@ -3,6 +3,7 @@ import { PercentageFeeStrategy } from "./strategies/percentage"
 import { TieredFeeStrategy } from "./strategies/tiered"
 import { ExemptAccountFeeStrategy } from "./strategies/exempt-account"
 import { ImbalanceFeeStrategy } from "./strategies/imbalance"
+import { PercentageAboveThresholdFeeStrategy } from "./strategies/percentage-above-threshold"
 import { ExponentialDecayStrategy } from "./strategies/exponential-decay"
 
 import {
@@ -29,6 +30,7 @@ const FEE_STRATEGIES = {
   tieredFlat: TieredFeeStrategy,
   exemptAccount: ExemptAccountFeeStrategy,
   imbalance: ImbalanceFeeStrategy,
+  percentageAboveThreshold: PercentageAboveThresholdFeeStrategy,
   exponentialDecay: ExponentialDecayStrategy,
 } as const
 

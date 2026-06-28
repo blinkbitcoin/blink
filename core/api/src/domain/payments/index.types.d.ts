@@ -78,6 +78,11 @@ type PaymentFlowState<
 > = XorPaymentHashProperty & {
   descriptionFromInvoice: string
   skipProbeForDestination: boolean
+  // Service/bank fee carried separately from the routing reserve
+  // (btcProtocolAndBankFee). Only added to the sender debit and recognized as
+  // revenue; never folded into the LND routing budget / verifyMaxFee check.
+  btcBankFee: BtcPaymentAmount
+  usdBankFee: UsdPaymentAmount
 } & PaymentFlowCommonState<S, R>
 
 type OnChainPaymentFlowState<S extends WalletCurrency, R extends WalletCurrency> = {
@@ -283,6 +288,8 @@ type LPFBWithRouteState<
 > = LPFBWithConversionState<S, R> & {
   outgoingNodePubkey: Pubkey | undefined
   checkedRoute: RawRoute | undefined
+  btcBankFee?: BtcPaymentAmount
+  usdBankFee?: UsdPaymentAmount
 }
 
 type OnChainPaymentFlowBuilder<S extends WalletCurrency> = {

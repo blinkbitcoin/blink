@@ -122,9 +122,15 @@ export const ImbalanceFeeStrategy = (
     if (zeroAmount instanceof Error) return zeroAmount
 
     let actualImbalance: BtcPaymentAmount | undefined
-    if (imbalanceFns) {
+    if (
+      imbalanceFns?.netInVolumeAmountInboundNetworkFn &&
+      imbalanceFns?.netInVolumeAmountOutboundNetworkFn
+    ) {
       const imbalanceCalculator = ImbalanceCalculator({
-        ...imbalanceFns,
+        netInVolumeAmountInboundNetworkFn: imbalanceFns.netInVolumeAmountInboundNetworkFn,
+        netInVolumeAmountOutboundNetworkFn:
+          imbalanceFns.netInVolumeAmountOutboundNetworkFn,
+        priceRatio: imbalanceFns.priceRatio,
         sinceDaysAgo: config.daysLookback,
       })
       const swapOutImbalance =

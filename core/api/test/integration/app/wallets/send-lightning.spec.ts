@@ -26,6 +26,7 @@ import {
 import { AmountCalculator, WalletCurrency } from "@/domain/shared"
 import * as LnFeesImpl from "@/domain/payments"
 import * as DisplayAmountsConverterImpl from "@/domain/fiat"
+import * as ConfigImpl from "@/config"
 
 import {
   AccountsRepository,
@@ -34,6 +35,7 @@ import {
   WalletInvoicesRepository,
 } from "@/services/mongoose"
 import { LedgerService } from "@/services/ledger"
+import { getBankOwnerWalletId } from "@/services/ledger/caching"
 import { Transaction, TransactionMetadata } from "@/services/ledger/schema"
 import { WalletInvoice } from "@/services/mongoose/schema"
 import { LnPayment } from "@/services/lnd/schema"
@@ -1131,6 +1133,330 @@ describe("initiated via lightning", () => {
       expect(lnIntraledgerLedgerMetadataSpy).toHaveBeenCalledTimes(1)
       const args = recordIntraledgerSpy.mock.calls[0][0]
       expect(args.metadata.type).toBe(LedgerTransactionType.LnIntraLedger)
+    })
+  })
+
+  // T2 #07 — 0.3% Lightning service fee on external sends above $100.
+  // NOTE: these tests require live mongo / LND / price-server and are not
+  // runnable in a bare sandbox. The exact-$100.00 boundary is covered
+  // deterministically by the strategy unit test; here we cover ≤ $100.
+  describe("service fee on external sends (#07)", () => {
+    // > $100 at the dev price-server rate (~$2.10 per 10_040 sats)
+    const aboveThresholdSats = toSats(1_000_000)
+    const expectedServiceFeeSats = Number(
+      calc.mulBasisPoints(
+        { amount: BigInt(aboveThresholdSats), currency: WalletCurrency.Btc },
+        30n,
+      ).amount,
+    )
+
+    const fundingReceiveAmounts = {
+      btc: { amount: 2_000_000n, currency: WalletCurrency.Btc } as BtcPaymentAmount,
+      usd: { amount: 42_000n, currency: WalletCurrency.Usd } as UsdPaymentAmount,
+    }
+    const fundingDisplayAmounts = {
+      amountDisplayCurrency: Number(
+        fundingReceiveAmounts.usd.amount,
+      ) as DisplayCurrencyBaseAmount,
+      feeDisplayCurrency: Number(receiveBankFee.usd.amount) as DisplayCurrencyBaseAmount,
+      displayCurrency: UsdDisplayCurrency,
+    }
+
+    const enableServiceFeeGate = () => {
+      const { getLightningNetworkConfig } = jest.requireActual("@/config")
+      const actual = getLightningNetworkConfig()
+      jest.spyOn(ConfigImpl, "getLightningNetworkConfig").mockReturnValue({
+        ...actual,
+        send: {
+          ...actual.send,
+          feeStrategies: [
+            {
+              name: "lightning_service_fee",
+              strategy: "percentageAboveThreshold",
+              params: { basisPoints: 30, thresholdInCents: 10_000 },
+            },
+          ],
+        },
+      })
+    }
+
+    const mockLndSuccess = (rawRoute?: RawRoute) => {
+      const { LndService: LnServiceOrig } = jest.requireActual("@/services/lnd")
+      jest.spyOn(LndImpl, "LndService").mockReturnValue({
+        ...LnServiceOrig(),
+        defaultPubkey: (): Pubkey => DEFAULT_PUBKEY,
+        listAllPubkeys: () => [],
+        findRouteForInvoice: () =>
+          rawRoute
+            ? { rawRoute, pubkey: DEFAULT_PUBKEY }
+            : new TemporaryChannelFailureError(),
+        findRouteForNoAmountInvoice: () =>
+          rawRoute
+            ? { rawRoute, pubkey: DEFAULT_PUBKEY }
+            : new TemporaryChannelFailureError(),
+        payInvoiceViaPaymentDetails: () => ({
+          roundedUpFee: toSats(0),
+          revealedPreImage: "revealedPreImage" as RevealedPreImage,
+          sentFromPubkey: DEFAULT_PUBKEY,
+        }),
+        payInvoiceViaRoutes: () => ({
+          roundedUpFee: toSats(0),
+          revealedPreImage: "revealedPreImage" as RevealedPreImage,
+          sentFromPubkey: DEFAULT_PUBKEY,
+        }),
+      })
+    }
+
+    // Net sats credited to the bank-owner (service-fee revenue) for a hash.
+    // Returns 0 if no revenue leg was written (or it was reverted).
+    const bankOwnerServiceFeeFor = async (paymentHash: PaymentHash): Promise<number> => {
+      const bankOwnerWalletId = await getBankOwnerWalletId()
+      const txns = await LedgerService().getTransactionsByHash(paymentHash)
+      if (txns instanceof Error) throw txns
+      const bankTxns = txns.filter((t) => t.walletId === bankOwnerWalletId)
+      const credit = bankTxns.reduce((sum, t) => sum + (Number(t.credit) || 0), 0)
+      const debit = bankTxns.reduce((sum, t) => sum + (Number(t.debit) || 0), 0)
+      return credit - debit
+    }
+
+    const fundedBtcWallet = async () => {
+      const walletDescriptor = await createRandomUserAndBtcWallet()
+      const account = await AccountsRepository().findById(walletDescriptor.accountId)
+      if (account instanceof Error) throw account
+
+      const receive = await recordReceiveLnPayment({
+        walletDescriptor,
+        paymentAmount: fundingReceiveAmounts,
+        bankFee: receiveBankFee,
+        displayAmounts: fundingDisplayAmounts,
+        memo,
+      })
+      if (receive instanceof Error) throw receive
+
+      return { walletDescriptor, account }
+    }
+
+    it("credits bank-owner the 0.3% service fee on an external BTC send above $100", async () => {
+      enableServiceFeeGate()
+      mockLndSuccess()
+
+      const { walletDescriptor, account } = await fundedBtcWallet()
+
+      const paymentResult = await Payments.payNoAmountInvoiceByWalletIdForBtcWallet({
+        uncheckedPaymentRequest: noAmountLnInvoice.paymentRequest,
+        memo,
+        senderWalletId: walletDescriptor.id,
+        senderAccount: account,
+        amount: aboveThresholdSats,
+      })
+      if (paymentResult instanceof Error) throw paymentResult
+      expect(paymentResult.status).toEqual(PaymentSendStatus.Success)
+
+      // Bank-owner is credited exactly the service fee, distinct from the
+      // routing reserve leg (which lands in Assets:Reserve:Lightning).
+      const serviceFee = await bankOwnerServiceFeeFor(noAmountLnInvoice.paymentHash)
+      expect(serviceFee).toEqual(expectedServiceFeeSats)
+
+      // Model 2: the sender debit (satsFee) is the accounting TOTAL (routing
+      // reserve + service fee); the service-fee breakdown is self-identified by
+      // the bank-owner credit leg (asserted above), so the total is strictly
+      // greater than the service fee (reserve > 0).
+      const txns = await LedgerService().getTransactionsByHash(
+        noAmountLnInvoice.paymentHash,
+      )
+      if (txns instanceof Error) throw txns
+      const senderTxn = txns.find((t) => t.walletId === walletDescriptor.id)
+      if (senderTxn === undefined) throw new Error("Expected sender txn not found")
+      expect(Number(senderTxn.satsFee)).toBeGreaterThan(expectedServiceFeeSats)
+    })
+
+    it("charges no service fee for a send at or below $100", async () => {
+      enableServiceFeeGate()
+      mockLndSuccess()
+
+      const { walletDescriptor, account } = await fundedBtcWallet()
+
+      // `amount` (10_040 sats ≈ $2.10) is well below the $100 gate.
+      const paymentResult = await Payments.payNoAmountInvoiceByWalletIdForBtcWallet({
+        uncheckedPaymentRequest: noAmountLnInvoice.paymentRequest,
+        memo,
+        senderWalletId: walletDescriptor.id,
+        senderAccount: account,
+        amount,
+      })
+      if (paymentResult instanceof Error) throw paymentResult
+      expect(paymentResult.status).toEqual(PaymentSendStatus.Success)
+
+      const serviceFee = await bankOwnerServiceFeeFor(noAmountLnInvoice.paymentHash)
+      expect(serviceFee).toEqual(0)
+    })
+
+    it("charges no service fee when the rollout gate is off (default config)", async () => {
+      // Do NOT enable the gate — default lightning.send.feeStrategies = [zero_fee]
+      mockLndSuccess()
+
+      const { walletDescriptor, account } = await fundedBtcWallet()
+
+      const paymentResult = await Payments.payNoAmountInvoiceByWalletIdForBtcWallet({
+        uncheckedPaymentRequest: noAmountLnInvoice.paymentRequest,
+        memo,
+        senderWalletId: walletDescriptor.id,
+        senderAccount: account,
+        amount: aboveThresholdSats,
+      })
+      if (paymentResult instanceof Error) throw paymentResult
+      expect(paymentResult.status).toEqual(PaymentSendStatus.Success)
+
+      const serviceFee = await bankOwnerServiceFeeFor(noAmountLnInvoice.paymentHash)
+      expect(serviceFee).toEqual(0)
+    })
+
+    it("still applies the service fee on a probed send above $100", async () => {
+      const rawRoute = { total_mtokens: "21000000", safe_fee: 210 } as RawRoute
+
+      enableServiceFeeGate()
+      mockLndSuccess(rawRoute)
+
+      const { walletDescriptor, account } = await fundedBtcWallet()
+
+      // Probe first — persists the flow (with the service fee in btcBankFee)
+      // via withRoute, so the send loads it from the repository.
+      const probe = await Payments.getNoAmountLightningFeeEstimationForBtcWallet({
+        walletId: walletDescriptor.id,
+        uncheckedPaymentRequest: noAmountLnInvoice.paymentRequest,
+        amount: aboveThresholdSats,
+      })
+      expect(probe).not.toBeInstanceOf(Error)
+
+      const paymentResult = await Payments.payNoAmountInvoiceByWalletIdForBtcWallet({
+        uncheckedPaymentRequest: noAmountLnInvoice.paymentRequest,
+        memo,
+        senderWalletId: walletDescriptor.id,
+        senderAccount: account,
+        amount: aboveThresholdSats,
+      })
+      if (paymentResult instanceof Error) throw paymentResult
+      expect(paymentResult.status).toEqual(PaymentSendStatus.Success)
+
+      // The service fee survives probing and is recognized on top of the
+      // actual routing fee.
+      const serviceFee = await bankOwnerServiceFeeFor(noAmountLnInvoice.paymentHash)
+      expect(serviceFee).toEqual(expectedServiceFeeSats)
+    })
+
+    it("recognizes no revenue when the send fails (reverted journal)", async () => {
+      enableServiceFeeGate()
+
+      const { LndService: LnServiceOrig } = jest.requireActual("@/services/lnd")
+      jest.spyOn(LndImpl, "LndService").mockReturnValue({
+        ...LnServiceOrig(),
+        defaultPubkey: (): Pubkey => DEFAULT_PUBKEY,
+        listAllPubkeys: () => [],
+        payInvoiceViaPaymentDetails: () => new TemporaryChannelFailureError(),
+      })
+
+      const { walletDescriptor, account } = await fundedBtcWallet()
+
+      const paymentResult = await Payments.payNoAmountInvoiceByWalletIdForBtcWallet({
+        uncheckedPaymentRequest: noAmountLnInvoice.paymentRequest,
+        memo,
+        senderWalletId: walletDescriptor.id,
+        senderAccount: account,
+        amount: aboveThresholdSats,
+      })
+      expect(paymentResult).toBeInstanceOf(TemporaryChannelFailureError)
+
+      // The pending journal (including the bank-owner credit) is voided —
+      // no orphan revenue.
+      const serviceFee = await bankOwnerServiceFeeFor(noAmountLnInvoice.paymentHash)
+      expect(serviceFee).toEqual(0)
+    })
+
+    it("charges the service fee on a USD-wallet external send above $100 (threshold compared in USD)", async () => {
+      enableServiceFeeGate()
+      mockLndSuccess()
+
+      const { usdWalletDescriptor } = await createRandomUserAndWallets()
+      const account = await AccountsRepository().findById(usdWalletDescriptor.accountId)
+      if (account instanceof Error) throw account
+
+      const receive = await recordReceiveLnPayment({
+        walletDescriptor: usdWalletDescriptor,
+        paymentAmount: fundingReceiveAmounts,
+        bankFee: receiveBankFee,
+        displayAmounts: fundingDisplayAmounts,
+        memo,
+      })
+      if (receive instanceof Error) throw receive
+
+      const paymentResult = await Payments.payNoAmountInvoiceByWalletIdForUsdWallet({
+        uncheckedPaymentRequest: noAmountLnInvoice.paymentRequest,
+        memo,
+        senderWalletId: usdWalletDescriptor.id,
+        senderAccount: account,
+        amount: toCents(20_000), // $200.00, above the $100 gate
+      })
+      if (paymentResult instanceof Error) throw paymentResult
+      expect(paymentResult.status).toEqual(PaymentSendStatus.Success)
+
+      const serviceFee = await bankOwnerServiceFeeFor(noAmountLnInvoice.paymentHash)
+      expect(serviceFee).toBeGreaterThan(0)
+    })
+
+    it("on a non-probed send that settles, reimburses the unused reserve only and retains the service fee (finding B)", async () => {
+      // Non-probed path: findRouteForInvoice fails → payInvoiceViaPaymentDetails
+      // returns roundedUpFee 0, so the actual routing fee (0) is below the 0.5%
+      // reserve and reimburseFee runs on the synchronous settle path.
+      enableServiceFeeGate()
+      mockLndSuccess()
+
+      const { walletDescriptor, account } = await fundedBtcWallet()
+
+      const paymentResult = await Payments.payNoAmountInvoiceByWalletIdForBtcWallet({
+        uncheckedPaymentRequest: noAmountLnInvoice.paymentRequest,
+        memo,
+        senderWalletId: walletDescriptor.id,
+        senderAccount: account,
+        amount: aboveThresholdSats,
+      })
+      if (paymentResult instanceof Error) throw paymentResult
+      expect(paymentResult.status).toEqual(PaymentSendStatus.Success)
+
+      const txns = await LedgerService().getTransactionsByHash(
+        noAmountLnInvoice.paymentHash,
+      )
+      if (txns instanceof Error) throw txns
+
+      // Original send leg: satsFee = accounting TOTAL (reserve + service). The
+      // service-fee breakdown is recovered from the self-identifying bank-owner
+      // credit leg (mirrors on-chain), not from a metadata field.
+      const senderSend = txns.find(
+        (t) =>
+          t.walletId === walletDescriptor.id && t.type === LedgerTransactionType.Payment,
+      )
+      if (senderSend === undefined) throw new Error("Expected sender send txn not found")
+      const total = Number(senderSend.satsFee)
+      const service = await bankOwnerServiceFeeFor(noAmountLnInvoice.paymentHash)
+      expect(service).toEqual(expectedServiceFeeSats)
+
+      // The reimbursement credits the sender the unused reserve ONLY
+      // (reserve − actual, actual = 0) = total − service, NOT the full total —
+      // the 0.3% service fee is never refunded.
+      const reimbursement = txns
+        .filter(
+          (t) =>
+            t.walletId === walletDescriptor.id &&
+            t.type === LedgerTransactionType.LnFeeReimbursement,
+        )
+        .reduce((sum, t) => sum + (Number(t.credit) || 0), 0)
+      expect(reimbursement).toEqual(total - service)
+      expect(reimbursement).not.toEqual(total)
+
+      // The service fee is retained as bank-owner revenue.
+      const serviceFeeRevenue = await bankOwnerServiceFeeFor(
+        noAmountLnInvoice.paymentHash,
+      )
+      expect(serviceFeeRevenue).toEqual(expectedServiceFeeSats)
     })
   })
 })

@@ -26,6 +26,7 @@ import { setErrorCritical, WalletCurrency } from "@/domain/shared"
 
 import { ApiKeysService } from "@/services/api-keys"
 import { LedgerService, getNonEndUserWalletIds } from "@/services/ledger"
+import { getBankOwnerWalletId } from "@/services/ledger/caching"
 import * as LedgerFacade from "@/services/ledger/facade"
 import { LndService } from "@/services/lnd"
 import { LockService } from "@/services/lock"
@@ -391,6 +392,26 @@ const lockedPendingPaymentSteps = async ({
       paymentLogger.fatal({ success: false, result: lnPaymentLookup }, error)
       return setErrorCritical(reimbursed)
     }
+
+    // The USD-failed path settles the original journal and reimburses the user
+    // the TOTAL (incl. the service fee) — unlike the BTC path which voids the
+    // journal (auto-reversing the bank-owner service-fee credit). So when the
+    // failed send carried a service fee, reverse the bank-owner credit explicitly
+    // to avoid orphan revenue on a failed payment (spec AC5 / Change Log #8).
+    // Same one-shot branch as reimburseFailedUsdPayment, gated by the caller-side
+    // isLnTxRecorded guard, so it cannot double-fire.
+    if (paymentFlow.btcBankFee.amount > 0n) {
+      const reversed = await LedgerFacade.recordLnFailedSendServiceFeeReversal({
+        paymentHash,
+        btcBankFee: paymentFlow.btcBankFee,
+      })
+      if (reversed instanceof Error) {
+        const error = `error reversing service fee on failed usd payment entry`
+        paymentLogger.fatal({ success: false, result: lnPaymentLookup }, error)
+        return setErrorCritical(reversed)
+      }
+    }
+
     const reverseResult = await apiKeys.reverseSpending({
       transactionId: journalId,
     })
@@ -508,9 +529,23 @@ const reconstructPendingPaymentFlow = async <
 
   const payment = filteredPayments[0]
 
+  // Recover the service fee from the self-identifying bank-owner credit leg of the
+  // send journal, mirroring on-chain (`facade/onchain-send.ts`: bankFee = bankOwnerTxn.credit).
+  // Exclude the `Reconciliation`-typed service-fee reversal (USD-failed path) so we read the
+  // ORIGINAL fee, not a netted value — exactly as on-chain excludes its fee-reconciliation legs.
+  // No bank-owner leg (no-fee / legacy / exempt sends) → 0 → reserve = total.
+  const bankOwnerWalletId = await getBankOwnerWalletId()
+  const bankOwnerTxns = ledgerTxns.filter(
+    (tx) =>
+      tx.walletId === bankOwnerWalletId &&
+      tx.type !== LedgerTransactionType.Reconciliation,
+  )
+  const bankFee = toSats(bankOwnerTxns.length === 1 ? (bankOwnerTxns[0].credit ?? 0) : 0)
+
   return PaymentFlowFromLedgerTransaction({
     ledgerTxn: payment,
     senderAccountId: senderAccount.id,
+    bankFee,
   })
 }
 

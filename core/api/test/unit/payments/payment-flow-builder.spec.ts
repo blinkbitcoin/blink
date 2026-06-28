@@ -1,4 +1,5 @@
 /* eslint jest/expect-expect: ["error", { "assertFunctionNames": ["expect", "checkSettlementMethod", "checkInvoice", "checkSenderWallet", "checkRecipientWallet"] }] */
+import * as ConfigImpl from "@/config"
 import { SettlementMethod, PaymentInitiationMethod } from "@/domain/wallets"
 import { decodeInvoice } from "@/domain/bitcoin/lightning"
 import { SelfPaymentError } from "@/domain/errors"
@@ -9,7 +10,12 @@ import {
   WalletPriceRatio,
   SubOneCentSatAmountForUsdSelfSendError,
 } from "@/domain/payments"
-import { ONE_CENT, ValidationError, WalletCurrency } from "@/domain/shared"
+import {
+  AmountCalculator,
+  ONE_CENT,
+  ValidationError,
+  WalletCurrency,
+} from "@/domain/shared"
 
 const skippedPubkey =
   "038f8f113c580048d847d6949371726653e02b928196bad310e3eda39ff61723f6" as Pubkey
@@ -1683,6 +1689,102 @@ describe("LightningPaymentFlowBuilder", () => {
 
         expect(payment).toBeInstanceOf(SelfPaymentError)
       })
+    })
+  })
+
+  // Model 2 (#07): with the lightning send fee strategy gate ON, an external send
+  // above the $100 threshold folds the 0.3% service fee INTO the accounting total
+  // (btcProtocolAndBankFee = routing reserve + service) while ALSO carrying the
+  // breakdown in btcBankFee/usdBankFee. This is the load-bearing fold previously
+  // covered only in the (sandbox-unrunnable) integration suite.
+  describe("service fee fold (#07, gate ON)", () => {
+    const calc = AmountCalculator()
+    const serviceFeeBasisPoints = 30n
+    const thresholdInCents = 10_000
+
+    // 1_000_000 sats ≈ $200 at the 0.02 cents/sat mid ratio → above the $100 gate.
+    const aboveThresholdSats = 1_000_000
+    const btcPaymentAmount = {
+      amount: BigInt(aboveThresholdSats),
+      currency: WalletCurrency.Btc,
+    } as BtcPaymentAmount
+
+    const enableGate = () => {
+      const actual = jest.requireActual("@/config").getLightningNetworkConfig()
+      jest.spyOn(ConfigImpl, "getLightningNetworkConfig").mockReturnValue({
+        ...actual,
+        send: {
+          ...actual.send,
+          feeStrategies: [
+            {
+              name: "lightning_service_fee",
+              strategy: "percentageAboveThreshold",
+              params: { basisPoints: Number(serviceFeeBasisPoints), thresholdInCents },
+            },
+          ],
+        },
+      })
+    }
+
+    afterEach(() => {
+      jest.restoreAllMocks()
+    })
+
+    const builderForBtcWallet = () =>
+      LightningPaymentFlowBuilder({ localNodeIds: [], skipProbe })
+        .withNoAmountInvoice({
+          invoice: invoiceWithNoAmount,
+          uncheckedAmount: aboveThresholdSats,
+        })
+        .withSenderWallet(senderBtcWalletDescriptor)
+        .withoutRecipientWallet()
+        .withConversion({ mid, hedgeBuyUsd, hedgeSellUsd })
+
+    it("withoutRoute folds the service fee into the reserve (btcProtocolAndBankFee = reserve + service, btcBankFee = service)", async () => {
+      enableGate()
+
+      const payment = await builderForBtcWallet().withoutRoute()
+      if (payment instanceof Error) throw payment
+
+      const reserve = LnFees().maxProtocolAndBankFee(btcPaymentAmount)
+      const service = calc.mulBasisPoints(btcPaymentAmount, serviceFeeBasisPoints)
+      expect(service.amount).toBeGreaterThan(0n)
+
+      const priceRatio = WalletPriceRatio(payment.paymentAmounts())
+      if (priceRatio instanceof Error) throw priceRatio
+      const usdService = priceRatio.convertFromBtcToCeil(service)
+      const usdReserve = priceRatio.convertFromBtcToCeil(reserve)
+
+      expect(payment.btcBankFee).toStrictEqual(service)
+      expect(payment.usdBankFee).toStrictEqual(usdService)
+      expect(payment.btcProtocolAndBankFee).toStrictEqual(calc.add(reserve, service))
+      expect(payment.usdProtocolAndBankFee).toStrictEqual(
+        calc.add(usdReserve, usdService),
+      )
+    })
+
+    it("withRoute folds the service fee on top of the actual routing fee", async () => {
+      enableGate()
+
+      const payment = await builderForBtcWallet().withRoute({ pubkey, rawRoute })
+      if (payment instanceof Error) throw payment
+
+      const reserve = LnFees().feeFromRawRoute(rawRoute)
+      if (reserve instanceof Error) throw reserve
+      const service = calc.mulBasisPoints(btcPaymentAmount, serviceFeeBasisPoints)
+      expect(service.amount).toBeGreaterThan(0n)
+
+      const priceRatio = WalletPriceRatio(payment.paymentAmounts())
+      if (priceRatio instanceof Error) throw priceRatio
+      const usdService = priceRatio.convertFromBtcToCeil(service)
+      const usdReserve = priceRatio.convertFromBtcToCeil(reserve)
+
+      expect(payment.btcBankFee).toStrictEqual(service)
+      expect(payment.usdBankFee).toStrictEqual(usdService)
+      expect(payment.btcProtocolAndBankFee).toStrictEqual(calc.add(reserve, service))
+      expect(payment.usdProtocolAndBankFee).toStrictEqual(
+        calc.add(usdReserve, usdService),
+      )
     })
   })
 })
