@@ -513,7 +513,10 @@ const reconstructPendingPaymentFlow = async <
   // Recover the service fee from the bank-owner credit leg
   const bankOwnerWalletId = await getBankOwnerWalletId()
   const bankOwnerCreditTxns = ledgerTxns.filter(
-    (tx) => tx.walletId === bankOwnerWalletId && (tx.credit ?? 0) > 0,
+    (tx) =>
+      tx.walletId === bankOwnerWalletId &&
+      tx.type === LedgerTransactionType.Payment &&
+      (tx.credit ?? 0) > 0,
   )
   const bankFee = toSats(
     bankOwnerCreditTxns.length === 1 ? (bankOwnerCreditTxns[0].credit ?? 0) : 0,
