@@ -578,12 +578,6 @@ const LPFBWithConversion = <S extends WalletCurrency, R extends WalletCurrency>(
     })
   }
 
-  // Deterministic, known-in-advance service/bank fee for external Lightning
-  // sends. Returned as the breakdown that callers fold into the accounting
-  // total (btcProtocolAndBankFee) while ALSO carrying it in btcBankFee/usdBankFee
-  // (Model 2 — nested like on-chain). The routing reserve is recovered as
-  // total − bankFee at the only two spots that need it (verifyMaxFee/LND-budget
-  // and reimbursement). Intraledger sends carry no service fee.
   const lnBankFee = async (
     state: LPFBWithConversionState<S, R>,
   ): Promise<
@@ -599,8 +593,7 @@ const LPFBWithConversion = <S extends WalletCurrency, R extends WalletCurrency>(
       usd: state.usdPaymentAmount,
       btc: state.btcPaymentAmount,
     })
-    // A sub-cent payment cannot have a price ratio; it is, by definition, below
-    // the USD threshold, so no service fee applies.
+
     if (priceRatio instanceof Error) {
       return { btcBankFee: ZERO_SATS, usdBankFee: ZERO_CENTS }
     }
@@ -631,9 +624,7 @@ const LPFBWithConversion = <S extends WalletCurrency, R extends WalletCurrency>(
     const bankFee = await lnBankFee(state)
     if (bankFee instanceof Error) return bankFee
 
-    // Model 2: btcProtocolAndBankFee carries the TOTAL (routing reserve +
-    // service fee), nested like on-chain. state.btcProtocolAndBankFee here is
-    // the routing reserve; fold the service fee into it.
+    // btcProtocolAndBankFee here is the routing reserve; fold the service fee into it.
     return paymentFromState({
       ...state,
       ...bankFee,
@@ -664,12 +655,9 @@ const LPFBWithConversion = <S extends WalletCurrency, R extends WalletCurrency>(
     if (btcRoutingReserve instanceof Error) return btcRoutingReserve
     const usdRoutingReserve = priceRatio.convertFromBtcToCeil(btcRoutingReserve)
 
-    // Service fee survives probing: it stacks on top of the actual routing fee.
     const bankFee = await lnBankFee(state)
     if (bankFee instanceof Error) return bankFee
 
-    // Model 2: fold the service fee into the accounting total so the reserve is
-    // recoverable as total − bankFee (verifyMaxFee/LND-budget, reimbursement).
     const btcProtocolAndBankFee = calc.add(btcRoutingReserve, bankFee.btcBankFee)
     const usdProtocolAndBankFee = calc.add(usdRoutingReserve, bankFee.usdBankFee)
 

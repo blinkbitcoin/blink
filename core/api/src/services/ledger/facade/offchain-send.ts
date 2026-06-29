@@ -1,6 +1,6 @@
 import { MainBook, Transaction } from "../books"
 
-import { EntryBuilder, toLedgerAccountDescriptor } from "../domain"
+import { EntryBuilder, lndLedgerAccountId, toLedgerAccountDescriptor } from "../domain"
 import { NoTransactionToSettleError } from "../domain/errors"
 import { TransactionsMetadataRepository } from "../services"
 import { persistAndReturnEntry } from "../helpers"
@@ -9,8 +9,11 @@ import { translateToLedgerJournal } from ".."
 
 import { staticAccountIds } from "./static-account-ids"
 
+import { InvalidLedgerTransactionStateError } from "@/domain/errors"
 import { UnknownLedgerError } from "@/domain/ledger"
-import { ZERO_CENTS, ZERO_SATS } from "@/domain/shared"
+import { AmountCalculator, ZERO_CENTS, ZERO_SATS } from "@/domain/shared"
+
+const calc = AmountCalculator()
 
 export const recordSendOffChain = async ({
   description,
@@ -68,6 +71,53 @@ export const recordLnSendRevert = async ({
   } catch (err) {
     return new UnknownLedgerError(err)
   }
+}
+
+export const recordLnFailedUsdSendRefund = async ({
+  description,
+  recipientWalletDescriptor,
+  amountToCreditReceiver,
+  btcBankFee,
+  metadata,
+  txMetadata,
+  additionalCreditMetadata,
+  additionalInternalMetadata,
+}: RecordLnFailedUsdSendRefundArgs) => {
+  const accountIds = await staticAccountIds()
+  if (accountIds instanceof Error) return accountIds
+
+  const totalBtc = amountToCreditReceiver.btc
+
+  if (btcBankFee.amount > totalBtc.amount) {
+    return new InvalidLedgerTransactionStateError(
+      `service fee (${btcBankFee.amount}) exceeds refund total (${totalBtc.amount})`,
+    )
+  }
+  const reserveBtc = calc.sub(totalBtc, btcBankFee)
+
+  const recipientAccountDescriptor = toLedgerAccountDescriptor(recipientWalletDescriptor)
+  const creditMetadata = { ...metadata, ...additionalCreditMetadata }
+  const internalMetadata = { ...metadata, ...additionalInternalMetadata }
+
+  const entry = MainBook.entry(description)
+  entry
+    .credit(recipientAccountDescriptor.id, Number(totalBtc.amount), {
+      ...creditMetadata,
+      currency: totalBtc.currency,
+    })
+    .debit(lndLedgerAccountId, Number(reserveBtc.amount), {
+      ...internalMetadata,
+      currency: reserveBtc.currency,
+    })
+
+  if (btcBankFee.amount > 0n) {
+    entry.debit(accountIds.bankOwnerAccountId, Number(btcBankFee.amount), {
+      ...internalMetadata,
+      currency: btcBankFee.currency,
+    })
+  }
+
+  return persistAndReturnEntry({ entry, ...txMetadata })
 }
 
 export const updateMetadataByHash = async (

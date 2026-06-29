@@ -19,9 +19,6 @@ export const PaymentFlowFromLedgerTransaction = <
 }: {
   ledgerTxn: LedgerTransaction<S>
   senderAccountId: AccountId
-  // Service-fee breakdown (sats), recovered from the self-identifying bank-owner
-  // credit leg at reimbursement reconstruction (mirrors on-chain). Callers that
-  // don't pass it (no-fee/legacy sends) get a ZERO breakdown → reserve = total.
   bankFee?: Satoshis
 }): PaymentFlow<S, R> | ValidationError => {
   if (ledgerTxn.type !== LedgerTransactionType.Payment) {
@@ -77,11 +74,6 @@ export const PaymentFlowFromLedgerTransaction = <
   })
   if (usdProtocolAndBankFee instanceof Error) return usdProtocolAndBankFee
 
-  // Model 2: btcProtocolAndBankFee (= satsFee) is the accounting TOTAL (routing
-  // reserve + service fee). The service-fee breakdown is recovered from the
-  // self-identifying bank-owner credit leg by the caller and passed in as
-  // `bankFee` so reimbursement can isolate the routing reserve as
-  // total − bankFee. No-fee/legacy sends pass ZERO → reserve = total.
   const btcBankFee = paymentAmountFromNumber({
     amount: bankFee,
     currency: WalletCurrency.Btc,
@@ -90,9 +82,6 @@ export const PaymentFlowFromLedgerTransaction = <
 
   let usdBankFee = ZERO_CENTS
   if (btcBankFee.amount > 0n) {
-    // Rebuild the usd breakdown via the same price ratio used at send time
-    // (the persisted sats/cents amounts), so usdProtocolAndBankFee − usdBankFee
-    // recovers the usd routing reserve exactly.
     const priceRatio = WalletPriceRatio({
       usd: usdPaymentAmount,
       btc: btcPaymentAmount,
@@ -124,8 +113,6 @@ export const PaymentFlowFromLedgerTransaction = <
     btcProtocolAndBankFee,
     usdProtocolAndBankFee,
 
-    // Service-fee breakdown recovered from the bank-owner credit leg so
-    // reimbursement refunds reserve = total − bankFee (service fee retained).
     btcBankFee,
     usdBankFee,
   })
