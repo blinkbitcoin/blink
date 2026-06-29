@@ -73,7 +73,7 @@ describe("update pending payments", () => {
       LedgerFacadeImpl,
       "LnFailedPaymentReceiveLedgerMetadata",
     )
-    const recordOffChainReceiveSpy = jest.spyOn(LedgerFacadeImpl, "recordReceiveOffChain")
+    const recordRefundSpy = jest.spyOn(LedgerFacadeImpl, "recordLnFailedUsdSendRefund")
 
     // Setup users and wallets
     const newWalletDescriptor = await createRandomUserAndBtcWallet()
@@ -96,6 +96,8 @@ describe("update pending payments", () => {
       usdPaymentAmount: sendAmount.usd,
       btcProtocolAndBankFee: bankFee.btc,
       usdProtocolAndBankFee: bankFee.usd,
+      btcBankFee: ZERO_SATS,
+      usdBankFee: ZERO_CENTS,
       totalAmountsForPayment: () => ({
         btc: calc.add(sendAmount.btc, bankFee.btc),
         usd: calc.add(sendAmount.usd, bankFee.usd),
@@ -115,16 +117,17 @@ describe("update pending payments", () => {
     // Check record function was called with right metadata
     expect(displayAmountsConverterSpy).toHaveBeenCalledTimes(0)
     expect(lnFailedPaymentReceiveLedgerMetadataSpy).toHaveBeenCalledTimes(1)
-    const args = recordOffChainReceiveSpy.mock.calls[0][0]
+    const args = recordRefundSpy.mock.calls[0][0]
     expect(args.metadata.type).toBe(LedgerTransactionType.Payment)
     expect(args.description).toBe(FAILED_USD_MEMO)
   })
 
-  // round-2 regression (#07 / AC5 on the USD-failure path): an async USD-wallet
-  // external send carrying a 0.3% service fee that later FAILS must reverse the
-  // bank-owner service-fee credit (no orphan revenue). Unlike the BTC path which
-  // VOIDs the journal, the USD path settles + reimburses, so the reversal is
-  // explicit. Mirrors the BTC "no revenue on failure" case for the USD path.
+  // #07 / AC5 on the USD-failure path (Change Log #13): an async USD-wallet external
+  // send that later FAILS is refunded by a SINGLE journal (recordLnFailedUsdSendRefund)
+  // that mirrors the BTC `void` forward-as-BTC — it credits the user the total AND claws
+  // the service fee back from bank-owner in the same entry, so no orphan revenue. The
+  // refund runs on every USD failure; the service-fee breakdown rides in btcBankFee
+  // (ZERO when the send carried no fee → the bank-owner clawback leg simply drops out).
   const runUsdFailureUpdate = async ({
     btcBankFee,
     usdBankFee,
@@ -145,10 +148,7 @@ describe("update pending payments", () => {
       findByPaymentHash: () => ({ paymentRequest: samplePaymentRequest }),
     })
 
-    const reversalSpy = jest.spyOn(
-      LedgerFacadeImpl,
-      "recordLnFailedSendServiceFeeReversal",
-    )
+    const refundSpy = jest.spyOn(LedgerFacadeImpl, "recordLnFailedUsdSendRefund")
 
     const newWalletDescriptor = await createRandomUserAndBtcWallet()
 
@@ -187,34 +187,43 @@ describe("update pending payments", () => {
 
     await updatePendingPaymentByHash({ paymentHash, logger: baseLogger })
 
-    return { reversalSpy, paymentHash }
+    return { refundSpy, paymentHash }
   }
 
-  it("reverses the bank-owner service-fee credit on an async USD failure carrying a service fee", async () => {
+  it("refunds the total and claws the service fee back from bank-owner on an async USD failure carrying a service fee", async () => {
     const serviceFee = { amount: 30n, currency: WalletCurrency.Btc } as BtcPaymentAmount
     const usdServiceFee = {
       amount: 10n,
       currency: WalletCurrency.Usd,
     } as UsdPaymentAmount
 
-    const { reversalSpy, paymentHash } = await runUsdFailureUpdate({
+    const { refundSpy } = await runUsdFailureUpdate({
       btcBankFee: serviceFee,
       usdBankFee: usdServiceFee,
     })
 
-    expect(reversalSpy).toHaveBeenCalledTimes(1)
-    expect(reversalSpy).toHaveBeenCalledWith({
-      paymentHash,
-      btcBankFee: serviceFee,
-    })
+    expect(refundSpy).toHaveBeenCalledTimes(1)
+    expect(refundSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: FAILED_USD_MEMO,
+        btcBankFee: serviceFee,
+        amountToCreditReceiver: {
+          btc: calc.add(sendAmount.btc, bankFee.btc),
+          usd: calc.add(sendAmount.usd, bankFee.usd),
+        },
+      }),
+    )
   })
 
-  it("does not reverse when the failed USD send carried no service fee", async () => {
-    const { reversalSpy } = await runUsdFailureUpdate({
+  it("refunds with no bank-owner clawback (btcBankFee = ZERO) when the failed USD send carried no service fee", async () => {
+    const { refundSpy } = await runUsdFailureUpdate({
       btcBankFee: ZERO_SATS,
       usdBankFee: ZERO_CENTS,
     })
 
-    expect(reversalSpy).not.toHaveBeenCalled()
+    expect(refundSpy).toHaveBeenCalledTimes(1)
+    expect(refundSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ btcBankFee: ZERO_SATS }),
+    )
   })
 })

@@ -2,12 +2,7 @@
 
 import { Entry, IJournal } from "medici"
 
-import {
-  WalletCurrency,
-  AmountCalculator,
-  ZERO_BANK_FEE,
-  ZERO_CENTS,
-} from "@/domain/shared"
+import { WalletCurrency, AmountCalculator, ZERO_BANK_FEE } from "@/domain/shared"
 
 import {
   lndLedgerAccountId,
@@ -1061,59 +1056,79 @@ describe("EntryBuilder", () => {
     })
   })
 
-  // Entry shape of the #07 async-USD-failure service-fee reversal
-  // (recordLnFailedSendServiceFeeReversal): a BTC-only bank-owner → offchain
-  // entry that reverses the orphaned service-fee credit. Mirrors the facade's
-  // exact wiring: withTotalAmount({ usd: ZERO }) so NO dealer legs are created,
-  // withBankFee(ZERO), debitAccount(bankOwner), creditOffChain().
-  describe("Ln failed-send service-fee reversal (bank-owner → offchain, BTC-only)", () => {
-    const bankOwnerAccountDescriptor = {
-      id: staticAccountIds.bankOwnerAccountId,
+  // Entry shape of the #07 async-USD-failure refund (recordLnFailedUsdSendRefund):
+  // a SINGLE journal that mirrors the BTC `void` forward-as-BTC — credit the user's
+  // BTC wallet the total, debit lnd the reserve (total − bankFee) and debit bank-owner
+  // the service fee, all in sats (no dealer legs). Built with raw medici (EntryBuilder
+  // can't put bank-owner on the debit side), so this mirrors the facade's exact wiring
+  // from the spec — Change Log #13, supersedes the two-journal reversal it replaces.
+  describe("Ln failed-USD-send refund (credit user / debit lnd + bank-owner, BTC-only)", () => {
+    const userBtcAccountId = creditorAccountId
+
+    const totalAmount = {
       currency: WalletCurrency.Btc,
-    } as LedgerAccountDescriptor<"BTC">
+      amount: 10_000n,
+    } as BtcPaymentAmount
+
+    const buildRefund = (btcBankFee: BtcPaymentAmount) => {
+      const entry = createEntry()
+      const reserve = {
+        currency: WalletCurrency.Btc,
+        amount: totalAmount.amount - btcBankFee.amount,
+      } as BtcPaymentAmount
+
+      entry
+        .credit(userBtcAccountId, Number(totalAmount.amount), {
+          ...metadata,
+          ...additionalInternalMetadata,
+          currency: totalAmount.currency,
+        })
+        .debit(lndLedgerAccountId, Number(reserve.amount), {
+          ...metadata,
+          ...additionalInternalMetadata,
+          currency: reserve.currency,
+        })
+
+      if (btcBankFee.amount > 0n) {
+        entry.debit(staticAccountIds.bankOwnerAccountId, Number(btcBankFee.amount), {
+          ...metadata,
+          ...additionalInternalMetadata,
+          currency: btcBankFee.currency,
+        })
+      }
+
+      return entry
+    }
 
     const serviceFeeAmount = {
       currency: WalletCurrency.Btc,
       amount: 3000n,
     } as BtcPaymentAmount
+    const reserveAmount = {
+      currency: WalletCurrency.Btc,
+      amount: 7000n,
+    } as BtcPaymentAmount
 
-    const buildReversal = () => {
-      const entry = createEntry()
-      const builder = EntryBuilder({
-        staticAccountIds,
-        entry,
-        metadata,
-        additionalInternalMetadata,
-      })
-      return builder
-        .withTotalAmount({ usdWithFees: ZERO_CENTS, btcWithFees: serviceFeeAmount })
-        .withBankFee(ZERO_BANK_FEE)
-        .debitAccount({
-          accountDescriptor: bankOwnerAccountDescriptor,
-          additionalMetadata: {},
-        })
-        .creditOffChain()
-    }
-
-    it("debits bank-owner and credits offchain the service-fee sats, balanced", () => {
-      const result = buildReversal()
+    it("credits the user the total, debits lnd the reserve and bank-owner the service fee, balanced", () => {
+      const result = buildRefund(serviceFeeAmount)
 
       const credits = result.transactions.filter((t) => t.credit > 0)
       const debits = result.transactions.filter((t) => t.debit > 0)
 
       expectJournalToBeBalanced(result)
+      expectEntryToEqual(findEntry(credits, userBtcAccountId), totalAmount)
+      expectEntryToEqual(findEntry(debits, lndLedgerAccountId), reserveAmount)
       expectEntryToEqual(
         findEntry(debits, staticAccountIds.bankOwnerAccountId),
         serviceFeeAmount,
       )
-      expectEntryToEqual(findEntry(credits, lndLedgerAccountId), serviceFeeAmount)
     })
 
-    it("creates NO dealer legs (BTC-only, usd = ZERO)", () => {
-      const result = buildReversal()
+    it("creates NO dealer legs (pure sats refund-as-BTC)", () => {
+      const result = buildRefund(serviceFeeAmount)
 
-      // Exactly two legs: bank-owner debit + lnd credit. No dealer conversion.
-      expect(result.transactions).toHaveLength(2)
+      // Exactly three legs: user credit + lnd debit + bank-owner debit. No conversion.
+      expect(result.transactions).toHaveLength(3)
       expect(
         result.transactions.find(
           (t) => t.accounts === staticAccountIds.dealerBtcAccountId,
@@ -1122,6 +1137,27 @@ describe("EntryBuilder", () => {
       expect(
         result.transactions.find(
           (t) => t.accounts === staticAccountIds.dealerUsdAccountId,
+        ),
+      ).toBeUndefined()
+    })
+
+    it("degenerates to a 2-leg refund (credit user / debit lnd the full total) when bankFee = 0", () => {
+      const zeroBankFee = {
+        currency: WalletCurrency.Btc,
+        amount: 0n,
+      } as BtcPaymentAmount
+      const result = buildRefund(zeroBankFee)
+
+      const credits = result.transactions.filter((t) => t.credit > 0)
+      const debits = result.transactions.filter((t) => t.debit > 0)
+
+      expectJournalToBeBalanced(result)
+      expect(result.transactions).toHaveLength(2)
+      expectEntryToEqual(findEntry(credits, userBtcAccountId), totalAmount)
+      expectEntryToEqual(findEntry(debits, lndLedgerAccountId), totalAmount)
+      expect(
+        result.transactions.find(
+          (t) => t.accounts === staticAccountIds.bankOwnerAccountId,
         ),
       ).toBeUndefined()
     })

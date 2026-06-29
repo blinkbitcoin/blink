@@ -382,6 +382,12 @@ const lockedPendingPaymentSteps = async ({
       })
     }
 
+    // USD can't void the original journal (its dealer legs would restore a USD
+    // liability the hedge no longer covers), so it settles + refunds forward-as-BTC.
+    // reimburseFailedUsdPayment writes a SINGLE journal that mirrors the BTC void:
+    // it credits the user the total AND claws the service fee back from bank-owner in
+    // the same entry, so a failed send credits no revenue (AC5) — no separate reversal
+    // (spec Change Log #13, supersedes the two-journal #8/#9).
     const reimbursed = await reimburseFailedUsdPayment({
       walletId,
       pendingPayment,
@@ -391,25 +397,6 @@ const lockedPendingPaymentSteps = async ({
       const error = `error reimbursing usd payment entry`
       paymentLogger.fatal({ success: false, result: lnPaymentLookup }, error)
       return setErrorCritical(reimbursed)
-    }
-
-    // The USD-failed path settles the original journal and reimburses the user
-    // the TOTAL (incl. the service fee) — unlike the BTC path which voids the
-    // journal (auto-reversing the bank-owner service-fee credit). So when the
-    // failed send carried a service fee, reverse the bank-owner credit explicitly
-    // to avoid orphan revenue on a failed payment (spec AC5 / Change Log #8).
-    // Same one-shot branch as reimburseFailedUsdPayment, gated by the caller-side
-    // isLnTxRecorded guard, so it cannot double-fire.
-    if (paymentFlow.btcBankFee.amount > 0n) {
-      const reversed = await LedgerFacade.recordLnFailedSendServiceFeeReversal({
-        paymentHash,
-        btcBankFee: paymentFlow.btcBankFee,
-      })
-      if (reversed instanceof Error) {
-        const error = `error reversing service fee on failed usd payment entry`
-        paymentLogger.fatal({ success: false, result: lnPaymentLookup }, error)
-        return setErrorCritical(reversed)
-      }
     }
 
     const reverseResult = await apiKeys.reverseSpending({
@@ -529,18 +516,21 @@ const reconstructPendingPaymentFlow = async <
 
   const payment = filteredPayments[0]
 
-  // Recover the service fee from the self-identifying bank-owner credit leg of the
+  // Recover the service fee from the self-identifying bank-owner CREDIT leg of the
   // send journal, mirroring on-chain (`facade/onchain-send.ts`: bankFee = bankOwnerTxn.credit).
-  // Exclude the `Reconciliation`-typed service-fee reversal (USD-failed path) so we read the
-  // ORIGINAL fee, not a netted value — exactly as on-chain excludes its fee-reconciliation legs.
-  // No bank-owner leg (no-fee / legacy / exempt sends) → 0 → reserve = total.
+  // Read the CREDIT specifically — the service fee is recognized as a bank-owner credit at
+  // send — so this ignores the bank-owner DEBIT leg that the USD-failed refund writes to claw
+  // the fee back (Change Log #13). That refund leg is never seen here anyway: reconstruction
+  // runs before the send is settled/refunded, and any re-run short-circuits at the
+  // `isLnTxRecorded` guard once the send is settled; reading the credit keeps recovery correct
+  // even if that ordering ever changes. No bank-owner leg (no-fee / legacy / exempt) → 0 → reserve = total.
   const bankOwnerWalletId = await getBankOwnerWalletId()
-  const bankOwnerTxns = ledgerTxns.filter(
-    (tx) =>
-      tx.walletId === bankOwnerWalletId &&
-      tx.type !== LedgerTransactionType.Reconciliation,
+  const bankOwnerCreditTxns = ledgerTxns.filter(
+    (tx) => tx.walletId === bankOwnerWalletId && (tx.credit ?? 0) > 0,
   )
-  const bankFee = toSats(bankOwnerTxns.length === 1 ? (bankOwnerTxns[0].credit ?? 0) : 0)
+  const bankFee = toSats(
+    bankOwnerCreditTxns.length === 1 ? (bankOwnerCreditTxns[0].credit ?? 0) : 0,
+  )
 
   return PaymentFlowFromLedgerTransaction({
     ledgerTxn: payment,

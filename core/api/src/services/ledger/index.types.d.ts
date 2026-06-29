@@ -40,9 +40,19 @@ type RecordBankownerReconciliationArgs = {
   }
 }
 
-type RecordLnFailedSendServiceFeeReversalArgs = {
-  paymentHash: PaymentHash
+type RecordLnFailedUsdSendRefundArgs = {
+  description: string
+  // resolved to the sender's BTC wallet by the caller (refund-as-BTC)
+  recipientWalletDescriptor: WalletDescriptor<WalletCurrency>
+  amountToCreditReceiver: {
+    usd: UsdPaymentAmount
+    btc: BtcPaymentAmount
+  }
   btcBankFee: BtcPaymentAmount
+  metadata: ReceiveLedgerMetadata
+  additionalCreditMetadata: TxMetadata
+  additionalInternalMetadata: TxMetadata
+  txMetadata?: LnLedgerTransactionMetadataUpdate
 }
 
 type RecordIntraledgerArgs = {

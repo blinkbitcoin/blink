@@ -93,10 +93,16 @@ export const reimburseFailedUsdPayment = async <
     accountId: recipientBtcWallet.accountId,
   }
 
-  const result = await LedgerFacade.recordReceiveOffChain({
+  // Single journal mirroring the BTC `void`, forward-as-BTC: credit the user's BTC
+  // wallet the total, debit the lnd reserve (total − bankFee) and claw the service
+  // fee back from bank-owner (total's breakdown) — so a failed send credits no
+  // revenue (AC5) without the old two-journal reimburse + reversal. When the send
+  // carried no service fee (btcBankFee = 0) this degenerates to the prior refund.
+  const result = await LedgerFacade.recordLnFailedUsdSendRefund({
     description: FAILED_USD_MEMO,
     recipientWalletDescriptor: btcWalletDescriptor,
     amountToCreditReceiver: paymentFlow.totalAmountsForPayment(),
+    btcBankFee: paymentFlow.btcBankFee,
     metadata,
     txMetadata,
     additionalCreditMetadata: creditAccountAdditionalMetadata,
