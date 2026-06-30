@@ -330,6 +330,7 @@ services:
       - LNURL_INTERNAL_JWT_AUDIENCE=blink-lnurl-server
       - LNURL_SCHEME=http
       - LNURL_WEBHOOK_DOMAIN=lnurl-server:4088
+    depends_on: [oathkeeper]
   bitcoind:
     image: lnliz/bitcoind:v28.4
     ports:
