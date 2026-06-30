@@ -126,6 +126,10 @@ describe("Tx metadata", () => {
           ...startingMetadataArgs,
           ...testCase.commonMetadataArgs,
         }
+        const expectsCreditMemoPayer = Object.prototype.hasOwnProperty.call(
+          testCase.expectedAdditionalCreditMetadata,
+          "memoPayer",
+        )
 
         describe(`cross-account (${testCase.crossAccount.title})`, () => {
           const { MetadataFn, type } = testCase.crossAccount
@@ -174,9 +178,12 @@ describe("Tx metadata", () => {
               }),
             )
             expect(creditAccountAdditionalMetadata).not.toHaveProperty("username")
-            if (!testCase.expectedAdditionalCreditMetadata.memoPayer) {
-              expect(creditAccountAdditionalMetadata).not.toHaveProperty("memoPayer")
-            }
+            expect(
+              Object.prototype.hasOwnProperty.call(
+                creditAccountAdditionalMetadata,
+                "memoPayer",
+              ),
+            ).toBe(expectsCreditMemoPayer)
 
             expect(internalAccountsAdditionalMetadata).toEqual(
               expect.objectContaining(expectedAmounts.internal),
@@ -210,9 +217,12 @@ describe("Tx metadata", () => {
                 ...testCase.expectedAdditionalCreditMetadata,
               }),
             )
-            if (!testCase.expectedAdditionalCreditMetadata.memoPayer) {
-              expect(creditAccountAdditionalMetadata).not.toHaveProperty("memoPayer")
-            }
+            expect(
+              Object.prototype.hasOwnProperty.call(
+                creditAccountAdditionalMetadata,
+                "memoPayer",
+              ),
+            ).toBe(expectsCreditMemoPayer)
 
             expect(internalAccountsAdditionalMetadata).toEqual(
               expect.objectContaining(expectedAmounts.internal),
@@ -243,9 +253,12 @@ describe("Tx metadata", () => {
                 ...testCase.expectedAdditionalCreditMetadata,
               }),
             )
-            if (!testCase.expectedAdditionalCreditMetadata.memoPayer) {
-              expect(creditAccountAdditionalMetadata).not.toHaveProperty("memoPayer")
-            }
+            expect(
+              Object.prototype.hasOwnProperty.call(
+                creditAccountAdditionalMetadata,
+                "memoPayer",
+              ),
+            ).toBe(expectsCreditMemoPayer)
 
             expect(internalAccountsAdditionalMetadata).toEqual(
               expect.objectContaining(expectedAmounts.internal),
@@ -288,9 +301,12 @@ describe("Tx metadata", () => {
                 ...testCase.expectedAdditionalCreditMetadata,
               }),
             )
-            if (!testCase.expectedAdditionalCreditMetadata.memoPayer) {
-              expect(creditAccountAdditionalMetadata).not.toHaveProperty("memoPayer")
-            }
+            expect(
+              Object.prototype.hasOwnProperty.call(
+                creditAccountAdditionalMetadata,
+                "memoPayer",
+              ),
+            ).toBe(expectsCreditMemoPayer)
 
             expect(internalAccountsAdditionalMetadata).toEqual(
               expect.objectContaining(expectedAmounts.internal),
@@ -330,9 +346,12 @@ describe("Tx metadata", () => {
                 ...testCase.expectedAdditionalCreditMetadata,
               }),
             )
-            if (!testCase.expectedAdditionalCreditMetadata.memoPayer) {
-              expect(creditAccountAdditionalMetadata).not.toHaveProperty("memoPayer")
-            }
+            expect(
+              Object.prototype.hasOwnProperty.call(
+                creditAccountAdditionalMetadata,
+                "memoPayer",
+              ),
+            ).toBe(expectsCreditMemoPayer)
 
             expect(internalAccountsAdditionalMetadata).toEqual(
               expect.objectContaining(expectedAmounts.internal),
