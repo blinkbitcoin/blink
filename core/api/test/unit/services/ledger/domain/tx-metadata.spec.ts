@@ -21,6 +21,7 @@ describe("Tx metadata", () => {
   const senderUsername = "sender" as Username
   const recipientUsername = "receiver" as Username
   const memoOfPayer = "sample payer memo"
+  const memoForRecipient = "sample recipient memo"
   const pubkey = "pubkey" as Pubkey
   const payeeAddresses: OnChainAddress[] = ["Address" as OnChainAddress]
   const newAddressRequestId: OnChainAddressRequestId =
@@ -105,6 +106,8 @@ describe("Tx metadata", () => {
       expectedCommonMetadata
       // @ts-ignore-next-line no-implicit-any error
       expectedAdditionalDebitMetadata
+      // @ts-ignore-next-line no-implicit-any error
+      expectedAdditionalCreditMetadata
       crossAccount: {
         // @ts-ignore-next-line no-implicit-any error
         MetadataFn
@@ -165,12 +168,15 @@ describe("Tx metadata", () => {
             )
 
             expect(creditAccountAdditionalMetadata).toEqual(
-              expect.objectContaining(expectedAmounts.recipient),
+              expect.objectContaining({
+                ...expectedAmounts.recipient,
+                ...testCase.expectedAdditionalCreditMetadata,
+              }),
             )
-            expect(creditAccountAdditionalMetadata).not.toHaveProperty([
-              "username",
-              "memoPayer",
-            ])
+            expect(creditAccountAdditionalMetadata).not.toHaveProperty("username")
+            if (!testCase.expectedAdditionalCreditMetadata.memoPayer) {
+              expect(creditAccountAdditionalMetadata).not.toHaveProperty("memoPayer")
+            }
 
             expect(internalAccountsAdditionalMetadata).toEqual(
               expect.objectContaining(expectedAmounts.internal),
@@ -199,9 +205,14 @@ describe("Tx metadata", () => {
             )
 
             expect(creditAccountAdditionalMetadata).toEqual(
-              expect.objectContaining(expectedAmounts.recipient),
+              expect.objectContaining({
+                ...expectedAmounts.recipient,
+                ...testCase.expectedAdditionalCreditMetadata,
+              }),
             )
-            expect(creditAccountAdditionalMetadata).not.toHaveProperty("memoPayer")
+            if (!testCase.expectedAdditionalCreditMetadata.memoPayer) {
+              expect(creditAccountAdditionalMetadata).not.toHaveProperty("memoPayer")
+            }
 
             expect(internalAccountsAdditionalMetadata).toEqual(
               expect.objectContaining(expectedAmounts.internal),
@@ -227,9 +238,14 @@ describe("Tx metadata", () => {
             )
 
             expect(creditAccountAdditionalMetadata).toEqual(
-              expect.objectContaining(expectedAmounts.internal),
+              expect.objectContaining({
+                ...expectedAmounts.internal,
+                ...testCase.expectedAdditionalCreditMetadata,
+              }),
             )
-            expect(creditAccountAdditionalMetadata).not.toHaveProperty("memoPayer")
+            if (!testCase.expectedAdditionalCreditMetadata.memoPayer) {
+              expect(creditAccountAdditionalMetadata).not.toHaveProperty("memoPayer")
+            }
 
             expect(internalAccountsAdditionalMetadata).toEqual(
               expect.objectContaining(expectedAmounts.internal),
@@ -267,9 +283,14 @@ describe("Tx metadata", () => {
             )
 
             expect(creditAccountAdditionalMetadata).toEqual(
-              expect.objectContaining(expectedAmounts.sender),
+              expect.objectContaining({
+                ...expectedAmounts.sender,
+                ...testCase.expectedAdditionalCreditMetadata,
+              }),
             )
-            expect(creditAccountAdditionalMetadata).not.toHaveProperty("memoPayer")
+            if (!testCase.expectedAdditionalCreditMetadata.memoPayer) {
+              expect(creditAccountAdditionalMetadata).not.toHaveProperty("memoPayer")
+            }
 
             expect(internalAccountsAdditionalMetadata).toEqual(
               expect.objectContaining(expectedAmounts.internal),
@@ -304,9 +325,14 @@ describe("Tx metadata", () => {
             )
 
             expect(creditAccountAdditionalMetadata).toEqual(
-              expect.objectContaining(expectedAmounts.internal),
+              expect.objectContaining({
+                ...expectedAmounts.internal,
+                ...testCase.expectedAdditionalCreditMetadata,
+              }),
             )
-            expect(creditAccountAdditionalMetadata).not.toHaveProperty("memoPayer")
+            if (!testCase.expectedAdditionalCreditMetadata.memoPayer) {
+              expect(creditAccountAdditionalMetadata).not.toHaveProperty("memoPayer")
+            }
 
             expect(internalAccountsAdditionalMetadata).toEqual(
               expect.objectContaining(expectedAmounts.internal),
@@ -327,6 +353,7 @@ describe("Tx metadata", () => {
         },
         expectedCommonMetadata: { memoPayer: undefined },
         expectedAdditionalDebitMetadata: { memoPayer: memoOfPayer },
+        expectedAdditionalCreditMetadata: {},
         crossAccount: {
           title: "OnChainIntraledgerLedgerMetadata",
           MetadataFn: OnChainIntraledgerLedgerMetadata,
@@ -344,9 +371,11 @@ describe("Tx metadata", () => {
         commonMetadataArgs: {
           paymentHash,
           pubkey,
+          memoForRecipient,
         },
         expectedCommonMetadata: { memoPayer: undefined },
         expectedAdditionalDebitMetadata: { memoPayer: memoOfPayer },
+        expectedAdditionalCreditMetadata: { memoPayer: memoForRecipient },
         crossAccount: {
           title: "LnIntraledgerLedgerMetadata",
           MetadataFn: LnIntraledgerLedgerMetadata,
@@ -364,6 +393,7 @@ describe("Tx metadata", () => {
         commonMetadataArgs: undefined,
         expectedCommonMetadata: { memoPayer: memoOfPayer },
         expectedAdditionalDebitMetadata: {},
+        expectedAdditionalCreditMetadata: {},
         crossAccount: {
           title: "WalletIdIntraledgerLedgerMetadata",
           MetadataFn: WalletIdIntraledgerLedgerMetadata,

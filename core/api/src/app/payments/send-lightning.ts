@@ -661,7 +661,12 @@ const lockedPaymentViaIntraledgerSteps = async ({
       | undefined
   } = {}
   let additionalCreditMetadata: {
-    [key: string]: Username | DisplayCurrencyBaseAmount | DisplayCurrency | undefined
+    [key: string]:
+      | Username
+      | DisplayCurrencyBaseAmount
+      | DisplayCurrency
+      | string
+      | undefined
   } = {}
   let additionalInternalMetadata: {
     [key: string]: DisplayCurrencyBaseAmount | DisplayCurrency | undefined
@@ -682,6 +687,7 @@ const lockedPaymentViaIntraledgerSteps = async ({
       senderDisplayCurrency,
 
       memoOfPayer: memo || undefined,
+      memoForRecipient: paymentFlow.descriptionFromInvoice || undefined,
     }))
   } else {
     ;({
@@ -703,6 +709,7 @@ const lockedPaymentViaIntraledgerSteps = async ({
       recipientDisplayCurrency,
 
       memoOfPayer: memo || undefined,
+      memoForRecipient: paymentFlow.descriptionFromInvoice || undefined,
       senderUsername,
       recipientUsername,
     }))
