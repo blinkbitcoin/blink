@@ -16,7 +16,7 @@
   "BRIA_HOST": "localhost",
   "BRIA_API_KEY": "bria_dev_000000000000000000000",
   "NOTIFICATIONS_HOST": "localhost",
-  "LNURL_SERVER_INTERNAL_URL": "http://localhost:4455/lnurl-internal",
+  "LNURL_SERVER_INTERNAL_URL": "",
   "MONGODB_CON": "mongodb://localhost:27017/galoy",
   "REDIS_MASTER_NAME": "mymaster",
   "REDIS_PASSWORD": "",
