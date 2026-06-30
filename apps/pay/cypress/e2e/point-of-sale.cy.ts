@@ -27,30 +27,25 @@ const accountDefaultWalletQuery = `
 
 describe("Point of Sale", () => {
   before(() => {
-    cy.request({
-      method: "POST",
-      url: "http://localhost:4455/auth/phone/login",
-      body: {
-        phone: usernamePhone,
-        code: testData.CODE,
-      },
-    })
-      .then((response) => {
-        expect(response.body).to.have.property("authToken")
-
-        return cy.request({
-          method: "POST",
-          url: "http://localhost:4455/graphql",
-          headers: {
-            Authorization: `Bearer ${response.body.authToken}`,
-          },
-          body: {
-            query: setUsernameMutation,
-            variables: {
-              input: { username },
+    cy.loginAndGetToken(usernamePhone, testData.CODE)
+      .then((authToken) => {
+        return cy
+          .request({
+            method: "POST",
+            url: "http://localhost:4455/graphql",
+            headers: {
+              Authorization: `Bearer ${authToken}`,
             },
-          },
-        })
+            body: {
+              query: setUsernameMutation,
+              variables: {
+                input: { username },
+              },
+            },
+          })
+          .then((response) => {
+            expect(response.body.errors ?? []).to.have.length(0)
+          })
       })
       .then(() => {
         cy.request({
@@ -61,6 +56,7 @@ describe("Point of Sale", () => {
             variables: { username },
           },
         }).then((response) => {
+          expect(response.body.errors ?? []).to.have.length(0)
           expect(response.body.data.accountDefaultWallet.id).to.be.a("string")
         })
       })

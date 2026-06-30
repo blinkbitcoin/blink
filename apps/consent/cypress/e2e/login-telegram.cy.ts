@@ -2,7 +2,7 @@ import { testData } from "../support/test-config"
 
 describe("Login Phone", () => {
   it("should be able to login via telegram passport", () => {
-    cy.flushRedis()
+    cy.resetAuthRateLimits(testData.PHONE_NUMBER)
     cy.visit(testData.AUTHORIZATION_URL)
     cy.location("search").should((search) => {
       const params = new URLSearchParams(search)
