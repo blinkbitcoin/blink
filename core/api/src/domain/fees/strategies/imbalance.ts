@@ -122,19 +122,22 @@ export const ImbalanceFeeStrategy = (
     })
     if (zeroAmount instanceof Error) return zeroAmount
 
-    if (!imbalanceFns || !priceRatio) {
-      return new ValidationError(
-        "ImbalanceFeeStrategy requires priceRatio and volume fns",
-      )
+    let actualImbalance: BtcPaymentAmount | undefined
+    if (imbalanceFns && priceRatio) {
+      const imbalanceCalculator = ImbalanceCalculator({
+        ...imbalanceFns,
+        priceRatio,
+        sinceDaysAgo: config.daysLookback,
+      })
+      const swapOutImbalance =
+        await imbalanceCalculator.getSwapOutImbalanceBtcAmount(wallet)
+      if (swapOutImbalance instanceof Error) return swapOutImbalance
+      actualImbalance = swapOutImbalance
     }
 
-    const imbalanceCalculator = ImbalanceCalculator({
-      ...imbalanceFns,
-      priceRatio,
-      sinceDaysAgo: config.daysLookback,
-    })
-    const actualImbalance = await imbalanceCalculator.getSwapOutImbalanceBtcAmount(wallet)
-    if (actualImbalance instanceof Error) return actualImbalance
+    if (!actualImbalance) {
+      return zeroAmount
+    }
 
     const amountWithImbalanceCalcs = calc.sub(
       calc.add(actualImbalance, paymentAmount),

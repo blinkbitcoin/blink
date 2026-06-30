@@ -78,9 +78,6 @@ type PaymentFlowState<
 > = XorPaymentHashProperty & {
   descriptionFromInvoice: string
   skipProbeForDestination: boolean
-  // Service/bank fee carried separately from the routing reserve
-  // (btcProtocolAndBankFee). Only added to the sender debit and recognized as
-  // revenue; never folded into the LND routing budget / verifyMaxFee check.
   btcBankFee: BtcPaymentAmount
   usdBankFee: UsdPaymentAmount
 } & PaymentFlowCommonState<S, R>

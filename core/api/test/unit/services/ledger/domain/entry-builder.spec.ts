@@ -1056,12 +1056,6 @@ describe("EntryBuilder", () => {
     })
   })
 
-  // Entry shape of the #07 async-USD-failure refund (recordLnFailedUsdSendRefund):
-  // a SINGLE journal that mirrors the BTC `void` forward-as-BTC — credit the user's
-  // BTC wallet the total, debit lnd the reserve (total − bankFee) and debit bank-owner
-  // the service fee, all in sats (no dealer legs). Built with raw medici (EntryBuilder
-  // can't put bank-owner on the debit side), so this mirrors the facade's exact wiring
-  // from the spec — Change Log #13, supersedes the two-journal reversal it replaces.
   describe("Ln failed-USD-send refund (credit user / debit lnd + bank-owner, BTC-only)", () => {
     const userBtcAccountId = creditorAccountId
 
@@ -1124,7 +1118,7 @@ describe("EntryBuilder", () => {
       )
     })
 
-    it("creates NO dealer legs (pure sats refund-as-BTC)", () => {
+    it("creates no dealer legs (pure sats refund-as-BTC)", () => {
       const result = buildRefund(serviceFeeAmount)
 
       // Exactly three legs: user credit + lnd debit + bank-owner debit. No conversion.

@@ -39,8 +39,7 @@ export const reimburseFee = async <S extends WalletCurrency, R extends WalletCur
   })
   if (actualFeeAmount instanceof Error) return actualFeeAmount
 
-  // Reserve = total − service fee (Model 2). Clamp to ≥ ZERO as defense against a
-  // corrupt recovered bank fee > total; the live path can never underflow.
+  // reserve = total − bank fee
   const maxFeeAmounts = {
     btc: calc.max(
       calc.sub(paymentFlow.btcProtocolAndBankFee, paymentFlow.btcBankFee),

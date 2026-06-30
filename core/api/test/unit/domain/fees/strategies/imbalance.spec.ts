@@ -80,32 +80,17 @@ describe("ImbalanceFeeStrategy", () => {
   })
 
   describe("calculate", () => {
-    it("returns a ValidationError when no imbalanceFns provided", async () => {
+    it("returns zero fee when no imbalanceFns provided", async () => {
       const strategy = ImbalanceFeeStrategy(config)
       if (strategy instanceof Error) throw strategy
 
       const fee = await strategy.calculate({
         paymentAmount,
-        priceRatio,
         wallet,
       } as unknown as FeeCalculationArgs)
-      expect(fee).toBeInstanceOf(ValidationError)
-    })
-
-    it("returns a ValidationError when no priceRatio provided", async () => {
-      const strategy = ImbalanceFeeStrategy(config)
-      if (strategy instanceof Error) throw strategy
-
-      const fee = await strategy.calculate({
-        accountId: "" as AccountId,
-        networkFee: {} as NetworkFee,
-        previousFee: {} as FeeDetails,
-        paymentAmount,
-        wallet,
-        imbalanceFns: createImbalanceFns(0n, 0n),
-      } as unknown as FeeCalculationArgs)
-
-      expect(fee).toBeInstanceOf(ValidationError)
+      expect(fee).not.toBeInstanceOf(Error)
+      if (fee instanceof Error) throw fee
+      expect(fee.amount).toBe(0n)
     })
 
     it("returns error when volume fn fails", async () => {
