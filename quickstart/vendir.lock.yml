@@ -2,24 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat: add profit transfer debug script (#648)'
-      sha: 54665919300d38e4adf7bbacd344f2282e334be2
+      commitTitle: 'fix(dev): order lnurl-server after oathkeeper in the e2e stack
+        (#654)...'
+      sha: 48adc19c9016454edc64307efcbdf4a6979e5935
       tags:
-      - 0.22.14-1-g546659193
+      - 0.22.15
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat: add profit transfer debug script (#648)'
-      sha: 54665919300d38e4adf7bbacd344f2282e334be2
+      commitTitle: 'fix(dev): order lnurl-server after oathkeeper in the e2e stack
+        (#654)...'
+      sha: 48adc19c9016454edc64307efcbdf4a6979e5935
       tags:
-      - 0.22.14-1-g546659193
+      - 0.22.15
     path: schemas
   - git:
-      commitTitle: 'feat: add profit transfer debug script (#648)'
-      sha: 54665919300d38e4adf7bbacd344f2282e334be2
+      commitTitle: 'fix(dev): order lnurl-server after oathkeeper in the e2e stack
+        (#654)...'
+      sha: 48adc19c9016454edc64307efcbdf4a6979e5935
       tags:
-      - 0.22.14-1-g546659193
+      - 0.22.15
     path: gql
   path: graphql
 kind: LockConfig
