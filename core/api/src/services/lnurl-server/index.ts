@@ -1,4 +1,4 @@
-import { create as createAxiosInstance } from "axios"
+import { create as createAxiosInstance, isAxiosError } from "axios"
 
 import { handleLnurlServerErrors } from "./errors"
 
@@ -10,6 +10,49 @@ import { wrapAsyncFunctionsToRunInSpan } from "@/services/tracing"
 export const lnurlServerClient = createAxiosInstance({
   timeout: 2000,
 })
+
+const logLnurlServerDiagnosticError = ({
+  err,
+  operation,
+  details,
+}: {
+  err: unknown
+  operation: string
+  details: Record<string, unknown>
+}) => {
+  if (!isAxiosError(err)) {
+    console.error(
+      `[lnurl-server-debug] ${JSON.stringify({
+        operation,
+        details,
+        error:
+          err instanceof Error
+            ? { name: err.name, message: err.message, stack: err.stack }
+            : err,
+      })}`,
+    )
+    return
+  }
+
+  console.error(
+    `[lnurl-server-debug] ${JSON.stringify({
+      operation,
+      details,
+      request: {
+        baseURL: err.config?.baseURL,
+        url: err.config?.url,
+        method: err.config?.method,
+      },
+      response: {
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        data: err.response?.data,
+      },
+      code: err.code,
+      message: err.message,
+    })}`,
+  )
+}
 
 export const LnurlServerService = ():
   | ILnurlServerService
@@ -40,6 +83,11 @@ export const LnurlServerService = ():
 
       return lnurlServerBlinkAccountFromRaw(data)
     } catch (err) {
+      logLnurlServerDiagnosticError({
+        err,
+        operation: "createBlinkAccount",
+        details: args,
+      })
       baseLogger.error({ err, args }, "Failed to create LNURL server Blink account")
       return handleLnurlServerErrors(err)
     }
@@ -61,6 +109,11 @@ export const LnurlServerService = ():
 
       return lnurlServerUpdatedDefaultWalletFromRaw(data)
     } catch (err) {
+      logLnurlServerDiagnosticError({
+        err,
+        operation: "updateDefaultWallet",
+        details: args,
+      })
       baseLogger.error({ err, args }, "Failed to update LNURL server default wallet")
       return handleLnurlServerErrors(err)
     }
@@ -80,6 +133,11 @@ export const LnurlServerService = ():
 
       return lnurlServerIdentifierFromRaw(data)
     } catch (err) {
+      logLnurlServerDiagnosticError({
+        err,
+        operation: "getIdentifier",
+        details: { domain, identifier },
+      })
       baseLogger.error(
         { err, domain, identifier },
         "Failed to fetch LNURL server identifier",
@@ -107,6 +165,11 @@ export const LnurlServerService = ():
 
       return lnurlServerTransferToSparkResultFromRaw(data)
     } catch (err) {
+      logLnurlServerDiagnosticError({
+        err,
+        operation: "transferIdentifierToSpark",
+        details: args,
+      })
       baseLogger.error(
         { err, args },
         "Failed to transfer LNURL server identifier to Spark",
