@@ -2,27 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix(dev): order lnurl-server after oathkeeper in the e2e stack
-        (#654)...'
-      sha: 48adc19c9016454edc64307efcbdf4a6979e5935
+      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1573
+        (#655)...'
+      sha: 26bc52db6771c7685520aa85e78000f867d71ba0
       tags:
-      - 0.22.15
+      - 0.22.15-2-g26bc52db6
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'fix(dev): order lnurl-server after oathkeeper in the e2e stack
-        (#654)...'
-      sha: 48adc19c9016454edc64307efcbdf4a6979e5935
+      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1573
+        (#655)...'
+      sha: 26bc52db6771c7685520aa85e78000f867d71ba0
       tags:
-      - 0.22.15
+      - 0.22.15-2-g26bc52db6
     path: schemas
   - git:
-      commitTitle: 'fix(dev): order lnurl-server after oathkeeper in the e2e stack
-        (#654)...'
-      sha: 48adc19c9016454edc64307efcbdf4a6979e5935
+      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1573
+        (#655)...'
+      sha: 26bc52db6771c7685520aa85e78000f867d71ba0
       tags:
-      - 0.22.15
+      - 0.22.16
     path: gql
   path: graphql
 kind: LockConfig
