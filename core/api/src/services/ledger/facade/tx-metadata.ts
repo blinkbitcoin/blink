@@ -599,6 +599,7 @@ export const LnIntraledgerLedgerMetadata = ({
   pubkey,
   paymentAmounts,
   memoOfPayer,
+  memoForRecipient,
   senderUsername,
   recipientUsername,
   ...displayArgs
@@ -616,6 +617,7 @@ export const LnIntraledgerLedgerMetadata = ({
   recipientDisplayCurrency: DisplayCurrency
 
   memoOfPayer?: string
+  memoForRecipient?: string
   senderUsername?: Username
   recipientUsername?: Username
 }) => {
@@ -659,7 +661,10 @@ export const LnIntraledgerLedgerMetadata = ({
       memoPayer: memoOfPayer,
       username: recipientUsername,
     },
-    creditAccountAdditionalMetadata,
+    creditAccountAdditionalMetadata: {
+      ...creditAccountAdditionalMetadata,
+      ...(memoForRecipient ? { memoPayer: memoForRecipient } : {}),
+    },
     internalAccountsAdditionalMetadata,
   }
 }
@@ -794,6 +799,7 @@ export const LnTradeIntraAccountLedgerMetadata = ({
   pubkey,
   paymentAmounts,
   memoOfPayer,
+  memoForRecipient,
   ...displayArgs
 }: {
   paymentHash: PaymentHash
@@ -805,6 +811,7 @@ export const LnTradeIntraAccountLedgerMetadata = ({
   senderDisplayCurrency: DisplayCurrency
 
   memoOfPayer?: string
+  memoForRecipient?: string
 }) => {
   const tradeDisplayArgs = {
     ...displayArgs,
@@ -850,7 +857,10 @@ export const LnTradeIntraAccountLedgerMetadata = ({
       ...debitAccountAdditionalMetadata,
       memoPayer: memoOfPayer,
     },
-    creditAccountAdditionalMetadata,
+    creditAccountAdditionalMetadata: {
+      ...creditAccountAdditionalMetadata,
+      ...(memoForRecipient ? { memoPayer: memoForRecipient } : {}),
+    },
     internalAccountsAdditionalMetadata,
   }
 }
