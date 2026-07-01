@@ -184,6 +184,11 @@ type LnRoutingRevenueLedgerMetadata = LedgerMetadata & {
   feesCollectedOn: string
 }
 
+type LnReserveRetainedLedgerMetadata = LedgerMetadata &
+  SendAmountsMetadata & {
+    hash: PaymentHash
+  }
+
 type LnChannelOpenOrClosingFee = LedgerMetadata & {
   txid: OnChainTxHash
 }

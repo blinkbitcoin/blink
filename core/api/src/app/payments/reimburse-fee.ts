@@ -12,6 +12,8 @@ import {
   ZERO_SATS,
 } from "@/domain/shared"
 
+import { getSkipFeeReimbursement } from "@/config"
+
 import * as LedgerFacade from "@/services/ledger/facade"
 import { baseLogger } from "@/services/logger"
 
@@ -59,6 +61,22 @@ export const reimburseFee = async <S extends WalletCurrency, R extends WalletCur
   // TODO: only reimburse fees is this is above a (configurable) threshold
   // note: we would still need to log the fee difference to the account owner
   if (feeDifference.btc.amount === 0n) {
+    return true
+  }
+
+  if (getSkipFeeReimbursement()) {
+    const paymentHash = paymentFlow.paymentHashForFlow()
+    if (paymentHash instanceof Error) return paymentHash
+
+    const result = await LedgerFacade.recordLnFeeReserveRetained({
+      paymentAmount: feeDifference.btc,
+      metadata: LedgerFacade.LnReserveRetained({
+        paymentAmount: feeDifference,
+        paymentHash,
+      }),
+    })
+    if (result instanceof Error) return result
+
     return true
   }
 
