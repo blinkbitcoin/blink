@@ -1056,7 +1056,7 @@ describe("EntryBuilder", () => {
     })
   })
 
-  describe("Ln failed-USD-send refund (credit user / debit lnd + bank-owner, BTC-only)", () => {
+  describe("ln failed-usd-send refund (credit user / debit lnd + bank-owner, btc-only)", () => {
     const userBtcAccountId = creditorAccountId
 
     const totalAmount = {

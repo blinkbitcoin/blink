@@ -1692,17 +1692,11 @@ describe("LightningPaymentFlowBuilder", () => {
     })
   })
 
-  // Model 2 (#07): with the lightning send fee strategy gate ON, an external send
-  // above the $100 threshold folds the 0.3% service fee INTO the accounting total
-  // (btcProtocolAndBankFee = routing reserve + service) while ALSO carrying the
-  // breakdown in btcBankFee/usdBankFee. This is the load-bearing fold previously
-  // covered only in the (sandbox-unrunnable) integration suite.
-  describe("service fee fold (#07, gate ON)", () => {
+  describe("ln bank fee", () => {
     const calc = AmountCalculator()
     const serviceFeeBasisPoints = 30n
     const thresholdInCents = 10_000
 
-    // 1_000_000 sats ≈ $200 at the 0.02 cents/sat mid ratio → above the $100 gate.
     const aboveThresholdSats = 1_000_000
     const btcPaymentAmount = {
       amount: BigInt(aboveThresholdSats),

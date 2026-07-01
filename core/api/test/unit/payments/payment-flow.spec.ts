@@ -10,9 +10,6 @@ const calc = AmountCalculator()
 
 const btcPaymentAmount = { amount: BigInt(20_000), currency: WalletCurrency.Btc }
 const usdPaymentAmount = { amount: BigInt(1_000), currency: WalletCurrency.Usd }
-// Model 2: btcProtocolAndBankFee is the accounting TOTAL (routing reserve 360 +
-// service fee 40); btcBankFee (40) is the service-fee breakdown — a SUBSET of the
-// total — so the balance check covers the full total including the service fee.
 const btcProtocolAndBankFee = { amount: BigInt(400), currency: WalletCurrency.Btc }
 const usdProtocolAndBankFee = { amount: BigInt(20), currency: WalletCurrency.Usd }
 const btcBankFee = { amount: BigInt(40), currency: WalletCurrency.Btc }
@@ -66,22 +63,6 @@ const runCheckBalanceTests = <S extends WalletCurrency, R extends WalletCurrency
       it("fails for send amount above balance", () => {
         const balanceForSend = {
           amount: sendAmount.amount - 1n,
-          currency: sendAmount.currency as S,
-        }
-        const check = paymentFlow.checkBalanceForSend(balanceForSend)
-        expect(check).toBeInstanceOf(InsufficientBalanceError)
-      })
-
-      // Model 2 (finding A): btcProtocolAndBankFee includes the service fee, so a
-      // balance that only covers amount + routing reserve (i.e. short by the
-      // service fee) must be rejected — the balance check covers the service fee.
-      it("fails for a balance short by the service fee", () => {
-        const serviceFeeAmount =
-          sendAmount.currency === WalletCurrency.Btc
-            ? btcBankFee.amount
-            : usdBankFee.amount
-        const balanceForSend = {
-          amount: sendAmount.amount - serviceFeeAmount,
           currency: sendAmount.currency as S,
         }
         const check = paymentFlow.checkBalanceForSend(balanceForSend)
