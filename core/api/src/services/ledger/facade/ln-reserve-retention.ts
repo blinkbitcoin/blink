@@ -1,12 +1,10 @@
 import { MainBook } from "../books"
 
-import { EntryBuilder } from "../domain"
+import { FeeOnlyEntryBuilder } from "../domain/fee-only-entry-builder"
 
 import { persistAndReturnEntry } from "../helpers"
 
 import { staticAccountIds } from "./static-account-ids"
-
-import { WalletCurrency, ZERO_BANK_FEE, ZERO_CENTS } from "@/domain/shared"
 
 export const recordLnFeeReserveRetained = async ({
   paymentAmount,
@@ -14,31 +12,19 @@ export const recordLnFeeReserveRetained = async ({
 }: {
   paymentAmount: BtcPaymentAmount
   metadata: LnReserveRetainedLedgerMetadata
-}) => {
+}): Promise<LedgerJournal | LedgerServiceError> => {
   const accountIds = await staticAccountIds()
   if (accountIds instanceof Error) return accountIds
 
-  const bankOwnerAccountDescriptor: LedgerAccountDescriptor<WalletCurrency> = {
-    id: accountIds.bankOwnerAccountId,
-    currency: WalletCurrency.Btc,
-  }
-
   let entry = MainBook.entry("ln fee reserve retained")
-  const builder = EntryBuilder({
+  const builder = FeeOnlyEntryBuilder({
     staticAccountIds: accountIds,
     entry,
     metadata,
-    additionalInternalMetadata: {},
+    btcFee: paymentAmount,
   })
 
-  entry = builder
-    .withTotalAmount({ usdWithFees: ZERO_CENTS, btcWithFees: paymentAmount })
-    .withBankFee(ZERO_BANK_FEE)
-    .debitOffChain()
-    .creditAccount({
-      accountDescriptor: bankOwnerAccountDescriptor,
-      additionalMetadata: {},
-    })
+  entry = builder.debitOffChain().creditBankOwner()
 
   return persistAndReturnEntry({ entry, hash: metadata.hash })
 }
