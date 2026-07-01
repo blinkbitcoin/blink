@@ -12,7 +12,7 @@ import {
   ZERO_SATS,
 } from "@/domain/shared"
 
-import { getLnFeeReserveRetentionEnabled } from "@/config"
+import { getSkipFeeReimbursement } from "@/config"
 
 import * as LedgerFacade from "@/services/ledger/facade"
 import { baseLogger } from "@/services/logger"
@@ -64,7 +64,7 @@ export const reimburseFee = async <S extends WalletCurrency, R extends WalletCur
     return true
   }
 
-  if (getLnFeeReserveRetentionEnabled()) {
+  if (getSkipFeeReimbursement()) {
     const paymentHash = paymentFlow.paymentHashForFlow()
     if (paymentHash instanceof Error) return paymentHash
 

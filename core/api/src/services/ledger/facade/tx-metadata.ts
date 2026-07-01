@@ -913,7 +913,7 @@ export const LnReserveRetained = ({
 }: {
   paymentAmount: PaymentAmountInAllCurrencies
   paymentHash: PaymentHash
-}) => {
+}): LnReserveRetainedLedgerMetadata => {
   const metadata: LnReserveRetainedLedgerMetadata = {
     type: LedgerTransactionType.LnReserveRetained,
     hash: paymentHash,

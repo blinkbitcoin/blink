@@ -112,7 +112,7 @@ type LightningNetworkConfig = {
       pubkeys: Pubkey[]
       chanIds: ChanId[]
     }
-    reserveRetentionEnabled?: boolean
+    skipFeeReimbursement: boolean
   }
   historicalPubkeys: Pubkey[]
 }
