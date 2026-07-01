@@ -127,6 +127,10 @@ type IntraLedgerPaymentSendWalletIdArgs = PaymentSendArgs & {
   amount: number
 }
 
+type IntraLedgerPaymentSendWalletIdInternalArgs = IntraLedgerPaymentSendWalletIdArgs & {
+  skipChecks: boolean
+}
+
 type PayAllOnChainByWalletIdArgs = {
   senderWalletId: WalletId
   senderAccount: Account

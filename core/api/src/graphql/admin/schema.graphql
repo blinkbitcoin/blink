@@ -5,7 +5,7 @@ type AccountDetailPayload {
 
 input AccountForceDeleteInput {
   accountId: AccountId!
-  cancelIfPositiveBalance: Boolean = true
+  skipChecks: Boolean = false
 }
 
 type AccountForceDeletePayload {

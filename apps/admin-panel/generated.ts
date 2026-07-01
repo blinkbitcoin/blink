@@ -67,7 +67,7 @@ export type AccountDetailPayload = {
 
 export type AccountForceDeleteInput = {
   readonly accountId: Scalars['AccountId']['input'];
-  readonly cancelIfPositiveBalance?: InputMaybe<Scalars['Boolean']['input']>;
+  readonly skipChecks?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 export type AccountForceDeletePayload = {
