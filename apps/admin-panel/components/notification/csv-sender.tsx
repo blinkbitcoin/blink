@@ -7,35 +7,7 @@ import {
   filteredUserCount as gqlFilteredUserCount,
   triggerMarketingNotification,
 } from "./notification-actions"
-
-// blink-core validates every userId against KratosUserIdRegex (= UuidRegex,
-// core/api/src/domain/shared/validation.ts). We mirror it here and drop bad rows
-// client-side: the mutation rejects the ENTIRE batch on the first invalid id, so
-// a stray header line or blank cell would otherwise fail a whole 1,000-user batch.
-const USER_ID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-
-// The admin GraphQL API parses request bodies with express.json()'s default
-// 100 kB limit. A userId is ~40 bytes inside the JSON array, so we keep each
-// mutation call to CHUNK_SIZE ids (well under the limit, leaving room for the
-// notification content payload) and loop over the batches.
-const CHUNK_SIZE = 1000
-
-const chunk = <T,>(arr: T[], size: number): T[][] => {
-  const out: T[][] = []
-  for (let i = 0; i < arr.length; i += size) {
-    out.push(arr.slice(i, i + size))
-  }
-  return out
-}
-
-type ParseSummary = {
-  fileName: string
-  totalRows: number
-  validUnique: number
-  duplicates: number
-  invalid: number
-}
+import { CHUNK_SIZE, ParseSummary, chunk, parseUserIdsCsv } from "./csv-parse"
 
 type BatchFailure = {
   userIds: string[]
@@ -53,6 +25,7 @@ const NotificationCsvSender = ({ notification }: NotificationCsvSenderArgs) => {
 
   const [filteredCount, setFilteredCount] = useState<number | null>(null)
   const [loadingCount, setLoadingCount] = useState(false)
+  const [countError, setCountError] = useState<string | undefined>(undefined)
 
   const [sending, setSending] = useState(false)
   const [progress, setProgress] = useState<{ sent: number; total: number } | null>(null)
@@ -72,6 +45,7 @@ const NotificationCsvSender = ({ notification }: NotificationCsvSenderArgs) => {
     setSummary(null)
     setUserIds([])
     setFilteredCount(null)
+    setCountError(undefined)
     resetSendState()
 
     const file = e.target.files?.[0]
@@ -79,39 +53,9 @@ const NotificationCsvSender = ({ notification }: NotificationCsvSenderArgs) => {
 
     try {
       const text = await file.text()
-      // Split on commas, semicolons and any whitespace so a one-per-line list, a
-      // single CSV column, or a comma-separated row all work. Strip wrapping quotes.
-      const tokens = text
-        .split(/[\s,;]+/)
-        .map((token) => token.trim().replace(/^["']|["']$/g, ""))
-        .filter(Boolean)
-
-      const seen = new Set<string>()
-      const valid: string[] = []
-      let duplicates = 0
-      let invalid = 0
-
-      for (const token of tokens) {
-        if (!USER_ID_REGEX.test(token)) {
-          invalid++
-          continue
-        }
-        if (seen.has(token)) {
-          duplicates++
-          continue
-        }
-        seen.add(token)
-        valid.push(token)
-      }
-
+      const { userIds: valid, summary: parsed } = parseUserIdsCsv(text, file.name)
       setUserIds(valid)
-      setSummary({
-        fileName: file.name,
-        totalRows: tokens.length,
-        validUnique: valid.length,
-        duplicates,
-        invalid,
-      })
+      setSummary(parsed)
     } catch (err) {
       setParseError(err instanceof Error ? err.message : "Could not read file")
     }
@@ -121,14 +65,15 @@ const NotificationCsvSender = ({ notification }: NotificationCsvSenderArgs) => {
     if (userIds.length === 0) return
     setLoadingCount(true)
     setFilteredCount(null)
+    setCountError(undefined)
     try {
-      // filteredUserCount rides the same 100 kB body limit, so count per chunk and
-      // sum — the ids are distinct, so per-chunk counts add up without overlap.
       let total = 0
       for (const batch of chunk(userIds, CHUNK_SIZE)) {
         total += await gqlFilteredUserCount({ userIdsFilter: batch })
       }
       setFilteredCount(total)
+    } catch (err) {
+      setCountError(err instanceof Error ? err.message : "Could not fetch user count")
     } finally {
       setLoadingCount(false)
     }
@@ -139,35 +84,41 @@ const NotificationCsvSender = ({ notification }: NotificationCsvSenderArgs) => {
     setDone(false)
     const newFailures: BatchFailure[] = []
 
-    for (let i = 0; i < batches.length; i++) {
-      const batch = batches[i]
-      const res = await triggerMarketingNotification({
-        userIdsFilter: batch,
-        openDeepLink: notification.openDeepLink,
-        openExternalUrl: notification.openExternalUrl,
-        icon: notification.icon,
-        shouldSendPush: notification.shouldSendPush,
-        shouldAddToHistory: notification.shouldAddToHistory,
-        shouldAddToBulletin: notification.shouldAddToBulletin,
-        localizedNotificationContents: notification.localizedNotificationContents,
-      })
-      if (res.success) {
-        // Accumulate with a functional update so a fresh send (after
-        // resetSendState sets it to 0) and a retry (which adds on top of the
-        // already-notified total) both stay correct regardless of render timing.
-        setNotifiedCount((prev) => prev + batch.length)
-      } else {
-        newFailures.push({
-          userIds: batch,
-          message: res.message ?? "Unknown error",
-        })
+    try {
+      for (let i = 0; i < batches.length; i++) {
+        const batch = batches[i]
+        try {
+          const res = await triggerMarketingNotification({
+            userIdsFilter: batch,
+            openDeepLink: notification.openDeepLink,
+            openExternalUrl: notification.openExternalUrl,
+            icon: notification.icon,
+            shouldSendPush: notification.shouldSendPush,
+            shouldAddToHistory: notification.shouldAddToHistory,
+            shouldAddToBulletin: notification.shouldAddToBulletin,
+            localizedNotificationContents: notification.localizedNotificationContents,
+          })
+          if (res.success) {
+            setNotifiedCount((prev) => prev + batch.length)
+          } else {
+            newFailures.push({
+              userIds: batch,
+              message: res.message ?? "Unknown error",
+            })
+          }
+        } catch (err) {
+          newFailures.push({
+            userIds: batch,
+            message: err instanceof Error ? err.message : "Request failed",
+          })
+        }
+        setProgress({ sent: i + 1, total: batches.length })
       }
-      setProgress({ sent: i + 1, total: batches.length })
+    } finally {
+      setFailures(newFailures)
+      setSending(false)
+      setDone(true)
     }
-
-    setFailures(newFailures)
-    setSending(false)
-    setDone(true)
   }
 
   const onSend = async () => {
@@ -232,6 +183,7 @@ const NotificationCsvSender = ({ notification }: NotificationCsvSenderArgs) => {
             Get user notification count
           </button>
           {loadingCount && <p>Loading...</p>}
+          {countError && <p className="text-red-500">{countError}</p>}
           {filteredCount !== null && (
             <p>
               Users that exist for these IDs: {filteredCount}
@@ -255,14 +207,14 @@ const NotificationCsvSender = ({ notification }: NotificationCsvSenderArgs) => {
 
       {progress && (
         <p>
-          Batches sent: {progress.sent}/{progress.total} — notified {notifiedCount}{" "}
-          user(s)
+          Batches sent: {progress.sent}/{progress.total} — {notifiedCount} ID(s) submitted
         </p>
       )}
 
       {done && failures.length === 0 && (
         <p className="text-green-500">
-          All batches sent — {notifiedCount} user(s) notified.
+          All batches sent — {notifiedCount} ID(s) submitted. Only IDs matching an
+          existing user are notified.
         </p>
       )}
 
