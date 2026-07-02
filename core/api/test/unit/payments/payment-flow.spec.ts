@@ -106,6 +106,9 @@ describe("LightningPaymentFlowFromLedgerTransaction", <S extends WalletCurrency,
 
     btcProtocolAndBankFee,
     usdProtocolAndBankFee,
+
+    btcBankFee,
+    usdBankFee,
   }
 
   for (const { name, sendAmount, inputAmount } of walletsToTest) {

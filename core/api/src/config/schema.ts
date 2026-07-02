@@ -185,6 +185,22 @@ const feeStrategySchema = {
       properties: {
         additionalProperties: false,
         name: { type: "string" },
+        strategy: { const: "percentageAboveThreshold" },
+        params: {
+          type: "object",
+          required: ["basisPoints", "thresholdInCents"],
+          additionalProperties: false,
+          properties: {
+            basisPoints: { type: "integer", minimum: 0 },
+            thresholdInCents: { type: "integer", minimum: 0 },
+          },
+        },
+      },
+    },
+    {
+      properties: {
+        additionalProperties: false,
+        name: { type: "string" },
         strategy: { const: "exponentialDecay" },
         params: {
           type: "object",
@@ -944,6 +960,14 @@ export const configSchema = {
             ratioAsBasisPoints: 20,
             daysLookback: 30,
             minFee: 0,
+          },
+        },
+        {
+          name: "lightning_service_fee",
+          strategy: "percentageAboveThreshold",
+          params: {
+            basisPoints: 30,
+            thresholdInCents: 10000,
           },
         },
         {

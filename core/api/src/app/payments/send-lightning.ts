@@ -33,8 +33,10 @@ import {
   toDisplayBaseAmount,
 } from "@/domain/payments"
 import {
+  AmountCalculator,
   WalletCurrency,
   ErrorLevel,
+  ZERO_SATS,
   checkedToBtcPaymentAmount,
   checkedToUsdPaymentAmount,
 } from "@/domain/shared"
@@ -78,6 +80,7 @@ import { ResourceExpiredLockServiceError } from "@/domain/lock"
 
 const dealer = DealerPriceService()
 const paymentFlowRepo = PaymentFlowStateRepository(defaultTimeToExpiryInSeconds)
+const calc = AmountCalculator()
 
 const getValidatedIntraledgerRecipientAccount = async <
   S extends WalletCurrency,
@@ -983,6 +986,10 @@ const lockedPaymentViaLnSteps = async ({
           paymentFlow.usdPaymentAmount.amount + paymentFlow.usdProtocolAndBankFee.amount,
       },
     },
+    bankFee: {
+      btc: paymentFlow.btcBankFee,
+      usd: paymentFlow.usdBankFee,
+    },
     senderWalletDescriptor,
     metadata,
     additionalDebitMetadata: debitAccountAdditionalMetadata,
@@ -1000,8 +1007,12 @@ const lockedPaymentViaLnSteps = async ({
       pubkey: outgoingNodePubkey,
     })
   } else {
+    // btcProtocolAndBankFee is the TOTAL (routing reserve + service fee)
     const maxFeeCheckArgs = {
-      maxFeeAmount: paymentFlow.btcProtocolAndBankFee,
+      maxFeeAmount: calc.max(
+        calc.sub(paymentFlow.btcProtocolAndBankFee, paymentFlow.btcBankFee),
+        ZERO_SATS,
+      ),
       btcPaymentAmount: paymentFlow.btcPaymentAmount,
       usdPaymentAmount: paymentFlow.usdPaymentAmount,
       priceRatio: walletPriceRatio,

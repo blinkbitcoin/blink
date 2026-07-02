@@ -239,6 +239,18 @@ const paymentFlowFromRaw = <S extends WalletCurrency, R extends WalletCurrency>(
   })
   if (usdProtocolAndBankFee instanceof Error) return usdProtocolAndBankFee
 
+  const btcBankFee = paymentAmountFromNumber({
+    amount: paymentFlowState.btcBankFee ?? 0,
+    currency: WalletCurrency.Btc,
+  })
+  if (btcBankFee instanceof Error) return btcBankFee
+
+  const usdBankFee = paymentAmountFromNumber({
+    amount: paymentFlowState.usdBankFee ?? 0,
+    currency: WalletCurrency.Usd,
+  })
+  if (usdBankFee instanceof Error) return usdBankFee
+
   return PaymentFlow<S, R>({
     ...hash,
 
@@ -259,6 +271,9 @@ const paymentFlowFromRaw = <S extends WalletCurrency, R extends WalletCurrency>(
 
     btcProtocolAndBankFee,
     usdProtocolAndBankFee,
+
+    btcBankFee,
+    usdBankFee,
 
     recipientWalletId: (paymentFlowState.recipientWalletId as WalletId) || undefined,
     recipientWalletCurrency: (paymentFlowState.recipientWalletCurrency as R) || undefined,
@@ -304,6 +319,9 @@ const rawFromPaymentFlow = <S extends WalletCurrency, R extends WalletCurrency>(
 
     btcProtocolAndBankFee: Number(paymentFlow.btcProtocolAndBankFee.amount),
     usdProtocolAndBankFee: Number(paymentFlow.usdProtocolAndBankFee.amount),
+
+    btcBankFee: Number(paymentFlow.btcBankFee.amount),
+    usdBankFee: Number(paymentFlow.usdBankFee.amount),
 
     recipientWalletId: paymentFlow.recipientWalletId,
     recipientWalletCurrency: paymentFlow.recipientWalletCurrency,
