@@ -285,8 +285,8 @@ type LPFBWithRouteState<
 > = LPFBWithConversionState<S, R> & {
   outgoingNodePubkey: Pubkey | undefined
   checkedRoute: RawRoute | undefined
-  btcBankFee?: BtcPaymentAmount
-  usdBankFee?: UsdPaymentAmount
+  btcBankFee: BtcPaymentAmount
+  usdBankFee: UsdPaymentAmount
 }
 
 type OnChainPaymentFlowBuilder<S extends WalletCurrency> = {

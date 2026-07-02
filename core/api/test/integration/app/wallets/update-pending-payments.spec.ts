@@ -122,12 +122,6 @@ describe("update pending payments", () => {
     expect(args.description).toBe(FAILED_USD_MEMO)
   })
 
-  // #07 / AC5 on the USD-failure path (Change Log #13): an async USD-wallet external
-  // send that later FAILS is refunded by a SINGLE journal (recordLnFailedUsdSendRefund)
-  // that mirrors the BTC `void` forward-as-BTC — it credits the user the total AND claws
-  // the service fee back from bank-owner in the same entry, so no orphan revenue. The
-  // refund runs on every USD failure; the service-fee breakdown rides in btcBankFee
-  // (ZERO when the send carried no fee → the bank-owner clawback leg simply drops out).
   const runUsdFailureUpdate = async ({
     btcBankFee,
     usdBankFee,
@@ -159,8 +153,6 @@ describe("update pending payments", () => {
       displayAmounts: displaySendEurAmounts,
     })
 
-    // USD-denominated sender flow carrying the service-fee breakdown in
-    // btcBankFee/usdBankFee (Model 2).
     const mockedPaymentFlow = {
       senderWalletCurrency: WalletCurrency.Usd,
       paymentHashForFlow: () => paymentHash,
@@ -191,22 +183,16 @@ describe("update pending payments", () => {
   }
 
   it("refunds the total and claws the service fee back from bank-owner on an async USD failure carrying a service fee", async () => {
-    const serviceFee = { amount: 30n, currency: WalletCurrency.Btc } as BtcPaymentAmount
-    const usdServiceFee = {
-      amount: 10n,
-      currency: WalletCurrency.Usd,
-    } as UsdPaymentAmount
+    const btcBankFee = { amount: 30n, currency: WalletCurrency.Btc } as BtcPaymentAmount
+    const usdBankFee = { amount: 10n, currency: WalletCurrency.Usd } as UsdPaymentAmount
 
-    const { refundSpy } = await runUsdFailureUpdate({
-      btcBankFee: serviceFee,
-      usdBankFee: usdServiceFee,
-    })
+    const { refundSpy } = await runUsdFailureUpdate({ btcBankFee, usdBankFee })
 
     expect(refundSpy).toHaveBeenCalledTimes(1)
     expect(refundSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         description: FAILED_USD_MEMO,
-        btcBankFee: serviceFee,
+        btcBankFee,
         amountToCreditReceiver: {
           btc: calc.add(sendAmount.btc, bankFee.btc),
           usd: calc.add(sendAmount.usd, bankFee.usd),
@@ -215,7 +201,7 @@ describe("update pending payments", () => {
     )
   })
 
-  it("refunds with no bank-owner clawback (btcBankFee = ZERO) when the failed USD send carried no service fee", async () => {
+  it("refunds the total with no bank-owner clawback on an async USD failure carrying no service fee", async () => {
     const { refundSpy } = await runUsdFailureUpdate({
       btcBankFee: ZERO_SATS,
       usdBankFee: ZERO_CENTS,
@@ -223,7 +209,14 @@ describe("update pending payments", () => {
 
     expect(refundSpy).toHaveBeenCalledTimes(1)
     expect(refundSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ btcBankFee: ZERO_SATS }),
+      expect.objectContaining({
+        description: FAILED_USD_MEMO,
+        btcBankFee: ZERO_SATS,
+        amountToCreditReceiver: {
+          btc: calc.add(sendAmount.btc, bankFee.btc),
+          usd: calc.add(sendAmount.usd, bankFee.usd),
+        },
+      }),
     )
   })
 })

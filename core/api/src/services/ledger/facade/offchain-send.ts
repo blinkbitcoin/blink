@@ -82,7 +82,9 @@ export const recordLnFailedUsdSendRefund = async ({
   txMetadata,
   additionalCreditMetadata,
   additionalInternalMetadata,
-}: RecordLnFailedUsdSendRefundArgs) => {
+}: RecordLnFailedUsdSendRefundArgs): Promise<
+  LedgerJournal | LedgerServiceError | InvalidLedgerTransactionStateError
+> => {
   const accountIds = await staticAccountIds()
   if (accountIds instanceof Error) return accountIds
 

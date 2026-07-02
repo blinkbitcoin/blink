@@ -570,8 +570,8 @@ const LPFBWithConversion = <S extends WalletCurrency, R extends WalletCurrency>(
       btcProtocolAndBankFee: state.btcProtocolAndBankFee,
       usdProtocolAndBankFee: state.usdProtocolAndBankFee,
 
-      btcBankFee: state.btcBankFee || ZERO_SATS,
-      usdBankFee: state.usdBankFee || ZERO_CENTS,
+      btcBankFee: state.btcBankFee,
+      usdBankFee: state.usdBankFee,
 
       outgoingNodePubkey: state.outgoingNodePubkey,
       cachedRoute: state.checkedRoute,

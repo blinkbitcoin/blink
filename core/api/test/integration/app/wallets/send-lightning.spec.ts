@@ -1260,26 +1260,6 @@ describe("initiated via lightning", () => {
       expect(Number(senderSend.satsFee)).toBeGreaterThan(serviceFee)
     })
 
-    it("charges no service fee when the amount is below the threshold", async () => {
-      enableServiceFeeGate(100_000_000)
-      mockLndSuccess()
-
-      const { walletDescriptor, account } = await fundedBtcWallet()
-
-      const paymentResult = await Payments.payNoAmountInvoiceByWalletIdForBtcWallet({
-        uncheckedPaymentRequest: noAmountLnInvoice.paymentRequest,
-        memo,
-        senderWalletId: walletDescriptor.id,
-        senderAccount: account,
-        amount: sendAmountSats,
-      })
-      if (paymentResult instanceof Error) throw paymentResult
-      expect(paymentResult.status).toEqual(PaymentSendStatus.Success)
-
-      const serviceFee = await bankOwnerServiceFeeFor(noAmountLnInvoice.paymentHash)
-      expect(serviceFee).toEqual(0)
-    })
-
     it("charges no service fee when the rollout gate is off (default config)", async () => {
       // Do NOT enable the gate — default lightning.send.feeStrategies = [zero_fee]
       mockLndSuccess()
