@@ -1,7 +1,8 @@
 import { MainBook, Transaction } from "../books"
 
-import { EntryBuilder, lndLedgerAccountId, toLedgerAccountDescriptor } from "../domain"
+import { EntryBuilder, toLedgerAccountDescriptor } from "../domain"
 import { NoTransactionToSettleError } from "../domain/errors"
+import { FeeRefundEntryBuilder } from "../domain/fee-refund-entry-builder"
 import { TransactionsMetadataRepository } from "../services"
 import { persistAndReturnEntry } from "../helpers"
 
@@ -11,9 +12,7 @@ import { staticAccountIds } from "./static-account-ids"
 
 import { InvalidLedgerTransactionStateError } from "@/domain/errors"
 import { UnknownLedgerError } from "@/domain/ledger"
-import { AmountCalculator, ZERO_CENTS, ZERO_SATS } from "@/domain/shared"
-
-const calc = AmountCalculator()
+import { ZERO_CENTS, ZERO_SATS } from "@/domain/shared"
 
 export const recordSendOffChain = async ({
   description,
@@ -95,29 +94,21 @@ export const recordLnFailedUsdSendRefund = async ({
       `service fee (${btcBankFee.amount}) exceeds refund total (${totalBtc.amount})`,
     )
   }
-  const reserveBtc = calc.sub(totalBtc, btcBankFee)
 
-  const recipientAccountDescriptor = toLedgerAccountDescriptor(recipientWalletDescriptor)
-  const creditMetadata = { ...metadata, ...additionalCreditMetadata }
-  const internalMetadata = { ...metadata, ...additionalInternalMetadata }
-
-  const entry = MainBook.entry(description)
-  entry
-    .credit(recipientAccountDescriptor.id, Number(totalBtc.amount), {
-      ...creditMetadata,
-      currency: totalBtc.currency,
+  const entry = FeeRefundEntryBuilder({
+    entry: MainBook.entry(description),
+    metadata,
+    additionalCreditMetadata,
+    additionalInternalMetadata,
+    staticAccountIds: accountIds,
+    amountToRefund: totalBtc,
+    btcBankFee,
+  })
+    .creditRecipient({
+      accountDescriptor: toLedgerAccountDescriptor(recipientWalletDescriptor),
     })
-    .debit(lndLedgerAccountId, Number(reserveBtc.amount), {
-      ...internalMetadata,
-      currency: reserveBtc.currency,
-    })
-
-  if (btcBankFee.amount > 0n) {
-    entry.debit(accountIds.bankOwnerAccountId, Number(btcBankFee.amount), {
-      ...internalMetadata,
-      currency: btcBankFee.currency,
-    })
-  }
+    .debitOffChain()
+    .debitBankOwner()
 
   return persistAndReturnEntry({ entry, ...txMetadata })
 }
