@@ -132,11 +132,13 @@ type FeeOnlyEntryBuilderConfig<M extends MediciEntry> = {
 type FeeOnlyEntryBuilderDebit<M extends MediciEntry> = {
   debitBankOwner: () => FeeOnlyEntryBuilderCredit<M>
   debitOnChain: () => FeeOnlyEntryBuilderCredit<M>
+  debitOffChain: () => FeeOnlyEntryBuilderCredit<M>
 }
 
 type FeeOnlyEntryBuilderCredit<M extends MediciEntry> = {
   creditBankOwner: () => M
   creditOnChain: () => M
+  creditOffChain: () => M
 }
 
 type BaseLedgerTransactionMetadata = {

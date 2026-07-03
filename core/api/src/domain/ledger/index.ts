@@ -53,6 +53,7 @@ export const AdminLedgerTransactionType = {
   Escrow: "escrow",
   // TODO: rename. should be routing_revenue
   RoutingRevenue: "routing_fee", // channel-related
+  LnReserveRetained: "ln_reserve_retained",
   Reconciliation: "reconciliation",
 } as const
 

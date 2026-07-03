@@ -2,7 +2,7 @@
 
 import { WalletCurrency } from "@/domain/shared"
 
-import { onChainLedgerAccountId } from "@/services/ledger/domain"
+import { lndLedgerAccountId, onChainLedgerAccountId } from "@/services/ledger/domain"
 import { MainBook } from "@/services/ledger/books"
 import { FeeOnlyEntryBuilder } from "@/services/ledger/domain/fee-only-entry-builder"
 
@@ -110,5 +110,53 @@ describe("FeeOnlyEntryBuilder", () => {
     expect(
       debits.find((tx) => tx.accounts === staticAccountIds.bankOwnerAccountId),
     ).toBeUndefined()
+  })
+
+  it("retains reserve, debit off-chain and credit bank owner", () => {
+    const entry = createEntry()
+    const builder = FeeOnlyEntryBuilder({
+      staticAccountIds,
+      entry,
+      metadata,
+      btcFee,
+    })
+    const result = builder.debitOffChain().creditBankOwner()
+
+    const credits = result.transactions.filter((t) => t.credit > 0)
+    const debits = result.transactions.filter((t) => t.debit > 0)
+
+    expectJournalToBeBalanced(result)
+
+    expectEntryToEqual(findEntry(credits, staticAccountIds.bankOwnerAccountId), btcFee)
+    expect(credits.find((tx) => tx.accounts === lndLedgerAccountId)).toBeUndefined()
+
+    expectEntryToEqual(findEntry(debits, lndLedgerAccountId), btcFee)
+    expect(
+      debits.find((tx) => tx.accounts === staticAccountIds.bankOwnerAccountId),
+    ).toBeUndefined()
+  })
+
+  it("debit bank owner and credit off-chain", () => {
+    const entry = createEntry()
+    const builder = FeeOnlyEntryBuilder({
+      staticAccountIds,
+      entry,
+      metadata,
+      btcFee,
+    })
+    const result = builder.debitBankOwner().creditOffChain()
+
+    const credits = result.transactions.filter((t) => t.credit > 0)
+    const debits = result.transactions.filter((t) => t.debit > 0)
+
+    expectJournalToBeBalanced(result)
+
+    expectEntryToEqual(findEntry(credits, lndLedgerAccountId), btcFee)
+    expect(
+      credits.find((tx) => tx.accounts === staticAccountIds.bankOwnerAccountId),
+    ).toBeUndefined()
+
+    expectEntryToEqual(findEntry(debits, staticAccountIds.bankOwnerAccountId), btcFee)
+    expect(debits.find((tx) => tx.accounts === lndLedgerAccountId)).toBeUndefined()
   })
 })

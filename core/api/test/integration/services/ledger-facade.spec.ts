@@ -498,6 +498,36 @@ describe("Facade", () => {
         expect(liabilitiesTxn.type).toBe(LedgerTransactionType.OnchainPayment)
       })
     })
+
+    describe("recordLnFeeReserveRetained", () => {
+      it("recordLnFeeReserveRetained", async () => {
+        const paymentHash = crypto.randomUUID() as PaymentHash
+        const btcAmount = { amount: 80n, currency: WalletCurrency.Btc }
+        const usdAmount = { amount: 5n, currency: WalletCurrency.Usd }
+
+        const res = await LedgerFacade.recordLnFeeReserveRetained({
+          paymentAmount: btcAmount,
+          metadata: LedgerFacade.LnReserveRetained({
+            paymentAmount: { btc: btcAmount, usd: usdAmount },
+            paymentHash,
+          }),
+        })
+        if (res instanceof Error) throw res
+
+        expect(res.transactionIds).toHaveLength(2)
+
+        const txns = await LedgerService().getTransactionsByHash(paymentHash)
+        if (txns instanceof Error) throw txns
+        expect(txns).toHaveLength(1)
+
+        const txn = txns[0]
+        expect(txn.type).toBe(LedgerTransactionType.LnReserveRetained)
+        expect(txn.credit).toBe(Number(btcAmount.amount))
+        // centsAmount is retrieved from metadata and for analytical purpose
+        expect(txn.centsAmount).toBe(Number(usdAmount.amount))
+        expect(txn.paymentHash).toBe(paymentHash)
+      })
+    })
   })
 
   describe("TxVolumeAmountSinceFactory", () => {
