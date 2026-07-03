@@ -16,6 +16,7 @@ import { getSkipFeeReimbursement } from "@/config"
 
 import * as LedgerFacade from "@/services/ledger/facade"
 import { baseLogger } from "@/services/logger"
+import { recordExceptionInCurrentSpan } from "@/services/tracing"
 
 export const reimburseFee = async <S extends WalletCurrency, R extends WalletCurrency>({
   paymentFlow,
@@ -75,7 +76,9 @@ export const reimburseFee = async <S extends WalletCurrency, R extends WalletCur
         paymentHash,
       }),
     })
-    if (result instanceof Error) return result
+    if (result instanceof Error) {
+      recordExceptionInCurrentSpan({ error: result })
+    }
 
     return true
   }

@@ -148,7 +148,7 @@ export const getValuesToSkipProbe = (): SkipFeeProbeConfig => {
 }
 
 export const getSkipFeeReimbursement = (): boolean =>
-  yamlConfig.paymentNetworks.lightning.send.skipFeeReimbursement || false
+  yamlConfig.paymentNetworks.lightning.send.skipFeeReimbursement
 
 export const getDisplayCurrencyConfig = (): {
   code: DisplayCurrency
@@ -441,7 +441,7 @@ export const getLightningNetworkConfig = (): LightningNetworkConfig => {
         pubkeys: (lightning.send.skipFeeProbe.pubkeys || []) as Pubkey[],
         chanIds: (lightning.send.skipFeeProbe.chanIds || []) as ChanId[],
       },
-      skipFeeReimbursement: lightning.send.skipFeeReimbursement || false,
+      skipFeeReimbursement: lightning.send.skipFeeReimbursement,
     },
     historicalPubkeys: (lightning.historicalPubkeys || []) as Pubkey[],
   }

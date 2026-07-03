@@ -12,6 +12,15 @@ const mockGetSkipFeeReimbursement = getSkipFeeReimbursement as jest.MockedFuncti
   typeof getSkipFeeReimbursement
 >
 
+jest.mock("@/services/tracing", () => ({
+  ...jest.requireActual("@/services/tracing"),
+  recordExceptionInCurrentSpan: jest.fn(),
+}))
+
+import { recordExceptionInCurrentSpan } from "@/services/tracing"
+
+const mockRecordExceptionInCurrentSpan = recordExceptionInCurrentSpan as jest.Mock
+
 import { reimburseFee } from "@/app/payments/reimburse-fee"
 
 import * as LedgerFacadeImpl from "@/services/ledger/facade"
@@ -53,6 +62,7 @@ describe("reimburseFee", () => {
 
   beforeEach(() => {
     mockGetSkipFeeReimbursement.mockReset()
+    mockRecordExceptionInCurrentSpan.mockClear()
   })
 
   afterEach(() => {
@@ -83,6 +93,29 @@ describe("reimburseFee", () => {
     expect(callArgs.metadata.type).toBe(LedgerTransactionType.LnReserveRetained)
     expect(callArgs.metadata.hash).toBe(paymentHash)
 
+    expect(recordReceiveOffChainSpy).not.toHaveBeenCalled()
+  })
+
+  it("does not fail the payment when the recognition journal errors (fail-open)", async () => {
+    mockGetSkipFeeReimbursement.mockReturnValue(true)
+    const recordReceiveOffChainSpy = jest.spyOn(LedgerFacadeImpl, "recordReceiveOffChain")
+    const ledgerError = new Error("ledger commit failed")
+    jest
+      .spyOn(LedgerFacadeImpl, "recordLnFeeReserveRetained")
+      .mockResolvedValue(
+        ledgerError as unknown as Awaited<
+          ReturnType<typeof LedgerFacadeImpl.recordLnFeeReserveRetained>
+        >,
+      )
+
+    const result = await reimburseFee({
+      paymentFlow: buildPaymentFlow(),
+      ...reimburseArgs,
+    })
+
+    expect(result).toBe(true)
+    expect(mockRecordExceptionInCurrentSpan).toHaveBeenCalledTimes(1)
+    expect(mockRecordExceptionInCurrentSpan.mock.calls[0][0].error).toBe(ledgerError)
     expect(recordReceiveOffChainSpy).not.toHaveBeenCalled()
   })
 
