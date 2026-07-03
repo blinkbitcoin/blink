@@ -7,6 +7,7 @@ import NotificationBuilder, {
 } from "../../components/notification/builder"
 import NotificationTestSender from "../../components/notification/test-sender"
 import NotificationFilteredSender from "../../components/notification/filtered-sender"
+import NotificationCsvSender from "../../components/notification/csv-sender"
 
 export default function NotificationsScreen() {
   const [notification, setNotification] = useState<NotificationContent>({
@@ -29,9 +30,10 @@ export default function NotificationsScreen() {
         setNotification={setNotification}
       />
       {notificationContainsEnglishContent && (
-        <div className="flex space-x-6">
+        <div className="flex flex-wrap gap-6">
           <NotificationTestSender notification={notification} />
           <NotificationFilteredSender notification={notification} />
+          <NotificationCsvSender notification={notification} />
         </div>
       )}
     </div>

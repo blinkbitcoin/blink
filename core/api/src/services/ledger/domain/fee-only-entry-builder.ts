@@ -1,4 +1,4 @@
-import { onChainLedgerAccountDescriptor } from "./accounts"
+import { lndLedgerAccountDescriptor, onChainLedgerAccountDescriptor } from "./accounts"
 
 export const FeeOnlyEntryBuilder = <M extends MediciEntry>({
   entry,
@@ -42,9 +42,16 @@ export const FeeOnlyEntryBuilder = <M extends MediciEntry>({
     })
   }
 
+  const debitOffChain = (): FeeOnlyEntryBuilderCredit<M> => {
+    return debitAccount({
+      accountDescriptor: lndLedgerAccountDescriptor,
+    })
+  }
+
   return {
     debitBankOwner,
     debitOnChain,
+    debitOffChain,
   }
 }
 
@@ -84,8 +91,14 @@ const EntryBuilderCredit = <M extends MediciEntry>({
       accountDescriptor: onChainLedgerAccountDescriptor,
     })
 
+  const creditOffChain = () =>
+    creditAccount({
+      accountDescriptor: lndLedgerAccountDescriptor,
+    })
+
   return {
     creditBankOwner,
     creditOnChain,
+    creditOffChain,
   }
 }
