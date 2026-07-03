@@ -2,24 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat: retain unused LN fee reserve behind config flag (#643)...'
-      sha: 36575db32524634b555f10878cae9c83cfdf3b0a
+      commitTitle: 'feat(notifications): add card onboarding deep link screens (#664)...'
+      sha: 34c03b815bb592fc28939aa262704a38f0d3ed07
       tags:
-      - 0.22.16-3-g36575db32
+      - 0.22.17-1-g34c03b815
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat: retain unused LN fee reserve behind config flag (#643)...'
-      sha: 36575db32524634b555f10878cae9c83cfdf3b0a
+      commitTitle: 'feat(notifications): add card onboarding deep link screens (#664)...'
+      sha: 34c03b815bb592fc28939aa262704a38f0d3ed07
       tags:
-      - 0.22.16-3-g36575db32
+      - 0.22.17-1-g34c03b815
     path: schemas
   - git:
-      commitTitle: 'feat: retain unused LN fee reserve behind config flag (#643)...'
-      sha: 36575db32524634b555f10878cae9c83cfdf3b0a
+      commitTitle: 'feat(notifications): add card onboarding deep link screens (#664)...'
+      sha: 34c03b815bb592fc28939aa262704a38f0d3ed07
       tags:
-      - 0.22.16-3-g36575db32
+      - 0.22.17-1-g34c03b815
     path: gql
   path: graphql
 kind: LockConfig
