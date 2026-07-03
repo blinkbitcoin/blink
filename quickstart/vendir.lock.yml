@@ -2,27 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1573
-        (#655)...'
-      sha: 26bc52db6771c7685520aa85e78000f867d71ba0
+      commitTitle: 'feat: retain unused LN fee reserve behind config flag (#643)...'
+      sha: 36575db32524634b555f10878cae9c83cfdf3b0a
       tags:
-      - 0.22.15-2-g26bc52db6
+      - 0.22.16-3-g36575db32
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1573
-        (#655)...'
-      sha: 26bc52db6771c7685520aa85e78000f867d71ba0
+      commitTitle: 'feat: retain unused LN fee reserve behind config flag (#643)...'
+      sha: 36575db32524634b555f10878cae9c83cfdf3b0a
       tags:
-      - 0.22.15-2-g26bc52db6
+      - 0.22.16-3-g36575db32
     path: schemas
   - git:
-      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1573
-        (#655)...'
-      sha: 26bc52db6771c7685520aa85e78000f867d71ba0
+      commitTitle: 'feat: retain unused LN fee reserve behind config flag (#643)...'
+      sha: 36575db32524634b555f10878cae9c83cfdf3b0a
       tags:
-      - 0.22.16
+      - 0.22.16-3-g36575db32
     path: gql
   path: graphql
 kind: LockConfig
