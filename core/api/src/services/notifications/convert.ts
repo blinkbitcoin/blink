@@ -137,6 +137,20 @@ export const deepLinkScreenToGrpcDeepLinkScreen = (
       return Grpc.DeepLinkScreen.SETTINGSNOTIFICATIONS
     case DeepLinkScreen.SettingsEmail:
       return Grpc.DeepLinkScreen.SETTINGSEMAIL
+    case DeepLinkScreen.CardOnboarding:
+      return Grpc.DeepLinkScreen.CARDONBOARDING
+    case DeepLinkScreen.CardOnboardingSubscribe:
+      return Grpc.DeepLinkScreen.CARDONBOARDINGSUBSCRIBE
+    case DeepLinkScreen.CardOnboardingLoading:
+      return Grpc.DeepLinkScreen.CARDONBOARDINGLOADING
+    case DeepLinkScreen.CardOnboardingPersonalInfo:
+      return Grpc.DeepLinkScreen.CARDONBOARDINGPERSONALINFO
+    case DeepLinkScreen.CardOnboardingProcessing:
+      return Grpc.DeepLinkScreen.CARDONBOARDINGPROCESSING
+    case DeepLinkScreen.CardOnboardingPreapproved:
+      return Grpc.DeepLinkScreen.CARDONBOARDINGPREAPPROVED
+    case DeepLinkScreen.CardOnboardingApproved:
+      return Grpc.DeepLinkScreen.CARDONBOARDINGAPPROVED
   }
 }
 
