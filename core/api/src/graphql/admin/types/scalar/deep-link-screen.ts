@@ -67,6 +67,27 @@ const DeepLinkScreen = GT.Enum({
     SETTINGS_EMAIL: {
       value: DomainDeepLinkScreen.SettingsEmail,
     },
+    CARD_ONBOARDING: {
+      value: DomainDeepLinkScreen.CardOnboarding,
+    },
+    CARD_ONBOARDING_SUBSCRIBE: {
+      value: DomainDeepLinkScreen.CardOnboardingSubscribe,
+    },
+    CARD_ONBOARDING_LOADING: {
+      value: DomainDeepLinkScreen.CardOnboardingLoading,
+    },
+    CARD_ONBOARDING_PERSONAL_INFO: {
+      value: DomainDeepLinkScreen.CardOnboardingPersonalInfo,
+    },
+    CARD_ONBOARDING_PROCESSING: {
+      value: DomainDeepLinkScreen.CardOnboardingProcessing,
+    },
+    CARD_ONBOARDING_PREAPPROVED: {
+      value: DomainDeepLinkScreen.CardOnboardingPreapproved,
+    },
+    CARD_ONBOARDING_APPROVED: {
+      value: DomainDeepLinkScreen.CardOnboardingApproved,
+    },
   },
 })
 

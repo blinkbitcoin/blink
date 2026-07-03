@@ -225,6 +225,27 @@ impl From<proto::DeepLinkScreen> for notification_event::DeepLinkScreen {
             proto::DeepLinkScreen::SettingsEmail => {
                 notification_event::DeepLinkScreen::SettingsEmail
             }
+            proto::DeepLinkScreen::CardOnboarding => {
+                notification_event::DeepLinkScreen::CardOnboarding
+            }
+            proto::DeepLinkScreen::CardOnboardingSubscribe => {
+                notification_event::DeepLinkScreen::CardOnboardingSubscribe
+            }
+            proto::DeepLinkScreen::CardOnboardingLoading => {
+                notification_event::DeepLinkScreen::CardOnboardingLoading
+            }
+            proto::DeepLinkScreen::CardOnboardingPersonalInfo => {
+                notification_event::DeepLinkScreen::CardOnboardingPersonalInfo
+            }
+            proto::DeepLinkScreen::CardOnboardingProcessing => {
+                notification_event::DeepLinkScreen::CardOnboardingProcessing
+            }
+            proto::DeepLinkScreen::CardOnboardingPreapproved => {
+                notification_event::DeepLinkScreen::CardOnboardingPreapproved
+            }
+            proto::DeepLinkScreen::CardOnboardingApproved => {
+                notification_event::DeepLinkScreen::CardOnboardingApproved
+            }
         }
     }
 }

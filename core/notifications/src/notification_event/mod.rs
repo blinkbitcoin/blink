@@ -108,6 +108,13 @@ pub enum DeepLinkScreen {
     SettingsTxLimits,
     SettingsNotifications,
     SettingsEmail,
+    CardOnboarding,
+    CardOnboardingSubscribe,
+    CardOnboardingLoading,
+    CardOnboardingPersonalInfo,
+    CardOnboardingProcessing,
+    CardOnboardingPreapproved,
+    CardOnboardingApproved,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -203,6 +210,19 @@ impl DeepLink {
                 DeepLinkScreen::SettingsTxLimits => "settings/tx-limits".to_string(),
                 DeepLinkScreen::SettingsNotifications => "settings/notifications".to_string(),
                 DeepLinkScreen::SettingsEmail => "settings/email".to_string(),
+                DeepLinkScreen::CardOnboarding => "card/onboarding".to_string(),
+                DeepLinkScreen::CardOnboardingSubscribe => "card/onboarding/subscribe".to_string(),
+                DeepLinkScreen::CardOnboardingLoading => "card/onboarding/loading".to_string(),
+                DeepLinkScreen::CardOnboardingPersonalInfo => {
+                    "card/onboarding/personal-info".to_string()
+                }
+                DeepLinkScreen::CardOnboardingProcessing => {
+                    "card/onboarding/processing".to_string()
+                }
+                DeepLinkScreen::CardOnboardingPreapproved => {
+                    "card/onboarding/preapproved".to_string()
+                }
+                DeepLinkScreen::CardOnboardingApproved => "card/onboarding/approved".to_string(),
             };
             link_string.push_str(&screen);
         }
@@ -343,5 +363,51 @@ impl From<MarketingNotificationTriggered> for NotificationEventPayload {
 impl From<LinkEmailReminder> for NotificationEventPayload {
     fn from(event: LinkEmailReminder) -> Self {
         NotificationEventPayload::LinkEmailReminder(event)
+    }
+}
+
+#[cfg(test)]
+mod deep_link_tests {
+    use super::*;
+
+    fn card_screen_link(screen: DeepLinkScreen) -> String {
+        DeepLink {
+            screen: Some(screen),
+            action: None,
+            label: None,
+        }
+        .to_link_string()
+    }
+
+    #[test]
+    fn card_onboarding_screens_produce_expected_links() {
+        assert_eq!(
+            card_screen_link(DeepLinkScreen::CardOnboarding),
+            "/card/onboarding"
+        );
+        assert_eq!(
+            card_screen_link(DeepLinkScreen::CardOnboardingSubscribe),
+            "/card/onboarding/subscribe"
+        );
+        assert_eq!(
+            card_screen_link(DeepLinkScreen::CardOnboardingLoading),
+            "/card/onboarding/loading"
+        );
+        assert_eq!(
+            card_screen_link(DeepLinkScreen::CardOnboardingPersonalInfo),
+            "/card/onboarding/personal-info"
+        );
+        assert_eq!(
+            card_screen_link(DeepLinkScreen::CardOnboardingProcessing),
+            "/card/onboarding/processing"
+        );
+        assert_eq!(
+            card_screen_link(DeepLinkScreen::CardOnboardingPreapproved),
+            "/card/onboarding/preapproved"
+        );
+        assert_eq!(
+            card_screen_link(DeepLinkScreen::CardOnboardingApproved),
+            "/card/onboarding/approved"
+        );
     }
 }
