@@ -1,5 +1,8 @@
 #!/bin/bash
 
+echo "Cleaning persisted LNURL server SQLite state..."
+rm -f dev/.data/lnurl.db dev/.data/lnurl.db-shm dev/.data/lnurl.db-wal
+
 echo "Running node_modules build..."
 buck2 build //:node_modules --verbose 4
 
