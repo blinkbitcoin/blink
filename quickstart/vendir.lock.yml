@@ -2,24 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat(notifications): add card onboarding deep link screens (#664)...'
-      sha: 34c03b815bb592fc28939aa262704a38f0d3ed07
+      commitTitle: 'fix(ci): remove root-owned lnurl state (#666)'
+      sha: 66e312de4d436480f7f2474793a49550dee3bf2c
       tags:
-      - 0.22.17-1-g34c03b815
+      - 0.22.17-4-g66e312de4
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat(notifications): add card onboarding deep link screens (#664)...'
-      sha: 34c03b815bb592fc28939aa262704a38f0d3ed07
+      commitTitle: 'fix(ci): remove root-owned lnurl state (#666)'
+      sha: 66e312de4d436480f7f2474793a49550dee3bf2c
       tags:
-      - 0.22.17-1-g34c03b815
+      - 0.22.17-4-g66e312de4
     path: schemas
   - git:
-      commitTitle: 'feat(notifications): add card onboarding deep link screens (#664)...'
-      sha: 34c03b815bb592fc28939aa262704a38f0d3ed07
+      commitTitle: 'fix(ci): remove root-owned lnurl state (#666)'
+      sha: 66e312de4d436480f7f2474793a49550dee3bf2c
       tags:
-      - 0.22.17-1-g34c03b815
+      - 0.22.17-4-g66e312de4
     path: gql
   path: graphql
 kind: LockConfig
