@@ -285,6 +285,13 @@ enum DeepLinkScreen {
   SettingsTxLimits = 18;
   SettingsNotifications = 19;
   SettingsEmail = 20;
+  CardOnboarding = 21;
+  CardOnboardingSubscribe = 22;
+  CardOnboardingLoading = 23;
+  CardOnboardingPersonalInfo = 24;
+  CardOnboardingProcessing = 25;
+  CardOnboardingPreapproved = 26;
+  CardOnboardingApproved = 27;
 }
 
 enum DeepLinkAction {
