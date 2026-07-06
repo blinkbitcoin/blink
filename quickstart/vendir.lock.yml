@@ -2,24 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat: retain unused LN fee reserve behind config flag (#643)...'
-      sha: 36575db32524634b555f10878cae9c83cfdf3b0a
+      commitTitle: 'fix(ci): remove root-owned lnurl state (#666)'
+      sha: 66e312de4d436480f7f2474793a49550dee3bf2c
       tags:
-      - 0.22.16-3-g36575db32
+      - 0.22.17-4-g66e312de4
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat: retain unused LN fee reserve behind config flag (#643)...'
-      sha: 36575db32524634b555f10878cae9c83cfdf3b0a
+      commitTitle: 'fix(ci): remove root-owned lnurl state (#666)'
+      sha: 66e312de4d436480f7f2474793a49550dee3bf2c
       tags:
-      - 0.22.16-3-g36575db32
+      - 0.22.17-4-g66e312de4
     path: schemas
   - git:
-      commitTitle: 'feat: retain unused LN fee reserve behind config flag (#643)...'
-      sha: 36575db32524634b555f10878cae9c83cfdf3b0a
+      commitTitle: 'fix(ci): remove root-owned lnurl state (#666)'
+      sha: 66e312de4d436480f7f2474793a49550dee3bf2c
       tags:
-      - 0.22.16-3-g36575db32
+      - 0.22.17-4-g66e312de4
     path: gql
   path: graphql
 kind: LockConfig

@@ -223,6 +223,13 @@ export const DeepLinkAction = {
 
 export type DeepLinkAction = typeof DeepLinkAction[keyof typeof DeepLinkAction];
 export const DeepLinkScreen = {
+  CardOnboarding: 'CARD_ONBOARDING',
+  CardOnboardingApproved: 'CARD_ONBOARDING_APPROVED',
+  CardOnboardingLoading: 'CARD_ONBOARDING_LOADING',
+  CardOnboardingPersonalInfo: 'CARD_ONBOARDING_PERSONAL_INFO',
+  CardOnboardingPreapproved: 'CARD_ONBOARDING_PREAPPROVED',
+  CardOnboardingProcessing: 'CARD_ONBOARDING_PROCESSING',
+  CardOnboardingSubscribe: 'CARD_ONBOARDING_SUBSCRIBE',
   Chat: 'CHAT',
   Circles: 'CIRCLES',
   Convert: 'CONVERT',
