@@ -6,12 +6,7 @@ import Image from "next/image"
 import CurrencyInput, { formatValue } from "react-currency-input-field"
 
 import { ACTION_TYPE, ACTIONS } from "@/app/reducer"
-import {
-  safeAmount,
-  getLocaleConfig,
-  extractSearchParams,
-  parseDisplayCurrency,
-} from "@/lib/utils"
+import { safeAmount, getLocaleConfig, parseDisplayCurrency } from "@/lib/utils"
 
 import { useDisplayCurrency } from "@/hooks/use-display-currency"
 
@@ -55,17 +50,31 @@ function ParsePayment({
     inputValue: state.currentAmount,
     defaultSize: 3,
   })
+  const currentQueryMatches = ({
+    amount,
+    memo,
+    display,
+  }: {
+    amount: string
+    memo: string
+    display: string
+  }) => {
+    return (
+      searchParams?.get("amount") === amount &&
+      (searchParams?.get("memo") ?? "") === memo &&
+      searchParams?.get("display") === display
+    )
+  }
   // set all query params on first load, even if they are not passed
   useEffect(() => {
     const initialAmount = safeAmount(state.currentAmount).toString()
     const initialDisplay = display
-    const initialQuery = extractSearchParams(searchParams)
     const newQuery = {
       amount: initialAmount,
       memo: memo ?? "",
       display: initialDisplay,
     }
-    if (initialQuery !== newQuery) {
+    if (!currentQueryMatches(newQuery)) {
       const params = new URLSearchParams({
         amount: initialAmount,
         memo: memo ?? "",
@@ -131,8 +140,7 @@ function ParsePayment({
       display,
     }
 
-    const initialQuery = extractSearchParams(searchParams)
-    if (initialQuery !== newQuery && !skipRouterPush) {
+    if (!currentQueryMatches(newQuery) && !skipRouterPush) {
       const newUrl = new URL(window.location.toString())
       newUrl.pathname = `/${username}`
       newUrl.search = new URLSearchParams(newQuery).toString()
