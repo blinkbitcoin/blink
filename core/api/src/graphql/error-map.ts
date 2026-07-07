@@ -905,6 +905,17 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "UnknownNotificationsServiceError":
     case "UnknownIpFetcherServiceError":
     case "UnknownLnurlServiceError":
+    case "UnknownLnurlServerServiceError":
+    case "LnurlServerServiceError":
+    case "LnurlServerBadRequestError":
+    case "LnurlServerUnauthorizedError":
+    case "LnurlServerForbiddenError":
+    case "LnurlServerNotFoundError":
+    case "LnurlServerUnavailableError":
+    case "LnurlServerConflictError":
+    case "LnurlServerIdentifierConflictError":
+    case "LnurlServerBlinkAccountExistsError":
+    case "LnurlServerMissingInternalUrlError":
     case "UnknownCacheServiceError":
     case "UnknownPhoneProviderServiceError":
     case "UnknownDealerPriceServiceError":
