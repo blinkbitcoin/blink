@@ -25,6 +25,11 @@ teardown_file() {
 }
 
 teardown() {
+  if [[ -f "$TRIGGER_STOP_FILE" ]]; then
+    rm "$TRIGGER_STOP_FILE"
+    retry 10 1 trigger_is_started
+  fi
+
   balance="$(balance_for_check)"
   if [[ "$balance" != 0 ]]; then
     fail "Error: balance_for_check failed ($balance)"
