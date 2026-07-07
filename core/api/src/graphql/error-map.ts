@@ -40,6 +40,8 @@ import {
   PriceServiceOfflineError,
   OperationRestrictedError,
   AuthorizationError,
+  MigrationStateConflictError,
+  MigrationInvalidDestinationError,
 } from "@/graphql/error"
 import { baseLogger } from "@/services/logger"
 
@@ -640,6 +642,23 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       message = "Invalid or inactive speed"
       return new ValidationInternalError({ message, logger: baseLogger })
 
+    case "MigrationStateConflictError":
+      message = error.message || "Migration is already in progress or committed"
+      return new MigrationStateConflictError({ message, logger: baseLogger })
+
+    case "MigrationDollarBalanceNotEmptyError":
+      message = error.message || "Dollar balance must be empty before migration"
+      return new MigrationStateConflictError({ message, logger: baseLogger })
+
+    case "MigrationInvalidDestinationError":
+    case "MigrationProofExpiredError":
+      message = error.message || "Invalid migration destination"
+      return new MigrationInvalidDestinationError({ message, logger: baseLogger })
+
+    case "MigrationFlowDisabledError":
+      message = "Migration is not available."
+      return new OperationRestrictedError({ message, logger: baseLogger })
+
     // ----------
     // Unhandled below here
     // ----------
@@ -748,6 +767,8 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "UndefinedIPError":
     case "UnauthorizedIPMetadataASNError":
     case "InvalidAccountStatusError":
+    case "MigrationFlowError":
+    case "InvalidMigrationFlowPhaseError":
     case "InvalidOnChainAddress":
     case "InvalidScanDepthAmount":
     case "InsufficientBalanceForRoutingError":
@@ -914,6 +935,7 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "UnknownBriaEventError":
     case "UnknownApiKeysServiceError":
     case "CouldNotFindAccountError":
+    case "CouldNotFindMigrationFlowStateError":
     case "OathkeeperError":
     case "OathkeeperUnauthorizedServiceError":
     case "OathkeeperMissingAuthorizationHeaderError":

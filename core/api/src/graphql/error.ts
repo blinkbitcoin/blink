@@ -94,6 +94,26 @@ export class QuizClaimedTooEarlyError extends CustomGraphQLError {
   }
 }
 
+export class MigrationStateConflictError extends CustomGraphQLError {
+  constructor(errData: CustomGraphQLErrorData) {
+    super({
+      code: "MIGRATION_STATE_CONFLICT",
+      forwardToClient: true,
+      ...errData,
+    })
+  }
+}
+
+export class MigrationInvalidDestinationError extends CustomGraphQLError {
+  constructor(errData: CustomGraphQLErrorData) {
+    super({
+      code: "MIGRATION_INVALID_DESTINATION",
+      forwardToClient: true,
+      ...errData,
+    })
+  }
+}
+
 export class ValidationInternalError extends CustomGraphQLError {
   constructor(errData: CustomGraphQLErrorData) {
     super({ code: "INVALID_INPUT", forwardToClient: true, ...errData })

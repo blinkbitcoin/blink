@@ -22,6 +22,7 @@ interface Account {
   ): InvoiceConnection
   level: AccountLevel!
   limits: AccountLimits!
+  migration: AccountMigration
   notificationSettings: NotificationSettings!
   pendingIncomingTransactions(walletIds: [WalletId]): [Transaction!]!
   realtimePrice: RealtimePrice!
@@ -97,6 +98,11 @@ type AccountLimits {
 
   """Limits for withdrawing to external onchain or lightning destinations."""
   withdrawal: [AccountLimit!]!
+}
+
+type AccountMigration {
+  status: MigrationStatus!
+  transferPaymentHash: String
 }
 
 input AccountUpdateDefaultWalletIdInput {
@@ -300,6 +306,7 @@ type ConsumerAccount implements Account {
   ): InvoiceConnection
   level: AccountLevel!
   limits: AccountLimits!
+  migration: AccountMigration
   notificationSettings: NotificationSettings!
   pendingIncomingTransactions(walletIds: [WalletId]): [Transaction!]!
 
@@ -931,6 +938,43 @@ type MerchantPayload {
   merchant: Merchant
 }
 
+input MigrationCommitInput {
+  """User attested to having backed up the destination wallet."""
+  backupAttested: Boolean!
+
+  """Version of the migration disclosure accepted by the user."""
+  disclosureVersion: String!
+
+  """
+  Signature over the migration proof-of-possession challenge, made with the Spark identity key.
+  """
+  proofSignature: String!
+
+  """
+  Timestamp of the signed challenge, in milliseconds since the Unix epoch.
+  """
+  proofTimestamp: SafeInt!
+
+  """No-amount BOLT11 invoice minted by the destination Spark wallet."""
+  sparkInvoice: LnPaymentRequest!
+
+  """Spark identity pubkey of the destination wallet, hex encoded."""
+  sparkPubkey: String!
+}
+
+type MigrationPayload {
+  errors: [Error!]!
+  migration: AccountMigration
+}
+
+enum MigrationStatus {
+  COMPLETED
+  FAILED
+  IN_PROGRESS
+  NOT_STARTED
+  TRANSFERRING
+}
+
 """(Positive) amount of minutes"""
 scalar Minutes
 
@@ -1056,6 +1100,8 @@ type Mutation {
   """Sends a payment to a lightning address."""
   lnurlPaymentSend(input: LnurlPaymentSendInput!): PaymentSendPayload!
   merchantMapSuggest(input: MerchantMapSuggestInput!): MerchantPayload!
+  migrationCommit(input: MigrationCommitInput!): MigrationPayload!
+  migrationStart: MigrationPayload!
   onChainAddressCreate(input: OnChainAddressCreateInput!): OnChainAddressPayload!
   onChainAddressCurrent(input: OnChainAddressCurrentInput!): OnChainAddressPayload!
   onChainPaymentSend(input: OnChainPaymentSendInput!): PaymentSendPayload!

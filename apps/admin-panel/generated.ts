@@ -89,6 +89,7 @@ export const AccountStatus = {
   Closed: 'CLOSED',
   Invited: 'INVITED',
   Locked: 'LOCKED',
+  Migrated: 'MIGRATED',
   New: 'NEW',
   Pending: 'PENDING'
 } as const;

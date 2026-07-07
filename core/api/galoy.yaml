@@ -305,6 +305,8 @@ cronConfig:
   removeInactiveMerchantsEnabled: true
 captcha:
   mandatory: false
+custodialMigrationFlow:
+  enabled: false
 smsAuthUnsupportedCountries: []
 whatsAppAuthUnsupportedCountries: []
 telegramAuthUnsupportedCountries: []

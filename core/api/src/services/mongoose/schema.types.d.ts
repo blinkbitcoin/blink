@@ -200,6 +200,24 @@ type PaymentFlowStateRecordIndex = XOR<
   inputAmount: number
 }
 
+type MigrationFlowStateStepRecord = {
+  step: string
+  recordedAt: Date
+  detail?: string
+}
+
+interface MigrationFlowStateRecord {
+  accountId: string
+  phase: string
+  destinationSparkPubkey?: string
+  destinationProofVerified: boolean
+  lnPaymentHash?: string
+  disclosureVersion?: string
+  steps: MigrationFlowStateStepRecord[]
+  createdAt: Date
+  updatedAt: Date
+}
+
 type WalletOnChainPendingReceiveRecord = {
   walletId: string
   address: string

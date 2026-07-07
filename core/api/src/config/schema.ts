@@ -1028,6 +1028,17 @@ export const configSchema = {
       additionalProperties: false,
       default: { mandatory: false },
     },
+    custodialMigrationFlow: {
+      type: "object",
+      properties: {
+        enabled: { type: "boolean" },
+      },
+      required: ["enabled"],
+      additionalProperties: false,
+      default: {
+        enabled: false,
+      },
+    },
     smsAuthUnsupportedCountries: {
       type: "array",
       items: { type: "string" },
@@ -1138,6 +1149,7 @@ export const configSchema = {
     "userActivenessMonthlyVolumeThreshold",
     "cronConfig",
     "captcha",
+    "custodialMigrationFlow",
     "smsAuthUnsupportedCountries",
     "whatsAppAuthUnsupportedCountries",
     "telegramAuthUnsupportedCountries",

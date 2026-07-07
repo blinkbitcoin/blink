@@ -1,5 +1,6 @@
 export * from "./accounts"
 export * from "./ln-payments"
+export * from "./migration-flow-state"
 export * from "./payment-flow"
 export * from "./quiz"
 export * from "./users"

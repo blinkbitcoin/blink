@@ -47,6 +47,7 @@ interface Account
   ): InvoiceConnection
   level: AccountLevel!
   limits: AccountLimits!
+  migration: AccountMigration
   notificationSettings: NotificationSettings!
   pendingIncomingTransactions(walletIds: [WalletId]): [Transaction!]!
   realtimePrice: RealtimePrice!
@@ -138,6 +139,13 @@ type AccountLimits
 
   """Limits for withdrawing to external onchain or lightning destinations."""
   withdrawal: [AccountLimit!]!
+}
+
+type AccountMigration
+  @join__type(graph: PUBLIC)
+{
+  status: MigrationStatus!
+  transferPaymentHash: String
 }
 
 input AccountUpdateDefaultWalletIdInput
@@ -461,6 +469,7 @@ type ConsumerAccount implements Account
   ): InvoiceConnection
   level: AccountLevel!
   limits: AccountLimits!
+  migration: AccountMigration
   notificationSettings: NotificationSettings!
   pendingIncomingTransactions(walletIds: [WalletId]): [Transaction!]!
 
@@ -1322,6 +1331,49 @@ type MerchantPayload
   merchant: Merchant
 }
 
+input MigrationCommitInput
+  @join__type(graph: PUBLIC)
+{
+  """User attested to having backed up the destination wallet."""
+  backupAttested: Boolean!
+
+  """Version of the migration disclosure accepted by the user."""
+  disclosureVersion: String!
+
+  """
+  Signature over the migration proof-of-possession challenge, made with the Spark identity key.
+  """
+  proofSignature: String!
+
+  """
+  Timestamp of the signed challenge, in milliseconds since the Unix epoch.
+  """
+  proofTimestamp: SafeInt!
+
+  """No-amount BOLT11 invoice minted by the destination Spark wallet."""
+  sparkInvoice: LnPaymentRequest!
+
+  """Spark identity pubkey of the destination wallet, hex encoded."""
+  sparkPubkey: String!
+}
+
+type MigrationPayload
+  @join__type(graph: PUBLIC)
+{
+  errors: [Error!]!
+  migration: AccountMigration
+}
+
+enum MigrationStatus
+  @join__type(graph: PUBLIC)
+{
+  COMPLETED @join__enumValue(graph: PUBLIC)
+  FAILED @join__enumValue(graph: PUBLIC)
+  IN_PROGRESS @join__enumValue(graph: PUBLIC)
+  NOT_STARTED @join__enumValue(graph: PUBLIC)
+  TRANSFERRING @join__enumValue(graph: PUBLIC)
+}
+
 """(Positive) amount of minutes"""
 scalar Minutes
   @join__type(graph: PUBLIC)
@@ -1459,6 +1511,8 @@ type Mutation
   """Sends a payment to a lightning address."""
   lnurlPaymentSend(input: LnurlPaymentSendInput!): PaymentSendPayload! @join__field(graph: PUBLIC)
   merchantMapSuggest(input: MerchantMapSuggestInput!): MerchantPayload! @join__field(graph: PUBLIC)
+  migrationCommit(input: MigrationCommitInput!): MigrationPayload! @join__field(graph: PUBLIC)
+  migrationStart: MigrationPayload! @join__field(graph: PUBLIC)
   onChainAddressCreate(input: OnChainAddressCreateInput!): OnChainAddressPayload! @join__field(graph: PUBLIC)
   onChainAddressCurrent(input: OnChainAddressCurrentInput!): OnChainAddressPayload! @join__field(graph: PUBLIC)
   onChainPaymentSend(input: OnChainPaymentSendInput!): PaymentSendPayload! @join__field(graph: PUBLIC)

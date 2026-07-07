@@ -102,6 +102,7 @@ export type Account = {
   readonly invoices?: Maybe<InvoiceConnection>;
   readonly level: AccountLevel;
   readonly limits: AccountLimits;
+  readonly migration?: Maybe<AccountMigration>;
   readonly notificationSettings: NotificationSettings;
   readonly pendingIncomingTransactions: ReadonlyArray<Transaction>;
   readonly realtimePrice: RealtimePrice;
@@ -192,6 +193,12 @@ export type AccountLimits = {
   readonly internalSend: ReadonlyArray<AccountLimit>;
   /** Limits for withdrawing to external onchain or lightning destinations. */
   readonly withdrawal: ReadonlyArray<AccountLimit>;
+};
+
+export type AccountMigration = {
+  readonly __typename: 'AccountMigration';
+  readonly status: MigrationStatus;
+  readonly transferPaymentHash?: Maybe<Scalars['String']['output']>;
 };
 
 export type AccountUpdateDefaultWalletIdInput = {
@@ -397,6 +404,7 @@ export type ConsumerAccount = Account & {
   readonly invoices?: Maybe<InvoiceConnection>;
   readonly level: AccountLevel;
   readonly limits: AccountLimits;
+  readonly migration?: Maybe<AccountMigration>;
   readonly notificationSettings: NotificationSettings;
   readonly pendingIncomingTransactions: ReadonlyArray<Transaction>;
   /** List the quiz questions of the consumer account */
@@ -943,6 +951,36 @@ export type MerchantPayload = {
   readonly merchant?: Maybe<Merchant>;
 };
 
+export type MigrationCommitInput = {
+  /** User attested to having backed up the destination wallet. */
+  readonly backupAttested: Scalars['Boolean']['input'];
+  /** Version of the migration disclosure accepted by the user. */
+  readonly disclosureVersion: Scalars['String']['input'];
+  /** Signature over the migration proof-of-possession challenge, made with the Spark identity key. */
+  readonly proofSignature: Scalars['String']['input'];
+  /** Timestamp of the signed challenge, in milliseconds since the Unix epoch. */
+  readonly proofTimestamp: Scalars['SafeInt']['input'];
+  /** No-amount BOLT11 invoice minted by the destination Spark wallet. */
+  readonly sparkInvoice: Scalars['LnPaymentRequest']['input'];
+  /** Spark identity pubkey of the destination wallet, hex encoded. */
+  readonly sparkPubkey: Scalars['String']['input'];
+};
+
+export type MigrationPayload = {
+  readonly __typename: 'MigrationPayload';
+  readonly errors: ReadonlyArray<Error>;
+  readonly migration?: Maybe<AccountMigration>;
+};
+
+export const MigrationStatus = {
+  Completed: 'COMPLETED',
+  Failed: 'FAILED',
+  InProgress: 'IN_PROGRESS',
+  NotStarted: 'NOT_STARTED',
+  Transferring: 'TRANSFERRING'
+} as const;
+
+export type MigrationStatus = typeof MigrationStatus[keyof typeof MigrationStatus];
 export type MobileVersions = {
   readonly __typename: 'MobileVersions';
   readonly currentSupported: Scalars['Int']['output'];
@@ -1052,6 +1090,8 @@ export type Mutation = {
   /** Sends a payment to a lightning address. */
   readonly lnurlPaymentSend: PaymentSendPayload;
   readonly merchantMapSuggest: MerchantPayload;
+  readonly migrationCommit: MigrationPayload;
+  readonly migrationStart: MigrationPayload;
   readonly onChainAddressCreate: OnChainAddressPayload;
   readonly onChainAddressCurrent: OnChainAddressPayload;
   readonly onChainPaymentSend: PaymentSendPayload;
@@ -1239,6 +1279,11 @@ export type MutationLnurlPaymentSendArgs = {
 
 export type MutationMerchantMapSuggestArgs = {
   input: MerchantMapSuggestInput;
+};
+
+
+export type MutationMigrationCommitArgs = {
+  input: MigrationCommitInput;
 };
 
 
