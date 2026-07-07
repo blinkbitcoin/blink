@@ -323,7 +323,7 @@ services:
       - LNURL_ADDRESS=0.0.0.0:8080
       - LNURL_AUTO_MIGRATE=true
       - LNURL_BLINK_GRAPHQL_ENDPOINT=http://oathkeeper:4455/graphql
-      - "LNURL_DB_URL=sqlite:///data/lnurl.db?mode=rwc"
+      - "LNURL_DB_URL=:memory:"
       - LNURL_DOMAINS=localhost:4088,127.0.0.1:4088,lnurl-server:8080
       - LNURL_INTERNAL_JWKS_URL=http://oathkeeper:4456/.well-known/jwks.json
       - LNURL_INTERNAL_JWT_ISSUER=galoy.io
