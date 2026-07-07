@@ -368,6 +368,7 @@ type Mutation {
   marketingNotificationTrigger(input: MarketingNotificationTriggerInput!): SuccessPayload!
   merchantMapDelete(input: MerchantMapDeleteInput!): MerchantPayload!
   merchantMapValidate(input: MerchantMapValidateInput!): MerchantPayload!
+  phoneRateLimitReset(input: PhoneRateLimitResetInput!): SuccessPayload!
   userUpdateEmail(input: UserUpdateEmailInput!): AccountDetailPayload!
   userUpdatePhone(input: UserUpdatePhoneInput!): AccountDetailPayload!
 }
@@ -461,6 +462,10 @@ scalar PaymentHash
 
 """Phone number which includes country code"""
 scalar Phone
+
+input PhoneRateLimitResetInput {
+  phone: Phone!
+}
 
 interface PriceInterface {
   base: SafeInt!

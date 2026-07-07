@@ -4,7 +4,7 @@ describe("Login Email", () => {
   it("should be able to login", () => {
     const email = testData.EMAIL
 
-    cy.flushRedis()
+    cy.resetAuthRateLimits(email)
     cy.visit(testData.AUTHORIZATION_URL)
     cy.location("search").should((search) => {
       const params = new URLSearchParams(search)

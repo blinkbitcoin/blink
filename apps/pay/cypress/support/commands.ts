@@ -40,7 +40,7 @@
 declare namespace Cypress {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   interface Chainable<Subject> {
-    flushRedis(): Chainable<void>
+    resetAuthRateLimits(identifier: string): Chainable<void>
     loginAndGetToken(phone: string, code: string): Chainable<string>
     graphqlOperation(
       query: string,
@@ -56,19 +56,19 @@ declare namespace Cypress {
   }
 }
 
-Cypress.Commands.add("flushRedis", () => {
-  const command = `docker exec galoy-dev-redis-1 redis-cli FLUSHALL`
+Cypress.Commands.add("resetAuthRateLimits", (identifier) => {
+  const command = `docker exec galoy-dev-redis-1 redis-cli DEL request_code_attempt_id:${identifier} request_phone_number_id:${identifier} login_attempt_id:${identifier}`
   cy.exec(command).then((result) => {
     if (result.code === 0) {
-      cy.log("Redis FLUSHALL executed successfully")
+      cy.log("Auth rate-limit keys reset successfully")
     } else {
-      throw new Error("Failed to execute FLUSHALL on Redis")
+      throw new Error("Failed to reset auth rate-limit keys on Redis")
     }
   })
 })
 
 Cypress.Commands.add("loginAndGetToken", (phone, code) => {
-  cy.flushRedis()
+  cy.resetAuthRateLimits(phone)
   cy.request({
     method: "POST",
     url: "http://localhost:4455/auth/phone/login",
