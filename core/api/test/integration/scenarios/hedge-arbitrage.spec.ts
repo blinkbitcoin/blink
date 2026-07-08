@@ -50,6 +50,10 @@ jest.mock("@/config", () => {
 const calc = AmountCalculator()
 const usdHedgeEnabled = getDealerConfig().usd.hedgingEnabled
 
+// These scenarios bootstrap LND nodes and exercise repeated invoice probes/payments.
+// CI runners have hit the default 60s Jest timeout on a successful but slow case.
+jest.setTimeout(120000)
+
 const USD_STARTING_BALANCE = 100 as UsdCents
 
 const ONE_CENT = { amount: 1n, currency: WalletCurrency.Usd } as UsdPaymentAmount
