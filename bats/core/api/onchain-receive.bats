@@ -21,9 +21,7 @@ setup_file() {
 }
 
 teardown() {
-   if [[ "$(balance_for_check)" != 0 ]]; then
-     fail "Error: balance_for_check failed"
-   fi
+  assert_balance_for_check
 }
 
 @test "onchain-receive: process received batch transaction via legacy lnd" {

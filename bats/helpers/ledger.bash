@@ -25,3 +25,16 @@ balance_for_check() {
 
   echo $(( $abs_lnd_balance_sync + $abs_assets_eq_liabilities ))
 }
+
+balance_for_check_is_zero() {
+  [[ "$(balance_for_check)" == 0 ]]
+}
+
+assert_balance_for_check() {
+  if retry 10 1 balance_for_check_is_zero; then
+    return 0
+  fi
+
+  balance="$(balance_for_check)"
+  fail "Error: balance_for_check failed ($balance)"
+}
