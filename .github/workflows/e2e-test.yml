@@ -12,7 +12,9 @@ jobs:
   tests:
     name: execute via bats
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # Full BATS runs on GitHub runners have completed close to 25 minutes and
+    # can still be making progress when the default job timeout cancels them.
+    timeout-minutes: 35
     steps:
       - name: Free disk space
         run: |
