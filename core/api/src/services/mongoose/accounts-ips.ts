@@ -83,9 +83,28 @@ export const AccountsIpsRepository = (): IAccountsIPsRepository => {
     }
   }
 
+  const findEarliestByAccountId = async (
+    accountId: AccountId,
+  ): Promise<AccountIP | RepositoryError> => {
+    try {
+      const result = await AccountIps.findOne({
+        accountId,
+      }).sort({ firstConnection: 1, _id: 1 })
+
+      if (!result) {
+        return new CouldNotFindAccountIpError(accountId)
+      }
+
+      return accountIPFromRaw(result)
+    } catch (error) {
+      return parseRepositoryError(error)
+    }
+  }
+
   return {
     update,
     findLastByAccountId,
+    findEarliestByAccountId,
     findByAccountIdAndIp,
   }
 }

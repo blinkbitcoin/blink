@@ -1,6 +1,12 @@
 import { AccountStatus } from "@/domain/accounts/primitives"
 import { WalletCurrency } from "@/domain/shared"
 
+const countryCodePattern = "^[A-Za-z]{2}$"
+
+// wind-down dates must carry an explicit offset: an offset-less string parses as server-local time
+const offsetDateTimePattern =
+  "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$"
+
 const displayCurrencyConfigSchema = {
   type: "object",
   properties: {
@@ -1053,6 +1059,87 @@ export const configSchema = {
         transactional: "twilio",
       },
     },
+    windDown: {
+      type: "object",
+      properties: {
+        enabled: { type: "boolean" },
+        affectedCountries: {
+          type: "array",
+          items: { type: "string", pattern: countryCodePattern },
+        },
+        regions: {
+          type: "array",
+          minItems: 1,
+          contains: {
+            type: "object",
+            properties: { code: { const: "default" } },
+            required: ["code"],
+          },
+          items: {
+            type: "object",
+            properties: {
+              code: { type: "string" },
+              timezone: { type: "string" },
+              countries: {
+                type: "array",
+                items: { type: "string", pattern: countryCodePattern },
+              },
+              receiveDisabledAt: {
+                type: ["string", "null"],
+                pattern: offsetDateTimePattern,
+              },
+              finalDeadline: { type: "string", pattern: offsetDateTimePattern },
+              gateArmsAt: { type: "string", pattern: offsetDateTimePattern },
+              receiveDisable: {
+                type: "object",
+                properties: {
+                  enabled: { type: "boolean" },
+                },
+                required: ["enabled"],
+                additionalProperties: false,
+                default: { enabled: false },
+              },
+              gate: {
+                type: "object",
+                properties: {
+                  enabled: { type: "boolean" },
+                },
+                required: ["enabled"],
+                additionalProperties: false,
+                default: { enabled: false },
+              },
+            },
+            required: [
+              "code",
+              "timezone",
+              "receiveDisabledAt",
+              "finalDeadline",
+              "gateArmsAt",
+              "receiveDisable",
+              "gate",
+            ],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["enabled", "affectedCountries", "regions"],
+      additionalProperties: false,
+      default: {
+        enabled: false,
+        affectedCountries: [],
+        regions: [
+          {
+            code: "default",
+            timezone: "Europe/Paris",
+            receiveDisabledAt: "2026-08-01T00:00:00+02:00",
+            finalDeadline: "2026-08-31T23:59:59+02:00",
+            gateArmsAt: "2026-09-01T00:00:00+02:00",
+            receiveDisable: { enabled: false },
+            gate: { enabled: false },
+          },
+        ],
+      },
+    },
   },
   required: [
     "locale",
@@ -1077,6 +1164,7 @@ export const configSchema = {
     "whatsAppAuthUnsupportedCountries",
     "telegramAuthUnsupportedCountries",
     "phoneProvider",
+    "windDown",
   ],
   additionalProperties: false,
 } as const

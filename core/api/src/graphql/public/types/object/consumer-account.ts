@@ -12,9 +12,11 @@ import CallbackEndpoint from "./callback-endpoint"
 
 import { NotificationSettings } from "./notification-settings"
 
+import AccountWindDown from "./account-wind-down"
+
 import PublicWallet from "./public-wallet"
 
-import { Accounts, Prices, Wallets, Quiz as QuizApp } from "@/app"
+import { Accounts, Prices, Wallets, Quiz as QuizApp, WindDown } from "@/app"
 
 import {
   majorToMinorUnit,
@@ -272,6 +274,18 @@ const ConsumerAccount = GT.Object<Account, GraphQLPublicContextAuth>({
         const result = await Accounts.getNotificationSettingsForAccount({
           account: source,
         })
+
+        if (result instanceof Error) {
+          throw mapError(result)
+        }
+
+        return result
+      },
+    },
+    windDown: {
+      type: AccountWindDown,
+      resolve: async (source) => {
+        const result = await WindDown.getAccountWindDown({ account: source })
 
         if (result instanceof Error) {
           throw mapError(result)

@@ -4,6 +4,8 @@ import Wallet from "../../../shared/types/abstract/wallet"
 
 import CallbackEndpoint from "../object/callback-endpoint"
 
+import AccountWindDown from "../object/account-wind-down"
+
 import { NotificationSettings } from "../object/notification-settings"
 
 import { GT } from "@/graphql/index"
@@ -89,6 +91,9 @@ const IAccount = GT.Interface({
     },
     notificationSettings: {
       type: GT.NonNull(NotificationSettings),
+    },
+    windDown: {
+      type: AccountWindDown,
     },
     walletById: {
       type: GT.NonNull(Wallet),

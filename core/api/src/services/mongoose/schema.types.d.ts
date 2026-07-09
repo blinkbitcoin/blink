@@ -90,6 +90,7 @@ interface AccountRecord {
 
   withdrawFee?: number
   contactEnabled: boolean
+  windDownExempt: boolean
   contacts: ContactObjectForUser[]
   created_at: Date
   onchain: OnChainObjectForUser[]

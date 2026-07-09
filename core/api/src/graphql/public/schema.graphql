@@ -41,6 +41,7 @@ interface Account {
   ): TransactionConnection
   walletById(walletId: WalletId!): Wallet!
   wallets: [Wallet!]!
+  windDown: AccountWindDown
 }
 
 type AccountDeletePayload {
@@ -120,6 +121,14 @@ type AccountUpdateDisplayCurrencyPayload {
 type AccountUpdateNotificationSettingsPayload {
   account: ConsumerAccount
   errors: [Error!]!
+}
+
+type AccountWindDown {
+  finalDeadline: Timestamp!
+  gateArmsAt: Timestamp!
+  receiveDisabledAt: Timestamp
+  status: WindDownStatus!
+  timezone: String!
 }
 
 """An Opaque Bearer token"""
@@ -318,6 +327,7 @@ type ConsumerAccount implements Account {
   ): TransactionConnection
   walletById(walletId: WalletId!): Wallet!
   wallets: [Wallet!]!
+  windDown: AccountWindDown
 }
 
 type Contact {
@@ -1949,3 +1959,9 @@ enum WalletCurrency {
 
 """Unique identifier of a wallet"""
 scalar WalletId
+
+enum WindDownStatus {
+  GATED_CLOSED
+  PRE_CUTOFF
+  RECEIVE_DISABLED
+}

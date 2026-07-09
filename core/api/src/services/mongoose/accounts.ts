@@ -142,6 +142,7 @@ const translateToAccount = (result: AccountRecord): Account => ({
   status: result.statusHistory.slice(-1)[0].status,
   statusHistory: (result.statusHistory || []) as AccountStatusHistory,
   contactEnabled: !!result.contactEnabled,
+  windDownExempt: !!result.windDownExempt,
   withdrawFee: result.withdrawFee as Satoshis,
   kratosUserId: result.kratosUserId as UserId,
   displayCurrency: (result.displayCurrency || UsdDisplayCurrency) as DisplayCurrency,

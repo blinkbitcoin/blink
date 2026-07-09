@@ -114,6 +114,7 @@ export type Account = {
   readonly transactions?: Maybe<TransactionConnection>;
   readonly walletById: Wallet;
   readonly wallets: ReadonlyArray<Wallet>;
+  readonly windDown?: Maybe<AccountWindDown>;
 };
 
 
@@ -224,6 +225,15 @@ export type AccountUpdateNotificationSettingsPayload = {
   readonly __typename: 'AccountUpdateNotificationSettingsPayload';
   readonly account?: Maybe<ConsumerAccount>;
   readonly errors: ReadonlyArray<Error>;
+};
+
+export type AccountWindDown = {
+  readonly __typename: 'AccountWindDown';
+  readonly finalDeadline: Scalars['Timestamp']['output'];
+  readonly gateArmsAt: Scalars['Timestamp']['output'];
+  readonly receiveDisabledAt?: Maybe<Scalars['Timestamp']['output']>;
+  readonly status: WindDownStatus;
+  readonly timezone: Scalars['String']['output'];
 };
 
 export type ApiKey = {
@@ -466,6 +476,7 @@ export type ConsumerAccount = Account & {
   readonly transactions?: Maybe<TransactionConnection>;
   readonly walletById: Wallet;
   readonly wallets: ReadonlyArray<Wallet>;
+  readonly windDown?: Maybe<AccountWindDown>;
 };
 
 
@@ -2520,6 +2531,13 @@ export const WalletCurrency = {
 } as const;
 
 export type WalletCurrency = typeof WalletCurrency[keyof typeof WalletCurrency];
+export const WindDownStatus = {
+  GatedClosed: 'GATED_CLOSED',
+  PreCutoff: 'PRE_CUTOFF',
+  ReceiveDisabled: 'RECEIVE_DISABLED'
+} as const;
+
+export type WindDownStatus = typeof WindDownStatus[keyof typeof WindDownStatus];
 export const Join__Graph = {
   ApiKeys: 'API_KEYS',
   Notifications: 'NOTIFICATIONS',
@@ -3675,6 +3693,7 @@ export type ResolversTypes = {
   AccountUpdateDisplayCurrencyInput: AccountUpdateDisplayCurrencyInput;
   AccountUpdateDisplayCurrencyPayload: ResolverTypeWrapper<Omit<AccountUpdateDisplayCurrencyPayload, 'account' | 'errors'> & { account?: Maybe<ResolversTypes['ConsumerAccount']>, errors: ReadonlyArray<ResolversTypes['Error']> }>;
   AccountUpdateNotificationSettingsPayload: ResolverTypeWrapper<Omit<AccountUpdateNotificationSettingsPayload, 'account' | 'errors'> & { account?: Maybe<ResolversTypes['ConsumerAccount']>, errors: ReadonlyArray<ResolversTypes['Error']> }>;
+  AccountWindDown: ResolverTypeWrapper<AccountWindDown>;
   ApiKey: ResolverTypeWrapper<ApiKey>;
   ApiKeyCreateInput: ApiKeyCreateInput;
   ApiKeyCreatePayload: ResolverTypeWrapper<ApiKeyCreatePayload>;
@@ -3897,6 +3916,7 @@ export type ResolversTypes = {
   Wallet: ResolverTypeWrapper<ResolversInterfaceTypes<ResolversTypes>['Wallet']>;
   WalletCurrency: WalletCurrency;
   WalletId: ResolverTypeWrapper<Scalars['WalletId']['output']>;
+  WindDownStatus: WindDownStatus;
   join__FieldSet: ResolverTypeWrapper<Scalars['join__FieldSet']['output']>;
   join__Graph: Join__Graph;
   link__Import: ResolverTypeWrapper<Scalars['link__Import']['output']>;
@@ -3922,6 +3942,7 @@ export type ResolversParentTypes = {
   AccountUpdateDisplayCurrencyInput: AccountUpdateDisplayCurrencyInput;
   AccountUpdateDisplayCurrencyPayload: Omit<AccountUpdateDisplayCurrencyPayload, 'account' | 'errors'> & { account?: Maybe<ResolversParentTypes['ConsumerAccount']>, errors: ReadonlyArray<ResolversParentTypes['Error']> };
   AccountUpdateNotificationSettingsPayload: Omit<AccountUpdateNotificationSettingsPayload, 'account' | 'errors'> & { account?: Maybe<ResolversParentTypes['ConsumerAccount']>, errors: ReadonlyArray<ResolversParentTypes['Error']> };
+  AccountWindDown: AccountWindDown;
   ApiKey: ApiKey;
   ApiKeyCreateInput: ApiKeyCreateInput;
   ApiKeyCreatePayload: ApiKeyCreatePayload;
@@ -4207,6 +4228,7 @@ export type AccountResolvers<ContextType = any, ParentType extends ResolversPare
   transactions?: Resolver<Maybe<ResolversTypes['TransactionConnection']>, ParentType, ContextType, Partial<AccountTransactionsArgs>>;
   walletById?: Resolver<ResolversTypes['Wallet'], ParentType, ContextType, RequireFields<AccountWalletByIdArgs, 'walletId'>>;
   wallets?: Resolver<ReadonlyArray<ResolversTypes['Wallet']>, ParentType, ContextType>;
+  windDown?: Resolver<Maybe<ResolversTypes['AccountWindDown']>, ParentType, ContextType>;
 };
 
 export type AccountDeletePayloadResolvers<ContextType = any, ParentType extends ResolversParentTypes['AccountDeletePayload'] = ResolversParentTypes['AccountDeletePayload']> = {
@@ -4244,6 +4266,15 @@ export type AccountUpdateDisplayCurrencyPayloadResolvers<ContextType = any, Pare
 export type AccountUpdateNotificationSettingsPayloadResolvers<ContextType = any, ParentType extends ResolversParentTypes['AccountUpdateNotificationSettingsPayload'] = ResolversParentTypes['AccountUpdateNotificationSettingsPayload']> = {
   account?: Resolver<Maybe<ResolversTypes['ConsumerAccount']>, ParentType, ContextType>;
   errors?: Resolver<ReadonlyArray<ResolversTypes['Error']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
+export type AccountWindDownResolvers<ContextType = any, ParentType extends ResolversParentTypes['AccountWindDown'] = ResolversParentTypes['AccountWindDown']> = {
+  finalDeadline?: Resolver<ResolversTypes['Timestamp'], ParentType, ContextType>;
+  gateArmsAt?: Resolver<ResolversTypes['Timestamp'], ParentType, ContextType>;
+  receiveDisabledAt?: Resolver<Maybe<ResolversTypes['Timestamp']>, ParentType, ContextType>;
+  status?: Resolver<ResolversTypes['WindDownStatus'], ParentType, ContextType>;
+  timezone?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
@@ -4389,6 +4420,7 @@ export type ConsumerAccountResolvers<ContextType = any, ParentType extends Resol
   transactions?: Resolver<Maybe<ResolversTypes['TransactionConnection']>, ParentType, ContextType, Partial<ConsumerAccountTransactionsArgs>>;
   walletById?: Resolver<ResolversTypes['Wallet'], ParentType, ContextType, RequireFields<ConsumerAccountWalletByIdArgs, 'walletId'>>;
   wallets?: Resolver<ReadonlyArray<ResolversTypes['Wallet']>, ParentType, ContextType>;
+  windDown?: Resolver<Maybe<ResolversTypes['AccountWindDown']>, ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
@@ -5322,6 +5354,7 @@ export type Resolvers<ContextType = any> = {
   AccountUpdateDefaultWalletIdPayload?: AccountUpdateDefaultWalletIdPayloadResolvers<ContextType>;
   AccountUpdateDisplayCurrencyPayload?: AccountUpdateDisplayCurrencyPayloadResolvers<ContextType>;
   AccountUpdateNotificationSettingsPayload?: AccountUpdateNotificationSettingsPayloadResolvers<ContextType>;
+  AccountWindDown?: AccountWindDownResolvers<ContextType>;
   ApiKey?: ApiKeyResolvers<ContextType>;
   ApiKeyCreatePayload?: ApiKeyCreatePayloadResolvers<ContextType>;
   ApiKeyLimits?: ApiKeyLimitsResolvers<ContextType>;

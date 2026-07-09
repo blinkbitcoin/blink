@@ -66,6 +66,7 @@ interface Account
   ): TransactionConnection
   walletById(walletId: WalletId!): Wallet!
   wallets: [Wallet!]!
+  windDown: AccountWindDown
 }
 
 type AccountDeletePayload
@@ -171,6 +172,16 @@ type AccountUpdateNotificationSettingsPayload
 {
   account: ConsumerAccount
   errors: [Error!]!
+}
+
+type AccountWindDown
+  @join__type(graph: PUBLIC)
+{
+  finalDeadline: Timestamp!
+  gateArmsAt: Timestamp!
+  receiveDisabledAt: Timestamp
+  status: WindDownStatus!
+  timezone: String!
 }
 
 type ApiKey
@@ -477,6 +488,7 @@ type ConsumerAccount implements Account
   ): TransactionConnection
   walletById(walletId: WalletId!): Wallet!
   wallets: [Wallet!]!
+  windDown: AccountWindDown
 }
 
 type Contact
@@ -2640,3 +2652,11 @@ enum WalletCurrency
 """Unique identifier of a wallet"""
 scalar WalletId
   @join__type(graph: PUBLIC)
+
+enum WindDownStatus
+  @join__type(graph: PUBLIC)
+{
+  GATED_CLOSED @join__enumValue(graph: PUBLIC)
+  PRE_CUTOFF @join__enumValue(graph: PUBLIC)
+  RECEIVE_DISABLED @join__enumValue(graph: PUBLIC)
+}

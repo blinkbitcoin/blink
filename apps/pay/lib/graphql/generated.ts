@@ -109,6 +109,7 @@ export type Account = {
   readonly transactions?: Maybe<TransactionConnection>;
   readonly walletById: Wallet;
   readonly wallets: ReadonlyArray<Wallet>;
+  readonly windDown?: Maybe<AccountWindDown>;
 };
 
 
@@ -219,6 +220,15 @@ export type AccountUpdateNotificationSettingsPayload = {
   readonly __typename: 'AccountUpdateNotificationSettingsPayload';
   readonly account?: Maybe<ConsumerAccount>;
   readonly errors: ReadonlyArray<Error>;
+};
+
+export type AccountWindDown = {
+  readonly __typename: 'AccountWindDown';
+  readonly finalDeadline: Scalars['Timestamp']['output'];
+  readonly gateArmsAt: Scalars['Timestamp']['output'];
+  readonly receiveDisabledAt?: Maybe<Scalars['Timestamp']['output']>;
+  readonly status: WindDownStatus;
+  readonly timezone: Scalars['String']['output'];
 };
 
 export type AuthTokenPayload = {
@@ -398,6 +408,7 @@ export type ConsumerAccount = Account & {
   readonly transactions?: Maybe<TransactionConnection>;
   readonly walletById: Wallet;
   readonly wallets: ReadonlyArray<Wallet>;
+  readonly windDown?: Maybe<AccountWindDown>;
 };
 
 
@@ -2281,6 +2292,13 @@ export const WalletCurrency = {
 } as const;
 
 export type WalletCurrency = typeof WalletCurrency[keyof typeof WalletCurrency];
+export const WindDownStatus = {
+  GatedClosed: 'GATED_CLOSED',
+  PreCutoff: 'PRE_CUTOFF',
+  ReceiveDisabled: 'RECEIVE_DISABLED'
+} as const;
+
+export type WindDownStatus = typeof WindDownStatus[keyof typeof WindDownStatus];
 export type AccountDefaultWalletsQueryVariables = Exact<{
   username: Scalars['Username']['input'];
 }>;

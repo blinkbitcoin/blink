@@ -269,6 +269,8 @@ export const getCronConfig = (config = yamlConfig): CronConfig => config.cronCon
 
 export const getCaptcha = (config = yamlConfig): CaptchaConfig => config.captcha
 
+export const getWindDownConfig = (config = yamlConfig): WindDownConfig => config.windDown
+
 export const getQuizzesConfig = (): QuizzesConfig => {
   const denyPhoneCountries = yamlConfig.quizzes.denyPhoneCountries || []
   const allowPhoneCountries = yamlConfig.quizzes.allowPhoneCountries || []

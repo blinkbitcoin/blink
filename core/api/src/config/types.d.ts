@@ -14,6 +14,31 @@ type CaptchaConfig = {
   mandatory: boolean
 }
 
+type WindDownReceiveDisableConfig = {
+  enabled: boolean
+}
+
+type WindDownGateConfig = {
+  enabled: boolean
+}
+
+type WindDownRegionConfig = {
+  code: string
+  timezone: string
+  countries?: string[]
+  receiveDisabledAt: string | null
+  finalDeadline: string
+  gateArmsAt: string
+  receiveDisable: WindDownReceiveDisableConfig
+  gate: WindDownGateConfig
+}
+
+type WindDownConfig = {
+  enabled: boolean
+  affectedCountries: string[]
+  regions: WindDownRegionConfig[]
+}
+
 type QuizzesConfig = {
   phoneMetadataValidationSettings: PhoneMetadataValidationSettings
   ipMetadataValidationSettings: IpMetadataValidationSettings
