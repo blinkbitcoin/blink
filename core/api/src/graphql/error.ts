@@ -114,6 +114,16 @@ export class MigrationInvalidDestinationError extends CustomGraphQLError {
   }
 }
 
+export class MigrationApiKeyForbiddenError extends CustomGraphQLError {
+  constructor(errData: CustomGraphQLErrorData) {
+    super({
+      code: "MIGRATION_API_KEY_FORBIDDEN",
+      forwardToClient: true,
+      ...errData,
+    })
+  }
+}
+
 export class ValidationInternalError extends CustomGraphQLError {
   constructor(errData: CustomGraphQLErrorData) {
     super({ code: "INVALID_INPUT", forwardToClient: true, ...errData })

@@ -5,3 +5,10 @@ export const MigrationFlowPhase = {
   Completed: "COMPLETED",
   Failed: "FAILED",
 } as const
+
+export const MigrationLnAddressTransferStatus = {
+  Transferred: "TRANSFERRED",
+  AlreadyTransferred: "ALREADY_TRANSFERRED",
+  SkippedNotRegistered: "SKIPPED_NOT_REGISTERED",
+  Failed: "FAILED",
+} as const

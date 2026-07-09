@@ -20,8 +20,7 @@ const MigrationCommitInput = GT.Input({
     },
     proofTimestamp: {
       type: GT.NonNull(SafeInt),
-      description:
-        "Timestamp of the signed challenge, in milliseconds since the Unix epoch.",
+      description: "Timestamp of the signed challenge, in seconds since the Unix epoch.",
     },
     sparkInvoice: {
       type: GT.NonNull(LnPaymentRequest),
@@ -59,7 +58,7 @@ const MigrationCommitMutation = GT.Field<
   args: {
     input: { type: GT.NonNull(MigrationCommitInput) },
   },
-  resolve: async (_, args, { domainAccount }) => {
+  resolve: async (_, args, { domainAccount, apiKeyId }) => {
     const {
       sparkPubkey,
       proofSignature,
@@ -74,6 +73,7 @@ const MigrationCommitMutation = GT.Field<
 
     const result = await MigrationFlow.commitMigrationFlow({
       accountId: domainAccount.id,
+      apiKeyId,
       sparkPubkey,
       proofSignature,
       proofTimestamp,

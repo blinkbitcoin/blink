@@ -5,13 +5,15 @@ import * as ecc from "tiny-secp256k1"
 import {
   buildMigrationProofChallenge,
   checkedToSparkPubkey,
-  MIGRATION_PROOF_FRESHNESS_WINDOW_MS,
+  MIGRATION_PROOF_FRESHNESS_WINDOW_SECONDS,
   MigrationInvalidDestinationError,
   MigrationProofExpiredError,
   verifyMigrationProofOfPossession,
 } from "@/domain/migration-flow"
 
 const sha256 = (data: Buffer) => createHash("sha256").update(data).digest()
+
+const nowInSeconds = () => Math.floor(Date.now() / 1000)
 
 const privateKey = Buffer.alloc(32, 7)
 const otherPrivateKey = Buffer.alloc(32, 11)
@@ -55,16 +57,77 @@ const signSchnorrProof = ({
     ecc.signSchnorr(challengeDigest({ destinationPubkey, timestamp }), key),
   ).toString("hex")
 
-const signEcdsaProof = ({
+const signEcdsaCompactProof = ({
   destinationPubkey,
   timestamp,
+  key = privateKey,
 }: {
   destinationPubkey: SparkPubkey
   timestamp: number
+  key?: Buffer
 }) =>
-  Buffer.from(
-    ecc.sign(challengeDigest({ destinationPubkey, timestamp }), privateKey),
+  Buffer.from(ecc.sign(challengeDigest({ destinationPubkey, timestamp }), key)).toString(
+    "hex",
+  )
+
+const derEncodeInteger = (bytes: Buffer): Buffer => {
+  let i = 0
+  while (i < bytes.length - 1 && bytes[i] === 0x00) i++
+  let value = bytes.subarray(i)
+  if (value[0] & 0x80) value = Buffer.concat([Buffer.from([0x00]), value])
+  return Buffer.concat([Buffer.from([0x02, value.length]), value])
+}
+
+const derEncode = (compact: Buffer): Buffer => {
+  const body = Buffer.concat([
+    derEncodeInteger(compact.subarray(0, 32)),
+    derEncodeInteger(compact.subarray(32, 64)),
+  ])
+  return Buffer.concat([Buffer.from([0x30, body.length]), body])
+}
+
+const rawDer = (r: Buffer, s: Buffer, trailing: Buffer = Buffer.alloc(0)): string => {
+  const body = Buffer.concat([
+    Buffer.from([0x02, r.length]),
+    r,
+    Buffer.from([0x02, s.length]),
+    s,
+    trailing,
+  ])
+  return Buffer.concat([Buffer.from([0x30, body.length]), body]).toString("hex")
+}
+
+const signEcdsaDerProof = ({
+  destinationPubkey,
+  timestamp,
+  key = privateKey,
+}: {
+  destinationPubkey: SparkPubkey
+  timestamp: number
+  key?: Buffer
+}) =>
+  derEncode(
+    Buffer.from(ecc.sign(challengeDigest({ destinationPubkey, timestamp }), key)),
   ).toString("hex")
+
+const findEcdsaSignature = (
+  predicate: (compact: Buffer) => boolean,
+): { destinationPubkey: SparkPubkey; timestamp: number; compact: Buffer } => {
+  const timestamp = nowInSeconds()
+  for (let i = 1; i < 100000; i++) {
+    const key = Buffer.alloc(32)
+    key.writeUInt32BE(i, 28)
+    if (!ecc.isPrivate(key)) continue
+    const destinationPubkey = Buffer.from(
+      ecc.pointFromScalar(key, true) as Uint8Array,
+    ).toString("hex") as SparkPubkey
+    const compact = Buffer.from(
+      ecc.sign(challengeDigest({ destinationPubkey, timestamp }), key),
+    )
+    if (predicate(compact)) return { destinationPubkey, timestamp, compact }
+  }
+  throw new Error("no matching signature found")
+}
 
 describe("buildMigrationProofChallenge", () => {
   it("is domain-separated and binds account, destination and timestamp", () => {
@@ -79,7 +142,7 @@ describe("buildMigrationProofChallenge", () => {
 
 describe("verifyMigrationProofOfPossession", () => {
   it("verifies a schnorr signature for a 32-byte x-only pubkey", () => {
-    const timestamp = Date.now()
+    const timestamp = nowInSeconds()
     const result = verifyMigrationProofOfPossession({
       accountId,
       destinationPubkey: xOnlyPubkey,
@@ -89,19 +152,64 @@ describe("verifyMigrationProofOfPossession", () => {
     expect(result).toBe(true)
   })
 
-  it("verifies an ecdsa signature for a 33-byte compressed pubkey", () => {
-    const timestamp = Date.now()
+  it("verifies a compact ecdsa signature for a 33-byte compressed pubkey", () => {
+    const timestamp = nowInSeconds()
     const result = verifyMigrationProofOfPossession({
       accountId,
       destinationPubkey: compressedPubkey,
-      signature: signEcdsaProof({ destinationPubkey: compressedPubkey, timestamp }),
+      signature: signEcdsaCompactProof({
+        destinationPubkey: compressedPubkey,
+        timestamp,
+      }),
+      timestamp,
+    })
+    expect(result).toBe(true)
+  })
+
+  it("verifies a DER-encoded ecdsa signature for a 33-byte compressed pubkey", () => {
+    const timestamp = nowInSeconds()
+    const result = verifyMigrationProofOfPossession({
+      accountId,
+      destinationPubkey: compressedPubkey,
+      signature: signEcdsaDerProof({ destinationPubkey: compressedPubkey, timestamp }),
+      timestamp,
+    })
+    expect(result).toBe(true)
+  })
+
+  it("verifies a DER signature whose INTEGER carries a legal leading zero", () => {
+    const { destinationPubkey, timestamp, compact } = findEcdsaSignature(
+      (c) => (c[0] & 0x80) !== 0,
+    )
+    const der = derEncode(compact)
+    expect(der[4]).toBe(0x00)
+    expect(der[5] & 0x80).not.toBe(0)
+    const result = verifyMigrationProofOfPossession({
+      accountId,
+      destinationPubkey,
+      signature: der.toString("hex"),
+      timestamp,
+    })
+    expect(result).toBe(true)
+  })
+
+  it("verifies a DER signature whose INTEGER is shorter than 32 bytes (left-padded)", () => {
+    const { destinationPubkey, timestamp, compact } = findEcdsaSignature(
+      (c) => c[0] === 0x00 && (c[1] & 0x80) === 0,
+    )
+    const der = derEncode(compact)
+    expect(der[3]).toBeLessThan(32)
+    const result = verifyMigrationProofOfPossession({
+      accountId,
+      destinationPubkey,
+      signature: der.toString("hex"),
       timestamp,
     })
     expect(result).toBe(true)
   })
 
   it("rejects a tampered signature", () => {
-    const timestamp = Date.now()
+    const timestamp = nowInSeconds()
     const signature = signSchnorrProof({ destinationPubkey: xOnlyPubkey, timestamp })
     const tampered = (signature.slice(0, 1) === "0" ? "1" : "0") + signature.slice(1)
 
@@ -115,7 +223,7 @@ describe("verifyMigrationProofOfPossession", () => {
   })
 
   it("rejects a signature made by a different key", () => {
-    const timestamp = Date.now()
+    const timestamp = nowInSeconds()
     const result = verifyMigrationProofOfPossession({
       accountId,
       destinationPubkey: otherXOnlyPubkey,
@@ -130,7 +238,7 @@ describe("verifyMigrationProofOfPossession", () => {
   })
 
   it("rejects a signature over a challenge for a different destination", () => {
-    const timestamp = Date.now()
+    const timestamp = nowInSeconds()
     const result = verifyMigrationProofOfPossession({
       accountId,
       destinationPubkey: xOnlyPubkey,
@@ -143,8 +251,73 @@ describe("verifyMigrationProofOfPossession", () => {
     expect(result).toBeInstanceOf(MigrationInvalidDestinationError)
   })
 
+  it("rejects a DER signature against a 32-byte x-only pubkey", () => {
+    const timestamp = nowInSeconds()
+    const result = verifyMigrationProofOfPossession({
+      accountId,
+      destinationPubkey: xOnlyPubkey,
+      signature: signEcdsaDerProof({ destinationPubkey: xOnlyPubkey, timestamp }),
+      timestamp,
+    })
+    expect(result).toBeInstanceOf(MigrationInvalidDestinationError)
+  })
+
+  it("rejects a truncated DER signature", () => {
+    const timestamp = nowInSeconds()
+    const der = signEcdsaDerProof({ destinationPubkey: compressedPubkey, timestamp })
+    const result = verifyMigrationProofOfPossession({
+      accountId,
+      destinationPubkey: compressedPubkey,
+      signature: der.slice(0, der.length - 4),
+      timestamp,
+    })
+    expect(result).toBeInstanceOf(MigrationInvalidDestinationError)
+  })
+
+  it("rejects a garbage DER signature", () => {
+    const timestamp = nowInSeconds()
+    const result = verifyMigrationProofOfPossession({
+      accountId,
+      destinationPubkey: compressedPubkey,
+      signature: "ff".repeat(70),
+      timestamp,
+    })
+    expect(result).toBeInstanceOf(MigrationInvalidDestinationError)
+  })
+
+  it("rejects a DER signature with trailing bytes inside the sequence", () => {
+    const timestamp = nowInSeconds()
+    const signature = rawDer(
+      Buffer.alloc(32, 0x11),
+      Buffer.alloc(32, 0x22),
+      Buffer.from([0x00, 0x00]),
+    )
+    const result = verifyMigrationProofOfPossession({
+      accountId,
+      destinationPubkey: compressedPubkey,
+      signature,
+      timestamp,
+    })
+    expect(result).toBeInstanceOf(MigrationInvalidDestinationError)
+  })
+
+  it("rejects a DER INTEGER with a superfluous leading zero", () => {
+    const timestamp = nowInSeconds()
+    const signature = rawDer(
+      Buffer.concat([Buffer.from([0x00, 0x01]), Buffer.alloc(30, 0x11)]),
+      Buffer.alloc(32, 0x22),
+    )
+    const result = verifyMigrationProofOfPossession({
+      accountId,
+      destinationPubkey: compressedPubkey,
+      signature,
+      timestamp,
+    })
+    expect(result).toBeInstanceOf(MigrationInvalidDestinationError)
+  })
+
   it("rejects a stale timestamp outside the freshness window", () => {
-    const timestamp = Date.now() - MIGRATION_PROOF_FRESHNESS_WINDOW_MS - 1000
+    const timestamp = nowInSeconds() - MIGRATION_PROOF_FRESHNESS_WINDOW_SECONDS - 5
     const result = verifyMigrationProofOfPossession({
       accountId,
       destinationPubkey: xOnlyPubkey,
@@ -155,7 +328,40 @@ describe("verifyMigrationProofOfPossession", () => {
   })
 
   it("rejects a future timestamp outside the freshness window", () => {
-    const timestamp = Date.now() + MIGRATION_PROOF_FRESHNESS_WINDOW_MS + 1000
+    const timestamp = nowInSeconds() + MIGRATION_PROOF_FRESHNESS_WINDOW_SECONDS + 5
+    const result = verifyMigrationProofOfPossession({
+      accountId,
+      destinationPubkey: xOnlyPubkey,
+      signature: signSchnorrProof({ destinationPubkey: xOnlyPubkey, timestamp }),
+      timestamp,
+    })
+    expect(result).toBeInstanceOf(MigrationProofExpiredError)
+  })
+
+  it("accepts a timestamp just inside the 600s freshness window", () => {
+    const timestamp = nowInSeconds() - (MIGRATION_PROOF_FRESHNESS_WINDOW_SECONDS - 1)
+    const result = verifyMigrationProofOfPossession({
+      accountId,
+      destinationPubkey: xOnlyPubkey,
+      signature: signSchnorrProof({ destinationPubkey: xOnlyPubkey, timestamp }),
+      timestamp,
+    })
+    expect(result).toBe(true)
+  })
+
+  it("rejects a timestamp just outside the 600s freshness window", () => {
+    const timestamp = nowInSeconds() - (MIGRATION_PROOF_FRESHNESS_WINDOW_SECONDS + 1)
+    const result = verifyMigrationProofOfPossession({
+      accountId,
+      destinationPubkey: xOnlyPubkey,
+      signature: signSchnorrProof({ destinationPubkey: xOnlyPubkey, timestamp }),
+      timestamp,
+    })
+    expect(result).toBeInstanceOf(MigrationProofExpiredError)
+  })
+
+  it("rejects a millisecond-valued timestamp as stale", () => {
+    const timestamp = Date.now()
     const result = verifyMigrationProofOfPossession({
       accountId,
       destinationPubkey: xOnlyPubkey,
@@ -166,25 +372,25 @@ describe("verifyMigrationProofOfPossession", () => {
   })
 
   it("accepts a timestamp just inside a custom freshness window", () => {
-    const timestamp = Date.now() - 1000
+    const timestamp = nowInSeconds() - 1
     const result = verifyMigrationProofOfPossession({
       accountId,
       destinationPubkey: xOnlyPubkey,
       signature: signSchnorrProof({ destinationPubkey: xOnlyPubkey, timestamp }),
       timestamp,
-      freshnessWindowMs: 2000 as MilliSeconds,
+      freshnessWindowSeconds: 2 as Seconds,
     })
     expect(result).toBe(true)
   })
 
   it("rejects a timestamp outside a custom freshness window", () => {
-    const timestamp = Date.now() - 3000
+    const timestamp = nowInSeconds() - 3
     const result = verifyMigrationProofOfPossession({
       accountId,
       destinationPubkey: xOnlyPubkey,
       signature: signSchnorrProof({ destinationPubkey: xOnlyPubkey, timestamp }),
       timestamp,
-      freshnessWindowMs: 2000 as MilliSeconds,
+      freshnessWindowSeconds: 2 as Seconds,
     })
     expect(result).toBeInstanceOf(MigrationProofExpiredError)
   })
@@ -194,13 +400,13 @@ describe("verifyMigrationProofOfPossession", () => {
       accountId,
       destinationPubkey: xOnlyPubkey,
       signature: "not-hex-at-all",
-      timestamp: Date.now(),
+      timestamp: nowInSeconds(),
     })
     expect(result).toBeInstanceOf(MigrationInvalidDestinationError)
   })
 
   it("rejects a truncated signature", () => {
-    const timestamp = Date.now()
+    const timestamp = nowInSeconds()
     const signature = signSchnorrProof({ destinationPubkey: xOnlyPubkey, timestamp })
     const result = verifyMigrationProofOfPossession({
       accountId,
@@ -212,7 +418,7 @@ describe("verifyMigrationProofOfPossession", () => {
   })
 
   it("rejects an unsupported pubkey length", () => {
-    const timestamp = Date.now()
+    const timestamp = nowInSeconds()
     const result = verifyMigrationProofOfPossession({
       accountId,
       destinationPubkey: "abcd" as SparkPubkey,

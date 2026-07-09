@@ -4,6 +4,8 @@ import { intraledgerPaymentSendWalletIdForBtcWallet } from "@/app/payments/send-
 import { payNoAmountInvoiceByWalletId } from "@/app/payments/send-lightning"
 import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
 
+import { getCustodialMigrationFlowConfig } from "@/config"
+
 import { toSats } from "@/domain/bitcoin"
 import { PaymentSendStatus } from "@/domain/bitcoin/lightning"
 import { MigrationFlowPhase, MigrationStateConflictError } from "@/domain/migration-flow"
@@ -22,7 +24,7 @@ import {
 } from "@/services/mongoose"
 import { recordExceptionInCurrentSpan } from "@/services/tracing"
 
-const reserveForAmount = (amount: bigint): bigint =>
+export const reserveForAmount = (amount: bigint): bigint =>
   LnFees().maxProtocolAndBankFee(BtcPaymentAmount(amount)).amount
 
 const totalDebitForAmount = (amount: bigint): bigint => amount + reserveForAmount(amount)
@@ -103,8 +105,10 @@ export const executeMigrationTransfer = async ({
     return PaymentSendStatus.Success
   }
 
+  const { deMinimisThresholdSats } = getCustodialMigrationFlowConfig()
+
   let drainAmount: bigint
-  if (balanceSats <= 10n) {
+  if (balanceSats <= BigInt(deMinimisThresholdSats)) {
     const topUpAmount = reserveForAmount(balanceSats)
 
     const bankOwnerWalletId = await getBankOwnerWalletId()
@@ -129,7 +133,10 @@ export const executeMigrationTransfer = async ({
     if (topUp instanceof Error) {
       return failMigration(topUp, `top-up failed: ${topUp.name}`)
     }
-    await recordStep("reserve-top-up", `${topUpAmount} sats from bank owner`)
+    await recordStep(
+      "reserve-top-up",
+      `${topUpAmount} sats from bank owner; Blink covered the Spark network fee (de-minimis subsidy)`,
+    )
 
     drainAmount = balanceSats
   } else {

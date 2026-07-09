@@ -197,8 +197,17 @@ export type AccountLimits = {
 
 export type AccountMigration = {
   readonly __typename: 'AccountMigration';
+  readonly preview: AccountMigrationPreview;
   readonly status: MigrationStatus;
   readonly transferPaymentHash?: Maybe<Scalars['String']['output']>;
+};
+
+export type AccountMigrationPreview = {
+  readonly __typename: 'AccountMigrationPreview';
+  readonly balanceSats: Scalars['SatAmount']['output'];
+  readonly feeCoveredByBlink: Scalars['Boolean']['output'];
+  readonly feeSats: Scalars['SatAmount']['output'];
+  readonly receiveSats: Scalars['SatAmount']['output'];
 };
 
 export type AccountUpdateDefaultWalletIdInput = {
@@ -958,7 +967,7 @@ export type MigrationCommitInput = {
   readonly disclosureVersion: Scalars['String']['input'];
   /** Signature over the migration proof-of-possession challenge, made with the Spark identity key. */
   readonly proofSignature: Scalars['String']['input'];
-  /** Timestamp of the signed challenge, in milliseconds since the Unix epoch. */
+  /** Timestamp of the signed challenge, in seconds since the Unix epoch. */
   readonly proofTimestamp: Scalars['SafeInt']['input'];
   /** No-amount BOLT11 invoice minted by the destination Spark wallet. */
   readonly sparkInvoice: Scalars['LnPaymentRequest']['input'];
@@ -966,6 +975,36 @@ export type MigrationCommitInput = {
   readonly sparkPubkey: Scalars['String']['input'];
 };
 
+export type MigrationLnAddressTransferInput = {
+  /** Signature over the migration proof-of-possession challenge, made with the Spark identity key. */
+  readonly proofSignature: Scalars['String']['input'];
+  /** Timestamp of the signed challenge, in seconds since the Unix epoch. */
+  readonly proofTimestamp: Scalars['SafeInt']['input'];
+  /** Spark identity pubkey of the destination wallet, hex encoded. */
+  readonly sparkPubkey: Scalars['String']['input'];
+};
+
+export type MigrationLnAddressTransferPayload = {
+  readonly __typename: 'MigrationLnAddressTransferPayload';
+  readonly errors: ReadonlyArray<Error>;
+  readonly results: ReadonlyArray<MigrationLnAddressTransferResult>;
+};
+
+export type MigrationLnAddressTransferResult = {
+  readonly __typename: 'MigrationLnAddressTransferResult';
+  readonly identifier: Scalars['String']['output'];
+  readonly lightningAddress?: Maybe<Scalars['String']['output']>;
+  readonly status: MigrationLnAddressTransferStatus;
+};
+
+export const MigrationLnAddressTransferStatus = {
+  AlreadyTransferred: 'ALREADY_TRANSFERRED',
+  Failed: 'FAILED',
+  SkippedNotRegistered: 'SKIPPED_NOT_REGISTERED',
+  Transferred: 'TRANSFERRED'
+} as const;
+
+export type MigrationLnAddressTransferStatus = typeof MigrationLnAddressTransferStatus[keyof typeof MigrationLnAddressTransferStatus];
 export type MigrationPayload = {
   readonly __typename: 'MigrationPayload';
   readonly errors: ReadonlyArray<Error>;
@@ -1091,6 +1130,7 @@ export type Mutation = {
   readonly lnurlPaymentSend: PaymentSendPayload;
   readonly merchantMapSuggest: MerchantPayload;
   readonly migrationCommit: MigrationPayload;
+  readonly migrationLnAddressTransfer: MigrationLnAddressTransferPayload;
   readonly migrationStart: MigrationPayload;
   readonly onChainAddressCreate: OnChainAddressPayload;
   readonly onChainAddressCurrent: OnChainAddressPayload;
@@ -1284,6 +1324,11 @@ export type MutationMerchantMapSuggestArgs = {
 
 export type MutationMigrationCommitArgs = {
   input: MigrationCommitInput;
+};
+
+
+export type MutationMigrationLnAddressTransferArgs = {
+  input: MigrationLnAddressTransferInput;
 };
 
 

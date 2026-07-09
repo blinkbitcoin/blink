@@ -307,6 +307,7 @@ captcha:
   mandatory: false
 custodialMigrationFlow:
   enabled: false
+  deMinimisThresholdSats: 100
 smsAuthUnsupportedCountries: []
 whatsAppAuthUnsupportedCountries: []
 telegramAuthUnsupportedCountries: []

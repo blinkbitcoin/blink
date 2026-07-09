@@ -9,9 +9,10 @@ const MigrationStartMutation = GT.Field<null, GraphQLPublicContextAuth>({
     complexity: 120,
   },
   type: GT.NonNull(MigrationPayload),
-  resolve: async (_, args, { domainAccount }) => {
+  resolve: async (_, args, { domainAccount, apiKeyId }) => {
     const result = await MigrationFlow.startMigrationFlow({
       accountId: domainAccount.id,
+      apiKeyId,
     })
 
     if (result instanceof Error) {

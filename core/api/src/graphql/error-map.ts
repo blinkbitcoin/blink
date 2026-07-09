@@ -42,6 +42,7 @@ import {
   AuthorizationError,
   MigrationStateConflictError,
   MigrationInvalidDestinationError,
+  MigrationApiKeyForbiddenError,
 } from "@/graphql/error"
 import { baseLogger } from "@/services/logger"
 
@@ -658,6 +659,11 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "MigrationFlowDisabledError":
       message = "Migration is not available."
       return new OperationRestrictedError({ message, logger: baseLogger })
+
+    case "MigrationApiKeyForbiddenError":
+      message =
+        error.message || "Migration is not available via API key. Please use a session."
+      return new MigrationApiKeyForbiddenError({ message, logger: baseLogger })
 
     // ----------
     // Unhandled below here

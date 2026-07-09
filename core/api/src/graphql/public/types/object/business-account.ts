@@ -226,7 +226,7 @@ const BusinessAccount = GT.Object({
         })
 
         if (result instanceof CouldNotFindMigrationFlowStateError) {
-          return { phase: MigrationFlowPhase.NotStarted }
+          return { accountId: source.id, phase: MigrationFlowPhase.NotStarted }
         }
 
         if (result instanceof Error) {

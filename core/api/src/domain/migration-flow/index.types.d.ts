@@ -6,6 +6,22 @@ type MigrationInvalidDestinationError =
 type MigrationFlowPhase =
   (typeof import("./index").MigrationFlowPhase)[keyof typeof import("./index").MigrationFlowPhase]
 
+type MigrationLnAddressTransferStatus =
+  (typeof import("./index").MigrationLnAddressTransferStatus)[keyof typeof import("./index").MigrationLnAddressTransferStatus]
+
+type MigrationLnAddressTransferResult = {
+  identifier: string
+  status: MigrationLnAddressTransferStatus
+  lightningAddress?: string
+}
+
+type MigrationPreview = {
+  balanceSats: Satoshis
+  feeSats: Satoshis
+  feeCoveredByBlink: boolean
+  receiveSats: Satoshis
+}
+
 type SparkPubkey = string & { readonly brand: unique symbol }
 
 type MigrationFlowStep = {
@@ -34,7 +50,7 @@ type MigrationProofChallengeArgs = {
 
 type VerifyMigrationProofArgs = MigrationProofChallengeArgs & {
   signature: string
-  freshnessWindowMs?: MilliSeconds
+  freshnessWindowSeconds?: Seconds
 }
 
 type MigrationFlowStepInput = {

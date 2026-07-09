@@ -1,3 +1,8 @@
+jest.mock("@/config", () => ({
+  ...jest.requireActual("@/config"),
+  getCustodialMigrationFlowConfig: jest.fn(),
+}))
+
 jest.mock("@/app/migration-flow/settle-migration-flow", () => ({
   completeMigrationFlowForSettledPayment: jest.fn(),
 }))
@@ -48,6 +53,7 @@ import { payNoAmountInvoiceByWalletId } from "@/app/payments/send-lightning"
 import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
 import { AccountStatus } from "@/domain/accounts"
 import { PaymentSendStatus, RouteNotFoundError } from "@/domain/bitcoin/lightning"
+import { getCustodialMigrationFlowConfig } from "@/config"
 import { MigrationFlowPhase, MigrationStateConflictError } from "@/domain/migration-flow"
 import { InvalidBtcPaymentAmountError } from "@/domain/shared"
 import { getBankOwnerWalletId } from "@/services/ledger/caching"
@@ -63,6 +69,7 @@ const mockPayNoAmountInvoice = payNoAmountInvoiceByWalletId as jest.Mock
 const mockIntraledgerSend = intraledgerPaymentSendWalletIdForBtcWallet as jest.Mock
 const mockGetBankOwnerWalletId = getBankOwnerWalletId as jest.Mock
 const mockCompleteFlow = completeMigrationFlowForSettledPayment as jest.Mock
+const mockGetMigrationConfig = getCustodialMigrationFlowConfig as jest.Mock
 
 describe("executeMigrationTransfer", () => {
   const accountId = "account-id" as AccountId
@@ -91,6 +98,7 @@ describe("executeMigrationTransfer", () => {
     mockIntraledgerSend.mockResolvedValue({ status: PaymentSendStatus.Success })
     mockPayNoAmountInvoice.mockResolvedValue({ status: PaymentSendStatus.Success })
     mockCompleteFlow.mockResolvedValue(undefined)
+    mockGetMigrationConfig.mockReturnValue({ enabled: true, deMinimisThresholdSats: 100 })
   })
 
   it("skips the transfer and completes directly on a zero balance", async () => {
@@ -147,6 +155,77 @@ describe("executeMigrationTransfer", () => {
         fromPhase: MigrationFlowPhase.Transferring,
         toPhase: MigrationFlowPhase.Failed,
       }),
+    )
+  })
+
+  it("subsidizes a mid-range balance within the threshold, draining the full balance to zero", async () => {
+    mockGetBalanceForWallet.mockResolvedValue(50)
+
+    const result = await executeMigrationTransfer(transferArgs)
+
+    expect(result).toBe(PaymentSendStatus.Success)
+    expect(mockIntraledgerSend).toHaveBeenCalledTimes(1)
+    expect(mockIntraledgerSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipientWalletId: btcWalletId,
+        amount: 10,
+        senderWalletId: bankOwnerWalletId,
+        senderAccount: bankOwnerAccount,
+      }),
+    )
+    expect(mockPayNoAmountInvoice).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: 50, skipChecks: true }),
+    )
+    const feeStep = mocks.addFlowStep.mock.calls.find(
+      ([arg]) => arg.step.step === "reserve-top-up",
+    )
+    expect(feeStep).toBeDefined()
+    expect(feeStep[0].step.detail).toMatch(/Spark network fee|de-minimis/i)
+  })
+
+  it("subsidizes exactly at the threshold (B = 100) and drains the full balance to zero", async () => {
+    mockGetBalanceForWallet.mockResolvedValue(100)
+
+    const result = await executeMigrationTransfer(transferArgs)
+
+    expect(result).toBe(PaymentSendStatus.Success)
+    expect(mockIntraledgerSend).toHaveBeenCalledTimes(1)
+    expect(mockIntraledgerSend).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: 10 }),
+    )
+    expect(mockPayNoAmountInvoice).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: 100, skipChecks: true }),
+    )
+  })
+
+  it("does not subsidize one sat above the threshold (B = 101) and drains A* with no top-up", async () => {
+    mockGetBalanceForWallet.mockResolvedValue(101)
+
+    const result = await executeMigrationTransfer(transferArgs)
+
+    expect(result).toBe(PaymentSendStatus.Success)
+    expect(mockIntraledgerSend).not.toHaveBeenCalled()
+    expect(mockPayNoAmountInvoice).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: 91, skipChecks: true }),
+    )
+  })
+
+  it("reads the threshold from config so a non-default threshold subsidizes larger balances", async () => {
+    mockGetMigrationConfig.mockReturnValue({
+      enabled: true,
+      deMinimisThresholdSats: 200,
+    })
+    mockGetBalanceForWallet.mockResolvedValue(150)
+
+    const result = await executeMigrationTransfer(transferArgs)
+
+    expect(result).toBe(PaymentSendStatus.Success)
+    expect(mockIntraledgerSend).toHaveBeenCalledTimes(1)
+    expect(mockIntraledgerSend).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: 10 }),
+    )
+    expect(mockPayNoAmountInvoice).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: 150, skipChecks: true }),
     )
   })
 

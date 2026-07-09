@@ -1,6 +1,5 @@
 import { executeMigrationTransfer } from "./execute-transfer"
 import { resumeMigrationFlow } from "./resume-migration-flow"
-import { transferLnAddressToSpark } from "./transfer-ln-address"
 
 import { getCustodialMigrationFlowConfig } from "@/config"
 
@@ -11,6 +10,7 @@ import { decodeInvoice } from "@/domain/bitcoin/lightning"
 import { CouldNotFindMigrationFlowStateError } from "@/domain/errors"
 import {
   checkedToSparkPubkey,
+  MigrationApiKeyForbiddenError,
   MigrationDollarBalanceNotEmptyError,
   MigrationFlowDisabledError,
   MigrationFlowPhase,
@@ -29,6 +29,7 @@ import {
 
 export const commitMigrationFlow = async ({
   accountId,
+  apiKeyId,
   sparkPubkey,
   proofSignature,
   proofTimestamp,
@@ -37,6 +38,7 @@ export const commitMigrationFlow = async ({
   backupAttested,
 }: {
   accountId: AccountId
+  apiKeyId?: ApiKeyId
   sparkPubkey: string
   proofSignature: string
   proofTimestamp: number
@@ -44,6 +46,8 @@ export const commitMigrationFlow = async ({
   disclosureVersion: string
   backupAttested: boolean
 }): Promise<MigrationFlow | ApplicationError> => {
+  if (apiKeyId) return new MigrationApiKeyForbiddenError()
+
   if (!getCustodialMigrationFlowConfig().enabled) {
     return new MigrationFlowDisabledError()
   }
@@ -138,8 +142,6 @@ export const commitMigrationFlow = async ({
     step: { step: "commit", detail: `paymentHash: ${paymentHash}` },
   })
   if (transferring instanceof Error) return transferring
-
-  await transferLnAddressToSpark({ account, destinationSparkPubkey: destinationPubkey })
 
   const transferResult = await executeMigrationTransfer({
     account,

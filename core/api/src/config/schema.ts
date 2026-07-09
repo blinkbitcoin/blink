@@ -1032,11 +1032,13 @@ export const configSchema = {
       type: "object",
       properties: {
         enabled: { type: "boolean" },
+        deMinimisThresholdSats: { type: "integer", minimum: 10, default: 100 },
       },
-      required: ["enabled"],
+      required: ["enabled", "deMinimisThresholdSats"],
       additionalProperties: false,
       default: {
         enabled: false,
+        deMinimisThresholdSats: 100,
       },
     },
     smsAuthUnsupportedCountries: {

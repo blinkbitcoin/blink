@@ -4,9 +4,43 @@ import * as ecc from "tiny-secp256k1"
 
 import { MigrationInvalidDestinationError, MigrationProofExpiredError } from "./errors"
 
-export const MIGRATION_PROOF_FRESHNESS_WINDOW_MS = (5 * 60 * 1000) as MilliSeconds
+export const MIGRATION_PROOF_FRESHNESS_WINDOW_SECONDS = 600 as Seconds
 
 const sha256 = (buffer: Buffer) => createHash("sha256").update(buffer).digest()
+
+const derToCompactSignature = (
+  der: Buffer,
+): Buffer | MigrationInvalidDestinationError => {
+  const invalid = new MigrationInvalidDestinationError("invalid proof signature encoding")
+
+  if (der.length < 8 || der[0] !== 0x30 || der[1] !== der.length - 2) return invalid
+
+  const readInteger = (offset: number): { value: Buffer; end: number } | null => {
+    if (offset + 2 > der.length || der[offset] !== 0x02) return null
+    const length = der[offset + 1]
+    const start = offset + 2
+    const end = start + length
+    if (length === 0 || end > der.length) return null
+    let value = der.subarray(start, end)
+    if (value[0] & 0x80) return null
+    if (value[0] === 0x00) {
+      if (value.length === 1 || (value[1] & 0x80) === 0) return null
+      value = value.subarray(1)
+    }
+    if (value.length > 32) return null
+    return { value, end }
+  }
+
+  const r = readInteger(2)
+  if (!r) return invalid
+  const s = readInteger(r.end)
+  if (!s || s.end !== der.length) return invalid
+
+  const compact = Buffer.alloc(64)
+  r.value.copy(compact, 32 - r.value.length)
+  s.value.copy(compact, 64 - s.value.length)
+  return compact
+}
 
 export const checkedToSparkPubkey = (
   pubkey: string,
@@ -37,9 +71,10 @@ export const verifyMigrationProofOfPossession = ({
   destinationPubkey,
   signature,
   timestamp,
-  freshnessWindowMs = MIGRATION_PROOF_FRESHNESS_WINDOW_MS,
+  freshnessWindowSeconds = MIGRATION_PROOF_FRESHNESS_WINDOW_SECONDS,
 }: VerifyMigrationProofArgs): true | MigrationInvalidDestinationError => {
-  if (Math.abs(Date.now() - timestamp) > freshnessWindowMs) {
+  const nowInSeconds = Math.floor(Date.now() / 1000)
+  if (Math.abs(nowInSeconds - timestamp) > freshnessWindowSeconds) {
     return new MigrationProofExpiredError(`stale proof timestamp: ${timestamp}`)
   }
 
@@ -57,19 +92,35 @@ export const verifyMigrationProofOfPossession = ({
   )
 
   try {
-    if (pubkeyBytes.length === 32) {
+    if (signatureBytes.length === 64) {
+      if (pubkeyBytes.length === 32) {
+        return (
+          ecc.verifySchnorr(digest, pubkeyBytes, signatureBytes) ||
+          new MigrationInvalidDestinationError("invalid proof signature")
+        )
+      }
+      if (pubkeyBytes.length === 33) {
+        return (
+          ecc.verify(digest, pubkeyBytes, signatureBytes) ||
+          new MigrationInvalidDestinationError("invalid proof signature")
+        )
+      }
+      return new MigrationInvalidDestinationError("unsupported pubkey length")
+    }
+
+    if (signatureBytes.length > 64) {
+      if (pubkeyBytes.length !== 33) {
+        return new MigrationInvalidDestinationError("unsupported pubkey length")
+      }
+      const compact = derToCompactSignature(signatureBytes)
+      if (compact instanceof Error) return compact
       return (
-        ecc.verifySchnorr(digest, pubkeyBytes, signatureBytes) ||
+        ecc.verify(digest, pubkeyBytes, compact) ||
         new MigrationInvalidDestinationError("invalid proof signature")
       )
     }
-    if (pubkeyBytes.length === 33) {
-      return (
-        ecc.verify(digest, pubkeyBytes, signatureBytes) ||
-        new MigrationInvalidDestinationError("invalid proof signature")
-      )
-    }
-    return new MigrationInvalidDestinationError("unsupported pubkey length")
+
+    return new MigrationInvalidDestinationError("invalid proof signature encoding")
   } catch (err) {
     return new MigrationInvalidDestinationError(err)
   }

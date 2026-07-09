@@ -144,8 +144,18 @@ type AccountLimits
 type AccountMigration
   @join__type(graph: PUBLIC)
 {
+  preview: AccountMigrationPreview!
   status: MigrationStatus!
   transferPaymentHash: String
+}
+
+type AccountMigrationPreview
+  @join__type(graph: PUBLIC)
+{
+  balanceSats: SatAmount!
+  feeCoveredByBlink: Boolean!
+  feeSats: SatAmount!
+  receiveSats: SatAmount!
 }
 
 input AccountUpdateDefaultWalletIdInput
@@ -1345,9 +1355,7 @@ input MigrationCommitInput
   """
   proofSignature: String!
 
-  """
-  Timestamp of the signed challenge, in milliseconds since the Unix epoch.
-  """
+  """Timestamp of the signed challenge, in seconds since the Unix epoch."""
   proofTimestamp: SafeInt!
 
   """No-amount BOLT11 invoice minted by the destination Spark wallet."""
@@ -1355,6 +1363,45 @@ input MigrationCommitInput
 
   """Spark identity pubkey of the destination wallet, hex encoded."""
   sparkPubkey: String!
+}
+
+input MigrationLnAddressTransferInput
+  @join__type(graph: PUBLIC)
+{
+  """
+  Signature over the migration proof-of-possession challenge, made with the Spark identity key.
+  """
+  proofSignature: String!
+
+  """Timestamp of the signed challenge, in seconds since the Unix epoch."""
+  proofTimestamp: SafeInt!
+
+  """Spark identity pubkey of the destination wallet, hex encoded."""
+  sparkPubkey: String!
+}
+
+type MigrationLnAddressTransferPayload
+  @join__type(graph: PUBLIC)
+{
+  errors: [Error!]!
+  results: [MigrationLnAddressTransferResult!]!
+}
+
+type MigrationLnAddressTransferResult
+  @join__type(graph: PUBLIC)
+{
+  identifier: String!
+  lightningAddress: String
+  status: MigrationLnAddressTransferStatus!
+}
+
+enum MigrationLnAddressTransferStatus
+  @join__type(graph: PUBLIC)
+{
+  ALREADY_TRANSFERRED @join__enumValue(graph: PUBLIC)
+  FAILED @join__enumValue(graph: PUBLIC)
+  SKIPPED_NOT_REGISTERED @join__enumValue(graph: PUBLIC)
+  TRANSFERRED @join__enumValue(graph: PUBLIC)
 }
 
 type MigrationPayload
@@ -1512,6 +1559,7 @@ type Mutation
   lnurlPaymentSend(input: LnurlPaymentSendInput!): PaymentSendPayload! @join__field(graph: PUBLIC)
   merchantMapSuggest(input: MerchantMapSuggestInput!): MerchantPayload! @join__field(graph: PUBLIC)
   migrationCommit(input: MigrationCommitInput!): MigrationPayload! @join__field(graph: PUBLIC)
+  migrationLnAddressTransfer(input: MigrationLnAddressTransferInput!): MigrationLnAddressTransferPayload! @join__field(graph: PUBLIC)
   migrationStart: MigrationPayload! @join__field(graph: PUBLIC)
   onChainAddressCreate(input: OnChainAddressCreateInput!): OnChainAddressPayload! @join__field(graph: PUBLIC)
   onChainAddressCurrent(input: OnChainAddressCurrentInput!): OnChainAddressPayload! @join__field(graph: PUBLIC)

@@ -60,6 +60,18 @@ describe("migrationDrainAmount", () => {
     }
   })
 
+  it("computes A* around the default de-minimis threshold (B = 100/101)", () => {
+    // pure fixed-point math is threshold-agnostic; execute-transfer subsidizes
+    // B <= threshold, but the drain function still returns A* here.
+    const atThreshold = expectFixedPoint(100n)
+    expect(atThreshold).toBe(90n)
+    expect(100n - totalDebit(atThreshold)).toBe(0n)
+
+    const aboveThreshold = expectFixedPoint(101n)
+    expect(aboveThreshold).toBe(91n)
+    expect(101n - totalDebit(aboveThreshold)).toBe(0n)
+  })
+
   it("crosses from the flat to the percentage regime at B = 2110/2111", () => {
     const flat = expectFixedPoint(2110n)
     expect(flat).toBe(2100n)

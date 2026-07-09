@@ -5,6 +5,7 @@ import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
 import { AccountValidator } from "@/domain/accounts"
 import { CouldNotFindMigrationFlowStateError } from "@/domain/errors"
 import {
+  MigrationApiKeyForbiddenError,
   MigrationDollarBalanceNotEmptyError,
   MigrationFlowDisabledError,
   MigrationFlowPhase,
@@ -18,9 +19,13 @@ import {
 
 export const startMigrationFlow = async ({
   accountId,
+  apiKeyId,
 }: {
   accountId: AccountId
+  apiKeyId?: ApiKeyId
 }): Promise<MigrationFlow | ApplicationError> => {
+  if (apiKeyId) return new MigrationApiKeyForbiddenError()
+
   if (!getCustodialMigrationFlowConfig().enabled) {
     return new MigrationFlowDisabledError()
   }

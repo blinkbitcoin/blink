@@ -36,6 +36,7 @@ import {
   InactiveAccountError,
 } from "@/domain/errors"
 import {
+  MigrationApiKeyForbiddenError,
   MigrationDollarBalanceNotEmptyError,
   MigrationFlowDisabledError,
   MigrationFlowPhase,
@@ -85,6 +86,24 @@ describe("startMigrationFlow", () => {
     expect(result).toBeInstanceOf(MigrationFlowDisabledError)
     expect(mocks.findAccountById).not.toHaveBeenCalled()
     expect(mocks.upsertFlowByAccountId).not.toHaveBeenCalled()
+  })
+
+  it("refuses an API-key caller without creating a migration flow", async () => {
+    const result = await startMigrationFlow({
+      accountId,
+      apiKeyId: "api-key-id" as ApiKeyId,
+    })
+
+    expect(result).toBeInstanceOf(MigrationApiKeyForbiddenError)
+    expect(mocks.findAccountById).not.toHaveBeenCalled()
+    expect(mocks.upsertFlowByAccountId).not.toHaveBeenCalled()
+  })
+
+  it("proceeds for a session caller with no apiKeyId", async () => {
+    const result = await startMigrationFlow({ accountId, apiKeyId: undefined })
+
+    expect(result).toBe(inProgressFlow)
+    expect(mocks.upsertFlowByAccountId).toHaveBeenCalledTimes(1)
   })
 
   it("returns InactiveAccountError for a non-active account", async () => {

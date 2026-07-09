@@ -11,8 +11,14 @@ jest.mock("@/app/migration-flow/resume-migration-flow", () => ({
   resumeMigrationFlow: jest.fn(),
 }))
 
-jest.mock("@/app/migration-flow/transfer-ln-address", () => ({
-  transferLnAddressToSpark: jest.fn(),
+jest.mock("@/app/accounts/lnurl-server", () => ({
+  __mocks: {
+    transferIdentifierToSpark: jest.fn(),
+  },
+  getLnurlServerService: () => ({
+    transferIdentifierToSpark: jest.requireMock("@/app/accounts/lnurl-server").__mocks
+      .transferIdentifierToSpark,
+  }),
 }))
 
 jest.mock("@/app/wallets/get-balance-for-wallet", () => ({
@@ -61,7 +67,6 @@ import * as ecc from "tiny-secp256k1"
 import { commitMigrationFlow } from "@/app/migration-flow/commit-migration-flow"
 import { executeMigrationTransfer } from "@/app/migration-flow/execute-transfer"
 import { resumeMigrationFlow } from "@/app/migration-flow/resume-migration-flow"
-import { transferLnAddressToSpark } from "@/app/migration-flow/transfer-ln-address"
 import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
 import { AccountStatus } from "@/domain/accounts"
 import {
@@ -75,6 +80,7 @@ import {
 } from "@/domain/errors"
 import {
   buildMigrationProofChallenge,
+  MigrationApiKeyForbiddenError,
   MigrationDollarBalanceNotEmptyError,
   MigrationFlowDisabledError,
   MigrationFlowPhase,
@@ -172,7 +178,8 @@ const mockGetConfig = getCustodialMigrationFlowConfig as jest.Mock
 const mockGetBalanceForWallet = getBalanceForWallet as jest.Mock
 const mockExecuteMigrationTransfer = executeMigrationTransfer as jest.Mock
 const mockResumeMigrationFlow = resumeMigrationFlow as jest.Mock
-const mockTransferLnAddressToSpark = transferLnAddressToSpark as jest.Mock
+const mockTransferIdentifierToSpark = jest.requireMock("@/app/accounts/lnurl-server")
+  .__mocks.transferIdentifierToSpark as jest.Mock
 
 describe("commitMigrationFlow", () => {
   const account = { id: accountId, status: AccountStatus.Active } as Account
@@ -197,7 +204,7 @@ describe("commitMigrationFlow", () => {
   const commitArgs = () => ({
     accountId,
     sparkPubkey,
-    proofTimestamp: Date.now(),
+    proofTimestamp: Math.floor(Date.now() / 1000),
     sparkInvoice: noAmountPaymentRequest,
     disclosureVersion: "v1",
     backupAttested: true,
@@ -219,7 +226,6 @@ describe("commitMigrationFlow", () => {
     mockGetBalanceForWallet.mockResolvedValue(0)
     mockLockIdempotencyKey.mockResolvedValue(undefined)
     mockExecuteMigrationTransfer.mockResolvedValue(PaymentSendStatus.Pending)
-    mockTransferLnAddressToSpark.mockResolvedValue(undefined)
   })
 
   it("returns MigrationFlowDisabledError when the feature flag is off", async () => {
@@ -229,6 +235,28 @@ describe("commitMigrationFlow", () => {
 
     expect(result).toBeInstanceOf(MigrationFlowDisabledError)
     expect(mockExecuteMigrationTransfer).not.toHaveBeenCalled()
+  })
+
+  it("refuses an API-key caller before touching any state or drain", async () => {
+    const result = await commitMigrationFlow({
+      ...validCommitArgs(),
+      apiKeyId: "api-key-id" as ApiKeyId,
+    })
+
+    expect(result).toBeInstanceOf(MigrationApiKeyForbiddenError)
+    expect(mocks.findAccountById).not.toHaveBeenCalled()
+    expect(mocks.updateFlowPhase).not.toHaveBeenCalled()
+    expect(mockExecuteMigrationTransfer).not.toHaveBeenCalled()
+  })
+
+  it("proceeds for a session caller with no apiKeyId", async () => {
+    const result = await commitMigrationFlow({
+      ...validCommitArgs(),
+      apiKeyId: undefined,
+    })
+
+    expect(result).not.toBeInstanceOf(MigrationApiKeyForbiddenError)
+    expect(mockExecuteMigrationTransfer).toHaveBeenCalledTimes(1)
   })
 
   it("rejects when the backup is not attested", async () => {
@@ -334,11 +362,11 @@ describe("commitMigrationFlow", () => {
     expect(result).toBeInstanceOf(MigrationInvalidDestinationError)
     expect(mocks.updateFlowPhase).not.toHaveBeenCalled()
     expect(mockExecuteMigrationTransfer).not.toHaveBeenCalled()
-    expect(mockTransferLnAddressToSpark).not.toHaveBeenCalled()
+    expect(mockTransferIdentifierToSpark).not.toHaveBeenCalled()
   })
 
   it("rejects a stale proof of possession", async () => {
-    const staleTimestamp = Date.now() - 10 * 60 * 1000
+    const staleTimestamp = Math.floor(Date.now() / 1000) - 11 * 60
 
     const result = await commitMigrationFlow({
       ...commitArgs(),
@@ -414,7 +442,7 @@ describe("commitMigrationFlow", () => {
     expect(mockExecuteMigrationTransfer).not.toHaveBeenCalled()
   })
 
-  it("commits the flow: CAS to TRANSFERRING, re-points the ln-address and pays once", async () => {
+  it("commits the flow funds-only: CAS to TRANSFERRING and pays once, no ln-address transfer", async () => {
     mocks.findFlowByAccountId
       .mockResolvedValueOnce(inProgressFlow)
       .mockResolvedValueOnce(transferringFlow)
@@ -434,11 +462,7 @@ describe("commitMigrationFlow", () => {
         disclosureVersion: "v1",
       }),
     )
-    expect(mockTransferLnAddressToSpark).toHaveBeenCalledTimes(1)
-    expect(mockTransferLnAddressToSpark).toHaveBeenCalledWith({
-      account,
-      destinationSparkPubkey: sparkPubkey,
-    })
+    expect(mockTransferIdentifierToSpark).not.toHaveBeenCalled()
     expect(mockExecuteMigrationTransfer).toHaveBeenCalledTimes(1)
     expect(mockExecuteMigrationTransfer).toHaveBeenCalledWith({
       account,

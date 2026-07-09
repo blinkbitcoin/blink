@@ -101,8 +101,16 @@ type AccountLimits {
 }
 
 type AccountMigration {
+  preview: AccountMigrationPreview!
   status: MigrationStatus!
   transferPaymentHash: String
+}
+
+type AccountMigrationPreview {
+  balanceSats: SatAmount!
+  feeCoveredByBlink: Boolean!
+  feeSats: SatAmount!
+  receiveSats: SatAmount!
 }
 
 input AccountUpdateDefaultWalletIdInput {
@@ -950,9 +958,7 @@ input MigrationCommitInput {
   """
   proofSignature: String!
 
-  """
-  Timestamp of the signed challenge, in milliseconds since the Unix epoch.
-  """
+  """Timestamp of the signed challenge, in seconds since the Unix epoch."""
   proofTimestamp: SafeInt!
 
   """No-amount BOLT11 invoice minted by the destination Spark wallet."""
@@ -960,6 +966,37 @@ input MigrationCommitInput {
 
   """Spark identity pubkey of the destination wallet, hex encoded."""
   sparkPubkey: String!
+}
+
+input MigrationLnAddressTransferInput {
+  """
+  Signature over the migration proof-of-possession challenge, made with the Spark identity key.
+  """
+  proofSignature: String!
+
+  """Timestamp of the signed challenge, in seconds since the Unix epoch."""
+  proofTimestamp: SafeInt!
+
+  """Spark identity pubkey of the destination wallet, hex encoded."""
+  sparkPubkey: String!
+}
+
+type MigrationLnAddressTransferPayload {
+  errors: [Error!]!
+  results: [MigrationLnAddressTransferResult!]!
+}
+
+type MigrationLnAddressTransferResult {
+  identifier: String!
+  lightningAddress: String
+  status: MigrationLnAddressTransferStatus!
+}
+
+enum MigrationLnAddressTransferStatus {
+  ALREADY_TRANSFERRED
+  FAILED
+  SKIPPED_NOT_REGISTERED
+  TRANSFERRED
 }
 
 type MigrationPayload {
@@ -1101,6 +1138,7 @@ type Mutation {
   lnurlPaymentSend(input: LnurlPaymentSendInput!): PaymentSendPayload!
   merchantMapSuggest(input: MerchantMapSuggestInput!): MerchantPayload!
   migrationCommit(input: MigrationCommitInput!): MigrationPayload!
+  migrationLnAddressTransfer(input: MigrationLnAddressTransferInput!): MigrationLnAddressTransferPayload!
   migrationStart: MigrationPayload!
   onChainAddressCreate(input: OnChainAddressCreateInput!): OnChainAddressPayload!
   onChainAddressCurrent(input: OnChainAddressCurrentInput!): OnChainAddressPayload!
