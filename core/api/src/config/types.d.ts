@@ -18,7 +18,7 @@ type WindDownReceiveDisableConfig = {
   enabled: boolean
 }
 
-type WindDownGateConfig = {
+type WindDownGateClosedConfig = {
   enabled: boolean
 }
 
@@ -30,7 +30,7 @@ type WindDownRegionConfig = {
   finalDeadline: string
   gateArmsAt: string
   receiveDisable: WindDownReceiveDisableConfig
-  gate: WindDownGateConfig
+  gateClosed: WindDownGateClosedConfig
 }
 
 type WindDownConfig = {

@@ -1099,7 +1099,7 @@ export const configSchema = {
                 additionalProperties: false,
                 default: { enabled: false },
               },
-              gate: {
+              gateClosed: {
                 type: "object",
                 properties: {
                   enabled: { type: "boolean" },
@@ -1116,7 +1116,7 @@ export const configSchema = {
               "finalDeadline",
               "gateArmsAt",
               "receiveDisable",
-              "gate",
+              "gateClosed",
             ],
             additionalProperties: false,
           },
@@ -1135,7 +1135,7 @@ export const configSchema = {
             finalDeadline: "2026-08-31T23:59:59+02:00",
             gateArmsAt: "2026-09-01T00:00:00+02:00",
             receiveDisable: { enabled: false },
-            gate: { enabled: false },
+            gateClosed: { enabled: false },
           },
         ],
       },

@@ -60,7 +60,7 @@ const region = (overrides: Partial<WindDownRegionConfig> = {}): WindDownRegionCo
   finalDeadline: "2026-08-31T23:59:59+02:00",
   gateArmsAt: "2026-09-01T00:00:00+02:00",
   receiveDisable: { enabled: false },
-  gate: { enabled: false },
+  gateClosed: { enabled: false },
   ...overrides,
 })
 
@@ -72,7 +72,7 @@ const euRegion: WindDownRegionConfig = {
   finalDeadline: "2026-09-15T23:59:59+02:00",
   gateArmsAt: "2026-09-16T00:00:00+02:00",
   receiveDisable: { enabled: false },
-  gate: { enabled: false },
+  gateClosed: { enabled: false },
 }
 
 const windDownConfig = (overrides: Partial<WindDownConfig> = {}): WindDownConfig =>
@@ -191,7 +191,7 @@ describe("getAccountWindDown", () => {
       windDownConfig({
         regions: [
           region({
-            gate: { enabled: true },
+            gateClosed: { enabled: true },
             receiveDisable: {
               enabled: true,
             },

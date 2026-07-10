@@ -8,7 +8,7 @@ const euRegion: WindDownRegionConfig = {
   finalDeadline: "2026-09-15T23:59:59+02:00",
   gateArmsAt: "2026-09-16T00:00:00+02:00",
   receiveDisable: { enabled: false },
-  gate: { enabled: false },
+  gateClosed: { enabled: false },
 }
 
 const defaultRegion: WindDownRegionConfig = {
@@ -18,7 +18,7 @@ const defaultRegion: WindDownRegionConfig = {
   finalDeadline: "2026-08-31T23:59:59+02:00",
   gateArmsAt: "2026-09-01T00:00:00+02:00",
   receiveDisable: { enabled: false },
-  gate: { enabled: false },
+  gateClosed: { enabled: false },
 }
 
 const regions = [euRegion, defaultRegion]
