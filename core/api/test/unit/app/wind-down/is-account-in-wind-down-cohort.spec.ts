@@ -113,7 +113,7 @@ describe("isAccountInWindDownCohort", () => {
     expect(result).toEqual({ matched: true, matchedCountry: "FR" })
   })
 
-  it("skips an unparseable current phone number without losing the other signals", async () => {
+  it("skips an unparsable current phone number without losing the other signals", async () => {
     withUser("not-a-phone", [FR_PHONE])
     const result = await isAccountInWindDownCohort({ account: makeAccount() })
     expect(result).toBe(true)
@@ -125,7 +125,7 @@ describe("isAccountInWindDownCohort", () => {
     expect(result).toBe(false)
   })
 
-  it("skips an unparseable deleted phone and still evaluates the remaining signals", async () => {
+  it("skips an unparsable deleted phone and still evaluates the remaining signals", async () => {
     withUser(US_PHONE, ["not-a-phone", FR_PHONE])
     const result = await isAccountInWindDownCohort({ account: makeAccount() })
     expect(result).toBe(true)
