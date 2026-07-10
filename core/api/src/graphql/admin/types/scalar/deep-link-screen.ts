@@ -88,6 +88,9 @@ const DeepLinkScreen = GT.Enum({
     CARD_ONBOARDING_APPROVED: {
       value: DomainDeepLinkScreen.CardOnboardingApproved,
     },
+    ACCOUNT_MIGRATION: {
+      value: DomainDeepLinkScreen.AccountMigration,
+    },
   },
 })
 

@@ -151,6 +151,8 @@ export const deepLinkScreenToGrpcDeepLinkScreen = (
       return Grpc.DeepLinkScreen.CARDONBOARDINGPREAPPROVED
     case DeepLinkScreen.CardOnboardingApproved:
       return Grpc.DeepLinkScreen.CARDONBOARDINGAPPROVED
+    case DeepLinkScreen.AccountMigration:
+      return Grpc.DeepLinkScreen.ACCOUNTMIGRATION
   }
 }
 
