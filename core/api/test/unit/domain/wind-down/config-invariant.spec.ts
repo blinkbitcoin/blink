@@ -12,15 +12,15 @@ describe("windDown region flags", () => {
     expect(validate(cloneConfig())).toBe(true)
   })
 
-  it("accepts receiveDisable.enabled true — sequencing is an operational gate, not a config invariant", () => {
+  it("accepts receiveDisabled.enabled true — sequencing is an operational gate, not a config invariant", () => {
     const config = cloneConfig()
-    config.windDown.regions[0].receiveDisable = { enabled: true }
+    config.windDown.regions[0].receiveDisabled = { enabled: true }
     expect(validate(config)).toBe(true)
   })
 
-  it("rejects an unknown key on receiveDisable", () => {
+  it("rejects an unknown key on receiveDisabled", () => {
     const config = cloneConfig()
-    config.windDown.regions[0].receiveDisable = {
+    config.windDown.regions[0].receiveDisabled = {
       enabled: true,
       flowVerifiedLiveAt: "2026-07-25T00:00:00+02:00",
     }

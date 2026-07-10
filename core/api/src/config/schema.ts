@@ -1090,7 +1090,7 @@ export const configSchema = {
               },
               finalDeadline: { type: "string", pattern: offsetDateTimePattern },
               gateArmsAt: { type: "string", pattern: offsetDateTimePattern },
-              receiveDisable: {
+              receiveDisabled: {
                 type: "object",
                 properties: {
                   enabled: { type: "boolean" },
@@ -1115,7 +1115,7 @@ export const configSchema = {
               "receiveDisabledAt",
               "finalDeadline",
               "gateArmsAt",
-              "receiveDisable",
+              "receiveDisabled",
               "gateClosed",
             ],
             additionalProperties: false,
@@ -1134,7 +1134,7 @@ export const configSchema = {
             receiveDisabledAt: "2026-08-01T00:00:00+02:00",
             finalDeadline: "2026-08-31T23:59:59+02:00",
             gateArmsAt: "2026-09-01T00:00:00+02:00",
-            receiveDisable: { enabled: false },
+            receiveDisabled: { enabled: false },
             gateClosed: { enabled: false },
           },
         ],

@@ -59,7 +59,7 @@ export const deriveWindDownState = ({
 
   const status = region.gateClosed.enabled
     ? WindDownStatus.GatedClosed
-    : region.receiveDisable.enabled
+    : region.receiveDisabled.enabled
       ? WindDownStatus.ReceiveDisabled
       : WindDownStatus.PreCutoff
 

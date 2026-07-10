@@ -59,7 +59,7 @@ const region = (overrides: Partial<WindDownRegionConfig> = {}): WindDownRegionCo
   receiveDisabledAt: "2026-08-01T00:00:00+02:00",
   finalDeadline: "2026-08-31T23:59:59+02:00",
   gateArmsAt: "2026-09-01T00:00:00+02:00",
-  receiveDisable: { enabled: false },
+  receiveDisabled: { enabled: false },
   gateClosed: { enabled: false },
   ...overrides,
 })
@@ -71,7 +71,7 @@ const euRegion: WindDownRegionConfig = {
   receiveDisabledAt: "2026-08-15T00:00:00+02:00",
   finalDeadline: "2026-09-15T23:59:59+02:00",
   gateArmsAt: "2026-09-16T00:00:00+02:00",
-  receiveDisable: { enabled: false },
+  receiveDisabled: { enabled: false },
   gateClosed: { enabled: false },
 }
 
@@ -163,7 +163,7 @@ describe("getAccountWindDown", () => {
     expect(windDown.gateArmsAt).toBeInstanceOf(Date)
   })
 
-  it("returns RECEIVE_DISABLED after the region receiveDisable flag flips, re-deriving from cached membership", async () => {
+  it("returns RECEIVE_DISABLED after the region receiveDisabled flag flips, re-deriving from cached membership", async () => {
     const account = makeAccount()
 
     const before = await getAccountWindDown({ account })
@@ -173,7 +173,7 @@ describe("getAccountWindDown", () => {
       windDownConfig({
         regions: [
           region({
-            receiveDisable: {
+            receiveDisabled: {
               enabled: true,
             },
           }),
@@ -186,13 +186,13 @@ describe("getAccountWindDown", () => {
     expect(mockFindById).toHaveBeenCalledTimes(1)
   })
 
-  it("returns GATED_CLOSED when the gate flag is set regardless of receiveDisable", async () => {
+  it("returns GATED_CLOSED when the gate flag is set regardless of receiveDisabled", async () => {
     mockGetWindDownConfig.mockReturnValue(
       windDownConfig({
         regions: [
           region({
             gateClosed: { enabled: true },
-            receiveDisable: {
+            receiveDisabled: {
               enabled: true,
             },
           }),

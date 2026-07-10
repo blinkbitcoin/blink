@@ -14,7 +14,7 @@ type CaptchaConfig = {
   mandatory: boolean
 }
 
-type WindDownReceiveDisableConfig = {
+type WindDownReceiveDisabledConfig = {
   enabled: boolean
 }
 
@@ -29,7 +29,7 @@ type WindDownRegionConfig = {
   receiveDisabledAt: string | null
   finalDeadline: string
   gateArmsAt: string
-  receiveDisable: WindDownReceiveDisableConfig
+  receiveDisabled: WindDownReceiveDisabledConfig
   gateClosed: WindDownGateClosedConfig
 }
 
