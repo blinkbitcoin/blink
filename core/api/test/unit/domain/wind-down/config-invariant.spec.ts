@@ -78,10 +78,10 @@ describe("windDown date and country format invariants", () => {
     expect(validate(config)).toBe(false)
   })
 
-  it("accepts a null receiveDisabledAt", () => {
+  it("rejects a null receiveDisabledAt — a region is a schedule, all three dates are required", () => {
     const config = cloneConfig()
     config.windDown.regions[0].receiveDisabledAt = null
-    expect(validate(config)).toBe(true)
+    expect(validate(config)).toBe(false)
   })
 
   it("rejects an affectedCountries entry that is not an alpha-2 code", () => {

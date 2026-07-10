@@ -10,7 +10,7 @@ const AccountWindDown = GT.Object<AccountWindDown, GraphQLPublicContextAuth>({
       type: GT.NonNull(WindDownStatus),
     },
     receiveDisabledAt: {
-      type: Timestamp,
+      type: GT.NonNull(Timestamp),
     },
     finalDeadline: {
       type: GT.NonNull(Timestamp),

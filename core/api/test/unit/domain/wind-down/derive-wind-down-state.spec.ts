@@ -69,11 +69,11 @@ describe("deriveWindDownState", () => {
     })
   })
 
-  it("passes a null receiveDisabledAt through unchanged", () => {
+  it("passes the region's dates through untouched, never re-deriving them", () => {
     const state = deriveWindDownState({
       ...base,
-      region: region({ receiveDisabledAt: null }),
+      region: region({ receiveDisabledAt: "2027-03-04T05:06:07+01:00" }),
     })
-    expect(state?.receiveDisabledAt).toBeNull()
+    expect(state?.receiveDisabledAt).toBe("2027-03-04T05:06:07+01:00")
   })
 })

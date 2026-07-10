@@ -26,7 +26,7 @@ type WindDownRegionConfig = {
   code: string
   timezone: string
   countries?: string[]
-  receiveDisabledAt: string | null
+  receiveDisabledAt: string
   finalDeadline: string
   gateArmsAt: string
   receiveDisabled: WindDownReceiveDisabledConfig

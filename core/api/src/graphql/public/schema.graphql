@@ -126,7 +126,7 @@ type AccountUpdateNotificationSettingsPayload {
 type AccountWindDown {
   finalDeadline: Timestamp!
   gateArmsAt: Timestamp!
-  receiveDisabledAt: Timestamp
+  receiveDisabledAt: Timestamp!
   status: WindDownStatus!
   timezone: String!
 }

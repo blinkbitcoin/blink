@@ -26,7 +26,7 @@ export const getAccountWindDown = async ({
 
   return {
     status: state.status,
-    receiveDisabledAt: state.receiveDisabledAt ? new Date(state.receiveDisabledAt) : null,
+    receiveDisabledAt: new Date(state.receiveDisabledAt),
     finalDeadline: new Date(state.finalDeadline),
     gateArmsAt: new Date(state.gateArmsAt),
     timezone: state.timezone,

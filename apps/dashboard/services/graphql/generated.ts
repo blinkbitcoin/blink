@@ -231,7 +231,7 @@ export type AccountWindDown = {
   readonly __typename: 'AccountWindDown';
   readonly finalDeadline: Scalars['Timestamp']['output'];
   readonly gateArmsAt: Scalars['Timestamp']['output'];
-  readonly receiveDisabledAt?: Maybe<Scalars['Timestamp']['output']>;
+  readonly receiveDisabledAt: Scalars['Timestamp']['output'];
   readonly status: WindDownStatus;
   readonly timezone: Scalars['String']['output'];
 };
@@ -4272,7 +4272,7 @@ export type AccountUpdateNotificationSettingsPayloadResolvers<ContextType = any,
 export type AccountWindDownResolvers<ContextType = any, ParentType extends ResolversParentTypes['AccountWindDown'] = ResolversParentTypes['AccountWindDown']> = {
   finalDeadline?: Resolver<ResolversTypes['Timestamp'], ParentType, ContextType>;
   gateArmsAt?: Resolver<ResolversTypes['Timestamp'], ParentType, ContextType>;
-  receiveDisabledAt?: Resolver<Maybe<ResolversTypes['Timestamp']>, ParentType, ContextType>;
+  receiveDisabledAt?: Resolver<ResolversTypes['Timestamp'], ParentType, ContextType>;
   status?: Resolver<ResolversTypes['WindDownStatus'], ParentType, ContextType>;
   timezone?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;

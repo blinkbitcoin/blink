@@ -1084,10 +1084,7 @@ export const configSchema = {
                 type: "array",
                 items: { type: "string", pattern: countryCodePattern },
               },
-              receiveDisabledAt: {
-                type: ["string", "null"],
-                pattern: offsetDateTimePattern,
-              },
+              receiveDisabledAt: { type: "string", pattern: offsetDateTimePattern },
               finalDeadline: { type: "string", pattern: offsetDateTimePattern },
               gateArmsAt: { type: "string", pattern: offsetDateTimePattern },
               receiveDisabled: {
