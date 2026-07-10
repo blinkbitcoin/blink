@@ -79,9 +79,14 @@ const makeAccount = (overrides: Partial<Account> = {}): Account =>
     ...overrides,
   }) as Account
 
-const withUser = (phoneCountry: string | undefined, deletedPhones: string[] = []) =>
+const withUser = (
+  phoneCountry: string | undefined,
+  deletedPhones: string[] = [],
+  phone?: string,
+) =>
   mockFindById.mockResolvedValue({
     phoneMetadata: phoneCountry ? { countryCode: phoneCountry } : undefined,
+    phone,
     deletedPhones,
   })
 
@@ -115,6 +120,30 @@ describe("isAccountInWindDownCohort", () => {
     withUser("US", ["+33612345678"])
     const result = await evaluateWindDownCohortMatch({ account: makeAccount() })
     expect(result).toEqual({ matched: true, matchedCountry: "FR" })
+  })
+
+  it("parses the current phone number when phoneMetadata was never captured", async () => {
+    withUser(undefined, [], "+33612345678")
+    const result = await evaluateWindDownCohortMatch({ account: makeAccount() })
+    expect(result).toEqual({ matched: true, matchedCountry: "FR" })
+  })
+
+  it("matches an EU phone number even when the carrier lookup reports a non-EU country", async () => {
+    withUser("US", [], "+33612345678")
+    const result = await evaluateWindDownCohortMatch({ account: makeAccount() })
+    expect(result).toEqual({ matched: true, matchedCountry: "FR" })
+  })
+
+  it("skips an unparseable current phone number without losing the other signals", async () => {
+    withUser(undefined, ["+33612345678"], "not-a-phone")
+    const result = await isAccountInWindDownCohort({ account: makeAccount() })
+    expect(result).toBe(true)
+  })
+
+  it("returns false for a phone-less account with no other signal", async () => {
+    withUser(undefined, [], undefined)
+    const result = await isAccountInWindDownCohort({ account: makeAccount() })
+    expect(result).toBe(false)
   })
 
   it("skips an unparseable deleted phone and still evaluates the remaining signals", async () => {

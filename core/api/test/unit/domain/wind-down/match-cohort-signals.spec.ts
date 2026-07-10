@@ -3,7 +3,7 @@ import { matchCohortSignals, matchedCohortCountry } from "@/domain/wind-down"
 const args = (
   overrides: Partial<MatchCohortSignalsArgs> = {},
 ): MatchCohortSignalsArgs => ({
-  phoneCountry: undefined,
+  phoneCountries: [],
   deletedPhoneCountries: [],
   creationIpCountry: undefined,
   affectedCountries: ["FR", "DE", "IS"],
@@ -13,23 +13,25 @@ const args = (
 describe("matchedCohortCountry", () => {
   it("returns undefined when no signal matches", () => {
     expect(
-      matchedCohortCountry(args({ phoneCountry: "US", creationIpCountry: "GB" })),
+      matchedCohortCountry(args({ phoneCountries: ["US"], creationIpCountry: "GB" })),
     ).toBeUndefined()
   })
 
   it("returns the matched country when the current phone country is affected", () => {
-    expect(matchedCohortCountry(args({ phoneCountry: "DE" }))).toBe("DE")
+    expect(matchedCohortCountry(args({ phoneCountries: ["DE"] }))).toBe("DE")
   })
 
   it("matches a deleted-phone country when the current phone is non-EU", () => {
     expect(
-      matchedCohortCountry(args({ phoneCountry: "US", deletedPhoneCountries: ["FR"] })),
+      matchedCohortCountry(
+        args({ phoneCountries: ["US"], deletedPhoneCountries: ["FR"] }),
+      ),
     ).toBe("FR")
   })
 
   it("matches the creation-IP country when no phone signal matches", () => {
     expect(
-      matchedCohortCountry(args({ phoneCountry: "US", creationIpCountry: "FR" })),
+      matchedCohortCountry(args({ phoneCountries: ["US"], creationIpCountry: "FR" })),
     ).toBe("FR")
   })
 
@@ -41,7 +43,7 @@ describe("matchedCohortCountry", () => {
     expect(
       matchedCohortCountry(
         args({
-          phoneCountry: "FR",
+          phoneCountries: ["FR"],
           deletedPhoneCountries: ["DE"],
           creationIpCountry: "IS",
         }),
@@ -50,14 +52,18 @@ describe("matchedCohortCountry", () => {
   })
 
   it("matches case-insensitively", () => {
-    expect(matchedCohortCountry(args({ phoneCountry: "fr" }))).toBe("FR")
+    expect(matchedCohortCountry(args({ phoneCountries: ["fr"] }))).toBe("FR")
+  })
+
+  it("matches any current-phone source, so a non-EU carrier lookup cannot shadow an EU number", () => {
+    expect(matchedCohortCountry(args({ phoneCountries: ["US", "FR"] }))).toBe("FR")
   })
 })
 
 describe("matchCohortSignals", () => {
   it("is true exactly when matchedCohortCountry is defined", () => {
-    const affected = args({ phoneCountry: "FR" })
-    const notAffected = args({ phoneCountry: "US" })
+    const affected = args({ phoneCountries: ["FR"] })
+    const notAffected = args({ phoneCountries: ["US"] })
 
     expect(matchCohortSignals(affected)).toBe(true)
     expect(matchedCohortCountry(affected)).toBeDefined()

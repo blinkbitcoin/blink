@@ -8,7 +8,7 @@ const normalize = (country: string | undefined): string | undefined =>
   country ? country.toUpperCase() : undefined
 
 export const matchedCohortCountry = ({
-  phoneCountry,
+  phoneCountries,
   deletedPhoneCountries,
   creationIpCountry,
   affectedCountries,
@@ -18,16 +18,19 @@ export const matchedCohortCountry = ({
     const normalized = normalize(country)
     return normalized !== undefined && affected.has(normalized) ? normalized : undefined
   }
-
-  const byPhone = matchOf(phoneCountry)
-  if (byPhone !== undefined) return byPhone
-
-  for (const deleted of deletedPhoneCountries) {
-    const byDeletedPhone = matchOf(deleted)
-    if (byDeletedPhone !== undefined) return byDeletedPhone
+  const firstMatch = (countries: string[]): string | undefined => {
+    for (const country of countries) {
+      const matched = matchOf(country)
+      if (matched !== undefined) return matched
+    }
+    return undefined
   }
 
-  return matchOf(creationIpCountry)
+  return (
+    firstMatch(phoneCountries) ??
+    firstMatch(deletedPhoneCountries) ??
+    matchOf(creationIpCountry)
+  )
 }
 
 export const matchCohortSignals = (args: MatchCohortSignalsArgs): boolean =>

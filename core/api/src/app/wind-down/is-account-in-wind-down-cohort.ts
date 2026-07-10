@@ -11,6 +11,9 @@ import { LocalCacheService } from "@/services/cache/local-cache"
 
 const cacheKeyFor = (accountId: AccountId): string => `wind-down:cohort:${accountId}`
 
+const countryOfPhone = (phone: string): string | undefined =>
+  parsePhoneNumberFromString(phone)?.country
+
 export const evaluateWindDownCohortMatch = async ({
   account,
 }: {
@@ -30,9 +33,15 @@ export const evaluateWindDownCohortMatch = async ({
   const user = await UsersRepository().findById(account.kratosUserId)
   if (user instanceof Error) return user
 
-  const phoneCountry = user.phoneMetadata?.countryCode
+  // phoneMetadata is only written at onboarding and never backfilled, so legacy
+  // accounts carry a phone with no carrier lookup — parse the number as well
+  const phoneCountries = [
+    user.phoneMetadata?.countryCode,
+    user.phone ? countryOfPhone(user.phone) : undefined,
+  ].filter((country): country is string => country !== undefined)
+
   const deletedPhoneCountries = (user.deletedPhones ?? [])
-    .map((phone) => parsePhoneNumberFromString(phone)?.country as string | undefined)
+    .map(countryOfPhone)
     .filter((country): country is string => country !== undefined)
 
   const earliestIp = await AccountsIpsRepository().findEarliestByAccountId(account.id)
@@ -47,7 +56,7 @@ export const evaluateWindDownCohortMatch = async ({
     earliestIp instanceof Error ? undefined : earliestIp.metadata?.isoCode
 
   const matchedCountry = matchedCohortCountry({
-    phoneCountry,
+    phoneCountries,
     deletedPhoneCountries,
     creationIpCountry,
     affectedCountries,
