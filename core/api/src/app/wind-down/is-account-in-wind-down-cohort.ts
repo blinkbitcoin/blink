@@ -1,15 +1,12 @@
 import { parsePhoneNumberFromString } from "libphonenumber-js"
 
-import { getWindDownConfig, SECS_PER_5_MINS } from "@/config"
+import { getWindDownConfig } from "@/config"
 
 import { matchedCohortCountry } from "@/domain/wind-down"
 import { CouldNotFindAccountIpError } from "@/domain/errors"
 
 import { UsersRepository } from "@/services/mongoose"
 import { AccountsIpsRepository } from "@/services/mongoose/accounts-ips"
-import { LocalCacheService } from "@/services/cache/local-cache"
-
-const cacheKeyFor = (accountId: AccountId): string => `wind-down:cohort:${accountId}`
 
 const countryOfPhone = (phone: string): string | undefined =>
   parsePhoneNumberFromString(phone)?.country
@@ -19,12 +16,6 @@ export const evaluateWindDownCohortMatch = async ({
 }: {
   account: Account
 }): Promise<WindDownCohortMatch | ApplicationError> => {
-  const cache = LocalCacheService()
-  const cacheKey = cacheKeyFor(account.id)
-
-  const cached = await cache.get<WindDownCohortMatch>({ key: cacheKey })
-  if (!(cached instanceof Error)) return cached
-
   const { affectedCountries } = getWindDownConfig()
   if (affectedCountries.length === 0) return { matched: false }
 
@@ -55,18 +46,7 @@ export const evaluateWindDownCohortMatch = async ({
     affectedCountries,
   })
 
-  const match: WindDownCohortMatch = {
-    matched: matchedCountry !== undefined,
-    matchedCountry,
-  }
-
-  await cache.set<WindDownCohortMatch>({
-    key: cacheKey,
-    value: match,
-    ttlSecs: SECS_PER_5_MINS,
-  })
-
-  return match
+  return { matched: matchedCountry !== undefined, matchedCountry }
 }
 
 export const isAccountInWindDownCohort = async ({

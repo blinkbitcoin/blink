@@ -1,6 +1,5 @@
 jest.mock("@/config", () => ({
   getWindDownConfig: jest.fn(),
-  SECS_PER_5_MINS: 300,
 }))
 
 jest.mock("@/services/mongoose", () => ({
@@ -10,25 +9,6 @@ jest.mock("@/services/mongoose", () => ({
 jest.mock("@/services/mongoose/accounts-ips", () => ({
   AccountsIpsRepository: jest.fn(),
 }))
-
-jest.mock("@/services/cache/local-cache", () => {
-  const store = new Map<string, unknown>()
-  return {
-    __mockCacheStore: store,
-    LocalCacheService: () => ({
-      get: async ({ key }: { key: string }) =>
-        store.has(key) ? store.get(key) : new Error("cache-miss"),
-      set: async ({ key, value }: { key: string; value: unknown }) => {
-        store.set(key, value)
-        return value
-      },
-      clear: async ({ key }: { key: string }) => {
-        store.delete(key)
-        return true
-      },
-    }),
-  }
-})
 
 import { getAccountWindDown } from "@/app/wind-down/get-account-wind-down"
 import { isAccountInWindDownCohort } from "@/app/wind-down/is-account-in-wind-down-cohort"
@@ -45,10 +25,6 @@ const mockUsersRepository = UsersRepository as jest.MockedFunction<typeof UsersR
 const mockAccountsIpsRepository = AccountsIpsRepository as jest.MockedFunction<
   typeof AccountsIpsRepository
 >
-
-const { __mockCacheStore: cacheStore } = jest.requireMock(
-  "@/services/cache/local-cache",
-) as { __mockCacheStore: Map<string, unknown> }
 
 const mockFindById = jest.fn()
 const mockFindEarliestByAccountId = jest.fn()
@@ -114,7 +90,6 @@ const withPhoneCountry = (phoneCountry: string) =>
 describe("getAccountWindDown", () => {
   beforeEach(() => {
     jest.resetAllMocks()
-    cacheStore.clear()
     mockGetWindDownConfig.mockReturnValue(windDownConfig())
     mockUsersRepository.mockReturnValue({
       findById: mockFindById,
@@ -163,7 +138,7 @@ describe("getAccountWindDown", () => {
     expect(windDown.gateArmsAt).toBeInstanceOf(Date)
   })
 
-  it("returns RECEIVE_DISABLED after the region receiveDisabled flag flips, re-deriving from cached membership", async () => {
+  it("returns RECEIVE_DISABLED after the region receiveDisabled flag flips, re-deriving from the same signals", async () => {
     const account = makeAccount()
 
     const before = await getAccountWindDown({ account })
@@ -183,7 +158,7 @@ describe("getAccountWindDown", () => {
 
     const after = await getAccountWindDown({ account })
     expect((after as AccountWindDown).status).toBe("RECEIVE_DISABLED")
-    expect(mockFindById).toHaveBeenCalledTimes(1)
+    expect(mockFindById).toHaveBeenCalledTimes(2)
   })
 
   it("returns GATED_CLOSED when the gate flag is set regardless of receiveDisabled", async () => {

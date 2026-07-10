@@ -1,6 +1,5 @@
 jest.mock("@/config", () => ({
   getWindDownConfig: jest.fn(),
-  SECS_PER_5_MINS: 300,
 }))
 
 jest.mock("@/services/mongoose", () => ({
@@ -10,25 +9,6 @@ jest.mock("@/services/mongoose", () => ({
 jest.mock("@/services/mongoose/accounts-ips", () => ({
   AccountsIpsRepository: jest.fn(),
 }))
-
-jest.mock("@/services/cache/local-cache", () => {
-  const store = new Map<string, unknown>()
-  return {
-    __mockCacheStore: store,
-    LocalCacheService: () => ({
-      get: async ({ key }: { key: string }) =>
-        store.has(key) ? store.get(key) : new Error("cache-miss"),
-      set: async ({ key, value }: { key: string; value: unknown }) => {
-        store.set(key, value)
-        return value
-      },
-      clear: async ({ key }: { key: string }) => {
-        store.delete(key)
-        return true
-      },
-    }),
-  }
-})
 
 import {
   isAccountInWindDownCohort,
@@ -47,10 +27,6 @@ const mockUsersRepository = UsersRepository as jest.MockedFunction<typeof UsersR
 const mockAccountsIpsRepository = AccountsIpsRepository as jest.MockedFunction<
   typeof AccountsIpsRepository
 >
-
-const { __mockCacheStore: cacheStore } = jest.requireMock(
-  "@/services/cache/local-cache",
-) as { __mockCacheStore: Map<string, unknown> }
 
 const mockFindById = jest.fn()
 const mockFindEarliestByAccountId = jest.fn()
@@ -97,7 +73,6 @@ const withUser = (
 describe("isAccountInWindDownCohort", () => {
   beforeEach(() => {
     jest.resetAllMocks()
-    cacheStore.clear()
     mockGetWindDownConfig.mockReturnValue(windDownConfig())
     mockUsersRepository.mockReturnValue({
       findById: mockFindById,
@@ -162,6 +137,12 @@ describe("isAccountInWindDownCohort", () => {
     expect(result).toBe(true)
   })
 
+  it("treats an accountips row with no geo metadata as an absent creation-IP signal", async () => {
+    mockFindEarliestByAccountId.mockResolvedValue({ metadata: undefined })
+    const result = await isAccountInWindDownCohort({ account: makeAccount() })
+    expect(result).toBe(false)
+  })
+
   it("treats a missing accountips row as an absent creation-IP signal, not an error", async () => {
     withUser(FR_PHONE)
     mockFindEarliestByAccountId.mockResolvedValue(new CouldNotFindAccountIpError())
@@ -174,7 +155,6 @@ describe("isAccountInWindDownCohort", () => {
     mockFindById.mockResolvedValue(error)
     const result = await isAccountInWindDownCohort({ account: makeAccount() })
     expect(result).toBe(error)
-    expect(cacheStore.size).toBe(0)
   })
 
   it("returns the accountips error when it is not a not-found error", async () => {
@@ -182,10 +162,9 @@ describe("isAccountInWindDownCohort", () => {
     mockFindEarliestByAccountId.mockResolvedValue(error)
     const result = await isAccountInWindDownCohort({ account: makeAccount() })
     expect(result).toBe(error)
-    expect(cacheStore.size).toBe(0)
   })
 
-  it("never caches an error result and re-reads on the next call", async () => {
+  it("does not let a transient error stick: the next call recomputes", async () => {
     const account = makeAccount()
     mockFindById
       .mockResolvedValueOnce(new UnknownRepositoryError("transient"))
@@ -193,22 +172,21 @@ describe("isAccountInWindDownCohort", () => {
 
     const first = await isAccountInWindDownCohort({ account })
     expect(first).toBeInstanceOf(UnknownRepositoryError)
-    expect(cacheStore.size).toBe(0)
 
     const second = await isAccountInWindDownCohort({ account })
     expect(second).toBe(true)
     expect(mockFindById).toHaveBeenCalledTimes(2)
   })
 
-  it("caches the signal match and does not re-read repositories on the second call", async () => {
+  it("recomputes from the repositories on every call — the result is not memoised", async () => {
     withUser(FR_PHONE)
     const account = makeAccount()
 
     expect(await isAccountInWindDownCohort({ account })).toBe(true)
     expect(await isAccountInWindDownCohort({ account })).toBe(true)
 
-    expect(mockFindById).toHaveBeenCalledTimes(1)
-    expect(cacheStore.size).toBe(1)
+    expect(mockFindById).toHaveBeenCalledTimes(2)
+    expect(mockFindEarliestByAccountId).toHaveBeenCalledTimes(2)
   })
 
   it("stays in-cohort regardless of the windDown.enabled status switch", async () => {
@@ -226,6 +204,5 @@ describe("isAccountInWindDownCohort", () => {
 
     expect(mockFindById).not.toHaveBeenCalled()
     expect(mockFindEarliestByAccountId).not.toHaveBeenCalled()
-    expect(cacheStore.size).toBe(0)
   })
 })
