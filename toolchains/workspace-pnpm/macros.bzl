@@ -1339,6 +1339,10 @@ _jest_test = rule(
             attrs.string(),
             default = [],
         ),
+        "test_rule_timeout_ms": attrs.option(
+            attrs.int(),
+            default = None,
+        ),
         "node_modules": attrs.source(
             doc = """Target which builds package `node_modules`.""",
         ),

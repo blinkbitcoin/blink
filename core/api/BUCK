@@ -229,6 +229,9 @@ jest_test(
     prod_deps_srcs = prod_deps_srcs,
     config_file = "test/integration/jest.config.js",
     run_serially = True,
+    # GitHub runners have exceeded Buck's default 10 minute cap while these
+    # integration suites were still making progress.
+    test_rule_timeout_ms = 1200000,
     env_json = "//dev:integration_env",
     env = {
         "LOGLEVEL": "warn",
