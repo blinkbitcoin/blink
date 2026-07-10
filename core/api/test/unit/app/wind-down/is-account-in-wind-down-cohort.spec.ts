@@ -79,14 +79,19 @@ const makeAccount = (overrides: Partial<Account> = {}): Account =>
     ...overrides,
   }) as Account
 
+const US_PHONE = "+14155552671"
+const FR_PHONE = "+33612345678"
+
 const withUser = (
-  phoneCountry: string | undefined,
+  phone: string | undefined,
   deletedPhones: string[] = [],
-  phone?: string,
+  phoneMetadataCountry?: string,
 ) =>
   mockFindById.mockResolvedValue({
-    phoneMetadata: phoneCountry ? { countryCode: phoneCountry } : undefined,
     phone,
+    phoneMetadata: phoneMetadataCountry
+      ? { countryCode: phoneMetadataCountry }
+      : undefined,
     deletedPhones,
   })
 
@@ -101,7 +106,7 @@ describe("isAccountInWindDownCohort", () => {
     mockAccountsIpsRepository.mockReturnValue({
       findEarliestByAccountId: mockFindEarliestByAccountId,
     } as unknown as ReturnType<typeof AccountsIpsRepository>)
-    withUser("US")
+    withUser(US_PHONE)
     mockFindEarliestByAccountId.mockResolvedValue(new CouldNotFindAccountIpError())
   })
 
@@ -110,44 +115,44 @@ describe("isAccountInWindDownCohort", () => {
     expect(result).toBe(false)
   })
 
-  it("returns true when the current phone country is affected", async () => {
-    withUser("FR")
+  it("returns true when the current phone number resolves to an affected country", async () => {
+    withUser(FR_PHONE)
     const result = await evaluateWindDownCohortMatch({ account: makeAccount() })
     expect(result).toEqual({ matched: true, matchedCountry: "FR" })
   })
 
   it("returns true for a deleted EU phone when the current phone is non-EU", async () => {
-    withUser("US", ["+33612345678"])
+    withUser(US_PHONE, [FR_PHONE])
     const result = await evaluateWindDownCohortMatch({ account: makeAccount() })
     expect(result).toEqual({ matched: true, matchedCountry: "FR" })
   })
 
-  it("parses the current phone number when phoneMetadata was never captured", async () => {
-    withUser(undefined, [], "+33612345678")
-    const result = await evaluateWindDownCohortMatch({ account: makeAccount() })
-    expect(result).toEqual({ matched: true, matchedCountry: "FR" })
+  it("ignores an EU phoneMetadata.countryCode on a non-EU number, so nobody is enforced against without being notified", async () => {
+    withUser(US_PHONE, [], "FR")
+    const result = await isAccountInWindDownCohort({ account: makeAccount() })
+    expect(result).toBe(false)
   })
 
-  it("matches an EU phone number even when the carrier lookup reports a non-EU country", async () => {
-    withUser("US", [], "+33612345678")
+  it("matches an EU number even when phoneMetadata.countryCode reports a non-EU country", async () => {
+    withUser(FR_PHONE, [], "US")
     const result = await evaluateWindDownCohortMatch({ account: makeAccount() })
     expect(result).toEqual({ matched: true, matchedCountry: "FR" })
   })
 
   it("skips an unparseable current phone number without losing the other signals", async () => {
-    withUser(undefined, ["+33612345678"], "not-a-phone")
+    withUser("not-a-phone", [FR_PHONE])
     const result = await isAccountInWindDownCohort({ account: makeAccount() })
     expect(result).toBe(true)
   })
 
   it("returns false for a phone-less account with no other signal", async () => {
-    withUser(undefined, [], undefined)
+    withUser(undefined)
     const result = await isAccountInWindDownCohort({ account: makeAccount() })
     expect(result).toBe(false)
   })
 
   it("skips an unparseable deleted phone and still evaluates the remaining signals", async () => {
-    withUser("US", ["not-a-phone", "+33612345678"])
+    withUser(US_PHONE, ["not-a-phone", FR_PHONE])
     const result = await isAccountInWindDownCohort({ account: makeAccount() })
     expect(result).toBe(true)
   })
@@ -159,7 +164,7 @@ describe("isAccountInWindDownCohort", () => {
   })
 
   it("short-circuits an exempt account to false without reading any repository", async () => {
-    withUser("FR")
+    withUser(FR_PHONE)
     const result = await isAccountInWindDownCohort({
       account: makeAccount({ windDownExempt: true }),
     })
@@ -170,7 +175,7 @@ describe("isAccountInWindDownCohort", () => {
   })
 
   it("treats a missing accountips row as an absent creation-IP signal, not an error", async () => {
-    withUser("FR")
+    withUser(FR_PHONE)
     mockFindEarliestByAccountId.mockResolvedValue(new CouldNotFindAccountIpError())
     const result = await isAccountInWindDownCohort({ account: makeAccount() })
     expect(result).toBe(true)
@@ -196,7 +201,7 @@ describe("isAccountInWindDownCohort", () => {
     const account = makeAccount()
     mockFindById
       .mockResolvedValueOnce(new UnknownRepositoryError("transient"))
-      .mockResolvedValue({ phoneMetadata: { countryCode: "FR" }, deletedPhones: [] })
+      .mockResolvedValue({ phone: FR_PHONE, deletedPhones: [] })
 
     const first = await isAccountInWindDownCohort({ account })
     expect(first).toBeInstanceOf(UnknownRepositoryError)
@@ -208,7 +213,7 @@ describe("isAccountInWindDownCohort", () => {
   })
 
   it("caches the signal match and does not re-read repositories on the second call", async () => {
-    withUser("FR")
+    withUser(FR_PHONE)
     const account = makeAccount()
 
     expect(await isAccountInWindDownCohort({ account })).toBe(true)
@@ -219,14 +224,14 @@ describe("isAccountInWindDownCohort", () => {
   })
 
   it("stays in-cohort regardless of the windDown.enabled status switch", async () => {
-    withUser("FR")
+    withUser(FR_PHONE)
     mockGetWindDownConfig.mockReturnValue(windDownConfig({ enabled: false }))
     const result = await isAccountInWindDownCohort({ account: makeAccount() })
     expect(result).toBe(true)
   })
 
   it("short-circuits without reading repositories when affectedCountries is empty", async () => {
-    withUser("FR")
+    withUser(FR_PHONE)
     mockGetWindDownConfig.mockReturnValue(windDownConfig({ affectedCountries: [] }))
 
     expect(await isAccountInWindDownCohort({ account: makeAccount() })).toBe(false)

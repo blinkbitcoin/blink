@@ -2,7 +2,7 @@ type WindDownStatus =
   (typeof import("./index").WindDownStatus)[keyof typeof import("./index").WindDownStatus]
 
 type MatchCohortSignalsArgs = {
-  phoneCountries: string[]
+  phoneCountry?: string
   deletedPhoneCountries: string[]
   creationIpCountry?: string
   affectedCountries: string[]

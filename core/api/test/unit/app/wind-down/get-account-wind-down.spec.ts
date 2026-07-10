@@ -99,9 +99,16 @@ const makeAccount = (overrides: Partial<Account> = {}): Account =>
     ...overrides,
   }) as Account
 
+const PHONE_BY_COUNTRY: Record<string, string> = {
+  FR: "+33612345678",
+  US: "+14155552671",
+  DE: "+4915112345678",
+  IS: "+3546112345",
+}
+
 const withPhoneCountry = (phoneCountry: string) =>
   mockFindById.mockResolvedValue({
-    phoneMetadata: { countryCode: phoneCountry },
+    phone: PHONE_BY_COUNTRY[phoneCountry],
     deletedPhones: [],
   })
 

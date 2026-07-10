@@ -33,12 +33,7 @@ export const evaluateWindDownCohortMatch = async ({
   const user = await UsersRepository().findById(account.kratosUserId)
   if (user instanceof Error) return user
 
-  // phoneMetadata is only written at onboarding and never backfilled, so legacy
-  // accounts carry a phone with no carrier lookup — parse the number as well
-  const phoneCountries = [
-    user.phoneMetadata?.countryCode,
-    user.phone ? countryOfPhone(user.phone) : undefined,
-  ].filter((country): country is string => country !== undefined)
+  const phoneCountry = user.phone ? countryOfPhone(user.phone) : undefined
 
   const deletedPhoneCountries = (user.deletedPhones ?? [])
     .map(countryOfPhone)
@@ -56,7 +51,7 @@ export const evaluateWindDownCohortMatch = async ({
     earliestIp instanceof Error ? undefined : earliestIp.metadata?.isoCode
 
   const matchedCountry = matchedCohortCountry({
-    phoneCountries,
+    phoneCountry,
     deletedPhoneCountries,
     creationIpCountry,
     affectedCountries,

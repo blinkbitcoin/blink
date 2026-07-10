@@ -8,7 +8,7 @@ const normalize = (country: string | undefined): string | undefined =>
   country ? country.toUpperCase() : undefined
 
 export const matchedCohortCountry = ({
-  phoneCountries,
+  phoneCountry,
   deletedPhoneCountries,
   creationIpCountry,
   affectedCountries,
@@ -27,7 +27,7 @@ export const matchedCohortCountry = ({
   }
 
   return (
-    firstMatch(phoneCountries) ??
+    matchOf(phoneCountry) ??
     firstMatch(deletedPhoneCountries) ??
     matchOf(creationIpCountry)
   )
