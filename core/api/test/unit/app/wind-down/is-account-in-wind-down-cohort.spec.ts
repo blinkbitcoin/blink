@@ -73,7 +73,6 @@ const makeAccount = (overrides: Partial<Account> = {}): Account =>
     status: "active" as AccountStatus,
     statusHistory: [],
     contactEnabled: true,
-    windDownExempt: false,
     kratosUserId: "user-id" as UserId,
     displayCurrency: "USD" as DisplayCurrency,
     ...overrides,
@@ -161,17 +160,6 @@ describe("isAccountInWindDownCohort", () => {
     mockFindEarliestByAccountId.mockResolvedValue({ metadata: { isoCode: "FR" } })
     const result = await isAccountInWindDownCohort({ account: makeAccount() })
     expect(result).toBe(true)
-  })
-
-  it("short-circuits an exempt account to false without reading any repository", async () => {
-    withUser(FR_PHONE)
-    const result = await isAccountInWindDownCohort({
-      account: makeAccount({ windDownExempt: true }),
-    })
-    expect(result).toBe(false)
-    expect(mockUsersRepository).not.toHaveBeenCalled()
-    expect(mockAccountsIpsRepository).not.toHaveBeenCalled()
-    expect(cacheStore.size).toBe(0)
   })
 
   it("treats a missing accountips row as an absent creation-IP signal, not an error", async () => {

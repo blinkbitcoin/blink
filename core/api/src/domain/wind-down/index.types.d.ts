@@ -10,7 +10,6 @@ type MatchCohortSignalsArgs = {
 
 type DeriveWindDownStateArgs = {
   enabled: boolean
-  exempt: boolean
   matched: boolean
   region: WindDownRegionConfig | undefined
 }

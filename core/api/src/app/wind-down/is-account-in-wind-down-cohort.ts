@@ -19,8 +19,6 @@ export const evaluateWindDownCohortMatch = async ({
 }: {
   account: Account
 }): Promise<WindDownCohortMatch | ApplicationError> => {
-  if (account.windDownExempt) return { matched: false }
-
   const cache = LocalCacheService()
   const cacheKey = cacheKeyFor(account.id)
 

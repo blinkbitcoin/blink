@@ -93,7 +93,6 @@ const makeAccount = (overrides: Partial<Account> = {}): Account =>
     status: "active" as AccountStatus,
     statusHistory: [],
     contactEnabled: true,
-    windDownExempt: false,
     kratosUserId: "user-id" as UserId,
     displayCurrency: "USD" as DisplayCurrency,
     ...overrides,
@@ -146,13 +145,6 @@ describe("getAccountWindDown", () => {
   it("returns null when no signal matches", async () => {
     withPhoneCountry("US")
     const result = await getAccountWindDown({ account: makeAccount() })
-    expect(result).toBeNull()
-  })
-
-  it("returns null for an exempt account even when signals match", async () => {
-    const result = await getAccountWindDown({
-      account: makeAccount({ windDownExempt: true }),
-    })
     expect(result).toBeNull()
   })
 

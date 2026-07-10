@@ -19,7 +19,6 @@ export const getAccountWindDown = async ({
   const region = regionForCountry(match.matchedCountry, config.regions)
   const state = deriveWindDownState({
     enabled: config.enabled,
-    exempt: account.windDownExempt,
     matched: match.matched,
     region,
   })

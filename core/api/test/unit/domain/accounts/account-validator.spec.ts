@@ -12,7 +12,6 @@ describe("AccountValidator", () => {
     withdrawFee: 100 as Satoshis,
     level: AccountLevel.One,
     contactEnabled: true,
-    windDownExempt: false,
     contacts: [],
     kratosUserId: "kratos-id-1" as UserId,
     displayCurrency: UsdDisplayCurrency,

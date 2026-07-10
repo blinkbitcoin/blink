@@ -13,7 +13,6 @@ describe("resolveScopes", () => {
     status: AccountStatus.Active,
     statusHistory: [{ status: AccountStatus.Active }],
     contactEnabled: true,
-    windDownExempt: false,
     kratosUserId: "kratosUserId" as UserId,
     displayCurrency: UsdDisplayCurrency,
   }

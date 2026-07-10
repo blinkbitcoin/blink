@@ -11,15 +11,11 @@ const region = (overrides: Partial<WindDownRegionConfig> = {}): WindDownRegionCo
   ...overrides,
 })
 
-const base = { enabled: true, exempt: false, matched: true, region: region() }
+const base = { enabled: true, matched: true, region: region() }
 
 describe("deriveWindDownState", () => {
   it("returns null when the master switch is off", () => {
     expect(deriveWindDownState({ ...base, enabled: false })).toBeNull()
-  })
-
-  it("returns null when the account is exempt", () => {
-    expect(deriveWindDownState({ ...base, exempt: true })).toBeNull()
   })
 
   it("returns null when the account is not matched", () => {

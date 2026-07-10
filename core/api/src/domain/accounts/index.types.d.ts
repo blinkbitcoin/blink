@@ -107,7 +107,6 @@ type Account = {
   status: AccountStatus
   statusHistory: AccountStatusHistory
   contactEnabled: boolean
-  windDownExempt: boolean
   kratosUserId: UserId
   displayCurrency: DisplayCurrency
   // temp

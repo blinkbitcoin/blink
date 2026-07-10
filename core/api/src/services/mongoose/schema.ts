@@ -231,10 +231,6 @@ const AccountSchema = new Schema<AccountRecord>(
       type: Boolean,
       default: true,
     },
-    windDownExempt: {
-      type: Boolean,
-      default: false,
-    },
 
     statusHistory: {
       type: [

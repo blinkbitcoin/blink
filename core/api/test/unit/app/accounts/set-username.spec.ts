@@ -57,7 +57,6 @@ const account = {
   status: "active" as AccountStatus,
   statusHistory: [],
   contactEnabled: true,
-  windDownExempt: false,
   kratosUserId: "user-id" as UserId,
   displayCurrency: "USD" as DisplayCurrency,
 } satisfies Account

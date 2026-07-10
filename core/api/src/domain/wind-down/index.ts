@@ -52,11 +52,10 @@ export const regionForCountry = (
 
 export const deriveWindDownState = ({
   enabled,
-  exempt,
   matched,
   region,
 }: DeriveWindDownStateArgs): WindDownState | null => {
-  if (!enabled || exempt || !matched || !region) return null
+  if (!enabled || !matched || !region) return null
 
   const status = region.gate.enabled
     ? WindDownStatus.GatedClosed
