@@ -33,9 +33,6 @@ export const matchedCohortCountry = ({
   )
 }
 
-export const matchCohortSignals = (args: MatchCohortSignalsArgs): boolean =>
-  matchedCohortCountry(args) !== undefined
-
 export const regionForCountry = (
   matchedCountry: string | undefined,
   regions: WindDownRegionConfig[],

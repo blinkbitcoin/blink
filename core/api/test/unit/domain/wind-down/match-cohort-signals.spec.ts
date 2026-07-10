@@ -1,4 +1,4 @@
-import { matchCohortSignals, matchedCohortCountry } from "@/domain/wind-down"
+import { matchedCohortCountry } from "@/domain/wind-down"
 
 const args = (
   overrides: Partial<MatchCohortSignalsArgs> = {},
@@ -51,18 +51,5 @@ describe("matchedCohortCountry", () => {
 
   it("matches case-insensitively", () => {
     expect(matchedCohortCountry(args({ phoneCountry: "fr" }))).toBe("FR")
-  })
-})
-
-describe("matchCohortSignals", () => {
-  it("is true exactly when matchedCohortCountry is defined", () => {
-    const affected = args({ phoneCountry: "FR" })
-    const notAffected = args({ phoneCountry: "US" })
-
-    expect(matchCohortSignals(affected)).toBe(true)
-    expect(matchedCohortCountry(affected)).toBeDefined()
-
-    expect(matchCohortSignals(notAffected)).toBe(false)
-    expect(matchedCohortCountry(notAffected)).toBeUndefined()
   })
 })
