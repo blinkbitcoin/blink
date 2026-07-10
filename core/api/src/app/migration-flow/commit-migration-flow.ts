@@ -4,6 +4,7 @@ import { resumeMigrationFlow } from "./resume-migration-flow"
 import { getCustodialMigrationFlowConfig } from "@/config"
 
 import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
+import { isAccountInWindDownCohort } from "@/app/wind-down"
 
 import { AccountValidator } from "@/domain/accounts"
 import { decodeInvoice } from "@/domain/bitcoin/lightning"
@@ -15,6 +16,7 @@ import {
   MigrationFlowDisabledError,
   MigrationFlowPhase,
   MigrationInvalidDestinationError,
+  MigrationNotEligibleError,
   MigrationStateConflictError,
   verifyMigrationProofOfPossession,
 } from "@/domain/migration-flow"
@@ -87,6 +89,12 @@ export const commitMigrationFlow = async ({
   ) {
     return resumeMigrationFlow({ accountId })
   }
+
+  // below the resume branch: cohort loss must not block reconciling an in-flight drain
+  const inCohort = await isAccountInWindDownCohort({ account })
+  if (inCohort instanceof Error) return inCohort
+  if (!inCohort) return new MigrationNotEligibleError()
+
   if (flow.phase !== MigrationFlowPhase.InProgress || flow.lnPaymentHash) {
     return new MigrationStateConflictError(
       `migration commit is single-shot: phase is ${flow.phase}`,

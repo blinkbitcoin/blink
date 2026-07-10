@@ -1,6 +1,7 @@
 import { getCustodialMigrationFlowConfig } from "@/config"
 
 import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
+import { isAccountInWindDownCohort } from "@/app/wind-down"
 
 import { AccountValidator } from "@/domain/accounts"
 import { CouldNotFindMigrationFlowStateError } from "@/domain/errors"
@@ -9,6 +10,7 @@ import {
   MigrationDollarBalanceNotEmptyError,
   MigrationFlowDisabledError,
   MigrationFlowPhase,
+  MigrationNotEligibleError,
 } from "@/domain/migration-flow"
 
 import {
@@ -35,6 +37,10 @@ export const startMigrationFlow = async ({
 
   const accountValidator = AccountValidator(account)
   if (accountValidator instanceof Error) return accountValidator
+
+  const inCohort = await isAccountInWindDownCohort({ account })
+  if (inCohort instanceof Error) return inCohort
+  if (!inCohort) return new MigrationNotEligibleError()
 
   const migrationFlowRepo = MigrationFlowStateRepository()
 

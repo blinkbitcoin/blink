@@ -25,6 +25,10 @@ jest.mock("@/app/wallets/get-balance-for-wallet", () => ({
   getBalanceForWallet: jest.fn(),
 }))
 
+jest.mock("@/app/wind-down", () => ({
+  isAccountInWindDownCohort: jest.fn(),
+}))
+
 jest.mock("@/services/lnd", () => ({
   __mockListAllPubkeys: jest.fn(),
   LndService: () => ({
@@ -68,6 +72,7 @@ import { commitMigrationFlow } from "@/app/migration-flow/commit-migration-flow"
 import { executeMigrationTransfer } from "@/app/migration-flow/execute-transfer"
 import { resumeMigrationFlow } from "@/app/migration-flow/resume-migration-flow"
 import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
+import { isAccountInWindDownCohort } from "@/app/wind-down"
 import { AccountStatus } from "@/domain/accounts"
 import {
   decodeInvoice,
@@ -77,6 +82,7 @@ import {
 import {
   CouldNotFindMigrationFlowStateError,
   InactiveAccountError,
+  UnknownRepositoryError,
 } from "@/domain/errors"
 import {
   buildMigrationProofChallenge,
@@ -85,6 +91,7 @@ import {
   MigrationFlowDisabledError,
   MigrationFlowPhase,
   MigrationInvalidDestinationError,
+  MigrationNotEligibleError,
   MigrationProofExpiredError,
   MigrationStateConflictError,
 } from "@/domain/migration-flow"
@@ -176,6 +183,7 @@ const mockListAllPubkeys = jest.requireMock("@/services/lnd")
   .__mockListAllPubkeys as jest.Mock
 const mockGetConfig = getCustodialMigrationFlowConfig as jest.Mock
 const mockGetBalanceForWallet = getBalanceForWallet as jest.Mock
+const mockIsAccountInWindDownCohort = isAccountInWindDownCohort as jest.Mock
 const mockExecuteMigrationTransfer = executeMigrationTransfer as jest.Mock
 const mockResumeMigrationFlow = resumeMigrationFlow as jest.Mock
 const mockTransferIdentifierToSpark = jest.requireMock("@/app/accounts/lnurl-server")
@@ -226,6 +234,7 @@ describe("commitMigrationFlow", () => {
     mockGetBalanceForWallet.mockResolvedValue(0)
     mockLockIdempotencyKey.mockResolvedValue(undefined)
     mockExecuteMigrationTransfer.mockResolvedValue(PaymentSendStatus.Pending)
+    mockIsAccountInWindDownCohort.mockResolvedValue(true)
   })
 
   it("returns MigrationFlowDisabledError when the feature flag is off", async () => {
@@ -234,6 +243,7 @@ describe("commitMigrationFlow", () => {
     const result = await commitMigrationFlow(validCommitArgs())
 
     expect(result).toBeInstanceOf(MigrationFlowDisabledError)
+    expect(mockIsAccountInWindDownCohort).not.toHaveBeenCalled()
     expect(mockExecuteMigrationTransfer).not.toHaveBeenCalled()
   })
 
@@ -245,7 +255,45 @@ describe("commitMigrationFlow", () => {
 
     expect(result).toBeInstanceOf(MigrationApiKeyForbiddenError)
     expect(mocks.findAccountById).not.toHaveBeenCalled()
+    expect(mockIsAccountInWindDownCohort).not.toHaveBeenCalled()
     expect(mocks.updateFlowPhase).not.toHaveBeenCalled()
+    expect(mockExecuteMigrationTransfer).not.toHaveBeenCalled()
+  })
+
+  it("refuses a commit when the account is no longer in the cohort without initiating a drain", async () => {
+    mockIsAccountInWindDownCohort.mockResolvedValue(false)
+
+    const result = await commitMigrationFlow(validCommitArgs())
+
+    expect(result).toBeInstanceOf(MigrationNotEligibleError)
+    expect(mockIsAccountInWindDownCohort).toHaveBeenCalledWith({ account })
+    expect(mocks.updateFlowPhase).not.toHaveBeenCalled()
+    expect(mockExecuteMigrationTransfer).not.toHaveBeenCalled()
+    expect(mockResumeMigrationFlow).not.toHaveBeenCalled()
+  })
+
+  it("propagates a membership check error without initiating a drain", async () => {
+    const repoError = new UnknownRepositoryError()
+    mockIsAccountInWindDownCohort.mockResolvedValue(repoError)
+
+    const result = await commitMigrationFlow(validCommitArgs())
+
+    expect(result).toBe(repoError)
+    expect(mocks.updateFlowPhase).not.toHaveBeenCalled()
+    expect(mockExecuteMigrationTransfer).not.toHaveBeenCalled()
+    expect(mockResumeMigrationFlow).not.toHaveBeenCalled()
+  })
+
+  it("reconciles an in-flight transfer without consulting cohort membership", async () => {
+    mocks.findFlowByAccountId.mockResolvedValue(transferringFlow)
+    mockIsAccountInWindDownCohort.mockResolvedValue(false)
+    mockResumeMigrationFlow.mockResolvedValue(transferringFlow)
+
+    const result = await commitMigrationFlow(validCommitArgs())
+
+    expect(result).toBe(transferringFlow)
+    expect(mockResumeMigrationFlow).toHaveBeenCalledTimes(1)
+    expect(mockIsAccountInWindDownCohort).not.toHaveBeenCalled()
     expect(mockExecuteMigrationTransfer).not.toHaveBeenCalled()
   })
 
@@ -450,6 +498,7 @@ describe("commitMigrationFlow", () => {
     const result = await commitMigrationFlow(validCommitArgs())
 
     expect(result).toBe(transferringFlow)
+    expect(mockIsAccountInWindDownCohort).toHaveBeenCalledWith({ account })
     expect(mocks.updateFlowPhase).toHaveBeenCalledTimes(1)
     expect(mocks.updateFlowPhase).toHaveBeenCalledWith(
       expect.objectContaining({
