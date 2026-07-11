@@ -193,6 +193,9 @@ type YamlSchema = {
     phone: string
     code: string
   }[]
+  test_accounts_captcha: {
+    phone: string
+  }[]
   rateLimits: {
     requestCodePerEmail: RateLimitInput
     requestCodePerPhoneNumber: RateLimitInput

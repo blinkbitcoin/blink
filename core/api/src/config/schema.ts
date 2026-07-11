@@ -624,6 +624,19 @@ export const configSchema = {
       default: [],
       uniqueItems: true,
     },
+    test_accounts_captcha: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          phone: { type: "string" },
+        },
+        required: ["phone"],
+        additionalProperties: false,
+      },
+      default: [],
+      uniqueItems: true,
+    },
     rateLimits: {
       type: "object",
       properties: {
@@ -1064,6 +1077,7 @@ export const configSchema = {
     "quizzes",
     "admin_accounts",
     "test_accounts",
+    "test_accounts_captcha",
     "rateLimits",
     "accounts",
     "accountLimits",
