@@ -458,10 +458,7 @@ const lockedPendingPaymentSteps = async ({
     actualFee: roundedUpFee,
     revealedPreImage,
   })
-  if (reimbursed instanceof Error) {
-    await completeMigrationFlowForSettledPayment({ paymentHash })
-    return reimbursed
-  }
+  if (reimbursed instanceof Error) return reimbursed
 
   const finalized = await finalizePaymentUpdate({
     result: reimbursed,

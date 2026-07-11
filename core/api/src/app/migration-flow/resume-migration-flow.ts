@@ -44,6 +44,10 @@ export const resumeMigrationFlow = async ({
   if (updated instanceof Error) return updated
   if (updated.phase !== MigrationFlowPhase.Transferring) return updated
 
+  // still Transferring here means an earlier run recorded the ledger verdict but
+  // died before its migration hook fired — and updatePendingPaymentByHash skips
+  // already-recorded hashes without re-firing hooks, so no retry will ever tell
+  // the flow. Read the verdict out of the ledger and apply it to the flow here.
   const ledgerTxns = await LedgerService().getTransactionsByHash(lnPaymentHash)
   if (ledgerTxns instanceof Error) {
     recordExceptionInCurrentSpan({ error: ledgerTxns, level: ErrorLevel.Warn })

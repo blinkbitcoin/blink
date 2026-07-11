@@ -1159,4 +1159,36 @@ export const configSchema = {
     "windDown",
   ],
   additionalProperties: false,
+  allOf: [
+    {
+      if: {
+        properties: {
+          custodialMigrationFlow: {
+            properties: { enabled: { const: true } },
+            required: ["enabled"],
+          },
+        },
+        required: ["custodialMigrationFlow"],
+      },
+      then: {
+        properties: {
+          paymentNetworks: {
+            properties: {
+              lightning: {
+                properties: {
+                  send: {
+                    properties: { skipFeeReimbursement: { const: true } },
+                    required: ["skipFeeReimbursement"],
+                  },
+                },
+                required: ["send"],
+              },
+            },
+            required: ["lightning"],
+          },
+        },
+        required: ["paymentNetworks"],
+      },
+    },
+  ],
 } as const
