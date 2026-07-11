@@ -589,6 +589,11 @@ usd_amount=50
   invoice_status="$(graphql_output '.data.me.defaultAccount.walletById.invoiceByPaymentHash.paymentStatus')"
   [[ "${invoice_status}" == "PENDING" ]] || exit 1
 
+  # The API can observe PENDING before LND has accepted the in-flight HTLC.
+  # Wait for ACCEPTED so cancellation is testing a held invoice, not the race
+  # where an invoice can still be canceled before the hold is locked in.
+  retry 15 1 check_lnd_invoice_accepted "$payment_hash"
+
   # Try to cancel invoice
   variables=$(
     jq -n \

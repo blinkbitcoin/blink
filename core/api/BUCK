@@ -234,6 +234,9 @@ jest_test(
     test_rule_timeout_ms = 1200000,
     env_json = "//dev:integration_env",
     env = {
+        # Some integration hooks bootstrap LND/bitcoind state and can exceed
+        # Jest's default 60s timeout on GitHub runners.
+        "JEST_TIMEOUT": "600000",
         "LOGLEVEL": "warn",
     }
 )

@@ -78,6 +78,10 @@ def supergraph_impl(ctx: AnalysisContext) -> list[DefaultInfo]:
         rover_toolchain.generate_supergraph[DefaultInfo].default_outputs,
         "--rover-bin",
         ctx.attrs.rover_bin[RunInfo],
+        "--rover-node-modules",
+        ctx.attrs.rover_node_modules,
+        "--supergraph-plugin-archive",
+        ctx.attrs.supergraph_plugin_archive,
         "--config",
         ctx.attrs.config,
     )
@@ -99,8 +103,16 @@ supergraph = rule(
             default = "root//third-party/node/rover:rover_bin",
             doc = """Rover dependency.""",
         ),
+        "rover_node_modules": attrs.source(
+            default = "root//third-party/node/rover:node_modules",
+            doc = """Generated node_modules tree that contains Rover's binary-install output.""",
+        ),
         "config": attrs.source(
             doc = """Configuration file to use for the supergraph""",
+        ),
+        "supergraph_plugin_archive": attrs.source(
+            default = "root//third-party/node/rover:supergraph-v2.3.2.tar.gz",
+            doc = """Pinned Rover supergraph plugin archive.""",
         ),
         "subgraphs": attrs.dict(
             key = attrs.string(),
