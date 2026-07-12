@@ -14,8 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # Fresh GitHub runners do not have Buck's downloaded Rust crate archives.
-      # Keep Buck crate downloads serial to avoid crates.io rate limiting.
-      BUCK2_JOBS: "1"
+      # Bound Buck fanout on hosted runners while crate archives come from CDN URLs.
+      BUCK2_JOBS: "4"
     # Full BATS runs on GitHub runners have completed close to 25 minutes and
     # can still be making progress when the default job timeout cancels them.
     timeout-minutes: 35

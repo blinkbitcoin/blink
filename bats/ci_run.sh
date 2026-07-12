@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BUCK2_JOBS="${BUCK2_JOBS:-1}"
+BUCK2_JOBS="${BUCK2_JOBS:-4}"
 
 echo "Cleaning persisted LNURL server SQLite state..."
 sudo rm -f dev/.data/lnurl.db dev/.data/lnurl.db-shm dev/.data/lnurl.db-wal
@@ -9,8 +9,8 @@ echo "Running node_modules build..."
 buck2 build -j "$BUCK2_JOBS" //:node_modules --verbose 4
 
 echo "Running rust builds..."
-# CI runners start with an empty Buck download cache. Keep crate archive
-# downloads serial so crates.io does not throttle the generated http_archive set.
+# CI runners start with an empty Buck download cache. Bound Buck fanout while
+# generated Rust crate archives are fetched from static.crates.io CDN URLs.
 buck2 build -j "$BUCK2_JOBS" //core/api-keys:api-keys //core/notifications:notifications
 
 echo "Running api builds..."
