@@ -662,8 +662,7 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       return new OperationRestrictedError({ message, logger: baseLogger })
 
     case "MigrationApiKeyForbiddenError":
-      message =
-        error.message || "Migration is not available via API key. Please use a session."
+      message = "Migration is not available via API key. Please use a session."
       return new MigrationApiKeyForbiddenError({ message, logger: baseLogger })
 
     case "MigrationNotEligibleError":
