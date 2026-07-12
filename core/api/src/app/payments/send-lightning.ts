@@ -138,7 +138,6 @@ export const payInvoiceByWalletId = async ({
   const validatedPaymentInputs = await validateInvoicePaymentInputs({
     uncheckedPaymentRequest,
     uncheckedSenderWalletId,
-    skipChecks,
   })
   if (validatedPaymentInputs instanceof AlreadyPaidError) {
     const decodedInvoice = decodeInvoice(uncheckedPaymentRequest)
@@ -210,7 +209,6 @@ export const payNoAmountInvoiceByWalletId = async ({
     amount,
     uncheckedSenderWalletId,
     senderAccount,
-    skipChecks,
   })
   if (validatedNoAmountPaymentInputs instanceof AlreadyPaidError) {
     const decodedInvoice = decodeInvoice(uncheckedPaymentRequest)
@@ -283,11 +281,9 @@ export const payNoAmountInvoiceByWalletIdForUsdWallet = async (
 const validateInvoicePaymentInputs = async ({
   uncheckedPaymentRequest,
   uncheckedSenderWalletId,
-  skipChecks = false,
 }: {
   uncheckedPaymentRequest: string
   uncheckedSenderWalletId: string
-  skipChecks: boolean
 }): Promise<
   | {
       senderWallet: Wallet
@@ -321,7 +317,7 @@ const validateInvoicePaymentInputs = async ({
   const senderAccount = await AccountsRepository().findById(senderWallet.accountId)
   if (senderAccount instanceof Error) return senderAccount
 
-  const accountValidator = AccountValidator(senderAccount, { skipChecks })
+  const accountValidator = AccountValidator(senderAccount)
   if (accountValidator instanceof Error) return accountValidator
   const validateWallet = accountValidator.validateWalletForAccount(senderWallet)
   if (validateWallet instanceof Error) return validateWallet
@@ -338,13 +334,11 @@ const validateNoAmountInvoicePaymentInputs = async <S extends WalletCurrency>({
   amount,
   uncheckedSenderWalletId,
   senderAccount,
-  skipChecks = false,
 }: {
   uncheckedPaymentRequest: string
   amount: number
   uncheckedSenderWalletId: string
   senderAccount: Account
-  skipChecks: boolean
 }): Promise<
   | {
       senderWallet: Wallet
@@ -376,7 +370,7 @@ const validateNoAmountInvoicePaymentInputs = async <S extends WalletCurrency>({
   const senderWallet = await WalletsRepository().findById(senderWalletId)
   if (senderWallet instanceof Error) return senderWallet
 
-  const accountValidator = AccountValidator(senderAccount, { skipChecks })
+  const accountValidator = AccountValidator(senderAccount)
   if (accountValidator instanceof Error) return accountValidator
   const validateWallet = accountValidator.validateWalletForAccount(senderWallet)
   if (validateWallet instanceof Error) return validateWallet

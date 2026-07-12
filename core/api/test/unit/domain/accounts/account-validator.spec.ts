@@ -42,18 +42,6 @@ describe("AccountValidator", () => {
     expect(result).toHaveProperty("validateWalletForAccount")
   })
 
-  it("returns validator object for inactive account when skipChecks=true", () => {
-    const inactiveAccount = {
-      ...baseAccountProps,
-      id: "account-id-3" as AccountId,
-      status: AccountStatus.Locked,
-    }
-
-    const result = AccountValidator(inactiveAccount, { skipChecks: true })
-    expect(result).not.toBeInstanceOf(Error)
-    expect(result).toHaveProperty("validateWalletForAccount")
-  })
-
   it("returns error for migrated account", () => {
     const migratedAccount = {
       ...baseAccountProps,
@@ -64,18 +52,6 @@ describe("AccountValidator", () => {
     const result = AccountValidator(migratedAccount)
     expect(result).toBeInstanceOf(InactiveAccountError)
     expect(result).toHaveProperty("message", "account-id-4")
-  })
-
-  it("returns validator object for migrated account when skipChecks=true", () => {
-    const migratedAccount = {
-      ...baseAccountProps,
-      id: "account-id-4" as AccountId,
-      status: AccountStatus.Migrated,
-    }
-
-    const result = AccountValidator(migratedAccount, { skipChecks: true })
-    expect(result).not.toBeInstanceOf(Error)
-    expect(result).toHaveProperty("validateWalletForAccount")
   })
 
   it("returns error if account status is not active or invited", () => {
