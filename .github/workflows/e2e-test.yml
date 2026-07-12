@@ -12,6 +12,10 @@ jobs:
   tests:
     name: execute via bats
     runs-on: ubuntu-latest
+    env:
+      # Fresh GitHub runners do not have Buck's downloaded Rust crate archives.
+      # Keep Buck from fanning out hundreds of crates.io requests at once.
+      BUCK2_JOBS: "4"
     # Full BATS runs on GitHub runners have completed close to 25 minutes and
     # can still be making progress when the default job timeout cancels them.
     timeout-minutes: 35

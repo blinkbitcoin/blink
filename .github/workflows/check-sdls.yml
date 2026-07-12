@@ -15,10 +15,14 @@ jobs:
   check-code:
     name: Check SDLs
     runs-on: ubuntu-latest
+    env:
+      # Fresh GitHub runners do not have Buck's downloaded Rust crate archives.
+      # Keep Buck from fanning out hundreds of crates.io requests at once.
+      BUCK2_JOBS: "4"
     steps:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v14
       - name: Run the Magic Nix Cache
         uses: DeterminateSystems/magic-nix-cache-action@v8
       - uses: actions/checkout@v4
-      - run: nix develop -c buck2 test //dev:check-sdls
+      - run: nix develop -c buck2 test -j "$BUCK2_JOBS" //dev:check-sdls

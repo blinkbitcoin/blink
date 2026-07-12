@@ -78,6 +78,10 @@ jobs:
     needs: prepare
     if: needs.prepare.outputs.matrix != '[]'
     runs-on: ubuntu-latest
+    env:
+      # Fresh GitHub runners do not have Buck's downloaded Rust crate archives.
+      # Keep Buck from fanning out hundreds of crates.io requests at once.
+      BUCK2_JOBS: "4"
     strategy:
       fail-fast: false
       matrix:
@@ -93,7 +97,7 @@ jobs:
       - name: Run the Magic Nix Cache
         uses: DeterminateSystems/magic-nix-cache-action@v8
       - name: Build via buck2
-        run: nix develop -c buck2 build ${{ matrix.build_args }}
+        run: nix develop -c buck2 build -j "$BUCK2_JOBS" ${{ matrix.build_args }}
       - name: Start deps and run tests via tilt
         run: nix develop -c xvfb-run ./dev/bin/tilt-ci.sh ${{ matrix.component }}
       - name: Prepare Tilt log
