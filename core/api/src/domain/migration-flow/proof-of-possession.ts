@@ -42,17 +42,16 @@ const derToCompactSignature = (
   return compact
 }
 
+// compressed keys only: every Spark SDK surface emits 66-hex compressed
 export const checkedToSparkPubkey = (
   pubkey: string,
 ): SparkPubkey | MigrationInvalidDestinationError => {
-  if (!/^([0-9a-f]{64}|[0-9a-f]{66})$/i.test(pubkey)) {
+  if (!/^[0-9a-f]{66}$/i.test(pubkey)) {
     return new MigrationInvalidDestinationError(pubkey)
   }
 
-  const bytes = Buffer.from(pubkey, "hex")
   try {
-    if (bytes.length === 32 && ecc.isXOnlyPoint(bytes)) return pubkey as SparkPubkey
-    if (bytes.length === 33 && ecc.isPoint(bytes)) return pubkey as SparkPubkey
+    if (ecc.isPoint(Buffer.from(pubkey, "hex"))) return pubkey as SparkPubkey
   } catch (err) {
     return new MigrationInvalidDestinationError(err)
   }
@@ -92,26 +91,18 @@ export const verifyMigrationProofOfPossession = ({
   )
 
   try {
-    if (signatureBytes.length === 64) {
-      if (pubkeyBytes.length === 32) {
-        return (
-          ecc.verifySchnorr(digest, pubkeyBytes, signatureBytes) ||
-          new MigrationInvalidDestinationError("invalid proof signature")
-        )
-      }
-      if (pubkeyBytes.length === 33) {
-        return (
-          ecc.verify(digest, pubkeyBytes, signatureBytes) ||
-          new MigrationInvalidDestinationError("invalid proof signature")
-        )
-      }
+    if (pubkeyBytes.length !== 33) {
       return new MigrationInvalidDestinationError("unsupported pubkey length")
     }
 
+    if (signatureBytes.length === 64) {
+      return (
+        ecc.verify(digest, pubkeyBytes, signatureBytes) ||
+        new MigrationInvalidDestinationError("invalid proof signature")
+      )
+    }
+
     if (signatureBytes.length > 64) {
-      if (pubkeyBytes.length !== 33) {
-        return new MigrationInvalidDestinationError("unsupported pubkey length")
-      }
       const compact = derToCompactSignature(signatureBytes)
       if (compact instanceof Error) return compact
       return (

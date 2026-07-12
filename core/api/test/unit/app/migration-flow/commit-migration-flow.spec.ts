@@ -143,7 +143,9 @@ if (decodedNoAmountInvoice instanceof Error) throw decodedNoAmountInvoice
 const noAmountPaymentHash = decodedNoAmountInvoice.paymentHash
 
 const privateKey = Buffer.alloc(32, 7)
-const sparkPubkey = Buffer.from(ecc.xOnlyPointFromScalar(privateKey)).toString("hex")
+const sparkPubkey = Buffer.from(
+  ecc.pointFromScalar(privateKey, true) as Uint8Array,
+).toString("hex")
 
 const accountId = "account-id" as AccountId
 
@@ -160,7 +162,7 @@ const signProof = (timestamp: number): string => {
       ),
     )
     .digest()
-  return Buffer.from(ecc.signSchnorr(digest, privateKey)).toString("hex")
+  return Buffer.from(ecc.sign(digest, privateKey)).toString("hex")
 }
 
 const mocks = jest.requireMock("@/services/mongoose").__mocks as {
