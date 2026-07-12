@@ -36,13 +36,6 @@ jest.mock("@/services/lnd", () => ({
   }),
 }))
 
-jest.mock("@/services/lock", () => ({
-  __mockLockIdempotencyKey: jest.fn(),
-  LockService: () => ({
-    lockIdempotencyKey: jest.requireMock("@/services/lock").__mockLockIdempotencyKey,
-  }),
-}))
-
 jest.mock("@/services/mongoose", () => ({
   __mocks: {
     findAccountById: jest.fn(),
@@ -95,7 +88,6 @@ import {
   MigrationProofExpiredError,
   MigrationStateConflictError,
 } from "@/domain/migration-flow"
-import { ResourceAttemptsTimelockServiceError } from "@/domain/lock"
 import { getCustodialMigrationFlowConfig } from "@/config"
 
 const nodePrivateKey = Buffer.alloc(32, 13)
@@ -177,8 +169,6 @@ const mocks = jest.requireMock("@/services/mongoose").__mocks as {
   updateFlowPhase: jest.Mock
   findAccountWalletsByAccountId: jest.Mock
 }
-const mockLockIdempotencyKey = jest.requireMock("@/services/lock")
-  .__mockLockIdempotencyKey as jest.Mock
 const mockListAllPubkeys = jest.requireMock("@/services/lnd")
   .__mockListAllPubkeys as jest.Mock
 const mockGetConfig = getCustodialMigrationFlowConfig as jest.Mock
@@ -232,7 +222,6 @@ describe("commitMigrationFlow", () => {
     mocks.findAccountWalletsByAccountId.mockResolvedValue(accountWallets)
     mockListAllPubkeys.mockReturnValue([])
     mockGetBalanceForWallet.mockResolvedValue(0)
-    mockLockIdempotencyKey.mockResolvedValue(undefined)
     mockExecuteMigrationTransfer.mockResolvedValue(PaymentSendStatus.Pending)
     mockIsAccountInWindDownCohort.mockResolvedValue(true)
   })
@@ -435,7 +424,6 @@ describe("commitMigrationFlow", () => {
     expect(mockGetBalanceForWallet).toHaveBeenCalledWith({
       walletId: accountWallets.USD.id,
     })
-    expect(mockLockIdempotencyKey).not.toHaveBeenCalled()
     expect(mocks.updateFlowPhase).not.toHaveBeenCalled()
     expect(mockExecuteMigrationTransfer).not.toHaveBeenCalled()
   })
@@ -475,17 +463,6 @@ describe("commitMigrationFlow", () => {
     expect(result).toBe(transferringFlow)
     expect(mockResumeMigrationFlow).toHaveBeenCalledTimes(1)
     expect(mockResumeMigrationFlow).toHaveBeenCalledWith({ accountId })
-    expect(mocks.updateFlowPhase).not.toHaveBeenCalled()
-    expect(mockExecuteMigrationTransfer).not.toHaveBeenCalled()
-  })
-
-  it("returns the lock error without moving funds when the idempotency lock is held", async () => {
-    const lockError = new ResourceAttemptsTimelockServiceError()
-    mockLockIdempotencyKey.mockResolvedValue(lockError)
-
-    const result = await commitMigrationFlow(validCommitArgs())
-
-    expect(result).toBe(lockError)
     expect(mocks.updateFlowPhase).not.toHaveBeenCalled()
     expect(mockExecuteMigrationTransfer).not.toHaveBeenCalled()
   })

@@ -22,7 +22,6 @@ import {
 } from "@/domain/migration-flow"
 
 import { LndService } from "@/services/lnd"
-import { LockService } from "@/services/lock"
 import {
   AccountsRepository,
   MigrationFlowStateRepository,
@@ -133,11 +132,6 @@ export const commitMigrationFlow = async ({
       `Dollar balance must be empty before migration. walletId: ${accountWallets.USD.id}, balance: ${usdBalance}`,
     )
   }
-
-  const lock = await LockService().lockIdempotencyKey(
-    `migration-commit:${accountId}` as IdempotencyKey,
-  )
-  if (lock instanceof Error) return lock
 
   const transferring = await migrationFlowRepo.updatePhase({
     accountId,
