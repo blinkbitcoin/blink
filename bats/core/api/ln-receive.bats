@@ -30,10 +30,10 @@ teardown() {
     retry 10 1 trigger_is_started
   fi
 
-  balance="$(balance_for_check)"
-  if [[ "$balance" != 0 ]]; then
-    fail "Error: balance_for_check failed ($balance)"
-  fi
+  # LN settlement and held-invoice cancellation can update the balance metrics
+  # just after the test body returns. Retry the shared invariant check so
+  # teardown does not fail on a transient metrics snapshot.
+  assert_balance_for_check
 }
 
 btc_amount=1000
