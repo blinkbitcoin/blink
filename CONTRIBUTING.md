@@ -6,6 +6,8 @@ To help get you started, we will explain a bit about how we've laid out the code
 - [Working with Types](#working-with-types)
 - [Understanding our Architecture](#architecture)
 
+Before opening or reviewing a pull request, also see the [PR Review Guide](docs/pr-review.md), which documents the conventions and standards actually enforced in review, with links to precedent.
+
 ---
 
 ## Working with Types
