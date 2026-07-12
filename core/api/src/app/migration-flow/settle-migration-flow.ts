@@ -2,7 +2,7 @@ import { updateAccountStatus } from "@/app/accounts/update-account-status"
 import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
 
 import { AccountStatus } from "@/domain/accounts"
-import { CouldNotFindMigrationFlowStateError } from "@/domain/errors"
+import { CouldNotFindError } from "@/domain/errors"
 import { MigrationFlowPhase } from "@/domain/migration-flow"
 import { ErrorLevel } from "@/domain/shared"
 
@@ -22,7 +22,7 @@ const findFlowByHash = async (
   paymentHash: PaymentHash,
 ): Promise<MigrationFlow | undefined> => {
   const flow = await MigrationFlowStateRepository().findByLnPaymentHash(paymentHash)
-  if (flow instanceof CouldNotFindMigrationFlowStateError) return undefined
+  if (flow instanceof CouldNotFindError) return undefined
   if (flow instanceof Error) {
     recordExceptionInCurrentSpan({ error: flow, level: ErrorLevel.Warn })
     return undefined

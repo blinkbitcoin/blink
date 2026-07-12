@@ -25,7 +25,7 @@ import {
   SAT_PRICE_PRECISION_OFFSET,
   USD_PRICE_PRECISION_OFFSET,
 } from "@/domain/fiat"
-import { CouldNotFindMigrationFlowStateError } from "@/domain/errors"
+import { CouldNotFindError } from "@/domain/errors"
 import { MigrationFlowPhase } from "@/domain/migration-flow"
 import { Accounts, MigrationFlow as MigrationFlowApp, Prices, Wallets } from "@/app"
 import { IInvoiceConnection } from "@/graphql/shared/types/abstract/invoice"
@@ -225,7 +225,7 @@ const BusinessAccount = GT.Object({
           accountId: source.id,
         })
 
-        if (result instanceof CouldNotFindMigrationFlowStateError) {
+        if (result instanceof CouldNotFindError) {
           return { accountId: source.id, phase: MigrationFlowPhase.NotStarted }
         }
 

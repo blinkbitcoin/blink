@@ -8,7 +8,7 @@ import { isAccountInWindDownCohort } from "@/app/wind-down"
 
 import { AccountValidator } from "@/domain/accounts"
 import { decodeInvoice } from "@/domain/bitcoin/lightning"
-import { CouldNotFindMigrationFlowStateError } from "@/domain/errors"
+import { CouldNotFindError } from "@/domain/errors"
 import {
   checkedToSparkPubkey,
   MigrationApiKeyForbiddenError,
@@ -78,7 +78,7 @@ export const commitMigrationFlow = async ({
   const migrationFlowRepo = MigrationFlowStateRepository()
 
   const flow = await migrationFlowRepo.findByAccountId(accountId)
-  if (flow instanceof CouldNotFindMigrationFlowStateError) {
+  if (flow instanceof CouldNotFindError) {
     return new MigrationStateConflictError("migration has not been started")
   }
   if (flow instanceof Error) return flow

@@ -24,7 +24,7 @@ import {
   Quiz as QuizApp,
 } from "@/app"
 
-import { CouldNotFindMigrationFlowStateError } from "@/domain/errors"
+import { CouldNotFindError } from "@/domain/errors"
 import { MigrationFlowPhase } from "@/domain/migration-flow"
 
 import {
@@ -298,7 +298,7 @@ const ConsumerAccount = GT.Object<Account, GraphQLPublicContextAuth>({
           accountId: source.id,
         })
 
-        if (result instanceof CouldNotFindMigrationFlowStateError) {
+        if (result instanceof CouldNotFindError) {
           return { accountId: source.id, phase: MigrationFlowPhase.NotStarted }
         }
 

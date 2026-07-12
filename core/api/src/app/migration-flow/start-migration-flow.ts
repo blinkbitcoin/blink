@@ -4,7 +4,7 @@ import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
 import { isAccountInWindDownCohort } from "@/app/wind-down"
 
 import { AccountValidator } from "@/domain/accounts"
-import { CouldNotFindMigrationFlowStateError } from "@/domain/errors"
+import { CouldNotFindError } from "@/domain/errors"
 import {
   MigrationApiKeyForbiddenError,
   MigrationDollarBalanceNotEmptyError,
@@ -45,7 +45,7 @@ export const startMigrationFlow = async ({
   const migrationFlowRepo = MigrationFlowStateRepository()
 
   const existing = await migrationFlowRepo.findByAccountId(accountId)
-  if (!(existing instanceof CouldNotFindMigrationFlowStateError)) return existing
+  if (!(existing instanceof CouldNotFindError)) return existing
 
   const accountWallets =
     await WalletsRepository().findAccountWalletsByAccountId(accountId)
