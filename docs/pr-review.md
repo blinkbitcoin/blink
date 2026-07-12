@@ -125,10 +125,10 @@ internal deps) <- `services/` (adapters that parse external data into domain typ
   app layer method)" (#85).
 - Services parse, domain decides: "this is not a valid service, please follow the rules of
   the other services, including data parsing, you cant return unparsed data directly from
-  service" and "move this to domain (pass ammount and limits to validate, service must not
+  service" and "move this to domain (pass amount and limits to validate, service must not
   replace domain logic" (#272).
 - The app layer never talks to external systems directly; that is a service's job (#328:
-  lnd calls moved behind a service, "this is responsability of the service").
+  lnd calls moved behind a service, "this is responsibility of the service").
 - Only services throw; app and domain return errors ("we only throw at service layer", #519).
 - Style is part of the architecture: "we dont use classes, please use the same code style
   as other services (including arrow function expressions).. the same apply to interfaces
@@ -202,7 +202,7 @@ please dont approve/merge/deploy without them."
 - Errors surfaced over GraphQL must be registered in `core/api/src/graphql/error-map.ts`.
 - Errors must be specific and meaningful: "this does not mean nothing.. can you create more
   specific errors?" (#205); unknown external errors get parsed, not passed through ("this
-  does not make sense, this is an unkown error unless you do a proper parsing (check other
+  does not make sense, this is an unknown error unless you do a proper parsing (check other
   services)", #272).
 - **Severity is a reviewed decision**: "critical creates an alert in honeycomb/pagerduty,
   are you sure this is correct? please check the purpose of all the errors in this file"
