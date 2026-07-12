@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BUCK2_JOBS="${BUCK2_JOBS:-4}"
+BUCK2_JOBS="${BUCK2_JOBS:-1}"
 
 echo "Cleaning persisted LNURL server SQLite state..."
 sudo rm -f dev/.data/lnurl.db dev/.data/lnurl.db-shm dev/.data/lnurl.db-wal
@@ -9,8 +9,8 @@ echo "Running node_modules build..."
 buck2 build -j "$BUCK2_JOBS" //:node_modules --verbose 4
 
 echo "Running rust builds..."
-# CI runners start with an empty Buck download cache. Limiting jobs keeps Rust
-# crate archive downloads from being issued in a burst that crates.io throttles.
+# CI runners start with an empty Buck download cache. Keep crate archive
+# downloads serial so crates.io does not throttle the generated http_archive set.
 buck2 build -j "$BUCK2_JOBS" //core/api-keys:api-keys //core/notifications:notifications
 
 echo "Running api builds..."

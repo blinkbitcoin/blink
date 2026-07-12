@@ -80,10 +80,12 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # Fresh GitHub runners do not have Buck's downloaded Rust crate archives.
-      # Keep Buck from fanning out hundreds of crates.io requests at once.
-      BUCK2_JOBS: "4"
+      # Keep Buck crate downloads serial to avoid crates.io rate limiting.
+      BUCK2_JOBS: "1"
     strategy:
       fail-fast: false
+      # Matrix jobs share the same crate source; avoid multiplying download streams.
+      max-parallel: 1
       matrix:
         include: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     steps:

@@ -17,8 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # Fresh GitHub runners do not have Buck's downloaded Rust crate archives.
-      # Keep Buck from fanning out hundreds of crates.io requests at once.
-      BUCK2_JOBS: "4"
+      # Keep Buck crate downloads serial to avoid crates.io rate limiting.
+      BUCK2_JOBS: "1"
     steps:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v14
