@@ -332,13 +332,13 @@ services:
       - LNURL_WEBHOOK_DOMAIN=lnurl-server:4088
     depends_on: [oathkeeper]
   bitcoind:
-    image: lnliz/bitcoind:v28.4
+    image: lnliz/bitcoind:29.3
     ports:
       - "18443:18443"
     volumes:
       - ${HOST_PROJECT_PATH:-.}/config/bitcoind/bitcoin.conf:/data/.bitcoin/bitcoin.conf
   bitcoind-signer:
-    image: lnliz/bitcoind:v28.4
+    image: lnliz/bitcoind:29.3
     ports: []
     volumes:
       - ${HOST_PROJECT_PATH:-.}/config/bitcoind/bitcoin.conf:/data/.bitcoin/bitcoin.conf
