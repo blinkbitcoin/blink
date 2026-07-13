@@ -7,7 +7,7 @@ import * as yaml from "js-yaml"
 
 import mergeWith from "lodash.mergewith"
 
-import { configSchema } from "./schema"
+import { configSchema, registerConfigFormats } from "./schema"
 
 import { ConfigError } from "./error"
 
@@ -38,7 +38,9 @@ try {
 
 // TODO: fix errors
 // const ajv = new Ajv({ allErrors: true, strict: "log" })
-const ajv = new Ajv({ useDefaults: true, discriminator: true, $data: true })
+const ajv = registerConfigFormats(
+  new Ajv({ useDefaults: true, discriminator: true, $data: true }),
+)
 
 const defaultConfig = {}
 const validate = ajv.compile<YamlSchema>(configSchema)

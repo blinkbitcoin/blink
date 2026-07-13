@@ -1,11 +1,22 @@
+import type Ajv from "ajv"
+
 import { AccountStatus } from "@/domain/accounts/primitives"
 import { WalletCurrency } from "@/domain/shared"
+import { DEFAULT_WIND_DOWN_REGION_CODE } from "@/domain/wind-down"
 
 const countryCodePattern = "^[A-Za-z]{2}$"
 
 // wind-down dates must carry an explicit offset: an offset-less string parses as server-local time
 const offsetDateTimePattern =
   "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$"
+
+export const registerConfigFormats = (ajv: Ajv): Ajv =>
+  ajv.addFormat("parsable-date-time", (value: string) => {
+    if (isNaN(new Date(value).getTime())) return false
+    const [year, month, day] = value.slice(0, 10).split("-").map(Number)
+    const utc = new Date(Date.UTC(year, month - 1, day))
+    return utc.getUTCMonth() === month - 1 && utc.getUTCDate() === day
+  })
 
 const displayCurrencyConfigSchema = {
   type: "object",
@@ -1072,7 +1083,7 @@ export const configSchema = {
           minItems: 1,
           contains: {
             type: "object",
-            properties: { code: { const: "default" } },
+            properties: { code: { const: DEFAULT_WIND_DOWN_REGION_CODE } },
             required: ["code"],
           },
           items: {
@@ -1084,9 +1095,21 @@ export const configSchema = {
                 type: "array",
                 items: { type: "string", pattern: countryCodePattern },
               },
-              receiveDisabledAt: { type: "string", pattern: offsetDateTimePattern },
-              finalDeadline: { type: "string", pattern: offsetDateTimePattern },
-              gateArmsAt: { type: "string", pattern: offsetDateTimePattern },
+              receiveDisabledAt: {
+                type: "string",
+                pattern: offsetDateTimePattern,
+                format: "parsable-date-time",
+              },
+              finalDeadline: {
+                type: "string",
+                pattern: offsetDateTimePattern,
+                format: "parsable-date-time",
+              },
+              gateArmsAt: {
+                type: "string",
+                pattern: offsetDateTimePattern,
+                format: "parsable-date-time",
+              },
               receiveDisabled: {
                 type: "object",
                 properties: {
@@ -1126,7 +1149,7 @@ export const configSchema = {
         affectedCountries: [],
         regions: [
           {
-            code: "default",
+            code: DEFAULT_WIND_DOWN_REGION_CODE,
             timezone: "Europe/Paris",
             receiveDisabledAt: "2026-08-01T00:00:00+02:00",
             finalDeadline: "2026-08-31T23:59:59+02:00",

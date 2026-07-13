@@ -11,9 +11,10 @@ import {
   getAccountLimits,
   yamlConfig,
   getOnchainNetworkConfig,
+  registerConfigFormats,
 } from "@/config"
 
-const ajv = new Ajv({ discriminator: true, $data: true })
+const ajv = registerConfigFormats(new Ajv({ discriminator: true, $data: true }))
 
 /* eslint @typescript-eslint/ban-ts-comment: "off" */
 // @ts-ignore-next-line no-implicit-any error

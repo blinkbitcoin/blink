@@ -1,3 +1,5 @@
+export const DEFAULT_WIND_DOWN_REGION_CODE = "default"
+
 export const WindDownStatus = {
   PreCutoff: "PRE_CUTOFF",
   ReceiveDisabled: "RECEIVE_DISABLED",
@@ -44,7 +46,7 @@ export const regionForCountry = (
     )
     if (specific) return specific
   }
-  return regions.find((region) => region.code === "default")
+  return regions.find((region) => region.code === DEFAULT_WIND_DOWN_REGION_CODE)
 }
 
 export const deriveWindDownState = ({

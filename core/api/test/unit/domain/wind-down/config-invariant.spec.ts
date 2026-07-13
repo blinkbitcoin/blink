@@ -1,8 +1,10 @@
 import Ajv from "ajv"
 
-import { configSchema, yamlConfig } from "@/config"
+import { configSchema, registerConfigFormats, yamlConfig } from "@/config"
 
-const ajv = new Ajv({ useDefaults: true, discriminator: true, $data: true })
+const ajv = registerConfigFormats(
+  new Ajv({ useDefaults: true, discriminator: true, $data: true }),
+)
 const validate = ajv.compile(configSchema)
 
 const cloneConfig = () => JSON.parse(JSON.stringify(yamlConfig))
@@ -75,6 +77,18 @@ describe("windDown date and country format invariants", () => {
   it("rejects a malformed operative date", () => {
     const config = cloneConfig()
     config.windDown.regions[0].finalDeadline = "31 August 2026"
+    expect(validate(config)).toBe(false)
+  })
+
+  it("rejects a shape-valid but calendar-invalid operative date", () => {
+    const config = cloneConfig()
+    config.windDown.regions[0].finalDeadline = "2026-13-45T00:00:00+02:00"
+    expect(validate(config)).toBe(false)
+  })
+
+  it("rejects a nonexistent day of month", () => {
+    const config = cloneConfig()
+    config.windDown.regions[0].gateArmsAt = "2026-02-30T00:00:00+01:00"
     expect(validate(config)).toBe(false)
   })
 
