@@ -1344,39 +1344,19 @@ type MerchantPayload
 input MigrationCommitInput
   @join__type(graph: PUBLIC)
 {
-  """User attested to having backed up the destination wallet."""
   backupAttested: Boolean!
-
-  """Version of the migration disclosure accepted by the user."""
   disclosureVersion: String!
-
-  """
-  Signature over the migration proof-of-possession challenge, made with the Spark identity key.
-  """
   proofSignature: String!
-
-  """Timestamp of the signed challenge, in seconds since the Unix epoch."""
   proofTimestamp: SafeInt!
-
-  """No-amount BOLT11 invoice minted by the destination Spark wallet."""
   sparkInvoice: LnPaymentRequest!
-
-  """Spark identity pubkey of the destination wallet, hex encoded."""
   sparkPubkey: String!
 }
 
 input MigrationLnAddressTransferInput
   @join__type(graph: PUBLIC)
 {
-  """
-  Signature over the migration proof-of-possession challenge, made with the Spark identity key.
-  """
   proofSignature: String!
-
-  """Timestamp of the signed challenge, in seconds since the Unix epoch."""
   proofTimestamp: SafeInt!
-
-  """Spark identity pubkey of the destination wallet, hex encoded."""
   sparkPubkey: String!
 }
 

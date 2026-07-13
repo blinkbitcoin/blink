@@ -9,31 +9,12 @@ import SafeInt from "@/graphql/shared/types/scalar/safe-int"
 const MigrationCommitInput = GT.Input({
   name: "MigrationCommitInput",
   fields: () => ({
-    sparkPubkey: {
-      type: GT.NonNull(GT.String),
-      description: "Spark identity pubkey of the destination wallet, hex encoded.",
-    },
-    proofSignature: {
-      type: GT.NonNull(GT.String),
-      description:
-        "Signature over the migration proof-of-possession challenge, made with the Spark identity key.",
-    },
-    proofTimestamp: {
-      type: GT.NonNull(SafeInt),
-      description: "Timestamp of the signed challenge, in seconds since the Unix epoch.",
-    },
-    sparkInvoice: {
-      type: GT.NonNull(LnPaymentRequest),
-      description: "No-amount BOLT11 invoice minted by the destination Spark wallet.",
-    },
-    disclosureVersion: {
-      type: GT.NonNull(GT.String),
-      description: "Version of the migration disclosure accepted by the user.",
-    },
-    backupAttested: {
-      type: GT.NonNull(GT.Boolean),
-      description: "User attested to having backed up the destination wallet.",
-    },
+    sparkPubkey: { type: GT.NonNull(GT.String) },
+    proofSignature: { type: GT.NonNull(GT.String) },
+    proofTimestamp: { type: GT.NonNull(SafeInt) },
+    sparkInvoice: { type: GT.NonNull(LnPaymentRequest) },
+    disclosureVersion: { type: GT.NonNull(GT.String) },
+    backupAttested: { type: GT.NonNull(GT.Boolean) },
   }),
 })
 

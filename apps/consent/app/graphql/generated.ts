@@ -961,26 +961,17 @@ export type MerchantPayload = {
 };
 
 export type MigrationCommitInput = {
-  /** User attested to having backed up the destination wallet. */
   readonly backupAttested: Scalars['Boolean']['input'];
-  /** Version of the migration disclosure accepted by the user. */
   readonly disclosureVersion: Scalars['String']['input'];
-  /** Signature over the migration proof-of-possession challenge, made with the Spark identity key. */
   readonly proofSignature: Scalars['String']['input'];
-  /** Timestamp of the signed challenge, in seconds since the Unix epoch. */
   readonly proofTimestamp: Scalars['SafeInt']['input'];
-  /** No-amount BOLT11 invoice minted by the destination Spark wallet. */
   readonly sparkInvoice: Scalars['LnPaymentRequest']['input'];
-  /** Spark identity pubkey of the destination wallet, hex encoded. */
   readonly sparkPubkey: Scalars['String']['input'];
 };
 
 export type MigrationLnAddressTransferInput = {
-  /** Signature over the migration proof-of-possession challenge, made with the Spark identity key. */
   readonly proofSignature: Scalars['String']['input'];
-  /** Timestamp of the signed challenge, in seconds since the Unix epoch. */
   readonly proofTimestamp: Scalars['SafeInt']['input'];
-  /** Spark identity pubkey of the destination wallet, hex encoded. */
   readonly sparkPubkey: Scalars['String']['input'];
 };
 

@@ -8,19 +8,9 @@ import SafeInt from "@/graphql/shared/types/scalar/safe-int"
 const MigrationLnAddressTransferInput = GT.Input({
   name: "MigrationLnAddressTransferInput",
   fields: () => ({
-    sparkPubkey: {
-      type: GT.NonNull(GT.String),
-      description: "Spark identity pubkey of the destination wallet, hex encoded.",
-    },
-    proofSignature: {
-      type: GT.NonNull(GT.String),
-      description:
-        "Signature over the migration proof-of-possession challenge, made with the Spark identity key.",
-    },
-    proofTimestamp: {
-      type: GT.NonNull(SafeInt),
-      description: "Timestamp of the signed challenge, in seconds since the Unix epoch.",
-    },
+    sparkPubkey: { type: GT.NonNull(GT.String) },
+    proofSignature: { type: GT.NonNull(GT.String) },
+    proofTimestamp: { type: GT.NonNull(SafeInt) },
   }),
 })
 
