@@ -16,9 +16,10 @@ jobs:
       # Fresh GitHub runners do not have Buck's downloaded Rust crate archives.
       # Bound Buck fanout on hosted runners while crate archives come from CDN URLs.
       BUCK2_JOBS: "4"
-    # Full BATS runs on GitHub runners have completed close to 25 minutes and
-    # can still be making progress when the default job timeout cancels them.
-    timeout-minutes: 35
+    # Full BATS runs on GitHub runners can spend several minutes resetting
+    # lightning state between files, especially after cron channel tests. Keep
+    # the cap high enough that slow teardown does not cancel a progressing run.
+    timeout-minutes: 60
     steps:
       - name: Free disk space
         run: |
