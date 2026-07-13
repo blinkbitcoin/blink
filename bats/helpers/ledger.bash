@@ -30,8 +30,15 @@ balance_for_check_is_zero() {
   [[ "$(balance_for_check)" == 0 ]]
 }
 
+# Wait for the exporter metrics used by the BATS accounting invariant to
+# converge. Most tests use the default short window, while onchain settlement
+# tests can pass a larger attempt count because Bria/LND/exporter updates are
+# asynchronous on GitHub runners.
 assert_balance_for_check() {
-  if retry 10 1 balance_for_check_is_zero; then
+  local attempts=${1:-10}
+  local delay=${2:-1}
+
+  if retry "$attempts" "$delay" balance_for_check_is_zero; then
     return 0
   fi
 
