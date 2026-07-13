@@ -129,8 +129,7 @@ export const payInvoiceByWalletId = async ({
   senderWalletId: uncheckedSenderWalletId,
   senderAccount,
   apiKeyId,
-  skipChecks = false,
-}: PayInvoiceByWalletIdInternalArgs): Promise<PaymentSendResult | ApplicationError> => {
+}: PayInvoiceByWalletIdArgs): Promise<PaymentSendResult | ApplicationError> => {
   addAttributesToCurrentSpan({
     "payment.initiation_method": PaymentInitiationMethod.Lightning,
   })
@@ -167,7 +166,7 @@ export const payInvoiceByWalletId = async ({
       senderAccount,
       memo,
       apiKeyId,
-      skipChecks,
+      skipChecks: false,
     })
   }
 

@@ -111,10 +111,6 @@ type PayInvoiceByWalletIdArgs = PaymentSendArgs & {
   senderAccount: Account
 }
 
-type PayInvoiceByWalletIdInternalArgs = PayInvoiceByWalletIdArgs & {
-  skipChecks?: boolean
-}
-
 type PayNoAmountInvoiceByWalletIdArgs = PaymentSendArgs & {
   uncheckedPaymentRequest: string
   amount: number
