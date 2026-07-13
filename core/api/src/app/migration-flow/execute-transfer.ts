@@ -6,7 +6,7 @@ import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
 
 import { getCustodialMigrationFlowConfig } from "@/config"
 
-import { toSats } from "@/domain/bitcoin"
+import { FEECAP_BASIS_POINTS, FEECAP_MIN, toSats } from "@/domain/bitcoin"
 import { PaymentSendStatus } from "@/domain/bitcoin/lightning"
 import { MigrationFlowPhase, MigrationStateConflictError } from "@/domain/migration-flow"
 import { LnFees } from "@/domain/payments"
@@ -32,14 +32,17 @@ const totalDebitForAmount = (amount: bigint): bigint => amount + reserveForAmoun
 export const migrationDrainAmount = (
   balance: bigint,
 ): bigint | InvalidBtcPaymentAmountError => {
-  if (balance <= 10n) return new InvalidBtcPaymentAmountError(`balance: ${balance}`)
-
-  // fixed point A* = max{A : A + reserve(A) <= B}; closed-form seed, then
-  // +/-1 corrections for the step function of the rounded percentage reserve
-  let amount = balance <= 2110n ? balance - 10n : (balance * 200n) / 201n
-  while (amount > 0n && totalDebitForAmount(amount) > balance) {
-    amount -= 1n
+  if (balance <= FEECAP_MIN.amount) {
+    return new InvalidBtcPaymentAmountError(`balance: ${balance}`)
   }
+
+  // fixed point A* = max{A : A + reserve(A) <= B} where reserve(A) is
+  // max(round-half-down(A*bps/10^4), feeMin). The seed never exceeds A* and
+  // undershoots by at most 1 for any bps/feeMin, so the single step below
+  // closes the gap while re-verifying against the live fee function
+  const flatSeed = balance - FEECAP_MIN.amount
+  const pctSeed = (10_000n * balance) / (10_000n + FEECAP_BASIS_POINTS)
+  let amount = flatSeed < pctSeed ? flatSeed : pctSeed
   while (totalDebitForAmount(amount + 1n) <= balance) {
     amount += 1n
   }
