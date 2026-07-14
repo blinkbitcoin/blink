@@ -3,6 +3,10 @@
 load "../../helpers/_common.bash"
 load "../../helpers/subscriber.bash"
 
+teardown() {
+  stop_subscriber
+}
+
 @test "public: can query globals" {
   exec_graphql 'anon' 'globals'
   network="$(graphql_output '.data.globals.network')"
@@ -82,7 +86,7 @@ load "../../helpers/subscriber.bash"
   num_errors=$(
     grep 'Data.*\bprice\b' "${SUBSCRIBER_LOG_FILE}" \
       | awk '{print $2}' \
-      | jq -r '.data.price.errors | length'
+      | jq -s -r 'map(.data.price.errors | length) | add'
   )
   [[ "$num_errors" == "0" ]] || exit 1
 
@@ -96,7 +100,7 @@ load "../../helpers/subscriber.bash"
   num_errors=$(
     grep 'Data.*\brealtimePrice\b.*EUR' "${SUBSCRIBER_LOG_FILE}" \
       | awk '{print $2}' \
-      | jq -r '.data.brealtimePrice.errors | length'
+      | jq -s -r 'map(.data.realtimePrice.errors | length) | add'
   )
   [[ "$num_errors" == "0" ]] || exit 1
 

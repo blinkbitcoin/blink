@@ -1,22 +1,26 @@
 #!/bin/bash
 
+BUCK2_JOBS="${BUCK2_JOBS:-4}"
+
 echo "Cleaning persisted LNURL server SQLite state..."
 sudo rm -f dev/.data/lnurl.db dev/.data/lnurl.db-shm dev/.data/lnurl.db-wal
 
 echo "Running node_modules build..."
-buck2 build //:node_modules --verbose 4
+buck2 build -j "$BUCK2_JOBS" //:node_modules --verbose 4
 
 echo "Running rust builds..."
-buck2 build //core/api-keys:api-keys //core/notifications:notifications
+# CI runners start with an empty Buck download cache. Bound Buck fanout while
+# generated Rust crate archives are fetched from static.crates.io CDN URLs.
+buck2 build -j "$BUCK2_JOBS" //core/api-keys:api-keys //core/notifications:notifications
 
 echo "Running api builds..."
-buck2 build //core/api:api //core/api-ws-server:api-ws-server //core/api-trigger:api-trigger //core/api-exporter:api-exporter --verbose 4
+buck2 build -j "$BUCK2_JOBS" //core/api:api //core/api-ws-server:api-ws-server //core/api-trigger:api-trigger //core/api-exporter:api-exporter --verbose 4
 
 # echo "Running apps builds..."
 # buck2 build //apps/dashboard:dashboard //apps/consent:consent //apps/pay:pay-ci //apps/admin-panel:admin-panel //apps/map:map //apps/voucher:voucher --verbose 4
 
 echo "Running bats helpers builds..."
-buck2 build //bats/helpers/callback:run //bats/helpers/subscriber:run //bats/helpers/totp:generate --verbose 4
+buck2 build -j "$BUCK2_JOBS" //bats/helpers/callback:run //bats/helpers/subscriber:run //bats/helpers/totp:generate --verbose 4
 
 echo "Running bats tests..."
 if [ "$1" != "" ]; then

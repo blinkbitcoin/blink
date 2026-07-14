@@ -555,12 +555,16 @@ wait_for_new_payout_id() {
   on_chain_payment_send_address=$(bitcoin_cli getnewaddress)
   [[ "${on_chain_payment_send_address}" != "null" ]] || exit 1
 
+  # This test verifies that internal API-created payouts can be cancelled.
+  # Use the slow queue so the payout remains cancellable after the test waits
+  # for Bria's asynchronous payout_submitted event to reach the trigger logs.
   variables=$(
     jq -n \
-    --arg wallet_id "$(read_value $btc_wallet_name)" \
-    --arg address "$on_chain_payment_send_address" \
-    --arg amount 12345 \
-    '{input: {walletId: $wallet_id, address: $address, amount: $amount}}'
+      --arg wallet_id "$(read_value $btc_wallet_name)" \
+      --arg address "$on_chain_payment_send_address" \
+      --arg amount 12345 \
+      --arg speed "SLOW" \
+      '{input: {walletId: $wallet_id, address: $address, amount: $amount, speed: $speed}}'
   )
   exec_graphql 'alice' 'on-chain-payment-send' "$variables"
   send_status="$(graphql_output '.data.onChainPaymentSend.status')"

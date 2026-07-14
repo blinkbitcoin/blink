@@ -94,6 +94,14 @@ check_for_ln_update() {
   [[ "$paid_status" == "PAID" ]] || exit 1
 }
 
+check_lnd_invoice_accepted() {
+  local payment_hash=$1
+
+  invoice_info="$(lnd_cli lookupinvoice "$payment_hash")"
+  state="$(echo "$invoice_info" | jq -r '.state')"
+  [[ "${state}" = "ACCEPTED" ]] || exit 1
+}
+
 check_ln_payment_settled() {
   local payment_request=$1
   local payment_hash=$2

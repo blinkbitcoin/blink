@@ -18,10 +18,10 @@ setup_file() {
 }
 
 teardown() {
-  balance="$(balance_for_check)"
-  if [[ "$balance" != 0 ]]; then
-    fail "Error: balance_for_check failed ($balance)"
-  fi
+  # Public LN receive tests settle payments through the trigger and exporter.
+  # The test assertions can finish before lndBalanceSync catches up on GitHub
+  # runners, so use the shared retrying invariant instead of a one-shot metric.
+  assert_balance_for_check
 }
 
 btc_amount=1000

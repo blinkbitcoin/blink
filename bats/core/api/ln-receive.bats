@@ -10,6 +10,7 @@ load "../../helpers/trigger.bash"
 load "../../helpers/user.bash"
 
 ALICE='alice'
+TRIGGER_RESTART_ATTEMPTS=30
 
 setup_file() {
   create_user "$ALICE"
@@ -25,10 +26,18 @@ teardown_file() {
 }
 
 teardown() {
-  balance="$(balance_for_check)"
-  if [[ "$balance" != 0 ]]; then
-    fail "Error: balance_for_check failed ($balance)"
+  if [[ -f "$TRIGGER_STOP_FILE" ]]; then
+    rm "$TRIGGER_STOP_FILE"
+    # Restarting api-trigger can lag on hosted runners because it replays
+    # pending invoices before logging readiness. Keep cleanup from leaking the
+    # stop file into later tests while still failing if trigger never recovers.
+    retry "$TRIGGER_RESTART_ATTEMPTS" 1 trigger_is_started
   fi
+
+  # LN settlement and held-invoice cancellation can update the balance metrics
+  # just after the test body returns. Retry the shared invariant check so
+  # teardown does not fail on a transient metrics snapshot.
+  assert_balance_for_check
 }
 
 btc_amount=1000
@@ -343,7 +352,9 @@ usd_amount=50
 
   # Start trigger
   rm $TRIGGER_STOP_FILE
-  retry 10 1 trigger_is_started
+  # api-trigger logs readiness only after replaying pending invoices, which can
+  # take longer than 10s on GitHub runners after an intentional stop/start.
+  retry "$TRIGGER_RESTART_ATTEMPTS" 1 trigger_is_started
 
   # Pay invoice & check for settled
   lnd_outside_cli payinvoice -f \
@@ -377,7 +388,9 @@ usd_amount=50
 
   # Start trigger
   rm $TRIGGER_STOP_FILE
-  retry 10 1 trigger_is_started
+  # api-trigger logs readiness only after replaying pending invoices, which can
+  # take longer than 10s on GitHub runners after an intentional stop/start.
+  retry "$TRIGGER_RESTART_ATTEMPTS" 1 trigger_is_started
 
   # Pay invoice & check for settled
   lnd_outside_cli payinvoice -f \
@@ -584,6 +597,11 @@ usd_amount=50
   invoice_status="$(graphql_output '.data.me.defaultAccount.walletById.invoiceByPaymentHash.paymentStatus')"
   [[ "${invoice_status}" == "PENDING" ]] || exit 1
 
+  # The API can observe PENDING before LND has accepted the in-flight HTLC.
+  # Wait for ACCEPTED so cancellation is testing a held invoice, not the race
+  # where an invoice can still be canceled before the hold is locked in.
+  retry 15 1 check_lnd_invoice_accepted "$payment_hash"
+
   # Try to cancel invoice
   variables=$(
     jq -n \
@@ -600,7 +618,9 @@ usd_amount=50
 
   # Start trigger
   rm $TRIGGER_STOP_FILE
-  retry 10 1 trigger_is_started
+  # api-trigger logs readiness only after replaying pending invoices, which can
+  # take longer than 10s on GitHub runners after an intentional stop/start.
+  retry "$TRIGGER_RESTART_ATTEMPTS" 1 trigger_is_started
 
   # check if ln invoice was settled
   retry 15 1 check_for_ln_initiated_settled "$token_name" "$payment_hash"

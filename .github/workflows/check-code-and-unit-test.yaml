@@ -12,6 +12,10 @@ jobs:
   tests:
     name: execute via buck2
     runs-on: ubuntu-latest
+    env:
+      # Fresh GitHub runners do not have Buck's downloaded Rust crate archives.
+      # Bound Buck fanout on hosted runners while crate archives come from CDN URLs.
+      BUCK2_JOBS: "4"
     steps:
       - name: Free disk space
         run: |
@@ -63,7 +67,7 @@ jobs:
           echo "build_args=$BUILD_ARGS" >> "$GITHUB_OUTPUT"
       - name: Build via buck2
         if: steps.prepare_args.outputs.args != ''
-        run: nix develop -c buck2 build ${{ steps.prepare_args.outputs.build_args }}
+        run: nix develop -c buck2 build -j "$BUCK2_JOBS" ${{ steps.prepare_args.outputs.build_args }}
       - name: Run checks and tests via buck2
         if: steps.prepare_args.outputs.args != ''
-        run: nix develop -c buck2 test ${{ steps.prepare_args.outputs.args }}
+        run: nix develop -c buck2 test -j "$BUCK2_JOBS" ${{ steps.prepare_args.outputs.args }}
