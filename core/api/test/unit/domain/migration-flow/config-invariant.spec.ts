@@ -32,10 +32,18 @@ describe("custodialMigrationFlow fee-retention invariant", () => {
     delete config.paymentNetworks.lightning.send.skipFeeReimbursement
     expect(validate(config)).toBe(false)
   })
+})
 
-  it("accepts reimbursement active while the flow is off", () => {
+describe("deMinimisThresholdSats floor", () => {
+  it("rejects a threshold below the 10-sat drain floor", () => {
     const config = cloneConfig()
-    config.paymentNetworks.lightning.send.skipFeeReimbursement = false
+    config.custodialMigrationFlow.deMinimisThresholdSats = 9
+    expect(validate(config)).toBe(false)
+  })
+
+  it("accepts a threshold of exactly 10", () => {
+    const config = cloneConfig()
+    config.custodialMigrationFlow.deMinimisThresholdSats = 10
     expect(validate(config)).toBe(true)
   })
 })

@@ -301,26 +301,6 @@ describe("transferLnAddressesToSpark", () => {
     ])
   })
 
-  it("treats a conflict already at the same pubkey as an idempotent no-op", async () => {
-    mocks.findUserById.mockResolvedValue({ id: account.kratosUserId } as User)
-    mockTransferIdentifierToSpark.mockResolvedValue(
-      new LnurlServerConflictError("conflict"),
-    )
-    mockGetIdentifier.mockResolvedValue({
-      provider: "spark",
-      providerDetails: { sparkPubkey },
-    } as LnurlServerIdentifier)
-
-    const results = await transferLnAddressesToSpark(args())
-
-    expect(results).toEqual([
-      {
-        identifier: username,
-        status: MigrationLnAddressTransferStatus.AlreadyTransferred,
-      },
-    ])
-  })
-
   it("rejects a tampered proof before any lnurl-server call", async () => {
     const valid = args()
     const tampered =

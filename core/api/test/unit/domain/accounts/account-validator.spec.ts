@@ -66,6 +66,14 @@ describe("AccountValidator", () => {
     expect(result).toHaveProperty("message", "account-id-3")
   })
 
+  it.each([AccountStatus.New, AccountStatus.Pending, AccountStatus.Closed])(
+    "rejects %s status",
+    (status) => {
+      const account = { ...baseAccountProps, id: "account-id-5" as AccountId, status }
+      expect(AccountValidator(account)).toBeInstanceOf(InactiveAccountError)
+    },
+  )
+
   it("returns true if wallet.accountId matches account.id", () => {
     const validAccount = {
       ...baseAccountProps,

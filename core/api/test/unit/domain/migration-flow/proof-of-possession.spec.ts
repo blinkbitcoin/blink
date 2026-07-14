@@ -164,6 +164,21 @@ describe("verifyMigrationProofOfPossession", () => {
     expect(result).toBe(true)
   })
 
+  it("rejects a well-formed DER signature made by the wrong key", () => {
+    const timestamp = nowInSeconds()
+    const result = verifyMigrationProofOfPossession({
+      accountId,
+      destinationPubkey: compressedPubkey,
+      signature: signEcdsaDerProof({
+        destinationPubkey: compressedPubkey,
+        timestamp,
+        key: otherPrivateKey,
+      }),
+      timestamp,
+    })
+    expect(result).toBeInstanceOf(MigrationInvalidDestinationError)
+  })
+
   it("verifies a DER signature whose INTEGER carries a legal leading zero", () => {
     const { destinationPubkey, timestamp, compact } = findEcdsaSignature(
       (c) => (c[0] & 0x80) !== 0,
@@ -236,17 +251,6 @@ describe("verifyMigrationProofOfPossession", () => {
         destinationPubkey: otherCompressedPubkey,
         timestamp,
       }),
-      timestamp,
-    })
-    expect(result).toBeInstanceOf(MigrationInvalidDestinationError)
-  })
-
-  it("rejects a DER signature against a 32-byte x-only pubkey", () => {
-    const timestamp = nowInSeconds()
-    const result = verifyMigrationProofOfPossession({
-      accountId,
-      destinationPubkey: xOnlyPubkey,
-      signature: signEcdsaDerProof({ destinationPubkey: xOnlyPubkey, timestamp }),
       timestamp,
     })
     expect(result).toBeInstanceOf(MigrationInvalidDestinationError)

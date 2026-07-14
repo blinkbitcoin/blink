@@ -37,9 +37,8 @@ export const migrationDrainAmount = (
   }
 
   // fixed point A* = max{A : A + reserve(A) <= B} where reserve(A) is
-  // max(round-half-down(A*bps/10^4), feeMin). The seed never exceeds A* and
-  // undershoots by at most 1 for any bps/feeMin, so the single step below
-  // closes the gap while re-verifying against the live fee function
+  // max(round-half-down(A*bps/10^4), feeMin). The seed never exceeds A*, so the
+  // loop below closes the gap upward while re-verifying against the live fee function
   const flatSeed = balance - FEECAP_MIN.amount
   const pctSeed = (10_000n * balance) / (10_000n + FEECAP_BASIS_POINTS)
   let amount = flatSeed < pctSeed ? flatSeed : pctSeed

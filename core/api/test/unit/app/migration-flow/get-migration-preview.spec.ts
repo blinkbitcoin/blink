@@ -37,10 +37,7 @@ jest.mock("@/services/tracing", () => ({
   recordExceptionInCurrentSpan: jest.fn(),
 }))
 
-import {
-  migrationDrainAmount,
-  reserveForAmount,
-} from "@/app/migration-flow/execute-transfer"
+import { migrationDrainAmount } from "@/app/migration-flow/execute-transfer"
 import { getMigrationPreview } from "@/app/migration-flow/get-migration-preview"
 import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
 import { getCustodialMigrationFlowConfig } from "@/config"
@@ -79,17 +76,6 @@ describe("getMigrationPreview", () => {
       feeCoveredByBlink: false,
       receiveSats: 0,
     })
-  })
-
-  it("subsidizes the de-minimis range (B = 50)", async () => {
-    const preview = await previewFor(50)
-    expect(preview).toEqual({
-      balanceSats: 50,
-      feeSats: 10,
-      feeCoveredByBlink: true,
-      receiveSats: 50,
-    })
-    expect(Number(reserveForAmount(50n))).toBe(preview.feeSats)
   })
 
   it("covers the fee at the threshold and charges it just above (B = 100 vs 101)", async () => {

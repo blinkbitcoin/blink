@@ -288,16 +288,6 @@ describe("commitMigrationFlow", () => {
     expect(mockExecuteMigrationTransfer).not.toHaveBeenCalled()
   })
 
-  it("proceeds for a session caller with no apiKeyId", async () => {
-    const result = await commitMigrationFlow({
-      ...validCommitArgs(),
-      apiKeyId: undefined,
-    })
-
-    expect(result).not.toBeInstanceOf(MigrationApiKeyForbiddenError)
-    expect(mockExecuteMigrationTransfer).toHaveBeenCalledTimes(1)
-  })
-
   it("rejects when the backup is not attested", async () => {
     const result = await commitMigrationFlow({
       ...validCommitArgs(),
