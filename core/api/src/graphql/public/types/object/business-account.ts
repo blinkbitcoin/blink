@@ -13,8 +13,6 @@ import Transaction, {
 import RealtimePrice from "./realtime-price"
 import { NotificationSettings } from "./notification-settings"
 
-import AccountWindDown from "./account-wind-down"
-
 import PublicWallet from "./public-wallet"
 
 import { connectionArgs } from "@/graphql/connections"
@@ -25,7 +23,7 @@ import {
   SAT_PRICE_PRECISION_OFFSET,
   USD_PRICE_PRECISION_OFFSET,
 } from "@/domain/fiat"
-import { Accounts, Prices, Wallets, WindDown } from "@/app"
+import { Accounts, Prices, Wallets } from "@/app"
 import { IInvoiceConnection } from "@/graphql/shared/types/abstract/invoice"
 
 const BusinessAccount = GT.Object({
@@ -208,18 +206,6 @@ const BusinessAccount = GT.Object({
         const result = await Accounts.getNotificationSettingsForAccount({
           account: source,
         })
-
-        if (result instanceof Error) {
-          throw mapError(result)
-        }
-
-        return result
-      },
-    },
-    windDown: {
-      type: AccountWindDown,
-      resolve: async (source) => {
-        const result = await WindDown.getAccountWindDown({ account: source })
 
         if (result instanceof Error) {
           throw mapError(result)

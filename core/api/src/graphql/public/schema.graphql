@@ -41,7 +41,6 @@ interface Account {
   ): TransactionConnection
   walletById(walletId: WalletId!): Wallet!
   wallets: [Wallet!]!
-  windDown: AccountWindDown
 }
 
 type AccountDeletePayload {
@@ -327,7 +326,6 @@ type ConsumerAccount implements Account {
   ): TransactionConnection
   walletById(walletId: WalletId!): Wallet!
   wallets: [Wallet!]!
-  windDown: AccountWindDown
 }
 
 type Contact {
@@ -1365,6 +1363,7 @@ type Query {
   realtimePrice(currency: DisplayCurrency = "USD"): RealtimePrice!
   userDefaultWalletId(username: Username!): WalletId! @deprecated(reason: "will be migrated to AccountDefaultWalletId")
   usernameAvailable(username: Username!): Boolean
+  windDown: AccountWindDown
 }
 
 type Quiz {

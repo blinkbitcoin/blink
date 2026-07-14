@@ -66,7 +66,6 @@ interface Account
   ): TransactionConnection
   walletById(walletId: WalletId!): Wallet!
   wallets: [Wallet!]!
-  windDown: AccountWindDown
 }
 
 type AccountDeletePayload
@@ -488,7 +487,6 @@ type ConsumerAccount implements Account
   ): TransactionConnection
   walletById(walletId: WalletId!): Wallet!
   wallets: [Wallet!]!
-  windDown: AccountWindDown
 }
 
 type Contact
@@ -1867,6 +1865,7 @@ type Query
   realtimePrice(currency: DisplayCurrency = "USD"): RealtimePrice! @join__field(graph: PUBLIC)
   userDefaultWalletId(username: Username!): WalletId! @join__field(graph: PUBLIC) @deprecated(reason: "will be migrated to AccountDefaultWalletId")
   usernameAvailable(username: Username!): Boolean @join__field(graph: PUBLIC)
+  windDown: AccountWindDown @join__field(graph: PUBLIC)
 }
 
 type Quiz

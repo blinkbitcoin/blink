@@ -114,7 +114,6 @@ export type Account = {
   readonly transactions?: Maybe<TransactionConnection>;
   readonly walletById: Wallet;
   readonly wallets: ReadonlyArray<Wallet>;
-  readonly windDown?: Maybe<AccountWindDown>;
 };
 
 
@@ -476,7 +475,6 @@ export type ConsumerAccount = Account & {
   readonly transactions?: Maybe<TransactionConnection>;
   readonly walletById: Wallet;
   readonly wallets: ReadonlyArray<Wallet>;
-  readonly windDown?: Maybe<AccountWindDown>;
 };
 
 
@@ -1790,6 +1788,7 @@ export type Query = {
   /** @deprecated will be migrated to AccountDefaultWalletId */
   readonly userDefaultWalletId: Scalars['WalletId']['output'];
   readonly usernameAvailable?: Maybe<Scalars['Boolean']['output']>;
+  readonly windDown?: Maybe<AccountWindDown>;
 };
 
 
@@ -4228,7 +4227,6 @@ export type AccountResolvers<ContextType = any, ParentType extends ResolversPare
   transactions?: Resolver<Maybe<ResolversTypes['TransactionConnection']>, ParentType, ContextType, Partial<AccountTransactionsArgs>>;
   walletById?: Resolver<ResolversTypes['Wallet'], ParentType, ContextType, RequireFields<AccountWalletByIdArgs, 'walletId'>>;
   wallets?: Resolver<ReadonlyArray<ResolversTypes['Wallet']>, ParentType, ContextType>;
-  windDown?: Resolver<Maybe<ResolversTypes['AccountWindDown']>, ParentType, ContextType>;
 };
 
 export type AccountDeletePayloadResolvers<ContextType = any, ParentType extends ResolversParentTypes['AccountDeletePayload'] = ResolversParentTypes['AccountDeletePayload']> = {
@@ -4420,7 +4418,6 @@ export type ConsumerAccountResolvers<ContextType = any, ParentType extends Resol
   transactions?: Resolver<Maybe<ResolversTypes['TransactionConnection']>, ParentType, ContextType, Partial<ConsumerAccountTransactionsArgs>>;
   walletById?: Resolver<ResolversTypes['Wallet'], ParentType, ContextType, RequireFields<ConsumerAccountWalletByIdArgs, 'walletId'>>;
   wallets?: Resolver<ReadonlyArray<ResolversTypes['Wallet']>, ParentType, ContextType>;
-  windDown?: Resolver<Maybe<ResolversTypes['AccountWindDown']>, ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
@@ -4988,6 +4985,7 @@ export type QueryResolvers<ContextType = any, ParentType extends ResolversParent
   realtimePrice?: Resolver<ResolversTypes['RealtimePrice'], ParentType, ContextType, RequireFields<QueryRealtimePriceArgs, 'currency'>>;
   userDefaultWalletId?: Resolver<ResolversTypes['WalletId'], ParentType, ContextType, RequireFields<QueryUserDefaultWalletIdArgs, 'username'>>;
   usernameAvailable?: Resolver<Maybe<ResolversTypes['Boolean']>, ParentType, ContextType, RequireFields<QueryUsernameAvailableArgs, 'username'>>;
+  windDown?: Resolver<Maybe<ResolversTypes['AccountWindDown']>, ParentType, ContextType>;
 };
 
 export type QuizResolvers<ContextType = any, ParentType extends ResolversParentTypes['Quiz'] = ResolversParentTypes['Quiz']> = {

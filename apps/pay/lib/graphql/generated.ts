@@ -109,7 +109,6 @@ export type Account = {
   readonly transactions?: Maybe<TransactionConnection>;
   readonly walletById: Wallet;
   readonly wallets: ReadonlyArray<Wallet>;
-  readonly windDown?: Maybe<AccountWindDown>;
 };
 
 
@@ -408,7 +407,6 @@ export type ConsumerAccount = Account & {
   readonly transactions?: Maybe<TransactionConnection>;
   readonly walletById: Wallet;
   readonly wallets: ReadonlyArray<Wallet>;
-  readonly windDown?: Maybe<AccountWindDown>;
 };
 
 
@@ -1615,6 +1613,7 @@ export type Query = {
   /** @deprecated will be migrated to AccountDefaultWalletId */
   readonly userDefaultWalletId: Scalars['WalletId']['output'];
   readonly usernameAvailable?: Maybe<Scalars['Boolean']['output']>;
+  readonly windDown?: Maybe<AccountWindDown>;
 };
 
 
