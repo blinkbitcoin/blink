@@ -1,6 +1,7 @@
 import fs from "fs"
 
 import Ajv from "ajv"
+import addFormats from "ajv-formats"
 import * as yaml from "js-yaml"
 
 import mergeWith from "lodash.mergewith"
@@ -11,10 +12,9 @@ import {
   getAccountLimits,
   yamlConfig,
   getOnchainNetworkConfig,
-  registerConfigFormats,
 } from "@/config"
 
-const ajv = registerConfigFormats(new Ajv({ discriminator: true, $data: true }))
+const ajv = addFormats(new Ajv({ discriminator: true, $data: true }))
 
 /* eslint @typescript-eslint/ban-ts-comment: "off" */
 // @ts-ignore-next-line no-implicit-any error

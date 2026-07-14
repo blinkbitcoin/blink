@@ -256,5 +256,5 @@ type YamlSchema = {
     verify: "prelude" | "twilio"
     transactional: "prelude" | "twilio"
   }
-  windDown: WindDownConfig
+  windDown: WindDownYamlConfig
 }

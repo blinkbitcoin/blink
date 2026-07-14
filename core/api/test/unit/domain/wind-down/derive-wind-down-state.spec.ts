@@ -3,9 +3,9 @@ import { deriveWindDownState, WindDownStatus } from "@/domain/wind-down"
 const region = (overrides: Partial<WindDownRegionConfig> = {}): WindDownRegionConfig => ({
   code: "default",
   timezone: "Europe/Paris",
-  receiveDisabledAt: "2026-08-01T00:00:00+02:00",
-  finalDeadline: "2026-08-31T23:59:59+02:00",
-  gateArmsAt: "2026-09-01T00:00:00+02:00",
+  receiveDisabledAt: new Date("2026-08-01T00:00:00+02:00"),
+  finalDeadline: new Date("2026-08-31T23:59:59+02:00"),
+  gateArmsAt: new Date("2026-09-01T00:00:00+02:00"),
   receiveDisabled: false,
   gateClosed: false,
   ...overrides,
@@ -53,9 +53,9 @@ describe("deriveWindDownState", () => {
   it("returns PRE_CUTOFF with the region dates and timezone when both flags are off", () => {
     expect(deriveWindDownState(base)).toEqual({
       status: WindDownStatus.PreCutoff,
-      receiveDisabledAt: "2026-08-01T00:00:00+02:00",
-      finalDeadline: "2026-08-31T23:59:59+02:00",
-      gateArmsAt: "2026-09-01T00:00:00+02:00",
+      receiveDisabledAt: new Date("2026-08-01T00:00:00+02:00"),
+      finalDeadline: new Date("2026-08-31T23:59:59+02:00"),
+      gateArmsAt: new Date("2026-09-01T00:00:00+02:00"),
       timezone: "Europe/Paris",
     })
   })
@@ -63,8 +63,8 @@ describe("deriveWindDownState", () => {
   it("passes the region's dates through untouched, never re-deriving them", () => {
     const state = deriveWindDownState({
       ...base,
-      region: region({ receiveDisabledAt: "2027-03-04T05:06:07+01:00" }),
+      region: region({ receiveDisabledAt: new Date("2027-03-04T05:06:07+01:00") }),
     })
-    expect(state?.receiveDisabledAt).toBe("2027-03-04T05:06:07+01:00")
+    expect(state?.receiveDisabledAt).toEqual(new Date("2027-03-04T05:06:07+01:00"))
   })
 })

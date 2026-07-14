@@ -28,18 +28,19 @@ export const evaluateWindDownCohortMatch = async ({
     .map(countryOfPhone)
     .filter((country): country is string => country !== undefined)
 
-  let creationIpCountry: string | undefined
-
+  // a missing accountips row is an absent signal, not an error: the collection is written
+  // on first authenticated request, not at signup, so older accounts have no row
   const earliestIp = await AccountsIpsRepository().findEarliestByAccountId(account.id)
-  if (earliestIp instanceof CouldNotFindAccountIpError) {
-    // accountips is written on first authenticated request, not at signup: older accounts have no row
-    creationIpCountry = undefined
-  } else if (earliestIp instanceof Error) {
+  if (
+    earliestIp instanceof Error &&
+    !(earliestIp instanceof CouldNotFindAccountIpError)
+  ) {
     return earliestIp
-  } else {
-    // metadata is absent on rows recorded before geo lookup succeeded, despite AccountIP typing it required
-    creationIpCountry = earliestIp.metadata?.isoCode
   }
+
+  // metadata is absent on rows recorded before geo lookup succeeded, despite AccountIP typing it required
+  const creationIpCountry =
+    earliestIp instanceof Error ? undefined : earliestIp.metadata?.isoCode
 
   const matchedCountry = matchedCohortCountry({
     phoneCountry,

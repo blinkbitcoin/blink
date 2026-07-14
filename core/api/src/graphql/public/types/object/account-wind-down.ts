@@ -3,7 +3,7 @@ import WindDownStatus from "../scalar/wind-down-status"
 import Timestamp from "@/graphql/shared/types/scalar/timestamp"
 import { GT } from "@/graphql/index"
 
-const AccountWindDown = GT.Object<AccountWindDown, GraphQLPublicContextAuth>({
+const AccountWindDown = GT.Object<WindDownState, GraphQLPublicContextAuth>({
   name: "AccountWindDown",
   fields: () => ({
     status: {

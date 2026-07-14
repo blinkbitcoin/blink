@@ -14,7 +14,7 @@ type CaptchaConfig = {
   mandatory: boolean
 }
 
-type WindDownRegionConfig = {
+type WindDownRegionYamlConfig = {
   code: string
   timezone: string
   countries?: string[]
@@ -23,6 +23,21 @@ type WindDownRegionConfig = {
   gateArmsAt: string
   receiveDisabled: boolean
   gateClosed: boolean
+}
+
+type WindDownYamlConfig = {
+  enabled: boolean
+  affectedCountries: string[]
+  regions: WindDownRegionYamlConfig[]
+}
+
+type WindDownRegionConfig = Omit<
+  WindDownRegionYamlConfig,
+  "receiveDisabledAt" | "finalDeadline" | "gateArmsAt"
+> & {
+  receiveDisabledAt: Date
+  finalDeadline: Date
+  gateArmsAt: Date
 }
 
 type WindDownConfig = {

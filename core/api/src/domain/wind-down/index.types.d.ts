@@ -21,14 +21,6 @@ type WindDownCohortMatch = {
 
 type WindDownState = {
   status: WindDownStatus
-  receiveDisabledAt: string
-  finalDeadline: string
-  gateArmsAt: string
-  timezone: string
-}
-
-type AccountWindDown = {
-  status: WindDownStatus
   receiveDisabledAt: Date
   finalDeadline: Date
   gateArmsAt: Date

@@ -32,9 +32,9 @@ const mockFindEarliestByAccountId = jest.fn()
 const region = (overrides: Partial<WindDownRegionConfig> = {}): WindDownRegionConfig => ({
   code: "default",
   timezone: "Europe/Paris",
-  receiveDisabledAt: "2026-08-01T00:00:00+02:00",
-  finalDeadline: "2026-08-31T23:59:59+02:00",
-  gateArmsAt: "2026-09-01T00:00:00+02:00",
+  receiveDisabledAt: new Date("2026-08-01T00:00:00+02:00"),
+  finalDeadline: new Date("2026-08-31T23:59:59+02:00"),
+  gateArmsAt: new Date("2026-09-01T00:00:00+02:00"),
   receiveDisabled: false,
   gateClosed: false,
   ...overrides,
@@ -44,9 +44,9 @@ const euRegion: WindDownRegionConfig = {
   code: "eu",
   timezone: "Europe/Berlin",
   countries: ["FR", "DE"],
-  receiveDisabledAt: "2026-08-15T00:00:00+02:00",
-  finalDeadline: "2026-09-15T23:59:59+02:00",
-  gateArmsAt: "2026-09-16T00:00:00+02:00",
+  receiveDisabledAt: new Date("2026-08-15T00:00:00+02:00"),
+  finalDeadline: new Date("2026-09-15T23:59:59+02:00"),
+  gateArmsAt: new Date("2026-09-16T00:00:00+02:00"),
   receiveDisabled: false,
   gateClosed: false,
 }
@@ -132,7 +132,7 @@ describe("getAccountWindDown", () => {
       gateArmsAt: new Date("2026-09-01T00:00:00+02:00"),
       timezone: "Europe/Paris",
     })
-    const windDown = result as AccountWindDown
+    const windDown = result as WindDownState
     expect(windDown.receiveDisabledAt).toBeInstanceOf(Date)
     expect(windDown.finalDeadline).toBeInstanceOf(Date)
     expect(windDown.gateArmsAt).toBeInstanceOf(Date)
@@ -142,7 +142,7 @@ describe("getAccountWindDown", () => {
     const account = makeAccount()
 
     const before = await getAccountWindDown({ account })
-    expect((before as AccountWindDown).status).toBe("PRE_CUTOFF")
+    expect((before as WindDownState).status).toBe("PRE_CUTOFF")
 
     mockGetWindDownConfig.mockReturnValue(
       windDownConfig({
@@ -151,7 +151,7 @@ describe("getAccountWindDown", () => {
     )
 
     const after = await getAccountWindDown({ account })
-    expect((after as AccountWindDown).status).toBe("RECEIVE_DISABLED")
+    expect((after as WindDownState).status).toBe("RECEIVE_DISABLED")
     expect(mockFindById).toHaveBeenCalledTimes(2)
   })
 
@@ -162,17 +162,17 @@ describe("getAccountWindDown", () => {
       }),
     )
     const result = await getAccountWindDown({ account: makeAccount() })
-    expect((result as AccountWindDown).status).toBe("GATED_CLOSED")
+    expect((result as WindDownState).status).toBe("GATED_CLOSED")
   })
 
   it("stays PRE_CUTOFF when the clock is past receiveDisabledAt but the flag is off", async () => {
     mockGetWindDownConfig.mockReturnValue(
       windDownConfig({
-        regions: [region({ receiveDisabledAt: "2020-01-01T00:00:00+02:00" })],
+        regions: [region({ receiveDisabledAt: new Date("2020-01-01T00:00:00+02:00") })],
       }),
     )
     const result = await getAccountWindDown({ account: makeAccount() })
-    expect((result as AccountWindDown).status).toBe("PRE_CUTOFF")
+    expect((result as WindDownState).status).toBe("PRE_CUTOFF")
   })
 
   it("returns the matching region's dates and timezone, not the default region's", async () => {
@@ -183,7 +183,7 @@ describe("getAccountWindDown", () => {
 
     const result = (await getAccountWindDown({
       account: makeAccount(),
-    })) as AccountWindDown
+    })) as WindDownState
     expect(result.timezone).toBe("Europe/Berlin")
     expect(result.finalDeadline).toEqual(new Date("2026-09-15T23:59:59+02:00"))
   })
@@ -196,7 +196,7 @@ describe("getAccountWindDown", () => {
 
     const result = (await getAccountWindDown({
       account: makeAccount(),
-    })) as AccountWindDown
+    })) as WindDownState
     expect(result.timezone).toBe("Europe/Paris")
     expect(result.finalDeadline).toEqual(new Date("2026-08-31T23:59:59+02:00"))
   })

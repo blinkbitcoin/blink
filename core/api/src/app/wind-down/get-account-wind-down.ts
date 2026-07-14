@@ -8,7 +8,7 @@ export const getAccountWindDown = async ({
   account,
 }: {
   account: Account
-}): Promise<AccountWindDown | null | ApplicationError> => {
+}): Promise<WindDownState | null | ApplicationError> => {
   const config = getWindDownConfig()
   if (!config.enabled) return null
 
@@ -17,18 +17,9 @@ export const getAccountWindDown = async ({
   if (!match.matched) return null
 
   const region = regionForCountry(match.matchedCountry, config.regions)
-  const state = deriveWindDownState({
+  return deriveWindDownState({
     enabled: config.enabled,
     matched: match.matched,
     region,
   })
-  if (!state) return null
-
-  return {
-    status: state.status,
-    receiveDisabledAt: new Date(state.receiveDisabledAt),
-    finalDeadline: new Date(state.finalDeadline),
-    gateArmsAt: new Date(state.gateArmsAt),
-    timezone: state.timezone,
-  }
 }

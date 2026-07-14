@@ -20,17 +20,10 @@ export const matchedCohortCountry = ({
     const normalized = normalize(country)
     return normalized !== undefined && affected.has(normalized) ? normalized : undefined
   }
-  const firstMatch = (countries: string[]): string | undefined => {
-    for (const country of countries) {
-      const matched = matchOf(country)
-      if (matched !== undefined) return matched
-    }
-    return undefined
-  }
 
   return (
     matchOf(phoneCountry) ??
-    firstMatch(deletedPhoneCountries) ??
+    deletedPhoneCountries.map(matchOf).find((matched) => matched !== undefined) ??
     matchOf(creationIpCountry)
   )
 }

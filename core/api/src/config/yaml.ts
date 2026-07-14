@@ -3,11 +3,12 @@ import fs from "fs"
 import path from "path"
 
 import Ajv from "ajv"
+import addFormats from "ajv-formats"
 import * as yaml from "js-yaml"
 
 import mergeWith from "lodash.mergewith"
 
-import { configSchema, registerConfigFormats } from "./schema"
+import { configSchema } from "./schema"
 
 import { ConfigError } from "./error"
 
@@ -36,9 +37,7 @@ try {
   baseLogger.debug({ err }, "no custom.yaml available. using default values")
 }
 
-const ajv = registerConfigFormats(
-  new Ajv({ useDefaults: true, discriminator: true, $data: true }),
-)
+const ajv = addFormats(new Ajv({ useDefaults: true, discriminator: true, $data: true }))
 
 const defaultConfig = {}
 const validate = ajv.compile<YamlSchema>(configSchema)
@@ -269,7 +268,25 @@ export const getCronConfig = (config = yamlConfig): CronConfig => config.cronCon
 
 export const getCaptcha = (config = yamlConfig): CaptchaConfig => config.captcha
 
-export const getWindDownConfig = (config = yamlConfig): WindDownConfig => config.windDown
+const windDownOperativeDate = (value: string): Date => {
+  const date = new Date(value)
+  if (isNaN(date.getTime())) {
+    throw new ConfigError("Invalid windDown operative date", value)
+  }
+  return date
+}
+
+const windDownConfig: WindDownConfig = {
+  ...yamlConfig.windDown,
+  regions: yamlConfig.windDown.regions.map((region) => ({
+    ...region,
+    receiveDisabledAt: windDownOperativeDate(region.receiveDisabledAt),
+    finalDeadline: windDownOperativeDate(region.finalDeadline),
+    gateArmsAt: windDownOperativeDate(region.gateArmsAt),
+  })),
+}
+
+export const getWindDownConfig = (): WindDownConfig => windDownConfig
 
 export const getQuizzesConfig = (): QuizzesConfig => {
   const denyPhoneCountries = yamlConfig.quizzes.denyPhoneCountries || []

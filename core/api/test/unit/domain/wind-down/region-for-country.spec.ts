@@ -4,9 +4,9 @@ const euRegion: WindDownRegionConfig = {
   code: "eu",
   timezone: "Europe/Berlin",
   countries: ["FR", "DE"],
-  receiveDisabledAt: "2026-08-15T00:00:00+02:00",
-  finalDeadline: "2026-09-15T23:59:59+02:00",
-  gateArmsAt: "2026-09-16T00:00:00+02:00",
+  receiveDisabledAt: new Date("2026-08-15T00:00:00+02:00"),
+  finalDeadline: new Date("2026-09-15T23:59:59+02:00"),
+  gateArmsAt: new Date("2026-09-16T00:00:00+02:00"),
   receiveDisabled: false,
   gateClosed: false,
 }
@@ -14,9 +14,9 @@ const euRegion: WindDownRegionConfig = {
 const defaultRegion: WindDownRegionConfig = {
   code: "default",
   timezone: "Europe/Paris",
-  receiveDisabledAt: "2026-08-01T00:00:00+02:00",
-  finalDeadline: "2026-08-31T23:59:59+02:00",
-  gateArmsAt: "2026-09-01T00:00:00+02:00",
+  receiveDisabledAt: new Date("2026-08-01T00:00:00+02:00"),
+  finalDeadline: new Date("2026-08-31T23:59:59+02:00"),
+  gateArmsAt: new Date("2026-09-01T00:00:00+02:00"),
   receiveDisabled: false,
   gateClosed: false,
 }

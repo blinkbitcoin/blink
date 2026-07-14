@@ -1,22 +1,8 @@
-import type Ajv from "ajv"
-
 import { AccountStatus } from "@/domain/accounts/primitives"
 import { WalletCurrency } from "@/domain/shared"
 import { DEFAULT_WIND_DOWN_REGION_CODE } from "@/domain/wind-down"
 
 const countryCodePattern = "^[A-Za-z]{2}$"
-
-// wind-down dates must carry an explicit offset: an offset-less string parses as server-local time
-const offsetDateTimePattern =
-  "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$"
-
-export const registerConfigFormats = (ajv: Ajv): Ajv =>
-  ajv.addFormat("parsable-date-time", (value: string) => {
-    if (isNaN(new Date(value).getTime())) return false
-    const [year, month, day] = value.slice(0, 10).split("-").map(Number)
-    const utc = new Date(Date.UTC(year, month - 1, day))
-    return utc.getUTCMonth() === month - 1 && utc.getUTCDate() === day
-  })
 
 const displayCurrencyConfigSchema = {
   type: "object",
@@ -1095,21 +1081,9 @@ export const configSchema = {
                 type: "array",
                 items: { type: "string", pattern: countryCodePattern },
               },
-              receiveDisabledAt: {
-                type: "string",
-                pattern: offsetDateTimePattern,
-                format: "parsable-date-time",
-              },
-              finalDeadline: {
-                type: "string",
-                pattern: offsetDateTimePattern,
-                format: "parsable-date-time",
-              },
-              gateArmsAt: {
-                type: "string",
-                pattern: offsetDateTimePattern,
-                format: "parsable-date-time",
-              },
+              receiveDisabledAt: { type: "string", format: "date-time" },
+              finalDeadline: { type: "string", format: "date-time" },
+              gateArmsAt: { type: "string", format: "date-time" },
               receiveDisabled: { type: "boolean", default: false },
               gateClosed: { type: "boolean", default: false },
             },
