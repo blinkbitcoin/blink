@@ -14,14 +14,6 @@ type CaptchaConfig = {
   mandatory: boolean
 }
 
-type WindDownReceiveDisabledConfig = {
-  enabled: boolean
-}
-
-type WindDownGateClosedConfig = {
-  enabled: boolean
-}
-
 type WindDownRegionConfig = {
   code: string
   timezone: string
@@ -29,8 +21,8 @@ type WindDownRegionConfig = {
   receiveDisabledAt: string
   finalDeadline: string
   gateArmsAt: string
-  receiveDisabled: WindDownReceiveDisabledConfig
-  gateClosed: WindDownGateClosedConfig
+  receiveDisabled: boolean
+  gateClosed: boolean
 }
 
 type WindDownConfig = {

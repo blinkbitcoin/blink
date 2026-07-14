@@ -6,8 +6,8 @@ const region = (overrides: Partial<WindDownRegionConfig> = {}): WindDownRegionCo
   receiveDisabledAt: "2026-08-01T00:00:00+02:00",
   finalDeadline: "2026-08-31T23:59:59+02:00",
   gateArmsAt: "2026-09-01T00:00:00+02:00",
-  receiveDisabled: { enabled: false },
-  gateClosed: { enabled: false },
+  receiveDisabled: false,
+  gateClosed: false,
   ...overrides,
 })
 
@@ -29,7 +29,7 @@ describe("deriveWindDownState", () => {
   it("returns GATED_CLOSED when the gate flag is set", () => {
     const state = deriveWindDownState({
       ...base,
-      region: region({ gateClosed: { enabled: true } }),
+      region: region({ gateClosed: true }),
     })
     expect(state?.status).toBe(WindDownStatus.GatedClosed)
   })
@@ -37,11 +37,7 @@ describe("deriveWindDownState", () => {
   it("returns RECEIVE_DISABLED when only the receiveDisabled flag is set", () => {
     const state = deriveWindDownState({
       ...base,
-      region: region({
-        receiveDisabled: {
-          enabled: true,
-        },
-      }),
+      region: region({ receiveDisabled: true }),
     })
     expect(state?.status).toBe(WindDownStatus.ReceiveDisabled)
   })
@@ -49,12 +45,7 @@ describe("deriveWindDownState", () => {
   it("prefers GATED_CLOSED over RECEIVE_DISABLED when both flags are set", () => {
     const state = deriveWindDownState({
       ...base,
-      region: region({
-        gateClosed: { enabled: true },
-        receiveDisabled: {
-          enabled: true,
-        },
-      }),
+      region: region({ gateClosed: true, receiveDisabled: true }),
     })
     expect(state?.status).toBe(WindDownStatus.GatedClosed)
   })

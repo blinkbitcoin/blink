@@ -1110,24 +1110,8 @@ export const configSchema = {
                 pattern: offsetDateTimePattern,
                 format: "parsable-date-time",
               },
-              receiveDisabled: {
-                type: "object",
-                properties: {
-                  enabled: { type: "boolean" },
-                },
-                required: ["enabled"],
-                additionalProperties: false,
-                default: { enabled: false },
-              },
-              gateClosed: {
-                type: "object",
-                properties: {
-                  enabled: { type: "boolean" },
-                },
-                required: ["enabled"],
-                additionalProperties: false,
-                default: { enabled: false },
-              },
+              receiveDisabled: { type: "boolean", default: false },
+              gateClosed: { type: "boolean", default: false },
             },
             required: [
               "code",
@@ -1154,8 +1138,8 @@ export const configSchema = {
             receiveDisabledAt: "2026-08-01T00:00:00+02:00",
             finalDeadline: "2026-08-31T23:59:59+02:00",
             gateArmsAt: "2026-09-01T00:00:00+02:00",
-            receiveDisabled: { enabled: false },
-            gateClosed: { enabled: false },
+            receiveDisabled: false,
+            gateClosed: false,
           },
         ],
       },

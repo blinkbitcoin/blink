@@ -56,9 +56,9 @@ export const deriveWindDownState = ({
 }: DeriveWindDownStateArgs): WindDownState | null => {
   if (!enabled || !matched || !region) return null
 
-  const status = region.gateClosed.enabled
+  const status = region.gateClosed
     ? WindDownStatus.GatedClosed
-    : region.receiveDisabled.enabled
+    : region.receiveDisabled
       ? WindDownStatus.ReceiveDisabled
       : WindDownStatus.PreCutoff
 

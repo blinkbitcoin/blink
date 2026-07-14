@@ -35,8 +35,8 @@ const region = (overrides: Partial<WindDownRegionConfig> = {}): WindDownRegionCo
   receiveDisabledAt: "2026-08-01T00:00:00+02:00",
   finalDeadline: "2026-08-31T23:59:59+02:00",
   gateArmsAt: "2026-09-01T00:00:00+02:00",
-  receiveDisabled: { enabled: false },
-  gateClosed: { enabled: false },
+  receiveDisabled: false,
+  gateClosed: false,
   ...overrides,
 })
 
@@ -47,8 +47,8 @@ const euRegion: WindDownRegionConfig = {
   receiveDisabledAt: "2026-08-15T00:00:00+02:00",
   finalDeadline: "2026-09-15T23:59:59+02:00",
   gateArmsAt: "2026-09-16T00:00:00+02:00",
-  receiveDisabled: { enabled: false },
-  gateClosed: { enabled: false },
+  receiveDisabled: false,
+  gateClosed: false,
 }
 
 const windDownConfig = (overrides: Partial<WindDownConfig> = {}): WindDownConfig =>
@@ -146,13 +146,7 @@ describe("getAccountWindDown", () => {
 
     mockGetWindDownConfig.mockReturnValue(
       windDownConfig({
-        regions: [
-          region({
-            receiveDisabled: {
-              enabled: true,
-            },
-          }),
-        ],
+        regions: [region({ receiveDisabled: true })],
       }),
     )
 
@@ -164,14 +158,7 @@ describe("getAccountWindDown", () => {
   it("returns GATED_CLOSED when the gate flag is set regardless of receiveDisabled", async () => {
     mockGetWindDownConfig.mockReturnValue(
       windDownConfig({
-        regions: [
-          region({
-            gateClosed: { enabled: true },
-            receiveDisabled: {
-              enabled: true,
-            },
-          }),
-        ],
+        regions: [region({ gateClosed: true, receiveDisabled: true })],
       }),
     )
     const result = await getAccountWindDown({ account: makeAccount() })

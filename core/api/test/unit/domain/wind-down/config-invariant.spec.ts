@@ -14,18 +14,15 @@ describe("windDown region flags", () => {
     expect(validate(cloneConfig())).toBe(true)
   })
 
-  it("accepts receiveDisabled.enabled true — sequencing is an operational gate, not a config invariant", () => {
+  it("accepts receiveDisabled true — sequencing is an operational gate, not a config invariant", () => {
     const config = cloneConfig()
-    config.windDown.regions[0].receiveDisabled = { enabled: true }
+    config.windDown.regions[0].receiveDisabled = true
     expect(validate(config)).toBe(true)
   })
 
-  it("rejects an unknown key on receiveDisabled", () => {
+  it("rejects the legacy nested {enabled} shape", () => {
     const config = cloneConfig()
-    config.windDown.regions[0].receiveDisabled = {
-      enabled: true,
-      flowVerifiedLiveAt: "2026-07-25T00:00:00+02:00",
-    }
+    config.windDown.regions[0].receiveDisabled = { enabled: true }
     expect(validate(config)).toBe(false)
   })
 })
