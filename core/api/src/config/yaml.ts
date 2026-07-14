@@ -36,8 +36,6 @@ try {
   baseLogger.debug({ err }, "no custom.yaml available. using default values")
 }
 
-// TODO: fix errors
-// const ajv = new Ajv({ allErrors: true, strict: "log" })
 const ajv = registerConfigFormats(
   new Ajv({ useDefaults: true, discriminator: true, $data: true }),
 )
