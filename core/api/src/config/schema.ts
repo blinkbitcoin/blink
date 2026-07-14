@@ -1109,9 +1109,9 @@ export const configSchema = {
           {
             code: DEFAULT_WIND_DOWN_REGION_CODE,
             timezone: "Europe/Paris",
-            receiveDisabledAt: "2026-08-01T00:00:00+02:00",
-            finalDeadline: "2026-08-31T23:59:59+02:00",
-            gateArmsAt: "2026-09-01T00:00:00+02:00",
+            receiveDisabledAt: "2026-07-31T22:00:00Z",
+            finalDeadline: "2026-08-31T21:59:59Z",
+            gateArmsAt: "2026-08-31T22:00:00Z",
             receiveDisabled: false,
             gateClosed: false,
           },
