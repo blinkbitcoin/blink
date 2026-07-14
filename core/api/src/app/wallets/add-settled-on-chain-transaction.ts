@@ -36,17 +36,21 @@ const { dustThreshold } = getOnChainWalletConfig()
 
 const logger = baseLogger
 
+type AddSettledTransactionArgs = {
+  txId: OnChainTxHash
+  vout: OnChainTxVout
+  satoshis: BtcPaymentAmount
+  address: OnChainAddress
+  settlementAccount?: "onchain" | "lnd"
+}
+
 const addSettledTransactionBeforeFinally = async ({
   txId: txHash,
   vout,
   satoshis: amount,
   address,
-}: {
-  txId: OnChainTxHash
-  vout: OnChainTxVout
-  satoshis: BtcPaymentAmount
-  address: OnChainAddress
-}): Promise<
+  settlementAccount = "onchain",
+}: AddSettledTransactionArgs): Promise<
   | {
       walletDescriptor: WalletDescriptor<WalletCurrency>
       newAddressRequestId: OnChainAddressRequestId | undefined
@@ -167,6 +171,7 @@ const addSettledTransactionBeforeFinally = async ({
       metadata,
       additionalCreditMetadata: creditAccountAdditionalMetadata,
       additionalInternalMetadata: internalAccountsAdditionalMetadata,
+      settlementAccount,
     })
 
     if (journal instanceof Error) {
@@ -202,12 +207,9 @@ const addSettledTransactionBeforeFinally = async ({
   })
 }
 
-export const addSettledTransaction = async (args: {
-  txId: OnChainTxHash
-  vout: OnChainTxVout
-  satoshis: BtcPaymentAmount
-  address: OnChainAddress
-}): Promise<true | ApplicationError> => {
+export const addSettledTransaction = async (
+  args: AddSettledTransactionArgs,
+): Promise<true | ApplicationError> => {
   const res = await addSettledTransactionBeforeFinally(args)
   if (res instanceof Error) return res
 

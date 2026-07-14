@@ -9,6 +9,12 @@ import { AmountCalculator, ZERO_CENTS, ZERO_SATS } from "@/domain/shared"
 
 const calc = AmountCalculator()
 
+type OnChainReceiveSettlementAccount = "onchain" | "lnd"
+
+type RecordReceiveOnChainArgs = RecordReceiveArgs & {
+  settlementAccount?: OnChainReceiveSettlementAccount
+}
+
 export const recordReceiveOnChain = async ({
   description,
   recipientWalletDescriptor,
@@ -18,7 +24,8 @@ export const recordReceiveOnChain = async ({
   txMetadata,
   additionalCreditMetadata,
   additionalInternalMetadata,
-}: RecordReceiveArgs) => {
+  settlementAccount = "onchain",
+}: RecordReceiveOnChainArgs) => {
   const actualFee = bankFee || { usd: ZERO_CENTS, btc: ZERO_SATS }
   const accountIds = await staticAccountIds()
   if (accountIds instanceof Error) return accountIds
@@ -36,14 +43,21 @@ export const recordReceiveOnChain = async ({
     btcWithFees: calc.add(amountToCreditReceiver.btc, actualFee.btc),
   }
 
-  entry = builder
+  const debitBuilder = builder
     .withTotalAmount(amountWithFees)
     .withBankFee({ usdBankFee: actualFee.usd, btcBankFee: actualFee.btc })
-    .debitOnChain()
-    .creditAccount({
-      accountDescriptor: toLedgerAccountDescriptor(recipientWalletDescriptor),
-      additionalMetadata: additionalCreditMetadata,
-    })
+
+  // Legacy LND onchain addresses settle into LND's wallet, so the asset-side
+  // ledger entry must use the LND account even though the transaction is onchain.
+  const creditBuilder =
+    settlementAccount === "lnd"
+      ? debitBuilder.debitOffChain()
+      : debitBuilder.debitOnChain()
+
+  entry = creditBuilder.creditAccount({
+    accountDescriptor: toLedgerAccountDescriptor(recipientWalletDescriptor),
+    additionalMetadata: additionalCreditMetadata,
+  })
 
   return persistAndReturnEntry({ entry, ...txMetadata })
 }
