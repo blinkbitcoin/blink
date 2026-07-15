@@ -103,7 +103,6 @@ export type Account = {
   readonly invoices?: Maybe<InvoiceConnection>;
   readonly level: AccountLevel;
   readonly limits: AccountLimits;
-  readonly migration?: Maybe<AccountMigration>;
   readonly notificationSettings: NotificationSettings;
   readonly pendingIncomingTransactions: ReadonlyArray<Transaction>;
   readonly realtimePrice: RealtimePrice;
@@ -414,7 +413,6 @@ export type ConsumerAccount = Account & {
   readonly invoices?: Maybe<InvoiceConnection>;
   readonly level: AccountLevel;
   readonly limits: AccountLimits;
-  readonly migration?: Maybe<AccountMigration>;
   readonly notificationSettings: NotificationSettings;
   readonly pendingIncomingTransactions: ReadonlyArray<Transaction>;
   /** List the quiz questions of the consumer account */
@@ -1683,6 +1681,7 @@ export type Query = {
   readonly lnInvoicePaymentStatusByHash: LnInvoicePaymentStatus;
   readonly lnInvoicePaymentStatusByPaymentRequest: LnInvoicePaymentStatus;
   readonly me?: Maybe<User>;
+  readonly migration?: Maybe<AccountMigration>;
   readonly mobileVersions?: Maybe<ReadonlyArray<Maybe<MobileVersions>>>;
   readonly onChainTxFee: OnChainTxFee;
   readonly onChainUsdTxFee: OnChainUsdTxFee;

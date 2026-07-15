@@ -47,7 +47,6 @@ interface Account
   ): InvoiceConnection
   level: AccountLevel!
   limits: AccountLimits!
-  migration: AccountMigration
   notificationSettings: NotificationSettings!
   pendingIncomingTransactions(walletIds: [WalletId]): [Transaction!]!
   realtimePrice: RealtimePrice!
@@ -479,7 +478,6 @@ type ConsumerAccount implements Account
   ): InvoiceConnection
   level: AccountLevel!
   limits: AccountLimits!
-  migration: AccountMigration
   notificationSettings: NotificationSettings!
   pendingIncomingTransactions(walletIds: [WalletId]): [Transaction!]!
 
@@ -1933,6 +1931,7 @@ type Query
   lnInvoicePaymentStatusByHash(input: LnInvoicePaymentStatusByHashInput!): LnInvoicePaymentStatus! @join__field(graph: PUBLIC)
   lnInvoicePaymentStatusByPaymentRequest(input: LnInvoicePaymentStatusByPaymentRequestInput!): LnInvoicePaymentStatus! @join__field(graph: PUBLIC)
   me: User @join__field(graph: PUBLIC)
+  migration: AccountMigration @join__field(graph: PUBLIC)
   mobileVersions: [MobileVersions] @join__field(graph: PUBLIC)
   onChainTxFee(address: OnChainAddress!, amount: SatAmount!, speed: PayoutSpeed! = FAST, walletId: WalletId!): OnChainTxFee! @join__field(graph: PUBLIC)
   onChainUsdTxFee(address: OnChainAddress!, amount: CentAmount!, speed: PayoutSpeed! = FAST, walletId: WalletId!): OnChainUsdTxFee! @join__field(graph: PUBLIC)

@@ -6,8 +6,6 @@ import CallbackEndpoint from "../object/callback-endpoint"
 
 import { NotificationSettings } from "../object/notification-settings"
 
-import AccountMigration from "../object/account-migration"
-
 import { GT } from "@/graphql/index"
 import { connectionArgs } from "@/graphql/connections"
 
@@ -91,9 +89,6 @@ const IAccount = GT.Interface({
     },
     notificationSettings: {
       type: GT.NonNull(NotificationSettings),
-    },
-    migration: {
-      type: AccountMigration,
     },
     walletById: {
       type: GT.NonNull(Wallet),

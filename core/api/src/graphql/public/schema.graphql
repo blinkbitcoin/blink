@@ -22,7 +22,6 @@ interface Account {
   ): InvoiceConnection
   level: AccountLevel!
   limits: AccountLimits!
-  migration: AccountMigration
   notificationSettings: NotificationSettings!
   pendingIncomingTransactions(walletIds: [WalletId]): [Transaction!]!
   realtimePrice: RealtimePrice!
@@ -314,7 +313,6 @@ type ConsumerAccount implements Account {
   ): InvoiceConnection
   level: AccountLevel!
   limits: AccountLimits!
-  migration: AccountMigration
   notificationSettings: NotificationSettings!
   pendingIncomingTransactions(walletIds: [WalletId]): [Transaction!]!
 
@@ -1413,6 +1411,7 @@ type Query {
   lnInvoicePaymentStatusByHash(input: LnInvoicePaymentStatusByHashInput!): LnInvoicePaymentStatus!
   lnInvoicePaymentStatusByPaymentRequest(input: LnInvoicePaymentStatusByPaymentRequestInput!): LnInvoicePaymentStatus!
   me: User
+  migration: AccountMigration
   mobileVersions: [MobileVersions]
   onChainTxFee(address: OnChainAddress!, amount: SatAmount!, speed: PayoutSpeed! = FAST, walletId: WalletId!): OnChainTxFee!
   onChainUsdTxFee(address: OnChainAddress!, amount: CentAmount!, speed: PayoutSpeed! = FAST, walletId: WalletId!): OnChainUsdTxFee!

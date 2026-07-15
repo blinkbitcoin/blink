@@ -8,8 +8,6 @@ import AccountLimits from "./account-limits"
 
 import Quiz from "./quiz"
 
-import AccountMigration from "./account-migration"
-
 import CallbackEndpoint from "./callback-endpoint"
 
 import { NotificationSettings } from "./notification-settings"
@@ -18,14 +16,10 @@ import PublicWallet from "./public-wallet"
 
 import {
   Accounts,
-  MigrationFlow as MigrationFlowApp,
   Prices,
   Wallets,
   Quiz as QuizApp,
 } from "@/app"
-
-import { CouldNotFindError } from "@/domain/errors"
-import { MigrationFlowPhase } from "@/domain/migration-flow"
 
 import {
   majorToMinorUnit,
@@ -283,24 +277,6 @@ const ConsumerAccount = GT.Object<Account, GraphQLPublicContextAuth>({
         const result = await Accounts.getNotificationSettingsForAccount({
           account: source,
         })
-
-        if (result instanceof Error) {
-          throw mapError(result)
-        }
-
-        return result
-      },
-    },
-    migration: {
-      type: AccountMigration,
-      resolve: async (source) => {
-        const result = await MigrationFlowApp.resumeMigrationFlow({
-          accountId: source.id,
-        })
-
-        if (result instanceof CouldNotFindError) {
-          return { accountId: source.id, phase: MigrationFlowPhase.NotStarted }
-        }
 
         if (result instanceof Error) {
           throw mapError(result)

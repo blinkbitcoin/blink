@@ -15,8 +15,6 @@ import { NotificationSettings } from "./notification-settings"
 
 import PublicWallet from "./public-wallet"
 
-import AccountMigration from "./account-migration"
-
 import { connectionArgs } from "@/graphql/connections"
 import { GT } from "@/graphql/index"
 import { mapError } from "@/graphql/error-map"
@@ -25,9 +23,7 @@ import {
   SAT_PRICE_PRECISION_OFFSET,
   USD_PRICE_PRECISION_OFFSET,
 } from "@/domain/fiat"
-import { CouldNotFindError } from "@/domain/errors"
-import { MigrationFlowPhase } from "@/domain/migration-flow"
-import { Accounts, MigrationFlow as MigrationFlowApp, Prices, Wallets } from "@/app"
+import { Accounts, Prices, Wallets } from "@/app"
 import { IInvoiceConnection } from "@/graphql/shared/types/abstract/invoice"
 
 const BusinessAccount = GT.Object({
@@ -210,24 +206,6 @@ const BusinessAccount = GT.Object({
         const result = await Accounts.getNotificationSettingsForAccount({
           account: source,
         })
-
-        if (result instanceof Error) {
-          throw mapError(result)
-        }
-
-        return result
-      },
-    },
-    migration: {
-      type: AccountMigration,
-      resolve: async (source: Account) => {
-        const result = await MigrationFlowApp.resumeMigrationFlow({
-          accountId: source.id,
-        })
-
-        if (result instanceof CouldNotFindError) {
-          return { accountId: source.id, phase: MigrationFlowPhase.NotStarted }
-        }
 
         if (result instanceof Error) {
           throw mapError(result)
