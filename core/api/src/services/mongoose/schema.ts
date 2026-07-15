@@ -429,6 +429,12 @@ AccountIpsSchema.index({
   ip: 1,
 })
 
+AccountIpsSchema.index({
+  accountId: 1,
+  firstConnection: 1,
+  _id: 1,
+})
+
 const UserSchema = new Schema(
   {
     createdAt: {

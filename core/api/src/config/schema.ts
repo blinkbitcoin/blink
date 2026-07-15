@@ -1,5 +1,8 @@
 import { AccountStatus } from "@/domain/accounts/primitives"
 import { WalletCurrency } from "@/domain/shared"
+import { DEFAULT_WIND_DOWN_REGION_CODE } from "@/domain/wind-down"
+
+const countryCodePattern = "^[A-Za-z]{2}$"
 
 const displayCurrencyConfigSchema = {
   type: "object",
@@ -1053,6 +1056,68 @@ export const configSchema = {
         transactional: "twilio",
       },
     },
+    windDown: {
+      type: "object",
+      properties: {
+        enabled: { type: "boolean" },
+        affectedCountries: {
+          type: "array",
+          items: { type: "string", pattern: countryCodePattern },
+        },
+        regions: {
+          type: "array",
+          minItems: 1,
+          contains: {
+            type: "object",
+            properties: { code: { const: DEFAULT_WIND_DOWN_REGION_CODE } },
+            required: ["code"],
+          },
+          items: {
+            type: "object",
+            properties: {
+              code: { type: "string" },
+              timezone: { type: "string" },
+              countries: {
+                type: "array",
+                items: { type: "string", pattern: countryCodePattern },
+              },
+              receiveDisabledAt: { type: "string", format: "date-time" },
+              finalDeadline: { type: "string", format: "date-time" },
+              gateArmsAt: { type: "string", format: "date-time" },
+              receiveDisabled: { type: "boolean", default: false },
+              gateClosed: { type: "boolean", default: false },
+            },
+            required: [
+              "code",
+              "timezone",
+              "receiveDisabledAt",
+              "finalDeadline",
+              "gateArmsAt",
+              "receiveDisabled",
+              "gateClosed",
+            ],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["enabled", "affectedCountries", "regions"],
+      additionalProperties: false,
+      default: {
+        enabled: false,
+        affectedCountries: [],
+        regions: [
+          {
+            code: DEFAULT_WIND_DOWN_REGION_CODE,
+            timezone: "Europe/Paris",
+            receiveDisabledAt: "2026-07-31T22:00:00Z",
+            finalDeadline: "2026-08-31T21:59:59Z",
+            gateArmsAt: "2026-08-31T22:00:00Z",
+            receiveDisabled: false,
+            gateClosed: false,
+          },
+        ],
+      },
+    },
   },
   required: [
     "locale",
@@ -1077,6 +1142,7 @@ export const configSchema = {
     "whatsAppAuthUnsupportedCountries",
     "telegramAuthUnsupportedCountries",
     "phoneProvider",
+    "windDown",
   ],
   additionalProperties: false,
 } as const

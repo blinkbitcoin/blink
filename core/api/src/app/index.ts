@@ -13,6 +13,7 @@ import * as WalletsMod from "./wallets"
 import * as PaymentsMod from "./payments"
 import * as MerchantsMod from "./merchants"
 import * as SupportChatMod from "./support"
+import * as WindDownMod from "./wind-down"
 
 import { wrapAsyncToRunInSpan } from "@/services/tracing"
 
@@ -32,6 +33,7 @@ const allFunctions = {
   Payments: { ...PaymentsMod },
   Merchants: { ...MerchantsMod },
   SupportChat: { ...SupportChatMod },
+  WindDown: { ...WindDownMod },
 } as const
 
 let subModule: keyof typeof allFunctions
@@ -63,4 +65,5 @@ export const {
   Payments,
   Merchants,
   SupportChat,
+  WindDown,
 } = allFunctions
