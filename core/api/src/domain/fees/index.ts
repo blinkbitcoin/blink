@@ -3,6 +3,7 @@ import { PercentageFeeStrategy } from "./strategies/percentage"
 import { TieredFeeStrategy } from "./strategies/tiered"
 import { ExemptAccountFeeStrategy } from "./strategies/exempt-account"
 import { ImbalanceFeeStrategy } from "./strategies/imbalance"
+import { PercentageAboveThresholdFeeStrategy } from "./strategies/percentage-above-threshold"
 import { ExponentialDecayStrategy } from "./strategies/exponential-decay"
 
 import {
@@ -29,6 +30,7 @@ const FEE_STRATEGIES = {
   tieredFlat: TieredFeeStrategy,
   exemptAccount: ExemptAccountFeeStrategy,
   imbalance: ImbalanceFeeStrategy,
+  percentageAboveThreshold: PercentageAboveThresholdFeeStrategy,
   exponentialDecay: ExponentialDecayStrategy,
 } as const
 
@@ -39,6 +41,7 @@ export const calculateCompositeFee = async ({
   paymentAmount,
   networkFee,
   strategies,
+  priceRatio,
   imbalanceFns,
   isValidatedMerchant,
 }: CalculateCompositeFeeArgs): Promise<FeeDetails | ValidationError> => {
@@ -57,6 +60,7 @@ export const calculateCompositeFee = async ({
     accountId,
     accountRole,
     wallet,
+    priceRatio,
     imbalanceFns,
     isValidatedMerchant,
   }
@@ -164,6 +168,7 @@ export const WithdrawalFeeCalculator = (): WithdrawalFeeCalculator => {
     wallet,
     networkFee,
     speed,
+    priceRatio,
     imbalanceFns,
   }: OnChainWithdrawalFeeArgs): Promise<WithdrawalFeeResult | ValidationError> => {
     const { send: onchainSendConfig } = getOnchainNetworkConfig()
@@ -175,6 +180,7 @@ export const WithdrawalFeeCalculator = (): WithdrawalFeeCalculator => {
       paymentAmount,
       networkFee,
       strategies,
+      priceRatio,
       imbalanceFns,
       isValidatedMerchant: false,
     })
@@ -186,6 +192,7 @@ export const WithdrawalFeeCalculator = (): WithdrawalFeeCalculator => {
     accountRole,
     wallet,
     networkFee,
+    priceRatio,
     imbalanceFns,
   }: LightningWithdrawalFeeArgs): Promise<WithdrawalFeeResult | ValidationError> => {
     const { send: lightningSendConfig } = getLightningNetworkConfig()
@@ -197,6 +204,7 @@ export const WithdrawalFeeCalculator = (): WithdrawalFeeCalculator => {
       paymentAmount,
       networkFee,
       strategies,
+      priceRatio,
       imbalanceFns,
       isValidatedMerchant: false,
     })

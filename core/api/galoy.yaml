@@ -181,6 +181,11 @@ feeStrategies:
       ratioAsBasisPoints: 20
       daysLookback: 30
       minFee: 0
+  - name: lightning_service_fee
+    strategy: percentageAboveThreshold
+    params:
+      basisPoints: 30
+      thresholdInCents: 10000
   - name: exponential_decay_fast
     strategy: exponentialDecay
     params:

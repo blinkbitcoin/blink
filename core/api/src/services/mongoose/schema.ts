@@ -520,6 +520,9 @@ const paymentFlowStateSchema = new Schema<PaymentFlowStateRecord>(
     btcProtocolAndBankFee: { type: Number, required: true },
     usdProtocolAndBankFee: { type: Number, required: true },
 
+    btcBankFee: { type: Number, required: false },
+    usdBankFee: { type: Number, required: false },
+
     recipientWalletId: String,
     recipientWalletCurrency: String,
     recipientAccountId: String,

@@ -40,6 +40,20 @@ type RecordBankownerReconciliationArgs = {
   }
 }
 
+type RecordLnFailedUsdSendRefundArgs = {
+  description: string
+  recipientWalletDescriptor: WalletDescriptor<WalletCurrency>
+  amountToCreditReceiver: {
+    usd: UsdPaymentAmount
+    btc: BtcPaymentAmount
+  }
+  btcBankFee: BtcPaymentAmount
+  metadata: ReceiveLedgerMetadata
+  additionalCreditMetadata: TxMetadata
+  additionalInternalMetadata: TxMetadata
+  txMetadata?: LnLedgerTransactionMetadataUpdate
+}
+
 type RecordIntraledgerArgs = {
   description: string
   senderWalletDescriptor: WalletDescriptor<WalletCurrency>

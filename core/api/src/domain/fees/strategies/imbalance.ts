@@ -112,6 +112,7 @@ export const ImbalanceFeeStrategy = (
 
   const calculate = async ({
     paymentAmount,
+    priceRatio,
     imbalanceFns,
     wallet,
   }: FeeCalculationArgs): Promise<BtcPaymentAmount | ValidationError> => {
@@ -122,9 +123,10 @@ export const ImbalanceFeeStrategy = (
     if (zeroAmount instanceof Error) return zeroAmount
 
     let actualImbalance: BtcPaymentAmount | undefined
-    if (imbalanceFns) {
+    if (imbalanceFns && priceRatio) {
       const imbalanceCalculator = ImbalanceCalculator({
         ...imbalanceFns,
+        priceRatio,
         sinceDaysAgo: config.daysLookback,
       })
       const swapOutImbalance =

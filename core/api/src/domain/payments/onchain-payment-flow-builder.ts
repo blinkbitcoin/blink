@@ -469,10 +469,10 @@ const OPFBWithConversion = <S extends WalletCurrency, R extends WalletCurrency>(
         currency: state.senderWalletCurrency,
         accountId: state.senderAccountId,
       },
+      priceRatio,
       imbalanceFns: {
         netInVolumeAmountInboundNetworkFn: state.netInVolumeAmountLightningFn,
         netInVolumeAmountOutboundNetworkFn: state.netInVolumeAmountOnChainFn,
-        priceRatio,
       },
     })
     if (feeAmounts instanceof Error) return feeAmounts

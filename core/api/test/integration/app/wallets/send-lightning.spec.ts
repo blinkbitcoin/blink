@@ -26,6 +26,7 @@ import {
 import { AmountCalculator, WalletCurrency } from "@/domain/shared"
 import * as LnFeesImpl from "@/domain/payments"
 import * as DisplayAmountsConverterImpl from "@/domain/fiat"
+import * as ConfigImpl from "@/config"
 
 import {
   AccountsRepository,
@@ -34,6 +35,7 @@ import {
   WalletInvoicesRepository,
 } from "@/services/mongoose"
 import { LedgerService } from "@/services/ledger"
+import { getBankOwnerWalletId } from "@/services/ledger/caching"
 import { Transaction, TransactionMetadata } from "@/services/ledger/schema"
 import { WalletInvoice } from "@/services/mongoose/schema"
 import { LnPayment } from "@/services/lnd/schema"
@@ -1131,6 +1133,281 @@ describe("initiated via lightning", () => {
       expect(lnIntraledgerLedgerMetadataSpy).toHaveBeenCalledTimes(1)
       const args = recordIntraledgerSpy.mock.calls[0][0]
       expect(args.metadata.type).toBe(LedgerTransactionType.LnIntraLedger)
+    })
+  })
+
+  describe("service fee on external sends", () => {
+    // Behavior only (a gated send books a bank-owner revenue leg, an ungated one
+    // doesn't); fee magnitude and the USD threshold math are covered by unit tests.
+    const sendAmountSats = toSats(1_000_000)
+
+    const fundingReceiveAmounts = {
+      btc: { amount: 2_000_000n, currency: WalletCurrency.Btc } as BtcPaymentAmount,
+      usd: { amount: 42_000n, currency: WalletCurrency.Usd } as UsdPaymentAmount,
+    }
+    const fundingDisplayAmounts = {
+      amountDisplayCurrency: Number(
+        fundingReceiveAmounts.usd.amount,
+      ) as DisplayCurrencyBaseAmount,
+      feeDisplayCurrency: Number(receiveBankFee.usd.amount) as DisplayCurrencyBaseAmount,
+      displayCurrency: UsdDisplayCurrency,
+    }
+
+    const enableServiceFeeGate = (thresholdInCents = 0) => {
+      const { getLightningNetworkConfig } = jest.requireActual("@/config")
+      const actual = getLightningNetworkConfig()
+      jest.spyOn(ConfigImpl, "getLightningNetworkConfig").mockReturnValue({
+        ...actual,
+        send: {
+          ...actual.send,
+          feeStrategies: [
+            {
+              name: "lightning_service_fee",
+              strategy: "percentageAboveThreshold",
+              params: { basisPoints: 30, thresholdInCents },
+            },
+          ],
+        },
+      })
+    }
+
+    const mockLndSuccess = (rawRoute?: RawRoute) => {
+      const { LndService: LnServiceOrig } = jest.requireActual("@/services/lnd")
+      jest.spyOn(LndImpl, "LndService").mockReturnValue({
+        ...LnServiceOrig(),
+        defaultPubkey: (): Pubkey => DEFAULT_PUBKEY,
+        listAllPubkeys: () => [],
+        findRouteForInvoice: () =>
+          rawRoute
+            ? { rawRoute, pubkey: DEFAULT_PUBKEY }
+            : new TemporaryChannelFailureError(),
+        findRouteForNoAmountInvoice: () =>
+          rawRoute
+            ? { rawRoute, pubkey: DEFAULT_PUBKEY }
+            : new TemporaryChannelFailureError(),
+        payInvoiceViaPaymentDetails: () => ({
+          roundedUpFee: toSats(0),
+          revealedPreImage: "revealedPreImage" as RevealedPreImage,
+          sentFromPubkey: DEFAULT_PUBKEY,
+        }),
+        payInvoiceViaRoutes: () => ({
+          roundedUpFee: toSats(0),
+          revealedPreImage: "revealedPreImage" as RevealedPreImage,
+          sentFromPubkey: DEFAULT_PUBKEY,
+        }),
+      })
+    }
+
+    // Net sats credited to the bank-owner (service-fee revenue) for a hash.
+    // Returns 0 if no revenue leg was written (or it was reverted).
+    const bankOwnerServiceFeeFor = async (paymentHash: PaymentHash): Promise<number> => {
+      const bankOwnerWalletId = await getBankOwnerWalletId()
+      const txns = await LedgerService().getTransactionsByHash(paymentHash)
+      if (txns instanceof Error) throw txns
+      const bankTxns = txns.filter((t) => t.walletId === bankOwnerWalletId)
+      const credit = bankTxns.reduce((sum, t) => sum + (Number(t.credit) || 0), 0)
+      const debit = bankTxns.reduce((sum, t) => sum + (Number(t.debit) || 0), 0)
+      return credit - debit
+    }
+
+    const fundedBtcWallet = async () => {
+      const walletDescriptor = await createRandomUserAndBtcWallet()
+      const account = await AccountsRepository().findById(walletDescriptor.accountId)
+      if (account instanceof Error) throw account
+
+      const receive = await recordReceiveLnPayment({
+        walletDescriptor,
+        paymentAmount: fundingReceiveAmounts,
+        bankFee: receiveBankFee,
+        displayAmounts: fundingDisplayAmounts,
+        memo,
+      })
+      if (receive instanceof Error) throw receive
+
+      return { walletDescriptor, account }
+    }
+
+    it("credits bank-owner a service fee on a gated external BTC send", async () => {
+      enableServiceFeeGate()
+      mockLndSuccess()
+
+      const { walletDescriptor, account } = await fundedBtcWallet()
+
+      const paymentResult = await Payments.payNoAmountInvoiceByWalletIdForBtcWallet({
+        uncheckedPaymentRequest: noAmountLnInvoice.paymentRequest,
+        memo,
+        senderWalletId: walletDescriptor.id,
+        senderAccount: account,
+        amount: sendAmountSats,
+      })
+      if (paymentResult instanceof Error) throw paymentResult
+      expect(paymentResult.status).toEqual(PaymentSendStatus.Success)
+
+      const serviceFee = await bankOwnerServiceFeeFor(noAmountLnInvoice.paymentHash)
+      expect(serviceFee).toBeGreaterThan(0)
+
+      const txns = await LedgerService().getTransactionsByHash(
+        noAmountLnInvoice.paymentHash,
+      )
+      if (txns instanceof Error) throw txns
+      // the Payment leg, not the LnFeeReimbursement leg also on the sender wallet
+      const senderSend = txns.find(
+        (t) =>
+          t.walletId === walletDescriptor.id && t.type === LedgerTransactionType.Payment,
+      )
+      if (senderSend === undefined) throw new Error("Expected sender send txn not found")
+      // satsFee is the accounting total (reserve + service), so it exceeds the service fee
+      expect(Number(senderSend.satsFee)).toBeGreaterThan(serviceFee)
+    })
+
+    it("charges no service fee when the rollout gate is off (default config)", async () => {
+      // Do NOT enable the gate — default lightning.send.feeStrategies = [zero_fee]
+      mockLndSuccess()
+
+      const { walletDescriptor, account } = await fundedBtcWallet()
+
+      const paymentResult = await Payments.payNoAmountInvoiceByWalletIdForBtcWallet({
+        uncheckedPaymentRequest: noAmountLnInvoice.paymentRequest,
+        memo,
+        senderWalletId: walletDescriptor.id,
+        senderAccount: account,
+        amount: sendAmountSats,
+      })
+      if (paymentResult instanceof Error) throw paymentResult
+      expect(paymentResult.status).toEqual(PaymentSendStatus.Success)
+
+      const serviceFee = await bankOwnerServiceFeeFor(noAmountLnInvoice.paymentHash)
+      expect(serviceFee).toEqual(0)
+    })
+
+    it("still applies the service fee on a probed send", async () => {
+      const rawRoute = { total_mtokens: "21000000", safe_fee: 210 } as RawRoute
+
+      enableServiceFeeGate()
+      mockLndSuccess(rawRoute)
+
+      const { walletDescriptor, account } = await fundedBtcWallet()
+
+      const probe = await Payments.getNoAmountLightningFeeEstimationForBtcWallet({
+        walletId: walletDescriptor.id,
+        uncheckedPaymentRequest: noAmountLnInvoice.paymentRequest,
+        amount: sendAmountSats,
+      })
+      expect(probe).not.toBeInstanceOf(Error)
+
+      const paymentResult = await Payments.payNoAmountInvoiceByWalletIdForBtcWallet({
+        uncheckedPaymentRequest: noAmountLnInvoice.paymentRequest,
+        memo,
+        senderWalletId: walletDescriptor.id,
+        senderAccount: account,
+        amount: sendAmountSats,
+      })
+      if (paymentResult instanceof Error) throw paymentResult
+      expect(paymentResult.status).toEqual(PaymentSendStatus.Success)
+
+      const serviceFee = await bankOwnerServiceFeeFor(noAmountLnInvoice.paymentHash)
+      expect(serviceFee).toBeGreaterThan(0)
+    })
+
+    it("recognizes no revenue when the send fails (reverted journal)", async () => {
+      enableServiceFeeGate()
+
+      const { LndService: LnServiceOrig } = jest.requireActual("@/services/lnd")
+      jest.spyOn(LndImpl, "LndService").mockReturnValue({
+        ...LnServiceOrig(),
+        defaultPubkey: (): Pubkey => DEFAULT_PUBKEY,
+        listAllPubkeys: () => [],
+        payInvoiceViaPaymentDetails: () => new TemporaryChannelFailureError(),
+      })
+
+      const { walletDescriptor, account } = await fundedBtcWallet()
+
+      const paymentResult = await Payments.payNoAmountInvoiceByWalletIdForBtcWallet({
+        uncheckedPaymentRequest: noAmountLnInvoice.paymentRequest,
+        memo,
+        senderWalletId: walletDescriptor.id,
+        senderAccount: account,
+        amount: sendAmountSats,
+      })
+      expect(paymentResult).toBeInstanceOf(TemporaryChannelFailureError)
+
+      // the pending journal (incl. the bank-owner credit) is voided — no orphan revenue
+      const serviceFee = await bankOwnerServiceFeeFor(noAmountLnInvoice.paymentHash)
+      expect(serviceFee).toEqual(0)
+    })
+
+    it("charges the service fee on a USD-wallet external send", async () => {
+      enableServiceFeeGate()
+      mockLndSuccess()
+
+      const { usdWalletDescriptor } = await createRandomUserAndWallets()
+      const account = await AccountsRepository().findById(usdWalletDescriptor.accountId)
+      if (account instanceof Error) throw account
+
+      const receive = await recordReceiveLnPayment({
+        walletDescriptor: usdWalletDescriptor,
+        paymentAmount: fundingReceiveAmounts,
+        bankFee: receiveBankFee,
+        displayAmounts: fundingDisplayAmounts,
+        memo,
+      })
+      if (receive instanceof Error) throw receive
+
+      const paymentResult = await Payments.payNoAmountInvoiceByWalletIdForUsdWallet({
+        uncheckedPaymentRequest: noAmountLnInvoice.paymentRequest,
+        memo,
+        senderWalletId: usdWalletDescriptor.id,
+        senderAccount: account,
+        amount: toCents(20_000),
+      })
+      if (paymentResult instanceof Error) throw paymentResult
+      expect(paymentResult.status).toEqual(PaymentSendStatus.Success)
+
+      const serviceFee = await bankOwnerServiceFeeFor(noAmountLnInvoice.paymentHash)
+      expect(serviceFee).toBeGreaterThan(0)
+    })
+
+    it("on a non-probed send that settles, reimburses the unused reserve only and retains the service fee (finding B)", async () => {
+      // non-probed: actual routing fee (0) < reserve, so reimburseFee runs on settle
+      enableServiceFeeGate()
+      mockLndSuccess()
+
+      const { walletDescriptor, account } = await fundedBtcWallet()
+
+      const paymentResult = await Payments.payNoAmountInvoiceByWalletIdForBtcWallet({
+        uncheckedPaymentRequest: noAmountLnInvoice.paymentRequest,
+        memo,
+        senderWalletId: walletDescriptor.id,
+        senderAccount: account,
+        amount: sendAmountSats,
+      })
+      if (paymentResult instanceof Error) throw paymentResult
+      expect(paymentResult.status).toEqual(PaymentSendStatus.Success)
+
+      const txns = await LedgerService().getTransactionsByHash(
+        noAmountLnInvoice.paymentHash,
+      )
+      if (txns instanceof Error) throw txns
+
+      const senderSend = txns.find(
+        (t) =>
+          t.walletId === walletDescriptor.id && t.type === LedgerTransactionType.Payment,
+      )
+      if (senderSend === undefined) throw new Error("Expected sender send txn not found")
+      const total = Number(senderSend.satsFee)
+      const service = await bankOwnerServiceFeeFor(noAmountLnInvoice.paymentHash)
+      expect(service).toBeGreaterThan(0)
+
+      // reimbursed = unused reserve only (total − service), never the full total
+      const reimbursement = txns
+        .filter(
+          (t) =>
+            t.walletId === walletDescriptor.id &&
+            t.type === LedgerTransactionType.LnFeeReimbursement,
+        )
+        .reduce((sum, t) => sum + (Number(t.credit) || 0), 0)
+      expect(reimbursement).toEqual(total - service)
+      expect(reimbursement).not.toEqual(total)
     })
   })
 })

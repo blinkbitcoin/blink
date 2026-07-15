@@ -78,6 +78,8 @@ type PaymentFlowState<
 > = XorPaymentHashProperty & {
   descriptionFromInvoice: string
   skipProbeForDestination: boolean
+  btcBankFee: BtcPaymentAmount
+  usdBankFee: UsdPaymentAmount
 } & PaymentFlowCommonState<S, R>
 
 type OnChainPaymentFlowState<S extends WalletCurrency, R extends WalletCurrency> = {
@@ -283,6 +285,8 @@ type LPFBWithRouteState<
 > = LPFBWithConversionState<S, R> & {
   outgoingNodePubkey: Pubkey | undefined
   checkedRoute: RawRoute | undefined
+  btcBankFee: BtcPaymentAmount
+  usdBankFee: UsdPaymentAmount
 }
 
 type OnChainPaymentFlowBuilder<S extends WalletCurrency> = {

@@ -26,6 +26,7 @@ import { setErrorCritical, WalletCurrency } from "@/domain/shared"
 
 import { ApiKeysService } from "@/services/api-keys"
 import { LedgerService, getNonEndUserWalletIds } from "@/services/ledger"
+import { getBankOwnerWalletId } from "@/services/ledger/caching"
 import * as LedgerFacade from "@/services/ledger/facade"
 import { LndService } from "@/services/lnd"
 import { LockService } from "@/services/lock"
@@ -391,6 +392,7 @@ const lockedPendingPaymentSteps = async ({
       paymentLogger.fatal({ success: false, result: lnPaymentLookup }, error)
       return setErrorCritical(reimbursed)
     }
+
     const reverseResult = await apiKeys.reverseSpending({
       transactionId: journalId,
     })
@@ -508,9 +510,22 @@ const reconstructPendingPaymentFlow = async <
 
   const payment = filteredPayments[0]
 
+  // Recover the service fee from the bank-owner credit leg
+  const bankOwnerWalletId = await getBankOwnerWalletId()
+  const bankOwnerCreditTxns = ledgerTxns.filter(
+    (tx) =>
+      tx.walletId === bankOwnerWalletId &&
+      tx.type === LedgerTransactionType.Payment &&
+      (tx.credit ?? 0) > 0,
+  )
+  const bankFee = toSats(
+    bankOwnerCreditTxns.length === 1 ? (bankOwnerCreditTxns[0].credit ?? 0) : 0,
+  )
+
   return PaymentFlowFromLedgerTransaction({
     ledgerTxn: payment,
     senderAccountId: senderAccount.id,
+    bankFee,
   })
 }
 

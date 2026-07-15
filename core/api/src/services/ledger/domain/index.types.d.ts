@@ -141,6 +141,32 @@ type FeeOnlyEntryBuilderCredit<M extends MediciEntry> = {
   creditOffChain: () => M
 }
 
+type FeeRefundEntryBuilderConfig<M extends MediciEntry> = {
+  entry: M
+  metadata: TxMetadata
+  additionalCreditMetadata: TxMetadata
+  additionalInternalMetadata: TxMetadata
+  staticAccountIds: {
+    bankOwnerAccountId: LedgerAccountId
+  }
+  amountToRefund: BtcPaymentAmount
+  btcBankFee: BtcPaymentAmount
+}
+
+type FeeRefundEntryBuilderCredit<M extends MediciEntry> = {
+  creditRecipient: (args: {
+    accountDescriptor: LedgerAccountDescriptor<WalletCurrency>
+  }) => FeeRefundEntryBuilderDebit<M>
+}
+
+type FeeRefundEntryBuilderDebit<M extends MediciEntry> = {
+  debitOffChain: () => FeeRefundEntryBuilderFee<M>
+}
+
+type FeeRefundEntryBuilderFee<M extends MediciEntry> = {
+  debitBankOwner: () => M
+}
+
 type BaseLedgerTransactionMetadata = {
   id: LedgerTransactionId
 }

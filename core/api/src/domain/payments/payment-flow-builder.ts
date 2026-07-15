@@ -12,13 +12,17 @@ import { WalletPriceRatio } from "./price-ratio"
 import { PaymentFlow } from "./payment-flow"
 
 import {
+  AmountCalculator,
   ValidationError,
   WalletCurrency,
+  ZERO_CENTS,
+  ZERO_SATS,
   checkedToUsdPaymentAmount,
   checkedToBtcPaymentAmount,
 } from "@/domain/shared"
 import { SelfPaymentError } from "@/domain/errors"
 import { PaymentInitiationMethod, SettlementMethod } from "@/domain/wallets"
+import { WithdrawalFeeCalculator } from "@/domain/fees"
 
 import { generateIntraLedgerHash } from "@/domain/payments/get-intraledger-hash"
 import {
@@ -29,6 +33,8 @@ import {
 import { addAttributesToCurrentSpan } from "@/services/tracing"
 
 import { ModifiedSet } from "@/utils"
+
+const calc = AmountCalculator()
 
 export const LightningPaymentFlowBuilder = <S extends WalletCurrency>(
   config: LightningPaymentFlowBuilderConfig,
@@ -564,17 +570,66 @@ const LPFBWithConversion = <S extends WalletCurrency, R extends WalletCurrency>(
       btcProtocolAndBankFee: state.btcProtocolAndBankFee,
       usdProtocolAndBankFee: state.usdProtocolAndBankFee,
 
+      btcBankFee: state.btcBankFee,
+      usdBankFee: state.usdBankFee,
+
       outgoingNodePubkey: state.outgoingNodePubkey,
       cachedRoute: state.checkedRoute,
     })
+  }
+
+  const lnBankFee = async (
+    state: LPFBWithConversionState<S, R>,
+  ): Promise<
+    | { btcBankFee: BtcPaymentAmount; usdBankFee: UsdPaymentAmount }
+    | ValidationError
+    | DealerPriceServiceError
+  > => {
+    if (state.settlementMethod !== SettlementMethod.Lightning) {
+      return { btcBankFee: ZERO_SATS, usdBankFee: ZERO_CENTS }
+    }
+
+    const priceRatio = WalletPriceRatio({
+      usd: state.usdPaymentAmount,
+      btc: state.btcPaymentAmount,
+    })
+
+    if (priceRatio instanceof Error) {
+      return { btcBankFee: ZERO_SATS, usdBankFee: ZERO_CENTS }
+    }
+
+    const feeAmounts = await WithdrawalFeeCalculator().lightningFee({
+      paymentAmount: state.btcPaymentAmount,
+      accountId: state.senderAccountId,
+      wallet: {
+        id: state.senderWalletId,
+        currency: state.senderWalletCurrency,
+        accountId: state.senderAccountId,
+      },
+      networkFee: { amount: ZERO_SATS, feeRate: 0 },
+      priceRatio,
+    })
+    if (feeAmounts instanceof Error) return feeAmounts
+
+    return {
+      btcBankFee: feeAmounts.bankFee,
+      usdBankFee: priceRatio.convertFromBtcToCeil(feeAmounts.bankFee),
+    }
   }
 
   const withoutRoute = async () => {
     const state = await statePromise
     if (state instanceof Error) return state
 
+    const bankFee = await lnBankFee(state)
+    if (bankFee instanceof Error) return bankFee
+
+    // btcProtocolAndBankFee here is the routing reserve; fold the service fee into it.
     return paymentFromState({
       ...state,
+      ...bankFee,
+      btcProtocolAndBankFee: calc.add(state.btcProtocolAndBankFee, bankFee.btcBankFee),
+      usdProtocolAndBankFee: calc.add(state.usdProtocolAndBankFee, bankFee.usdBankFee),
       outgoingNodePubkey: undefined,
       checkedRoute: undefined,
     })
@@ -596,12 +651,19 @@ const LPFBWithConversion = <S extends WalletCurrency, R extends WalletCurrency>(
     })
     if (priceRatio instanceof Error) return priceRatio
 
-    const btcProtocolAndBankFee = LnFees().feeFromRawRoute(rawRoute)
-    if (btcProtocolAndBankFee instanceof Error) return btcProtocolAndBankFee
-    const usdProtocolAndBankFee = priceRatio.convertFromBtcToCeil(btcProtocolAndBankFee)
+    const btcRoutingReserve = LnFees().feeFromRawRoute(rawRoute)
+    if (btcRoutingReserve instanceof Error) return btcRoutingReserve
+    const usdRoutingReserve = priceRatio.convertFromBtcToCeil(btcRoutingReserve)
+
+    const bankFee = await lnBankFee(state)
+    if (bankFee instanceof Error) return bankFee
+
+    const btcProtocolAndBankFee = calc.add(btcRoutingReserve, bankFee.btcBankFee)
+    const usdProtocolAndBankFee = calc.add(usdRoutingReserve, bankFee.usdBankFee)
 
     return paymentFromState({
       ...state,
+      ...bankFee,
       outgoingNodePubkey: pubkey,
       checkedRoute: rawRoute,
       btcProtocolAndBankFee,
