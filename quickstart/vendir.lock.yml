@@ -2,24 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix(ci): remove root-owned lnurl state (#666)'
-      sha: 66e312de4d436480f7f2474793a49550dee3bf2c
+      commitTitle: 'ci: fix crate downloads and npm audit against retired registry
+        endpoints (#685)...'
+      sha: 3ccc402527056a63c3caab72d5647ffa677aaae2
       tags:
-      - 0.22.17-4-g66e312de4
+      - 0.22.18-1-g3ccc40252
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'fix(ci): remove root-owned lnurl state (#666)'
-      sha: 66e312de4d436480f7f2474793a49550dee3bf2c
+      commitTitle: 'ci: fix crate downloads and npm audit against retired registry
+        endpoints (#685)...'
+      sha: 3ccc402527056a63c3caab72d5647ffa677aaae2
       tags:
-      - 0.22.17-4-g66e312de4
+      - 0.22.18-1-g3ccc40252
     path: schemas
   - git:
-      commitTitle: 'fix(ci): remove root-owned lnurl state (#666)'
-      sha: 66e312de4d436480f7f2474793a49550dee3bf2c
+      commitTitle: 'ci: fix crate downloads and npm audit against retired registry
+        endpoints (#685)...'
+      sha: 3ccc402527056a63c3caab72d5647ffa677aaae2
       tags:
-      - 0.22.17-4-g66e312de4
+      - 0.22.18-1-g3ccc40252
     path: gql
   path: graphql
 kind: LockConfig
