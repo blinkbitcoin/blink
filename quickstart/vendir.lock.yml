@@ -2,27 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'ci: fix crate downloads and npm audit against retired registry
-        endpoints (#685)...'
-      sha: 3ccc402527056a63c3caab72d5647ffa677aaae2
+      commitTitle: 'feat(wind-down): add account windDown status query and live cohort
+        check (#677)...'
+      sha: c401308bae22b9dee010ec0eac939304996d6006
       tags:
-      - 0.22.18-1-g3ccc40252
+      - 0.22.19-1-gc401308ba
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'ci: fix crate downloads and npm audit against retired registry
-        endpoints (#685)...'
-      sha: 3ccc402527056a63c3caab72d5647ffa677aaae2
+      commitTitle: 'feat(wind-down): add account windDown status query and live cohort
+        check (#677)...'
+      sha: c401308bae22b9dee010ec0eac939304996d6006
       tags:
-      - 0.22.18-1-g3ccc40252
+      - 0.22.19-1-gc401308ba
     path: schemas
   - git:
-      commitTitle: 'ci: fix crate downloads and npm audit against retired registry
-        endpoints (#685)...'
-      sha: 3ccc402527056a63c3caab72d5647ffa677aaae2
+      commitTitle: 'feat(wind-down): add account windDown status query and live cohort
+        check (#677)...'
+      sha: c401308bae22b9dee010ec0eac939304996d6006
       tags:
-      - 0.22.18-1-g3ccc40252
+      - 0.22.19-1-gc401308ba
     path: gql
   path: graphql
 kind: LockConfig
