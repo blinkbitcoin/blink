@@ -3,7 +3,7 @@ import { regionForCountry } from "@/domain/wind-down"
 const euRegion: WindDownRegionConfig = {
   code: "eu",
   timezone: "Europe/Berlin",
-  countries: ["FR", "DE"],
+  countries: ["FR", "de"],
   receiveDisabledAt: new Date("2026-08-15T00:00:00+02:00"),
   finalDeadline: new Date("2026-09-15T23:59:59+02:00"),
   gateArmsAt: new Date("2026-09-16T00:00:00+02:00"),
@@ -23,17 +23,19 @@ const defaultRegion: WindDownRegionConfig = {
 
 const regions = [euRegion, defaultRegion]
 
+const cohortCountry = (country: string) => country as CohortCountry
+
 describe("regionForCountry", () => {
   it("picks the region whose countries list contains the matched country", () => {
-    expect(regionForCountry("FR", regions)).toBe(euRegion)
+    expect(regionForCountry(cohortCountry("FR"), regions)).toBe(euRegion)
   })
 
-  it("matches the countries list case-insensitively", () => {
-    expect(regionForCountry("de", regions)).toBe(euRegion)
+  it("matches lowercase countries-list entries case-insensitively", () => {
+    expect(regionForCountry(cohortCountry("DE"), regions)).toBe(euRegion)
   })
 
   it("falls back to the default region when no countries list contains it", () => {
-    expect(regionForCountry("IS", regions)).toBe(defaultRegion)
+    expect(regionForCountry(cohortCountry("IS"), regions)).toBe(defaultRegion)
   })
 
   it("falls back to the default region when the matched country is undefined", () => {
@@ -41,6 +43,6 @@ describe("regionForCountry", () => {
   })
 
   it("returns undefined when nothing matches and there is no default region", () => {
-    expect(regionForCountry("IS", [euRegion])).toBeUndefined()
+    expect(regionForCountry(cohortCountry("IS"), [euRegion])).toBeUndefined()
   })
 })

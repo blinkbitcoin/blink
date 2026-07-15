@@ -1,6 +1,8 @@
 type WindDownStatus =
   (typeof import("./index").WindDownStatus)[keyof typeof import("./index").WindDownStatus]
 
+type CohortCountry = string & { readonly brand: unique symbol }
+
 type MatchCohortSignalsArgs = {
   phoneCountry?: string
   deletedPhoneCountries: string[]
@@ -16,7 +18,7 @@ type DeriveWindDownStateArgs = {
 
 type WindDownCohortMatch = {
   matched: boolean
-  matchedCountry?: string
+  matchedCountry?: CohortCountry
 }
 
 type WindDownState = {

@@ -14,11 +14,13 @@ export const matchedCohortCountry = ({
   deletedPhoneCountries,
   creationIpCountry,
   affectedCountries,
-}: MatchCohortSignalsArgs): string | undefined => {
+}: MatchCohortSignalsArgs): CohortCountry | undefined => {
   const affected = new Set(affectedCountries.map((c) => c.toUpperCase()))
-  const matchOf = (country: string | undefined): string | undefined => {
+  const matchOf = (country: string | undefined): CohortCountry | undefined => {
     const normalized = normalize(country)
-    return normalized !== undefined && affected.has(normalized) ? normalized : undefined
+    return normalized !== undefined && affected.has(normalized)
+      ? (normalized as CohortCountry)
+      : undefined
   }
 
   return (
@@ -29,13 +31,12 @@ export const matchedCohortCountry = ({
 }
 
 export const regionForCountry = (
-  matchedCountry: string | undefined,
+  matchedCountry: CohortCountry | undefined,
   regions: WindDownRegionConfig[],
 ): WindDownRegionConfig | undefined => {
-  const normalized = normalize(matchedCountry)
-  if (normalized !== undefined) {
+  if (matchedCountry !== undefined) {
     const specific = regions.find((region) =>
-      (region.countries ?? []).some((c) => c.toUpperCase() === normalized),
+      (region.countries ?? []).some((c) => c.toUpperCase() === matchedCountry),
     )
     if (specific) return specific
   }
