@@ -103,6 +103,22 @@
         "type": "github"
       }
     },
+    "nixpkgs-reindeer": {
+      "locked": {
+        "lastModified": 1733253515,
+        "narHash": "sha256-4gcpZYEJJB3wqSuCIKaO+4Mhbe2nL7p5XNmnFWJAhvg=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "9ef707ba9522a98dc7d38721ea74164c654efaed",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "9ef707ba9522a98dc7d38721ea74164c654efaed",
+        "type": "github"
+      }
+    },
     "nixpkgs-tilt": {
       "locked": {
         "lastModified": 1771892004,
@@ -142,6 +158,7 @@
         "nixpkgs": "nixpkgs_2",
         "nixpkgs-docker": "nixpkgs-docker",
         "nixpkgs-node": "nixpkgs-node",
+        "nixpkgs-reindeer": "nixpkgs-reindeer",
         "nixpkgs-tilt": "nixpkgs-tilt",
         "rust-overlay": "rust-overlay"
       }
