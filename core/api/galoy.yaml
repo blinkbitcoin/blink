@@ -311,3 +311,14 @@ telegramAuthUnsupportedCountries: []
 phoneProvider:
   verify: twilio
   transactional: twilio
+windDown:
+  enabled: false
+  affectedCountries: []
+  regions:
+    - code: default
+      timezone: Europe/Paris
+      receiveDisabledAt: "2026-07-31T22:00:00Z"
+      finalDeadline: "2026-08-31T21:59:59Z"
+      gateArmsAt: "2026-08-31T22:00:00Z"
+      receiveDisabled: false
+      gateClosed: false

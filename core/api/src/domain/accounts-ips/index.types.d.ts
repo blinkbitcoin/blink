@@ -33,4 +33,5 @@ interface IAccountsIPsRepository {
     input: FindByAccountIdAndIpArgs,
   ): Promise<AccountIP | RepositoryError>
   findLastByAccountId(accountId: AccountId): Promise<AccountIP | RepositoryError>
+  findEarliestByAccountId(accountId: AccountId): Promise<AccountIP | RepositoryError>
 }

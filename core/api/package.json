@@ -65,6 +65,7 @@
     "@prelude.so/sdk": "^0.7.0",
     "@t3-oss/env-core": "^0.7.3",
     "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
     "axios": "^1.15.2",
     "axios-retry": "^4.5.0",
     "basic-auth": "^2.0.1",

@@ -2,6 +2,7 @@ import { GT } from "@/graphql/index"
 
 import MeQuery from "@/graphql/public/root/query/me"
 import GlobalsQuery from "@/graphql/public/root/query/globals"
+import WindDownQuery from "@/graphql/public/root/query/wind-down"
 import CurrencyListQuery from "@/graphql/public/root/query/currency-list"
 import PayoutSpeedsQuery from "@/graphql/public/root/query/payout-speeds"
 import AuthorizationQuery from "@/graphql/public/root/query/authorization"
@@ -41,6 +42,7 @@ export const queryFields = {
     atAccountLevel: {
       authorization: AuthorizationQuery,
       me: MeQuery,
+      windDown: WindDownQuery,
     },
     atWalletLevel: {
       onChainTxFee: OnChainTxFeeQuery,
