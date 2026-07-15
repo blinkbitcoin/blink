@@ -6,6 +6,10 @@
     nixpkgs-node.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     nixpkgs-docker.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     nixpkgs-tilt.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+    # reindeer >= 2024.03.29 downloads crates from static.crates.io (CDN) instead of the
+    # rate-limited crates.io API; later versions require cargo >= 1.79 metadata semantics,
+    # so this stays pinned until the rust toolchain is bumped
+    nixpkgs-reindeer.url = "github:nixos/nixpkgs/9ef707ba9522a98dc7d38721ea74164c654efaed";
     flake-utils.url = "github:numtide/flake-utils";
     concourse-shared.url = "github:blinkbitcoin/concourse-shared";
 
@@ -24,6 +28,7 @@
     nixpkgs-node,
     nixpkgs-docker,
     nixpkgs-tilt,
+    nixpkgs-reindeer,
     flake-utils,
     concourse-shared,
     rust-overlay,
@@ -32,6 +37,7 @@
       nodePkgs = import nixpkgs-node {inherit system;};
       dockerPkgs = import nixpkgs-docker {inherit system;};
       tiltPkgs = import nixpkgs-tilt {inherit system;};
+      reindeerPkgs = import nixpkgs-reindeer {inherit system;};
       # CVE: DoS via stack overflow in async_hooks - require nodejs 20.20.0+
       expectedNodeVersion = "20.20.0";
       overlays = [
@@ -81,7 +87,7 @@
           cargo-nextest
           cargo-audit
           cargo-watch
-          reindeer
+          reindeerPkgs.reindeer
           gitMinimal
           grpcurl
           buf
