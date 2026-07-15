@@ -27,7 +27,7 @@ SEVERITY_ORDER = [
 # lockfile v6 package keys look like:
 #   /@scope/name@1.2.3:
 #   /name@1.2.3(peer@4.5.6)(other@7.8.9):
-LOCKFILE_PACKAGE_KEY = re.compile(r"^  /(?P<name>.+)@(?P<version>[^()@/]+?)(\(.*\))*:$")
+LOCKFILE_PACKAGE_KEY = re.compile(r"^  /(?P<name>.+)@(?P<version>[^()@/]+?)(\([^)]*\))*:$")
 
 
 def collect_packages(lockfile_path):
