@@ -46,7 +46,6 @@ import {
 import {
   buildMigrationProofChallenge,
   MigrationApiKeyForbiddenError,
-  MigrationFlowDisabledError,
   MigrationInvalidDestinationError,
   MigrationLnAddressTransferStatus,
 } from "@/domain/migration-flow"
@@ -136,17 +135,24 @@ describe("transferLnAddressesToSpark", () => {
     expect(mocks.addFlowStep).not.toHaveBeenCalled()
   })
 
-  it("refuses when the migration feature flag is off, before any lnurl-server call", async () => {
+  it("proceeds with the migration feature flag off — the re-point is not flag-gated", async () => {
     ;(getCustodialMigrationFlowConfig as jest.Mock).mockReturnValue({
       enabled: false,
       deMinimisThresholdSats: 100,
     })
 
-    const result = await transferLnAddressesToSpark(args())
+    const results = await transferLnAddressesToSpark(args())
 
-    expect(result).toBeInstanceOf(MigrationFlowDisabledError)
-    expect(mockGetLnurlServerService).not.toHaveBeenCalled()
-    expect(mockTransferIdentifierToSpark).not.toHaveBeenCalled()
+    expect(results).toEqual([
+      expect.objectContaining({
+        identifier: username,
+        status: MigrationLnAddressTransferStatus.Transferred,
+      }),
+      expect.objectContaining({
+        identifier: phone,
+        status: MigrationLnAddressTransferStatus.Transferred,
+      }),
+    ])
   })
 
   it("treats a conflict at the same pubkey as idempotent regardless of hex casing", async () => {

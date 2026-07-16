@@ -1,4 +1,4 @@
-import { LNURL_SERVER_LN_ADDRESS_DOMAIN, getCustodialMigrationFlowConfig } from "@/config"
+import { LNURL_SERVER_LN_ADDRESS_DOMAIN } from "@/config"
 
 import { getLnurlServerService } from "@/app/accounts/lnurl-server"
 
@@ -8,7 +8,6 @@ import { LnurlServerConflictError, LnurlServerNotFoundError } from "@/domain/lnu
 import {
   checkedToSparkPubkey,
   MigrationApiKeyForbiddenError,
-  MigrationFlowDisabledError,
   MigrationLnAddressTransferStatus,
   verifyMigrationProofOfPossession,
 } from "@/domain/migration-flow"
@@ -33,10 +32,6 @@ export const transferLnAddressesToSpark = async ({
   proofTimestamp: number
 }): Promise<MigrationLnAddressTransferResult[] | ApplicationError> => {
   if (apiKeyId) return new MigrationApiKeyForbiddenError()
-
-  if (!getCustodialMigrationFlowConfig().enabled) {
-    return new MigrationFlowDisabledError()
-  }
 
   if (!ALLOWED_STATUSES.includes(account.status)) {
     return new InactiveAccountError(account.id)
