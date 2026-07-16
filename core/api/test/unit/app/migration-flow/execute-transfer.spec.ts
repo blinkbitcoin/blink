@@ -54,6 +54,7 @@ import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
 import { AccountStatus } from "@/domain/accounts"
 import { PaymentSendStatus, RouteNotFoundError } from "@/domain/bitcoin/lightning"
 import { getCustodialMigrationFlowConfig } from "@/config"
+import { InsufficientBalanceError } from "@/domain/errors"
 import { MigrationFlowPhase, MigrationStateConflictError } from "@/domain/migration-flow"
 import { InvalidBtcPaymentAmountError } from "@/domain/shared"
 import { getBankOwnerWalletId } from "@/services/ledger/caching"
@@ -280,6 +281,32 @@ describe("executeMigrationTransfer", () => {
     const result = await executeMigrationTransfer(transferArgs)
 
     expect(result).toBe(routeError)
+    expect(mocks.updateFlowPhase).toHaveBeenCalledTimes(1)
+    expect(mocks.updateFlowPhase).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accountId,
+        fromPhase: MigrationFlowPhase.Transferring,
+        toPhase: MigrationFlowPhase.Failed,
+      }),
+    )
+    expect(mockCompleteFlow).not.toHaveBeenCalled()
+  })
+
+  it("fails closed when a concurrent spend leaves the balance short at send time", async () => {
+    mockGetBalanceForWallet.mockResolvedValue(100_000)
+    const balanceAtSendTime = 40_000
+    mockPayNoAmountInvoice.mockImplementation(async ({ amount }) =>
+      amount > balanceAtSendTime
+        ? new InsufficientBalanceError(
+            `Payment amount '${amount}' sats exceeds balance '${balanceAtSendTime}'`,
+          )
+        : { status: PaymentSendStatus.Success },
+    )
+
+    const result = await executeMigrationTransfer(transferArgs)
+
+    expect(result).toBeInstanceOf(InsufficientBalanceError)
+    expect(mockPayNoAmountInvoice).toHaveBeenCalledTimes(1)
     expect(mocks.updateFlowPhase).toHaveBeenCalledTimes(1)
     expect(mocks.updateFlowPhase).toHaveBeenCalledWith(
       expect.objectContaining({

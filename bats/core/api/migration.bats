@@ -106,7 +106,6 @@ ln_address_transfer_input() {
   [[ "$error_message" == "$api_key_refusal_message" ]] || exit 1
 }
 
-# Real re-point against the dev lnurl server (not flag- or cohort-gated).
 @test "migration: lnAddressTransfer re-points a registered address to spark" {
   create_user 'charlie'
 

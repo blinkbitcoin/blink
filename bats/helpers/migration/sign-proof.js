@@ -1,6 +1,4 @@
 #!/usr/bin/env node
-// Signs the migration proof-of-possession challenge with a fixed test keypair.
-// Usage: sign-proof.js <accountId> [timestamp]
 
 const crypto = require("crypto")
 

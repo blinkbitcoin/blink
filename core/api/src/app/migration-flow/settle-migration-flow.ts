@@ -16,8 +16,6 @@ import {
   recordExceptionInCurrentSpan,
 } from "@/services/tracing"
 
-const migrationPrivilegedClientId = "system" as PrivilegedClientId
-
 const findFlowByHash = async (
   paymentHash: PaymentHash,
 ): Promise<MigrationFlow | undefined> => {
@@ -34,7 +32,6 @@ const softCloseMigratedAccount = async (accountId: AccountId): Promise<void> => 
   const softClosed = await updateAccountStatus({
     accountId,
     status: AccountStatus.Migrated,
-    updatedByPrivilegedClientId: migrationPrivilegedClientId,
     comment: "custodial migration completed",
   })
   if (softClosed instanceof Error) {
