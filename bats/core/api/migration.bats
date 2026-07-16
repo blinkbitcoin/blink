@@ -1,35 +1,17 @@
 load "../../helpers/_common.bash"
 load "../../helpers/user.bash"
 
-# End-to-end coverage for the migration surface.
-#
-# Query (Query.migration) is driven for real: an authed account reads its
-# not-started state and the preview resolves.
-#
-# The mutations (migrationStart / migrationCommit / migrationLnAddressTransfer)
-# cannot be driven end-to-end here — custodialMigrationFlow.enabled is off in dev,
-# and cohort membership + real proof-of-possession + a live Spark endpoint are
-# absent — and their guard logic is already covered in test/unit/app/migration-flow.
-# So e2e carries only what unit tests can't: one representative shield smoke (auth
-# is a uniform atAccountLevel guarantee) plus the app-layer API-key refusal per
-# mutation — the migration-specific contract that also proves the resolver threads
-# apiKeyId through.
-
 setup_file() {
   clear_cache
 
   create_user 'alice'
 
-  # Write-scoped API key: passes scope + shield so a mutation reaches the app-layer
-  # guard, where the API-key refusal is what we assert.
   local key_name="migration-$RANDOM"
   local variables="{\"input\":{\"name\":\"${key_name}\",\"scopes\":[\"WRITE\"]}}"
   exec_graphql 'alice' 'api-key-create' "$variables"
   local secret="$(graphql_output '.data.apiKeyCreate.apiKeySecret')"
   cache_value 'api-key-secret' "$secret"
 
-  # A valid bolt11 so MigrationCommitInput.sparkInvoice passes scalar coercion and
-  # the commit reaches the guard (the invoice is never paid).
   variables=$(
     jq -n \
     --arg wallet_id "$(read_value 'alice.btc_wallet_id')" \
@@ -75,8 +57,6 @@ ln_address_transfer_input() {
   transfer_payment_hash="$(graphql_output '.data.migration.transferPaymentHash')"
   [[ "$transfer_payment_hash" == "null" ]] || exit 1
 
-  # preview resolves for a not-started account: the fallback carries accountId
-  # into getMigrationPreview, so a fresh (unfunded) account previews a zero drain
   balance_sats="$(graphql_output '.data.migration.preview.balanceSats')"
   [[ "$balance_sats" == "0" ]] || exit 1
 
@@ -97,9 +77,6 @@ ln_address_transfer_input() {
   [[ "$(graphql_output '.errors[0].message')" == "Not authorized" ]] || exit 1
 }
 
-# Mutations ------------------------------------------------------------------
-
-# Shield smoke: authed-only is a uniform atAccountLevel guarantee — assert it once.
 @test "migration: mutations reject unauthenticated callers" {
   exec_graphql 'anon' 'migration-start'
 
@@ -127,4 +104,38 @@ ln_address_transfer_input() {
 
   error_message="$(graphql_output '.data.migrationLnAddressTransfer.errors[0].message')"
   [[ "$error_message" == "$api_key_refusal_message" ]] || exit 1
+}
+
+# Real re-point against the dev lnurl server (not flag- or cohort-gated).
+@test "migration: lnAddressTransfer re-points a registered address to spark" {
+  create_user 'charlie'
+
+  username="migrate_$RANDOM$RANDOM"
+  variables=$(
+    jq -n \
+    --arg username "$username" \
+    '{input: {username: $username}}'
+  )
+  exec_graphql 'charlie' 'user-update-username' "$variables"
+  [[ "$(graphql_output '.data.userUpdateUsername.errors | length')" == "0" ]] || exit 1
+
+  proof="$(node "${REPO_ROOT}/bats/helpers/migration/sign-proof.js" "$(read_value 'charlie.account_id')")"
+  variables="$(echo "$proof" | jq '{input: .}')"
+
+  exec_graphql 'charlie' 'migration-ln-address-transfer' "$variables"
+  [[ "$(graphql_output '.data.migrationLnAddressTransfer.errors | length')" == "0" ]] || exit 1
+
+  username_status="$(graphql_output --arg id "$username" '.data.migrationLnAddressTransfer.results[] | select(.identifier == $id) | .status')"
+  [[ "$username_status" == "TRANSFERRED" ]] || exit 1
+
+  lightning_address="$(graphql_output --arg id "$username" '.data.migrationLnAddressTransfer.results[] | select(.identifier == $id) | .lightningAddress')"
+  [[ "$lightning_address" == "$username@"* ]] || exit 1
+
+  phone_status="$(graphql_output --arg id "$(read_value 'charlie.phone')" '.data.migrationLnAddressTransfer.results[] | select(.identifier == $id) | .status')"
+  [[ "$phone_status" == "SKIPPED_NOT_REGISTERED" ]] || exit 1
+
+  # idempotent re-run: same pubkey conflict resolves to already-transferred
+  exec_graphql 'charlie' 'migration-ln-address-transfer' "$variables"
+  username_status="$(graphql_output --arg id "$username" '.data.migrationLnAddressTransfer.results[] | select(.identifier == $id) | .status')"
+  [[ "$username_status" == "ALREADY_TRANSFERRED" ]] || exit 1
 }
