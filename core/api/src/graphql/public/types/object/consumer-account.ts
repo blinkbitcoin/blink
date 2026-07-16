@@ -14,12 +14,7 @@ import { NotificationSettings } from "./notification-settings"
 
 import PublicWallet from "./public-wallet"
 
-import {
-  Accounts,
-  Prices,
-  Wallets,
-  Quiz as QuizApp,
-} from "@/app"
+import { Accounts, Prices, Wallets, Quiz as QuizApp } from "@/app"
 
 import {
   majorToMinorUnit,
