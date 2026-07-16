@@ -2,24 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix(ci): remove root-owned lnurl state (#666)'
-      sha: 66e312de4d436480f7f2474793a49550dee3bf2c
+      commitTitle: 'feat(wind-down): add account windDown status query and live cohort
+        check (#677)...'
+      sha: c401308bae22b9dee010ec0eac939304996d6006
       tags:
-      - 0.22.17-4-g66e312de4
+      - 0.22.19-1-gc401308ba
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'fix(ci): remove root-owned lnurl state (#666)'
-      sha: 66e312de4d436480f7f2474793a49550dee3bf2c
+      commitTitle: 'feat(wind-down): add account windDown status query and live cohort
+        check (#677)...'
+      sha: c401308bae22b9dee010ec0eac939304996d6006
       tags:
-      - 0.22.17-4-g66e312de4
+      - 0.22.19-1-gc401308ba
     path: schemas
   - git:
-      commitTitle: 'fix(ci): remove root-owned lnurl state (#666)'
-      sha: 66e312de4d436480f7f2474793a49550dee3bf2c
+      commitTitle: 'feat(wind-down): add account windDown status query and live cohort
+        check (#677)...'
+      sha: c401308bae22b9dee010ec0eac939304996d6006
       tags:
-      - 0.22.17-4-g66e312de4
+      - 0.22.19-1-gc401308ba
     path: gql
   path: graphql
 kind: LockConfig
