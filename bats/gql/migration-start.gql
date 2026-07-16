@@ -1,0 +1,10 @@
+mutation migrationStart {
+  migrationStart {
+    errors {
+      message
+    }
+    migration {
+      status
+    }
+  }
+}

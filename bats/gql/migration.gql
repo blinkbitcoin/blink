@@ -1,0 +1,12 @@
+query migration {
+  migration {
+    status
+    transferPaymentHash
+    preview {
+      balanceSats
+      feeSats
+      feeCoveredByBlink
+      receiveSats
+    }
+  }
+}
