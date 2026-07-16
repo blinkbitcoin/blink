@@ -1,8 +1,9 @@
 import Ajv from "ajv"
+import addFormats from "ajv-formats"
 
 import { configSchema, yamlConfig } from "@/config"
 
-const ajv = new Ajv({ useDefaults: true, discriminator: true, $data: true })
+const ajv = addFormats(new Ajv({ useDefaults: true, discriminator: true, $data: true }))
 const validate = ajv.compile(configSchema)
 
 const cloneConfig = () => JSON.parse(JSON.stringify(yamlConfig))
