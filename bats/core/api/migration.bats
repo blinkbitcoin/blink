@@ -196,7 +196,6 @@ ln_address_transfer_input() {
   funding_sats=200000
   fund_user_lightning "$token_name" "$token_name.btc_wallet_id" "$funding_sats"
 
-  # non-null windDown = in the cohort (status value depends on the region dates)
   exec_graphql "$token_name" 'wind-down'
   [[ "$(graphql_output '.data.windDown.status')" != "null" ]] || exit 1
 
@@ -226,12 +225,11 @@ ln_address_transfer_input() {
   [[ "$(echo $invoice_state | jq -r '.state')" == "SETTLED" ]] || exit 1
   [[ "$(echo $invoice_state | jq -r '.amt_paid_sat')" == "$receive_sats" ]] || exit 1
 
-  # read-back must survive the soft-close to Migrated
   exec_graphql "$token_name" 'migration'
   [[ "$(graphql_output '.data.migration.status')" == "COMPLETED" ]] || exit 1
   [[ "$(graphql_output '.data.migration.transferPaymentHash')" == "$payment_hash" ]] || exit 1
 
-  # 200_000 splits exactly: drain 199_005 + retained fee reserve 995, residual 0
+  # residual should be 0
   [[ "$(btc_balance_for "$token_name")" == "0" ]] || exit 1
 }
 
@@ -241,7 +239,6 @@ ln_address_transfer_input() {
   login_user "$token_name" "$phone"
   cache_value "$token_name.phone" "$phone"
 
-  # top-up comes from the bank owner, funded by the full-flow test's retained reserve
   funding_sats=50
   fund_user_lightning "$token_name" "$token_name.btc_wallet_id" "$funding_sats"
 
