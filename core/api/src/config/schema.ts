@@ -489,7 +489,7 @@ const paymentNetworksSchema = {
           pubkeys: [],
           chanIds: [],
         },
-        skipFeeReimbursement: false,
+        skipFeeReimbursement: true,
       },
       historicalPubkeys: [],
     },
@@ -1037,7 +1037,7 @@ export const configSchema = {
       required: ["enabled", "deMinimisThresholdSats"],
       additionalProperties: false,
       default: {
-        enabled: false,
+        enabled: true,
         deMinimisThresholdSats: 100,
       },
     },
@@ -1115,9 +1115,10 @@ export const configSchema = {
       },
       required: ["enabled", "affectedCountries", "regions"],
       additionalProperties: false,
+      // dev/e2e default: only +31-phone test users join the cohort; deployments override
       default: {
-        enabled: false,
-        affectedCountries: [],
+        enabled: true,
+        affectedCountries: ["NL"],
         regions: [
           {
             code: DEFAULT_WIND_DOWN_REGION_CODE,

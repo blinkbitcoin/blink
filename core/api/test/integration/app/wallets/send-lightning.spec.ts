@@ -2,6 +2,8 @@ import { randomUUID } from "crypto"
 
 import { Accounts, Payments } from "@/app"
 
+import * as ConfigImpl from "@/config"
+
 import { AccountStatus } from "@/domain/accounts"
 import { toSats } from "@/domain/bitcoin"
 import {
@@ -547,6 +549,7 @@ describe("initiated via lightning", () => {
 
     it("records transaction with fee reimbursement metadata on ln send", async () => {
       // Setup mocks
+      jest.spyOn(ConfigImpl, "getSkipFeeReimbursement").mockReturnValue(false)
       const { LndService: LnServiceOrig } = jest.requireActual("@/services/lnd")
       jest.spyOn(LndImpl, "LndService").mockReturnValue({
         ...LnServiceOrig(),
