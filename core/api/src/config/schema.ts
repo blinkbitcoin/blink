@@ -1115,7 +1115,6 @@ export const configSchema = {
       },
       required: ["enabled", "affectedCountries", "regions"],
       additionalProperties: false,
-      // dev/e2e default: only +31-phone test users join the cohort; deployments override
       default: {
         enabled: true,
         affectedCountries: ["NL"],
