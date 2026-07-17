@@ -30,6 +30,7 @@ jest.mock("@/services/mongoose", () => ({
 jest.mock("@/services/tracing", () => ({
   addAttributesToCurrentSpan: jest.fn(),
   recordExceptionInCurrentSpan: jest.fn(),
+  wrapAsyncToRunInSpan: ({ fn }: { fn: unknown }) => fn,
 }))
 
 import { updateAccountStatus } from "@/app/accounts/update-account-status"
@@ -202,7 +203,7 @@ describe("settle-migration-flow", () => {
       expect(mockRecordException).toHaveBeenCalled()
     })
 
-    it("records a critical exception when the soft-close fails but does not throw", async () => {
+    it("records a warn-level exception when the soft-close fails but does not throw", async () => {
       const softCloseError = new Error("status update failed")
       mockUpdateAccountStatus.mockResolvedValue(softCloseError)
 
@@ -211,7 +212,7 @@ describe("settle-migration-flow", () => {
       ).resolves.toBeUndefined()
 
       expect(mockRecordException).toHaveBeenCalledWith(
-        expect.objectContaining({ error: softCloseError, level: ErrorLevel.Critical }),
+        expect.objectContaining({ error: softCloseError, level: ErrorLevel.Warn }),
       )
     })
   })

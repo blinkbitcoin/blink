@@ -14,6 +14,7 @@ import {
 import {
   addAttributesToCurrentSpan,
   recordExceptionInCurrentSpan,
+  wrapAsyncToRunInSpan,
 } from "@/services/tracing"
 
 const findFlowByHash = async (
@@ -35,7 +36,7 @@ const softCloseMigratedAccount = async (accountId: AccountId): Promise<void> => 
     comment: "custodial migration completed",
   })
   if (softClosed instanceof Error) {
-    recordExceptionInCurrentSpan({ error: softClosed, level: ErrorLevel.Critical })
+    recordExceptionInCurrentSpan({ error: softClosed, level: ErrorLevel.Warn })
   }
 }
 
@@ -50,82 +51,80 @@ const residualBalanceDetail = async (accountId: AccountId): Promise<string> => {
   return `residual balance: ${balance} sats`
 }
 
-export const completeMigrationFlowForSettledPayment = async ({
-  paymentHash,
-}: {
-  paymentHash: PaymentHash
-}): Promise<void> => {
-  try {
-    const flow = await findFlowByHash(paymentHash)
-    if (flow === undefined) return
+export const completeMigrationFlowForSettledPayment = wrapAsyncToRunInSpan({
+  namespace: "app.migrationflow",
+  fnName: "completeMigrationFlowForSettledPayment",
+  fn: async ({ paymentHash }: { paymentHash: PaymentHash }): Promise<void> => {
+    try {
+      const flow = await findFlowByHash(paymentHash)
+      if (flow === undefined) return
 
-    if (flow.phase === MigrationFlowPhase.Completed) {
-      const account = await AccountsRepository().findById(flow.accountId)
-      if (account instanceof Error) {
-        recordExceptionInCurrentSpan({ error: account, level: ErrorLevel.Warn })
+      addAttributesToCurrentSpan({ "migrationFlow.accountId": flow.accountId })
+
+      if (flow.phase === MigrationFlowPhase.Completed) {
+        const account = await AccountsRepository().findById(flow.accountId)
+        if (account instanceof Error) {
+          recordExceptionInCurrentSpan({ error: account, level: ErrorLevel.Warn })
+          return
+        }
+        if (account.status !== AccountStatus.Migrated) {
+          await softCloseMigratedAccount(flow.accountId)
+        }
         return
       }
-      if (account.status !== AccountStatus.Migrated) {
-        await softCloseMigratedAccount(flow.accountId)
+
+      if (
+        flow.phase !== MigrationFlowPhase.Transferring &&
+        flow.phase !== MigrationFlowPhase.Failed
+      ) {
+        return
       }
-      return
+
+      const completed = await MigrationFlowStateRepository().updatePhase({
+        accountId: flow.accountId,
+        fromPhase: flow.phase,
+        toPhase: MigrationFlowPhase.Completed,
+        step: {
+          step: "transfer-settled",
+          detail: await residualBalanceDetail(flow.accountId),
+        },
+      })
+      if (completed instanceof Error) {
+        recordExceptionInCurrentSpan({ error: completed, level: ErrorLevel.Warn })
+        return
+      }
+      addAttributesToCurrentSpan({ "migrationFlow.completed": true })
+
+      await softCloseMigratedAccount(flow.accountId)
+    } catch (err) {
+      recordExceptionInCurrentSpan({ error: err, level: ErrorLevel.Warn })
     }
+  },
+})
 
-    if (
-      flow.phase !== MigrationFlowPhase.Transferring &&
-      flow.phase !== MigrationFlowPhase.Failed
-    ) {
-      return
+export const failMigrationFlowForFailedPayment = wrapAsyncToRunInSpan({
+  namespace: "app.migrationflow",
+  fnName: "failMigrationFlowForFailedPayment",
+  fn: async ({ paymentHash }: { paymentHash: PaymentHash }): Promise<void> => {
+    try {
+      const flow = await findFlowByHash(paymentHash)
+      if (flow === undefined || flow.phase !== MigrationFlowPhase.Transferring) return
+
+      addAttributesToCurrentSpan({ "migrationFlow.accountId": flow.accountId })
+
+      const failed = await MigrationFlowStateRepository().updatePhase({
+        accountId: flow.accountId,
+        fromPhase: MigrationFlowPhase.Transferring,
+        toPhase: MigrationFlowPhase.Failed,
+        step: { step: "transfer-failed", detail: "ln payment failed" },
+      })
+      if (failed instanceof Error) {
+        recordExceptionInCurrentSpan({ error: failed, level: ErrorLevel.Warn })
+        return
+      }
+      addAttributesToCurrentSpan({ "migrationFlow.failed": true })
+    } catch (err) {
+      recordExceptionInCurrentSpan({ error: err, level: ErrorLevel.Warn })
     }
-
-    const completed = await MigrationFlowStateRepository().updatePhase({
-      accountId: flow.accountId,
-      fromPhase: flow.phase,
-      toPhase: MigrationFlowPhase.Completed,
-      step: {
-        step: "transfer-settled",
-        detail: await residualBalanceDetail(flow.accountId),
-      },
-    })
-    if (completed instanceof Error) {
-      recordExceptionInCurrentSpan({ error: completed, level: ErrorLevel.Warn })
-      return
-    }
-    addAttributesToCurrentSpan({
-      "migrationFlow.completed": true,
-      "migrationFlow.accountId": flow.accountId,
-    })
-
-    await softCloseMigratedAccount(flow.accountId)
-  } catch (err) {
-    recordExceptionInCurrentSpan({ error: err, level: ErrorLevel.Warn })
-  }
-}
-
-export const failMigrationFlowForFailedPayment = async ({
-  paymentHash,
-}: {
-  paymentHash: PaymentHash
-}): Promise<void> => {
-  try {
-    const flow = await findFlowByHash(paymentHash)
-    if (flow === undefined || flow.phase !== MigrationFlowPhase.Transferring) return
-
-    const failed = await MigrationFlowStateRepository().updatePhase({
-      accountId: flow.accountId,
-      fromPhase: MigrationFlowPhase.Transferring,
-      toPhase: MigrationFlowPhase.Failed,
-      step: { step: "transfer-failed", detail: "ln payment failed" },
-    })
-    if (failed instanceof Error) {
-      recordExceptionInCurrentSpan({ error: failed, level: ErrorLevel.Warn })
-      return
-    }
-    addAttributesToCurrentSpan({
-      "migrationFlow.failed": true,
-      "migrationFlow.accountId": flow.accountId,
-    })
-  } catch (err) {
-    recordExceptionInCurrentSpan({ error: err, level: ErrorLevel.Warn })
-  }
-}
+  },
+})
