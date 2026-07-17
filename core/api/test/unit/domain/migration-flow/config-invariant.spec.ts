@@ -9,7 +9,7 @@ const validate = ajv.compile(configSchema)
 const cloneConfig = () => JSON.parse(JSON.stringify(yamlConfig))
 
 describe("custodialMigrationFlow fee-retention invariant", () => {
-  it("accepts the shipped-dark default config", () => {
+  it("accepts the shipped default config", () => {
     expect(validate(cloneConfig())).toBe(true)
   })
 

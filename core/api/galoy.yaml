@@ -290,7 +290,7 @@ paymentNetworks:
       skipFeeProbe:
         pubkeys: []
         chanIds: []
-      skipFeeReimbursement: false
+      skipFeeReimbursement: true
     historicalPubkeys: []
   intraledger:
     receive:
@@ -306,7 +306,7 @@ cronConfig:
 captcha:
   mandatory: false
 custodialMigrationFlow:
-  enabled: false
+  enabled: true
   deMinimisThresholdSats: 100
 smsAuthUnsupportedCountries: []
 whatsAppAuthUnsupportedCountries: []
@@ -315,8 +315,9 @@ phoneProvider:
   verify: twilio
   transactional: twilio
 windDown:
-  enabled: false
-  affectedCountries: []
+  enabled: true
+  affectedCountries:
+    - NL
   regions:
     - code: default
       timezone: Europe/Paris
