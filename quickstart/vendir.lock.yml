@@ -2,27 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat(wind-down): add account windDown status query and live cohort
-        check (#677)...'
-      sha: c401308bae22b9dee010ec0eac939304996d6006
+      commitTitle: 'docs: add PR review guide distilled from repo review history (#681)'
+      sha: c0ba6712b3dc1659704ccc0acaa4df088cb640ba
       tags:
-      - 0.22.19-1-gc401308ba
+      - 0.22.20-2-gc0ba6712b
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat(wind-down): add account windDown status query and live cohort
-        check (#677)...'
-      sha: c401308bae22b9dee010ec0eac939304996d6006
+      commitTitle: 'docs: add PR review guide distilled from repo review history (#681)'
+      sha: c0ba6712b3dc1659704ccc0acaa4df088cb640ba
       tags:
-      - 0.22.19-1-gc401308ba
+      - 0.22.20-2-gc0ba6712b
     path: schemas
   - git:
-      commitTitle: 'feat(wind-down): add account windDown status query and live cohort
-        check (#677)...'
-      sha: c401308bae22b9dee010ec0eac939304996d6006
+      commitTitle: 'docs: add PR review guide distilled from repo review history (#681)'
+      sha: c0ba6712b3dc1659704ccc0acaa4df088cb640ba
       tags:
-      - 0.22.19-1-gc401308ba
+      - 0.22.20-2-gc0ba6712b
     path: gql
   path: graphql
 kind: LockConfig
