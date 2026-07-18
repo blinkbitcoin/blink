@@ -330,9 +330,14 @@ usd_amount=50
   # Check for settled
   retry 15 1 check_for_ln_initiated_settled "$token_name" "$payment_hash"
 
+  # without a probe the fee reserve is retained (skipFeeReimbursement), so the
+  # wallet is debited amount + fee
+  settlement_fee="$(txns_for_hash "$token_name" "$payment_hash" | jq -r '.[0].node.settlementFee')"
+  [[ "$settlement_fee" -gt "0" ]] || exit 1
+
   final_balance="$(balance_for_wallet $token_name 'USD')"
   wallet_diff="$(( $initial_balance - $final_balance ))"
-  [[ "$wallet_diff" == "$usd_amount" ]] || exit 1
+  [[ "$wallet_diff" == "$(( $usd_amount + $settlement_fee ))" ]] || exit 1
 
   final_lnd1_balance=$(lnd_cli channelbalance | jq -r '.balance')
   lnd1_diff="$(( $initial_lnd1_balance - $final_lnd1_balance ))"

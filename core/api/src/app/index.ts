@@ -5,6 +5,7 @@ import * as CallbackMod from "./callback"
 import * as CommMod from "./comm"
 import * as QuizMod from "./quiz"
 import * as LightningMod from "./lightning"
+import * as MigrationFlowMod from "./migration-flow"
 import * as OnChainMod from "./on-chain"
 import * as PricesMod from "./prices"
 import * as TransactionsMod from "./transactions"
@@ -25,6 +26,7 @@ const allFunctions = {
   Comm: { ...CommMod },
   Quiz: { ...QuizMod },
   Lightning: { ...LightningMod },
+  MigrationFlow: { ...MigrationFlowMod },
   OnChain: { ...OnChainMod },
   Prices: { ...PricesMod },
   Transactions: { ...TransactionsMod },
@@ -57,6 +59,7 @@ export const {
   Comm,
   Quiz,
   Lightning,
+  MigrationFlow,
   OnChain,
   Prices,
   Transactions,

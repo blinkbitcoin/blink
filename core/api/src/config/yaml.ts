@@ -149,6 +149,11 @@ export const getValuesToSkipProbe = (): SkipFeeProbeConfig => {
 export const getSkipFeeReimbursement = (): boolean =>
   yamlConfig.paymentNetworks.lightning.send.skipFeeReimbursement
 
+export const getCustodialMigrationFlowConfig = (): CustodialMigrationFlowConfig => ({
+  enabled: yamlConfig.custodialMigrationFlow.enabled,
+  deMinimisThresholdSats: yamlConfig.custodialMigrationFlow.deMinimisThresholdSats,
+})
+
 export const getDisplayCurrencyConfig = (): {
   code: DisplayCurrency
   symbol: string

@@ -65,6 +65,9 @@ import UserUpdateUsernameMutation from "@/graphql/public/root/mutation/user-upda
 import CaptchaCreateChallengeMutation from "@/graphql/public/root/mutation/captcha-create-challenge"
 import CaptchaRequestAuthCodeMutation from "@/graphql/public/root/mutation/captcha-request-auth-code"
 import QuizClaimMutation from "@/graphql/public/root/mutation/quiz-claim"
+import MigrationStartMutation from "@/graphql/public/root/mutation/migration-start"
+import MigrationCommitMutation from "@/graphql/public/root/mutation/migration-commit"
+import MigrationLnAddressTransferMutation from "@/graphql/public/root/mutation/migration-ln-address-transfer"
 import MerchantMapSuggestMutation from "@/graphql/public/root/mutation/merchant-map-suggest"
 import SupportChatMessageAddMutation from "@/graphql/public/root/mutation/support-chat-message-add"
 import SupportChatResetMutation from "@/graphql/public/root/mutation/support-chat-reset"
@@ -120,6 +123,10 @@ export const mutationFields = {
 
       accountDelete: AccountDeleteMutation,
       feedbackSubmit: FeedbackSubmitMutation,
+
+      migrationStart: MigrationStartMutation,
+      migrationCommit: MigrationCommitMutation,
+      migrationLnAddressTransfer: MigrationLnAddressTransferMutation,
 
       callbackEndpointAdd: CallbackEndpointAddMutation,
       callbackEndpointDelete: CallbackEndpointDeleteMutation,

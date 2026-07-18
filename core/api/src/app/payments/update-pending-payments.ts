@@ -4,6 +4,10 @@ import { reimburseFailedUsdPayment } from "./reimburse-failed-usd"
 
 import { PaymentFlowFromLedgerTransaction } from "./translations"
 
+import {
+  completeMigrationFlowForSettledPayment,
+  failMigrationFlowForFailedPayment,
+} from "@/app/migration-flow/settle-migration-flow"
 import { getTransactionForWalletByJournalId } from "@/app/wallets"
 
 import { toSats } from "@/domain/bitcoin"
@@ -372,13 +376,15 @@ const lockedPendingPaymentSteps = async ({
           },
         })
       }
-      return finalizePaymentUpdate({
+      const finalized = await finalizePaymentUpdate({
         result: voided,
         walletIds,
         paymentHash,
         journalId,
         notificationRecipient,
       })
+      await failMigrationFlowForFailedPayment({ paymentHash })
+      return finalized
     }
 
     const reimbursed = await reimburseFailedUsdPayment({
@@ -403,13 +409,15 @@ const lockedPendingPaymentSteps = async ({
         },
       })
     }
-    return finalizePaymentUpdate({
+    const finalized = await finalizePaymentUpdate({
       result: reimbursed,
       walletIds,
       paymentHash,
       journalId,
       notificationRecipient,
     })
+    await failMigrationFlowForFailedPayment({ paymentHash })
+    return finalized
   }
 
   paymentLogger.info(
@@ -426,13 +434,15 @@ const lockedPendingPaymentSteps = async ({
   }
 
   if (pendingPayment.feeKnownInAdvance) {
-    return finalizePaymentUpdate({
+    const finalized = await finalizePaymentUpdate({
       result: true,
       walletIds,
       paymentHash,
       journalId,
       notificationRecipient,
     })
+    await completeMigrationFlowForSettledPayment({ paymentHash })
+    return finalized
   }
 
   const { displayAmount, displayFee, displayCurrency } = pendingPayment
@@ -450,13 +460,15 @@ const lockedPendingPaymentSteps = async ({
   })
   if (reimbursed instanceof Error) return reimbursed
 
-  return finalizePaymentUpdate({
+  const finalized = await finalizePaymentUpdate({
     result: reimbursed,
     walletIds,
     paymentHash,
     journalId,
     notificationRecipient,
   })
+  await completeMigrationFlowForSettledPayment({ paymentHash })
+  return finalized
 }
 
 const reconstructPendingPaymentFlow = async <

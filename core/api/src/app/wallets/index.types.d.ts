@@ -117,6 +117,10 @@ type PayNoAmountInvoiceByWalletIdArgs = PaymentSendArgs & {
   senderAccount: Account
 }
 
+type PayNoAmountInvoiceByWalletIdInternalArgs = PayNoAmountInvoiceByWalletIdArgs & {
+  skipChecks: boolean
+}
+
 type IntraLedgerPaymentSendUsernameArgs = PaymentSendArgs & {
   recipientUsername: Username
   amount: Satoshis

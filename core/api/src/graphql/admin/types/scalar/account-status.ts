@@ -10,6 +10,7 @@ const AccountStatus = GT.Enum({
     ACTIVE: { value: DomainAccountStatus.Active },
     LOCKED: { value: DomainAccountStatus.Locked },
     CLOSED: { value: DomainAccountStatus.Closed },
+    MIGRATED: { value: DomainAccountStatus.Migrated },
   },
 })
 

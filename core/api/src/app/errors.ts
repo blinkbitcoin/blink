@@ -13,6 +13,7 @@ import * as LockServiceErrors from "@/domain/lock/errors"
 import * as RateLimitServiceErrors from "@/domain/rate-limit/errors"
 import * as IpFetcherErrors from "@/domain/ipfetcher/errors"
 import * as AccountErrors from "@/domain/accounts/errors"
+import * as MigrationFlowErrors from "@/domain/migration-flow/errors"
 import * as NotificationsErrors from "@/domain/notifications/errors"
 import * as CacheErrors from "@/domain/cache/errors"
 import * as PhoneProviderServiceErrors from "@/domain/phone-provider/errors"
@@ -47,6 +48,7 @@ export const ApplicationErrors = {
   ...RateLimitServiceErrors,
   ...IpFetcherErrors,
   ...AccountErrors,
+  ...MigrationFlowErrors,
   ...NotificationsErrors,
   ...CacheErrors,
   ...PhoneProviderServiceErrors,
