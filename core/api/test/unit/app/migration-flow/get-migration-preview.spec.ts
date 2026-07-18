@@ -96,6 +96,16 @@ describe("getMigrationPreview", () => {
     })
   })
 
+  it("shows the true reserve on a skipped balance (B = 2111)", async () => {
+    const preview = await previewFor(2111)
+    expect(preview).toEqual({
+      balanceSats: 2111,
+      feeSats: 10,
+      feeCoveredByBlink: false,
+      receiveSats: 2101,
+    })
+  })
+
   it("charges the reserve in the normal range (B = 100000)", async () => {
     const drain = migrationDrainAmount(100_000n)
     if (drain instanceof Error) throw drain

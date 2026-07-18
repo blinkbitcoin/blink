@@ -52,6 +52,28 @@ export const migrationDrainAmount = (
   return amount
 }
 
+// ~1 in 201 balances has no exact drain and would strand 1 sat; a bank-owner
+// top-up of the residual moves it to a balance that drains to exactly zero
+export const migrationDrainPlan = (
+  balance: bigint,
+): { amount: bigint; residualTopUp: bigint } | InvalidBtcPaymentAmountError => {
+  const amount = migrationDrainAmount(balance)
+  if (amount instanceof Error) return amount
+
+  const residual = balance - totalDebitForAmount(amount)
+  if (residual === 0n) return { amount, residualTopUp: 0n }
+
+  const toppedAmount = migrationDrainAmount(balance + residual)
+  if (toppedAmount instanceof Error) return toppedAmount
+  if (balance + residual - totalDebitForAmount(toppedAmount) !== 0n) {
+    return new InvalidBtcPaymentAmountError(
+      `residual not drainable for balance: ${balance}`,
+    )
+  }
+
+  return { amount: toppedAmount, residualTopUp: residual }
+}
+
 export const executeMigrationTransfer = async ({
   account,
   btcWalletId,
@@ -109,29 +131,32 @@ export const executeMigrationTransfer = async ({
 
   const { deMinimisThresholdSats } = getCustodialMigrationFlowConfig()
 
+  const topUpFromBankOwner = async (amount: bigint, memo: string) => {
+    const bankOwnerWalletId = await getBankOwnerWalletId()
+    const bankOwnerWallet = await WalletsRepository().findById(bankOwnerWalletId)
+    if (bankOwnerWallet instanceof Error) return bankOwnerWallet
+    const bankOwnerAccount = await AccountsRepository().findById(
+      bankOwnerWallet.accountId,
+    )
+    if (bankOwnerAccount instanceof Error) return bankOwnerAccount
+
+    return intraledgerPaymentSendWalletIdForBtcWallet({
+      recipientWalletId: btcWalletId,
+      amount: toSats(amount),
+      memo,
+      senderWalletId: bankOwnerWalletId,
+      senderAccount: bankOwnerAccount,
+    })
+  }
+
   let drainAmount: bigint
   if (balanceSats <= BigInt(deMinimisThresholdSats)) {
     const topUpAmount = reserveForAmount(balanceSats)
 
-    const bankOwnerWalletId = await getBankOwnerWalletId()
-    const bankOwnerWallet = await WalletsRepository().findById(bankOwnerWalletId)
-    if (bankOwnerWallet instanceof Error) {
-      return failMigration(bankOwnerWallet, `top-up failed: ${bankOwnerWallet.name}`)
-    }
-    const bankOwnerAccount = await AccountsRepository().findById(
-      bankOwnerWallet.accountId,
+    const topUp = await topUpFromBankOwner(
+      topUpAmount,
+      "custodial migration reserve top-up",
     )
-    if (bankOwnerAccount instanceof Error) {
-      return failMigration(bankOwnerAccount, `top-up failed: ${bankOwnerAccount.name}`)
-    }
-
-    const topUp = await intraledgerPaymentSendWalletIdForBtcWallet({
-      recipientWalletId: btcWalletId,
-      amount: toSats(topUpAmount),
-      memo: "custodial migration reserve top-up",
-      senderWalletId: bankOwnerWalletId,
-      senderAccount: bankOwnerAccount,
-    })
     if (topUp instanceof Error) {
       return failMigration(topUp, `top-up failed: ${topUp.name}`)
     }
@@ -142,13 +167,27 @@ export const executeMigrationTransfer = async ({
 
     drainAmount = balanceSats
   } else {
-    const amount = migrationDrainAmount(balanceSats)
-    if (amount instanceof Error) {
-      return failMigration(amount, `drain amount failed: ${amount.name}`)
+    const plan = migrationDrainPlan(balanceSats)
+    if (plan instanceof Error) {
+      return failMigration(plan, `drain amount failed: ${plan.name}`)
     }
-    drainAmount = amount
 
-    const residual = balanceSats - totalDebitForAmount(drainAmount)
+    if (plan.residualTopUp > 0n) {
+      const topUp = await topUpFromBankOwner(
+        plan.residualTopUp,
+        "custodial migration residual top-up",
+      )
+      if (topUp instanceof Error) {
+        return failMigration(topUp, `residual top-up failed: ${topUp.name}`)
+      }
+      await recordStep(
+        "residual-top-up",
+        `${plan.residualTopUp} sats from bank owner; makes the drain land on zero`,
+      )
+    }
+    drainAmount = plan.amount
+
+    const residual = balanceSats + plan.residualTopUp - totalDebitForAmount(drainAmount)
     await recordStep(
       "drain-computed",
       `amount: ${drainAmount} sats, reserve: ${reserveForAmount(drainAmount)} sats, expected residual: ${residual} sats`,

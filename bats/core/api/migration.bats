@@ -265,3 +265,40 @@ ln_address_transfer_input() {
 
   [[ "$(btc_balance_for "$token_name")" == "0" ]] || exit 1
 }
+
+@test "migration: skipped balance gets a 1-sat top-up and drains to zero" {
+  token_name='migrator_residual'
+  phone="$(random_nl_phone)"
+  login_user "$token_name" "$phone"
+  cache_value "$token_name.phone" "$phone"
+
+  # 2111 is the smallest balance with no exact drain amount
+  funding_sats=2111
+  fund_user_lightning "$token_name" "$token_name.btc_wallet_id" "$funding_sats"
+
+  exec_graphql "$token_name" 'migration-start'
+  [[ "$(graphql_output '.data.migrationStart.errors | length')" == "0" ]] || exit 1
+
+  exec_graphql "$token_name" 'migration'
+  [[ "$(graphql_output '.data.migration.preview.balanceSats')" == "$funding_sats" ]] || exit 1
+  [[ "$(graphql_output '.data.migration.preview.feeSats')" == "10" ]] || exit 1
+  [[ "$(graphql_output '.data.migration.preview.feeCoveredByBlink')" == "false" ]] || exit 1
+  receive_sats="$(graphql_output '.data.migration.preview.receiveSats')"
+  [[ "$receive_sats" == "2101" ]] || exit 1
+
+  invoice_response="$(lnd_outside_cli addinvoice)"
+  payment_request="$(echo $invoice_response | jq -r '.payment_request')"
+  payment_hash="$(echo $invoice_response | jq -r '.r_hash')"
+  [[ "${payment_request}" != "null" ]] || exit 1
+
+  variables="$(commit_variables_for "$token_name" "$payment_request")"
+  exec_graphql "$token_name" 'migration-commit' "$variables"
+  [[ "$(graphql_output '.data.migrationCommit.errors | length')" == "0" ]] || exit 1
+  [[ "$(graphql_output '.data.migrationCommit.migration.status')" == "COMPLETED" ]] || exit 1
+
+  invoice_state="$(lnd_outside_cli lookupinvoice "$payment_hash")"
+  [[ "$(echo $invoice_state | jq -r '.state')" == "SETTLED" ]] || exit 1
+  [[ "$(echo $invoice_state | jq -r '.amt_paid_sat')" == "$receive_sats" ]] || exit 1
+
+  [[ "$(btc_balance_for "$token_name")" == "0" ]] || exit 1
+}
