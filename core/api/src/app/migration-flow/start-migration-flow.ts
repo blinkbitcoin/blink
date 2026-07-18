@@ -1,0 +1,66 @@
+import { getCustodialMigrationFlowConfig } from "@/config"
+
+import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
+import { isAccountInWindDownCohort } from "@/app/wind-down"
+
+import { AccountValidator } from "@/domain/accounts"
+import { CouldNotFindError } from "@/domain/errors"
+import {
+  MigrationApiKeyForbiddenError,
+  MigrationDollarBalanceNotEmptyError,
+  MigrationFlowDisabledError,
+  MigrationFlowPhase,
+  MigrationNotEligibleError,
+} from "@/domain/migration-flow"
+
+import {
+  AccountsRepository,
+  MigrationFlowStateRepository,
+  WalletsRepository,
+} from "@/services/mongoose"
+
+export const startMigrationFlow = async ({
+  accountId,
+  apiKeyId,
+}: {
+  accountId: AccountId
+  apiKeyId?: ApiKeyId
+}): Promise<MigrationFlow | ApplicationError> => {
+  if (apiKeyId) return new MigrationApiKeyForbiddenError()
+
+  if (!getCustodialMigrationFlowConfig().enabled) {
+    return new MigrationFlowDisabledError()
+  }
+
+  const account = await AccountsRepository().findById(accountId)
+  if (account instanceof Error) return account
+
+  const accountValidator = AccountValidator(account)
+  if (accountValidator instanceof Error) return accountValidator
+
+  const inCohort = await isAccountInWindDownCohort({ account })
+  if (inCohort instanceof Error) return inCohort
+  if (!inCohort) return new MigrationNotEligibleError()
+
+  const migrationFlowRepo = MigrationFlowStateRepository()
+
+  const existing = await migrationFlowRepo.findByAccountId(accountId)
+  if (!(existing instanceof CouldNotFindError)) return existing
+
+  const accountWallets =
+    await WalletsRepository().findAccountWalletsByAccountId(accountId)
+  if (accountWallets instanceof Error) return accountWallets
+
+  const usdBalance = await getBalanceForWallet({ walletId: accountWallets.USD.id })
+  if (usdBalance instanceof Error) return usdBalance
+  if (usdBalance > 0) {
+    return new MigrationDollarBalanceNotEmptyError(
+      `Dollar balance must be empty before migration. walletId: ${accountWallets.USD.id}, balance: ${usdBalance}`,
+    )
+  }
+
+  return migrationFlowRepo.upsertByAccountId({
+    accountId,
+    phase: MigrationFlowPhase.InProgress,
+  })
+}

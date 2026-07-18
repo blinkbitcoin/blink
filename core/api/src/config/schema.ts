@@ -489,7 +489,7 @@ const paymentNetworksSchema = {
           pubkeys: [],
           chanIds: [],
         },
-        skipFeeReimbursement: false,
+        skipFeeReimbursement: true,
       },
       historicalPubkeys: [],
     },
@@ -1028,6 +1028,19 @@ export const configSchema = {
       additionalProperties: false,
       default: { mandatory: false },
     },
+    custodialMigrationFlow: {
+      type: "object",
+      properties: {
+        enabled: { type: "boolean" },
+        deMinimisThresholdSats: { type: "integer", minimum: 10, default: 100 },
+      },
+      required: ["enabled", "deMinimisThresholdSats"],
+      additionalProperties: false,
+      default: {
+        enabled: true,
+        deMinimisThresholdSats: 100,
+      },
+    },
     smsAuthUnsupportedCountries: {
       type: "array",
       items: { type: "string" },
@@ -1103,8 +1116,8 @@ export const configSchema = {
       required: ["enabled", "affectedCountries", "regions"],
       additionalProperties: false,
       default: {
-        enabled: false,
-        affectedCountries: [],
+        enabled: true,
+        affectedCountries: ["NL"],
         regions: [
           {
             code: DEFAULT_WIND_DOWN_REGION_CODE,
@@ -1138,6 +1151,7 @@ export const configSchema = {
     "userActivenessMonthlyVolumeThreshold",
     "cronConfig",
     "captcha",
+    "custodialMigrationFlow",
     "smsAuthUnsupportedCountries",
     "whatsAppAuthUnsupportedCountries",
     "telegramAuthUnsupportedCountries",
@@ -1145,4 +1159,36 @@ export const configSchema = {
     "windDown",
   ],
   additionalProperties: false,
+  allOf: [
+    {
+      if: {
+        properties: {
+          custodialMigrationFlow: {
+            properties: { enabled: { const: true } },
+            required: ["enabled"],
+          },
+        },
+        required: ["custodialMigrationFlow"],
+      },
+      then: {
+        properties: {
+          paymentNetworks: {
+            properties: {
+              lightning: {
+                properties: {
+                  send: {
+                    properties: { skipFeeReimbursement: { const: true } },
+                    required: ["skipFeeReimbursement"],
+                  },
+                },
+                required: ["send"],
+              },
+            },
+            required: ["lightning"],
+          },
+        },
+        required: ["paymentNetworks"],
+      },
+    },
+  ],
 } as const

@@ -4,6 +4,7 @@ import mongoose from "mongoose"
 
 import { getDefaultAccountsConfig, Levels } from "@/config"
 import { AccountIdRegex, AccountStatus, UsernameRegex } from "@/domain/accounts"
+import { MigrationFlowPhase } from "@/domain/migration-flow"
 import { WalletIdRegex, WalletType } from "@/domain/wallets"
 import { WalletCurrency } from "@/domain/shared"
 import { WalletInvoiceWebhookStatus } from "@/domain/wallet-invoices"
@@ -550,6 +551,57 @@ paymentFlowStateSchema.index({
 export const PaymentFlowState = mongoose.model(
   "Payment_Flow_State",
   paymentFlowStateSchema,
+)
+
+const migrationFlowStateSchema = new Schema<MigrationFlowStateRecord>(
+  {
+    accountId: {
+      type: String,
+      ref: "Account",
+      required: true,
+    },
+    phase: {
+      type: String,
+      required: true,
+      enum: Object.values(MigrationFlowPhase),
+    },
+    destinationSparkPubkey: String,
+    destinationProofVerified: {
+      type: Boolean,
+      required: true,
+      default: false,
+    },
+    lnPaymentHash: String,
+    disclosureVersion: String,
+    steps: {
+      type: [
+        {
+          step: { type: String, required: true },
+          recordedAt: { type: Date, required: true, default: Date.now },
+          detail: String,
+        },
+      ],
+      default: [],
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now,
+      required: true,
+    },
+  },
+  { id: false },
+)
+
+migrationFlowStateSchema.index({ accountId: 1 }, { unique: true })
+migrationFlowStateSchema.index({ lnPaymentHash: 1 }, { unique: true, sparse: true })
+
+export const MigrationFlowState = mongoose.model<MigrationFlowStateRecord>(
+  "MigrationFlowState",
+  migrationFlowStateSchema,
 )
 
 const WalletOnChainPendingReceiveSchema = new Schema<WalletOnChainPendingReceiveRecord>(

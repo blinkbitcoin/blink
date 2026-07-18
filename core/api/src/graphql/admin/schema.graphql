@@ -28,6 +28,7 @@ enum AccountStatus {
   CLOSED
   INVITED
   LOCKED
+  MIGRATED
   NEW
   PENDING
 }

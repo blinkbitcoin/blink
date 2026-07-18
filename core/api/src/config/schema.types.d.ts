@@ -249,6 +249,10 @@ type YamlSchema = {
   captcha: {
     mandatory: boolean
   }
+  custodialMigrationFlow: {
+    enabled: boolean
+    deMinimisThresholdSats: number
+  }
   smsAuthUnsupportedCountries: string[]
   whatsAppAuthUnsupportedCountries: string[]
   telegramAuthUnsupportedCountries: string[]
