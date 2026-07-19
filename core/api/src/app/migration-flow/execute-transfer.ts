@@ -36,9 +36,6 @@ export const migrationDrainAmount = (
     return new InvalidBtcPaymentAmountError(`balance: ${balance}`)
   }
 
-  // fixed point A* = max{A : A + reserve(A) <= B} where reserve(A) is
-  // max(round-half-down(A*bps/10^4), feeMin). The seed never exceeds A*, so the
-  // loop below closes the gap upward while re-verifying against the live fee function
   const flatSeed = balance - FEECAP_MIN.amount
   const pctSeed = (10_000n * balance) / (10_000n + FEECAP_BASIS_POINTS)
   let amount = flatSeed < pctSeed ? flatSeed : pctSeed
@@ -52,9 +49,6 @@ export const migrationDrainAmount = (
   return amount
 }
 
-// the fee's integer step function can skip a balance (no amount debits it exactly),
-// stranding a residual; a bank-owner top-up of the residual reaches a balance that
-// drains to exactly zero, and the plan fails closed if the fee shape ever breaks that
 export const migrationDrainPlan = (
   balance: bigint,
 ): { amount: bigint; residualTopUp: bigint } | InvalidBtcPaymentAmountError => {
@@ -132,8 +126,6 @@ export const executeMigrationTransfer = async ({
 
   const { deMinimisThresholdSats } = getCustodialMigrationFlowConfig()
 
-  // maxAmount bounds are proven per call site; a breach means the drain math or
-  // config no longer satisfies its preconditions, so no bank-owner money moves
   const topUpFromBankOwner = async (amount: bigint, maxAmount: bigint, memo: string) => {
     if (amount <= 0n || amount > maxAmount) {
       return new InvalidBtcPaymentAmountError(
@@ -161,9 +153,6 @@ export const executeMigrationTransfer = async ({
   if (balanceSats <= BigInt(deMinimisThresholdSats)) {
     const topUpAmount = reserveForAmount(balanceSats)
 
-    // reserve(B ≤ threshold) equals FEECAP_MIN exactly while
-    // threshold * bps ≤ 10^4 * FEECAP_MIN + 5000 (threshold ≤ 2100 at current values);
-    // raising the threshold past that requires revisiting this bound
     const topUp = await topUpFromBankOwner(
       topUpAmount,
       FEECAP_MIN.amount,
@@ -185,8 +174,6 @@ export const executeMigrationTransfer = async ({
     }
 
     if (plan.residualTopUp > 0n) {
-      // the residual is provably ≤ 1 for any fee rate ≤ 100%: the debit function
-      // steps by at most 2 sats, so a skipped balance is always repaired by +1
       const topUp = await topUpFromBankOwner(
         plan.residualTopUp,
         1n,
