@@ -52,8 +52,9 @@ export const migrationDrainAmount = (
   return amount
 }
 
-// ~1 in 201 balances has no exact drain and would strand 1 sat; a bank-owner
-// top-up of the residual moves it to a balance that drains to exactly zero
+// the fee's integer step function can skip a balance (no amount debits it exactly),
+// stranding a residual; a bank-owner top-up of the residual reaches a balance that
+// drains to exactly zero, and the plan fails closed if the fee shape ever breaks that
 export const migrationDrainPlan = (
   balance: bigint,
 ): { amount: bigint; residualTopUp: bigint } | InvalidBtcPaymentAmountError => {
