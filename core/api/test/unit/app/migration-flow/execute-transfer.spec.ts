@@ -162,7 +162,10 @@ describe("executeMigrationTransfer", () => {
   it("fails the migration without moving bank-owner funds when the de-minimis top-up exceeds FEECAP_MIN", async () => {
     // reserve(2101) = 11 > FEECAP_MIN: a threshold past the proven bound
     // (threshold * bps > 10^4 * FEECAP_MIN + 5000) must trip the top-up guard
-    mockGetMigrationConfig.mockReturnValue({ enabled: true, deMinimisThresholdSats: 5000 })
+    mockGetMigrationConfig.mockReturnValue({
+      enabled: true,
+      deMinimisThresholdSats: 5000,
+    })
     mockGetBalanceForWallet.mockResolvedValue(2101)
 
     const result = await executeMigrationTransfer(transferArgs)
