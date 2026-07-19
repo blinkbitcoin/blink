@@ -177,14 +177,18 @@ ln_address_transfer_input() {
 # No spark rail in the e2e stack: an lnd_outside no-amount invoice stands in for
 # the Spark wallet's swap invoice (the transfer is just a Lightning send).
 
-@test "migration: start is refused outside the wind-down cohort" {
-  # alice's +1 phone country is not in windDown.affectedCountries
-  exec_graphql 'alice' 'wind-down'
+@test "migration: a non-cohort account can start a migration" {
+  # +1 phone country is not in windDown.affectedCountries: no wind-down
+  # banner, but the flow itself is available to all accounts
+  token_name='non_cohort_migrator'
+  login_user "$token_name" "$(random_phone)"
+
+  exec_graphql "$token_name" 'wind-down'
   [[ "$(graphql_output '.data.windDown')" == "null" ]] || exit 1
 
-  exec_graphql 'alice' 'migration-start'
-  error_message="$(graphql_output '.data.migrationStart.errors[0].message')"
-  [[ "$error_message" == "This account is not eligible for migration" ]] || exit 1
+  exec_graphql "$token_name" 'migration-start'
+  [[ "$(graphql_output '.data.migrationStart.errors | length')" == "0" ]] || exit 1
+  [[ "$(graphql_output '.data.migrationStart.migration.status')" == "IN_PROGRESS" ]] || exit 1
 }
 
 @test "migration: full flow drains the btc wallet to an external invoice" {

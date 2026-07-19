@@ -7,10 +7,6 @@ jest.mock("@/app/wallets/get-balance-for-wallet", () => ({
   getBalanceForWallet: jest.fn(),
 }))
 
-jest.mock("@/app/wind-down", () => ({
-  isAccountInWindDownCohort: jest.fn(),
-}))
-
 jest.mock("@/services/mongoose", () => ({
   __mocks: {
     findAccountById: jest.fn(),
@@ -34,19 +30,16 @@ jest.mock("@/services/mongoose", () => ({
 
 import { startMigrationFlow } from "@/app/migration-flow/start-migration-flow"
 import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
-import { isAccountInWindDownCohort } from "@/app/wind-down"
 import { AccountStatus } from "@/domain/accounts"
 import {
   CouldNotFindMigrationFlowStateError,
   InactiveAccountError,
-  UnknownRepositoryError,
 } from "@/domain/errors"
 import {
   MigrationApiKeyForbiddenError,
   MigrationDollarBalanceNotEmptyError,
   MigrationFlowDisabledError,
   MigrationFlowPhase,
-  MigrationNotEligibleError,
 } from "@/domain/migration-flow"
 import { getCustodialMigrationFlowConfig } from "@/config"
 
@@ -58,7 +51,6 @@ const mocks = jest.requireMock("@/services/mongoose").__mocks as {
 }
 const mockGetConfig = getCustodialMigrationFlowConfig as jest.Mock
 const mockGetBalanceForWallet = getBalanceForWallet as jest.Mock
-const mockIsAccountInWindDownCohort = isAccountInWindDownCohort as jest.Mock
 
 describe("startMigrationFlow", () => {
   const accountId = "account-id" as AccountId
@@ -84,7 +76,6 @@ describe("startMigrationFlow", () => {
     mocks.findAccountWalletsByAccountId.mockResolvedValue(accountWallets)
     mockGetBalanceForWallet.mockResolvedValue(0)
     mocks.upsertFlowByAccountId.mockResolvedValue(inProgressFlow)
-    mockIsAccountInWindDownCohort.mockResolvedValue(true)
   })
 
   it("returns MigrationFlowDisabledError when the feature flag is off", async () => {
@@ -94,7 +85,6 @@ describe("startMigrationFlow", () => {
 
     expect(result).toBeInstanceOf(MigrationFlowDisabledError)
     expect(mocks.findAccountById).not.toHaveBeenCalled()
-    expect(mockIsAccountInWindDownCohort).not.toHaveBeenCalled()
     expect(mocks.upsertFlowByAccountId).not.toHaveBeenCalled()
   })
 
@@ -106,27 +96,6 @@ describe("startMigrationFlow", () => {
 
     expect(result).toBeInstanceOf(MigrationApiKeyForbiddenError)
     expect(mocks.findAccountById).not.toHaveBeenCalled()
-    expect(mockIsAccountInWindDownCohort).not.toHaveBeenCalled()
-    expect(mocks.upsertFlowByAccountId).not.toHaveBeenCalled()
-  })
-
-  it("refuses a non-cohort account without creating a migration flow", async () => {
-    mockIsAccountInWindDownCohort.mockResolvedValue(false)
-
-    const result = await startMigrationFlow({ accountId })
-
-    expect(result).toBeInstanceOf(MigrationNotEligibleError)
-    expect(mockIsAccountInWindDownCohort).toHaveBeenCalledWith({ account })
-    expect(mocks.upsertFlowByAccountId).not.toHaveBeenCalled()
-  })
-
-  it("propagates a membership check error without creating a migration flow", async () => {
-    const repoError = new UnknownRepositoryError()
-    mockIsAccountInWindDownCohort.mockResolvedValue(repoError)
-
-    const result = await startMigrationFlow({ accountId })
-
-    expect(result).toBe(repoError)
     expect(mocks.upsertFlowByAccountId).not.toHaveBeenCalled()
   })
 
@@ -161,11 +130,10 @@ describe("startMigrationFlow", () => {
     expect(mocks.upsertFlowByAccountId).not.toHaveBeenCalled()
   })
 
-  it("creates an IN_PROGRESS migration flow for an eligible account", async () => {
+  it("creates an IN_PROGRESS migration flow for an account", async () => {
     const result = await startMigrationFlow({ accountId })
 
     expect(result).toBe(inProgressFlow)
-    expect(mockIsAccountInWindDownCohort).toHaveBeenCalledWith({ account })
     expect(mocks.upsertFlowByAccountId).toHaveBeenCalledTimes(1)
     expect(mocks.upsertFlowByAccountId).toHaveBeenCalledWith({
       accountId,
