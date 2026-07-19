@@ -132,7 +132,14 @@ export const executeMigrationTransfer = async ({
 
   const { deMinimisThresholdSats } = getCustodialMigrationFlowConfig()
 
-  const topUpFromBankOwner = async (amount: bigint, memo: string) => {
+  // maxAmount bounds are proven per call site; a breach means the drain math or
+  // config no longer satisfies its preconditions, so no bank-owner money moves
+  const topUpFromBankOwner = async (amount: bigint, maxAmount: bigint, memo: string) => {
+    if (amount <= 0n || amount > maxAmount) {
+      return new InvalidBtcPaymentAmountError(
+        `top-up out of bounds: ${amount} sats, max ${maxAmount}`,
+      )
+    }
     const bankOwnerWalletId = await getBankOwnerWalletId()
     const bankOwnerWallet = await WalletsRepository().findById(bankOwnerWalletId)
     if (bankOwnerWallet instanceof Error) return bankOwnerWallet
@@ -154,8 +161,12 @@ export const executeMigrationTransfer = async ({
   if (balanceSats <= BigInt(deMinimisThresholdSats)) {
     const topUpAmount = reserveForAmount(balanceSats)
 
+    // reserve(B ≤ threshold) equals FEECAP_MIN exactly while
+    // threshold * bps ≤ 10^4 * FEECAP_MIN + 5000 (threshold ≤ 2100 at current values);
+    // raising the threshold past that requires revisiting this bound
     const topUp = await topUpFromBankOwner(
       topUpAmount,
+      FEECAP_MIN.amount,
       "custodial migration reserve top-up",
     )
     if (topUp instanceof Error) {
@@ -174,8 +185,11 @@ export const executeMigrationTransfer = async ({
     }
 
     if (plan.residualTopUp > 0n) {
+      // the residual is provably ≤ 1 for any fee rate ≤ 100%: the debit function
+      // steps by at most 2 sats, so a skipped balance is always repaired by +1
       const topUp = await topUpFromBankOwner(
         plan.residualTopUp,
+        1n,
         "custodial migration residual top-up",
       )
       if (topUp instanceof Error) {

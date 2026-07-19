@@ -147,4 +147,23 @@ describe("migrationDrainPlan", () => {
       expect(plan.residualTopUp).toBeLessThanOrEqual(1n)
     }
   })
+
+  it("never needs more than a 1-sat top-up: exhaustive sweep across both regimes", () => {
+    // the bound holds for any fee rate ≤ 100%, not just the current bps; a failure
+    // here means the fee shape broke that precondition and the runtime guard will fire
+    let topUps = 0n
+    for (let balance = 11n; balance <= 30_000n; balance += 1n) {
+      const plan = migrationDrainPlan(balance)
+      if (plan instanceof Error) throw plan
+      if (plan.residualTopUp > 1n) {
+        throw new Error(`residual top-up ${plan.residualTopUp} at balance ${balance}`)
+      }
+      if (balance + plan.residualTopUp - totalDebit(plan.amount) !== 0n) {
+        throw new Error(`did not drain to zero at balance ${balance}`)
+      }
+      topUps += plan.residualTopUp
+    }
+    // the skipped family 201k+101 (k = 10..148) at the current fee shape
+    expect(topUps).toBe(139n)
+  })
 })
