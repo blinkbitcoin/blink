@@ -2,6 +2,10 @@ jest.mock("@/app/accounts/update-account-status", () => ({
   updateAccountStatus: jest.fn(),
 }))
 
+jest.mock("@/app/migration-flow/reclaim-top-up", () => ({
+  reclaimMigrationTopUp: jest.fn(),
+}))
+
 jest.mock("@/app/wallets/get-balance-for-wallet", () => ({
   getBalanceForWallet: jest.fn(),
 }))
@@ -34,6 +38,7 @@ jest.mock("@/services/tracing", () => ({
 }))
 
 import { updateAccountStatus } from "@/app/accounts/update-account-status"
+import { reclaimMigrationTopUp } from "@/app/migration-flow/reclaim-top-up"
 import {
   completeMigrationFlowForSettledPayment,
   failMigrationFlowForFailedPayment,
@@ -54,6 +59,7 @@ const mocks = jest.requireMock("@/services/mongoose").__mocks as {
 const mockUpdateAccountStatus = updateAccountStatus as jest.Mock
 const mockGetBalanceForWallet = getBalanceForWallet as jest.Mock
 const mockRecordException = recordExceptionInCurrentSpan as jest.Mock
+const mockReclaimTopUp = reclaimMigrationTopUp as jest.Mock
 
 describe("settle-migration-flow", () => {
   const accountId = "account-id" as AccountId
@@ -79,6 +85,7 @@ describe("settle-migration-flow", () => {
     })
     mockGetBalanceForWallet.mockResolvedValue(0)
     mockUpdateAccountStatus.mockResolvedValue({ id: accountId } as Account)
+    mockReclaimTopUp.mockResolvedValue(undefined)
     mocks.findAccountById.mockResolvedValue({
       id: accountId,
       status: AccountStatus.Migrated,
@@ -235,6 +242,55 @@ describe("settle-migration-flow", () => {
         }),
       )
       expect(mockUpdateAccountStatus).not.toHaveBeenCalled()
+      expect(mockReclaimTopUp).not.toHaveBeenCalled()
+    })
+
+    it("reclaims a persisted top-up after flipping to FAILED", async () => {
+      mocks.findFlowByLnPaymentHash.mockResolvedValue({
+        ...transferringFlow,
+        topUpSats: 10 as Satoshis,
+      })
+      mocks.updateFlowPhase.mockResolvedValue({
+        ...transferringFlow,
+        phase: MigrationFlowPhase.Failed,
+      })
+
+      await failMigrationFlowForFailedPayment({ paymentHash })
+
+      expect(mockReclaimTopUp).toHaveBeenCalledTimes(1)
+      expect(mockReclaimTopUp).toHaveBeenCalledWith({ accountId, topUpSats: 10 })
+    })
+
+    it("does not reclaim when the FAILED transition loses the CAS", async () => {
+      mocks.findFlowByLnPaymentHash.mockResolvedValue({
+        ...transferringFlow,
+        topUpSats: 10 as Satoshis,
+      })
+      mocks.updateFlowPhase.mockResolvedValue(
+        new MigrationStateConflictError("already failed"),
+      )
+
+      await failMigrationFlowForFailedPayment({ paymentHash })
+
+      expect(mockReclaimTopUp).not.toHaveBeenCalled()
+    })
+
+    it("swallows a reclaim rejection without throwing", async () => {
+      mocks.findFlowByLnPaymentHash.mockResolvedValue({
+        ...transferringFlow,
+        topUpSats: 10 as Satoshis,
+      })
+      mocks.updateFlowPhase.mockResolvedValue({
+        ...transferringFlow,
+        phase: MigrationFlowPhase.Failed,
+      })
+      mockReclaimTopUp.mockRejectedValue(new Error("reclaim blew up"))
+
+      await expect(
+        failMigrationFlowForFailedPayment({ paymentHash }),
+      ).resolves.toBeUndefined()
+
+      expect(mockRecordException).toHaveBeenCalled()
     })
 
     it("is a no-op for a hash with no matching migration", async () => {

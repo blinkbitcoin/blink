@@ -1,3 +1,5 @@
+import { reclaimMigrationTopUp } from "./reclaim-top-up"
+
 import { updateAccountStatus } from "@/app/accounts/update-account-status"
 import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
 
@@ -123,6 +125,13 @@ export const failMigrationFlowForFailedPayment = wrapAsyncToRunInSpan({
         return
       }
       addAttributesToCurrentSpan({ "migrationFlow.failed": true })
+
+      if (flow.topUpSats !== undefined) {
+        await reclaimMigrationTopUp({
+          accountId: flow.accountId,
+          topUpSats: flow.topUpSats,
+        })
+      }
     } catch (err) {
       recordExceptionInCurrentSpan({ error: err, level: ErrorLevel.Warn })
     }

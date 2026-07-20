@@ -1,3 +1,4 @@
+import { reclaimMigrationTopUp } from "./reclaim-top-up"
 import { completeMigrationFlowForSettledPayment } from "./settle-migration-flow"
 
 import { intraledgerPaymentSendWalletIdForBtcWallet } from "@/app/payments/send-intraledger"
@@ -92,7 +93,22 @@ export const executeMigrationTransfer = async ({
     }
   }
 
-  const failMigration = async (error: ApplicationError, detail: string) => {
+  const recordTopUp = async (topUpSats: bigint, step: string, detail: string) => {
+    const recorded = await migrationFlowRepo.recordTopUp({
+      accountId: account.id,
+      topUpSats: toSats(topUpSats),
+      step: { step, detail },
+    })
+    if (recorded instanceof Error) {
+      recordExceptionInCurrentSpan({ error: recorded, level: ErrorLevel.Warn })
+    }
+  }
+
+  const failMigration = async (
+    error: ApplicationError,
+    detail: string,
+    topUpSats = 0n,
+  ) => {
     const failed = await migrationFlowRepo.updatePhase({
       accountId: account.id,
       fromPhase: MigrationFlowPhase.Transferring,
@@ -101,6 +117,13 @@ export const executeMigrationTransfer = async ({
     })
     if (failed instanceof Error) {
       recordExceptionInCurrentSpan({ error: failed, level: ErrorLevel.Warn })
+      return error
+    }
+    if (topUpSats > 0n) {
+      await reclaimMigrationTopUp({
+        accountId: account.id,
+        topUpSats: toSats(topUpSats),
+      })
     }
     return error
   }
@@ -150,6 +173,7 @@ export const executeMigrationTransfer = async ({
   }
 
   let drainAmount: bigint
+  let topUpSats = 0n
   if (balanceSats <= BigInt(deMinimisThresholdSats)) {
     const topUpAmount = reserveForAmount(balanceSats)
 
@@ -161,11 +185,13 @@ export const executeMigrationTransfer = async ({
     if (topUp instanceof Error) {
       return failMigration(topUp, `top-up failed: ${topUp.name}`)
     }
-    await recordStep(
+    await recordTopUp(
+      topUpAmount,
       "reserve-top-up",
       `${topUpAmount} sats from bank owner; Blink covered the Spark network fee (de-minimis subsidy)`,
     )
 
+    topUpSats = topUpAmount
     drainAmount = balanceSats
   } else {
     const plan = migrationDrainPlan(balanceSats)
@@ -182,10 +208,12 @@ export const executeMigrationTransfer = async ({
       if (topUp instanceof Error) {
         return failMigration(topUp, `residual top-up failed: ${topUp.name}`)
       }
-      await recordStep(
+      await recordTopUp(
+        plan.residualTopUp,
         "residual-top-up",
         `${plan.residualTopUp} sats from bank owner; makes the drain land on zero`,
       )
+      topUpSats = plan.residualTopUp
     }
     drainAmount = plan.amount
 
@@ -205,13 +233,18 @@ export const executeMigrationTransfer = async ({
     skipChecks: true,
   })
   if (paymentResult instanceof Error) {
-    return failMigration(paymentResult, `ln payment failed: ${paymentResult.name}`)
+    return failMigration(
+      paymentResult,
+      `ln payment failed: ${paymentResult.name}`,
+      topUpSats,
+    )
   }
 
   if (paymentResult.status === PaymentSendStatus.AlreadyPaid) {
     return failMigration(
       new MigrationStateConflictError("invoice already paid"),
       "invoice already paid",
+      topUpSats,
     )
   }
 
