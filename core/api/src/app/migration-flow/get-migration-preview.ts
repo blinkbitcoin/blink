@@ -1,4 +1,4 @@
-import { migrationDrainAmount, reserveForAmount } from "./execute-transfer"
+import { migrationDrainPlan, reserveForAmount } from "./execute-transfer"
 
 import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
 
@@ -42,13 +42,13 @@ export const getMigrationPreview = async ({
     }
   }
 
-  const drainAmount = migrationDrainAmount(balanceSats)
-  if (drainAmount instanceof Error) return drainAmount
+  const plan = migrationDrainPlan(balanceSats)
+  if (plan instanceof Error) return plan
 
   return {
     balanceSats: toSats(balanceSats),
-    feeSats: toSats(balanceSats - drainAmount),
+    feeSats: toSats(balanceSats - plan.amount),
     feeCoveredByBlink: false,
-    receiveSats: toSats(drainAmount),
+    receiveSats: toSats(plan.amount),
   }
 }

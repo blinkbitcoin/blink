@@ -22,7 +22,10 @@ jest.mock("@/services/tracing", () => ({
   recordExceptionInCurrentSpan: jest.fn(),
 }))
 
-import { migrationDrainAmount } from "@/app/migration-flow/execute-transfer"
+import {
+  migrationDrainAmount,
+  migrationDrainPlan,
+} from "@/app/migration-flow/execute-transfer"
 import { LnFees } from "@/domain/payments"
 import { BtcPaymentAmount, InvalidBtcPaymentAmountError } from "@/domain/shared"
 
@@ -96,5 +99,60 @@ describe("migrationDrainAmount", () => {
       const amount = expectFixedPoint(balance)
       expect(balance - totalDebit(amount)).toBeLessThanOrEqual(1n)
     }
+  })
+})
+
+describe("migrationDrainPlan", () => {
+  const expectExactZero = (balance: bigint) => {
+    const plan = migrationDrainPlan(balance)
+    if (plan instanceof Error) throw plan
+    expect(balance + plan.residualTopUp - totalDebit(plan.amount)).toBe(0n)
+    return plan
+  }
+
+  it("propagates the unsendable-dust error", () => {
+    expect(migrationDrainPlan(10n)).toBeInstanceOf(InvalidBtcPaymentAmountError)
+  })
+
+  it("needs no top-up on exactly-drainable balances", () => {
+    for (const balance of [11n, 100n, 2110n, 2112n, 200_000n, 10_000_000n]) {
+      const plan = expectExactZero(balance)
+      expect(plan.residualTopUp).toBe(0n)
+      expect(plan.amount).toBe(migrationDrainAmount(balance))
+    }
+  })
+
+  it("tops up 1 sat on skipped balances (B = 201k + 101) and drains to zero", () => {
+    for (let k = 10n; k <= 40n; k += 1n) {
+      const balance = 201n * k + 101n
+      expect(migrationDrainAmount(balance)).not.toBeInstanceOf(Error)
+      const plan = expectExactZero(balance)
+      expect(plan.residualTopUp).toBe(1n)
+      expect(totalDebit(plan.amount)).toBe(balance + 1n)
+    }
+  })
+
+  it("gives the user their full balance minus the true reserve on a skipped balance", () => {
+    const plan = expectExactZero(2111n)
+    expect(plan.amount).toBe(2101n)
+    expect(2111n - plan.amount).toBe(10n)
+  })
+
+  it("drains to zero with at most a 1-sat top-up across an exhaustive sweep", () => {
+    // the ≤1 bound holds for any fee rate ≤ 100%, not just the current bps; a failure
+    // here means the fee shape broke that precondition and the runtime guard will fire
+    let sawTopUp = false
+    for (let balance = 11n; balance <= 30_000n; balance += 1n) {
+      const plan = migrationDrainPlan(balance)
+      if (plan instanceof Error) throw plan
+      if (plan.residualTopUp > 1n) {
+        throw new Error(`residual top-up ${plan.residualTopUp} at balance ${balance}`)
+      }
+      if (balance + plan.residualTopUp - totalDebit(plan.amount) !== 0n) {
+        throw new Error(`did not drain to zero at balance ${balance}`)
+      }
+      sawTopUp ||= plan.residualTopUp === 1n
+    }
+    expect(sawTopUp).toBe(true)
   })
 })
