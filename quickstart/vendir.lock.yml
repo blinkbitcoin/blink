@@ -2,24 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'docs: add PR review guide distilled from repo review history (#681)'
-      sha: c0ba6712b3dc1659704ccc0acaa4df088cb640ba
+      commitTitle: 'chore(migration): make the migration flow available to all accounts,
+        drain balance to exactly zero for edge cases (#692)'
+      sha: 2a3c562fffb3a95edc3fb69e0a57118d18593c31
       tags:
-      - 0.22.20-2-gc0ba6712b
+      - 0.22.21-1-g2a3c562ff
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'docs: add PR review guide distilled from repo review history (#681)'
-      sha: c0ba6712b3dc1659704ccc0acaa4df088cb640ba
+      commitTitle: 'chore(migration): make the migration flow available to all accounts,
+        drain balance to exactly zero for edge cases (#692)'
+      sha: 2a3c562fffb3a95edc3fb69e0a57118d18593c31
       tags:
-      - 0.22.20-2-gc0ba6712b
+      - 0.22.21-1-g2a3c562ff
     path: schemas
   - git:
-      commitTitle: 'docs: add PR review guide distilled from repo review history (#681)'
-      sha: c0ba6712b3dc1659704ccc0acaa4df088cb640ba
+      commitTitle: 'chore(migration): make the migration flow available to all accounts,
+        drain balance to exactly zero for edge cases (#692)'
+      sha: 2a3c562fffb3a95edc3fb69e0a57118d18593c31
       tags:
-      - 0.22.20-2-gc0ba6712b
+      - 0.22.21-1-g2a3c562ff
     path: gql
   path: graphql
 kind: LockConfig
