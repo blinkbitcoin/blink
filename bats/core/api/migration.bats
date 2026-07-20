@@ -177,14 +177,18 @@ ln_address_transfer_input() {
 # No spark rail in the e2e stack: an lnd_outside no-amount invoice stands in for
 # the Spark wallet's swap invoice (the transfer is just a Lightning send).
 
-@test "migration: start is refused outside the wind-down cohort" {
-  # alice's +1 phone country is not in windDown.affectedCountries
-  exec_graphql 'alice' 'wind-down'
+@test "migration: a non-cohort account can start a migration" {
+  # +1 phone country is not in windDown.affectedCountries: no wind-down
+  # banner, but the flow itself is available to all accounts
+  token_name='non_cohort_migrator'
+  login_user "$token_name" "$(random_phone)"
+
+  exec_graphql "$token_name" 'wind-down'
   [[ "$(graphql_output '.data.windDown')" == "null" ]] || exit 1
 
-  exec_graphql 'alice' 'migration-start'
-  error_message="$(graphql_output '.data.migrationStart.errors[0].message')"
-  [[ "$error_message" == "This account is not eligible for migration" ]] || exit 1
+  exec_graphql "$token_name" 'migration-start'
+  [[ "$(graphql_output '.data.migrationStart.errors | length')" == "0" ]] || exit 1
+  [[ "$(graphql_output '.data.migrationStart.migration.status')" == "IN_PROGRESS" ]] || exit 1
 }
 
 @test "migration: full flow drains the btc wallet to an external invoice" {
@@ -262,6 +266,43 @@ ln_address_transfer_input() {
   invoice_state="$(lnd_outside_cli lookupinvoice "$payment_hash")"
   [[ "$(echo $invoice_state | jq -r '.state')" == "SETTLED" ]] || exit 1
   [[ "$(echo $invoice_state | jq -r '.amt_paid_sat')" == "$funding_sats" ]] || exit 1
+
+  [[ "$(btc_balance_for "$token_name")" == "0" ]] || exit 1
+}
+
+@test "migration: skipped balance gets a 1-sat top-up and drains to zero" {
+  token_name='migrator_residual'
+  phone="$(random_nl_phone)"
+  login_user "$token_name" "$phone"
+  cache_value "$token_name.phone" "$phone"
+
+  # 2111 is the smallest balance with no exact drain amount
+  funding_sats=2111
+  fund_user_lightning "$token_name" "$token_name.btc_wallet_id" "$funding_sats"
+
+  exec_graphql "$token_name" 'migration-start'
+  [[ "$(graphql_output '.data.migrationStart.errors | length')" == "0" ]] || exit 1
+
+  exec_graphql "$token_name" 'migration'
+  [[ "$(graphql_output '.data.migration.preview.balanceSats')" == "$funding_sats" ]] || exit 1
+  [[ "$(graphql_output '.data.migration.preview.feeSats')" == "10" ]] || exit 1
+  [[ "$(graphql_output '.data.migration.preview.feeCoveredByBlink')" == "false" ]] || exit 1
+  receive_sats="$(graphql_output '.data.migration.preview.receiveSats')"
+  [[ "$receive_sats" == "2101" ]] || exit 1
+
+  invoice_response="$(lnd_outside_cli addinvoice)"
+  payment_request="$(echo $invoice_response | jq -r '.payment_request')"
+  payment_hash="$(echo $invoice_response | jq -r '.r_hash')"
+  [[ "${payment_request}" != "null" ]] || exit 1
+
+  variables="$(commit_variables_for "$token_name" "$payment_request")"
+  exec_graphql "$token_name" 'migration-commit' "$variables"
+  [[ "$(graphql_output '.data.migrationCommit.errors | length')" == "0" ]] || exit 1
+  [[ "$(graphql_output '.data.migrationCommit.migration.status')" == "COMPLETED" ]] || exit 1
+
+  invoice_state="$(lnd_outside_cli lookupinvoice "$payment_hash")"
+  [[ "$(echo $invoice_state | jq -r '.state')" == "SETTLED" ]] || exit 1
+  [[ "$(echo $invoice_state | jq -r '.amt_paid_sat')" == "$receive_sats" ]] || exit 1
 
   [[ "$(btc_balance_for "$token_name")" == "0" ]] || exit 1
 }
