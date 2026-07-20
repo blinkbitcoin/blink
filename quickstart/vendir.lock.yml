@@ -2,27 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'chore(migration): make the migration flow available to all accounts,
-        drain balance to exactly zero for edge cases (#692)'
-      sha: 2a3c562fffb3a95edc3fb69e0a57118d18593c31
+      commitTitle: 'feat: account migration deeplink (#678)...'
+      sha: 3f54ac89b06b90fe42258215b580337f4c554535
       tags:
-      - 0.22.21-1-g2a3c562ff
+      - 0.22.23
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'chore(migration): make the migration flow available to all accounts,
-        drain balance to exactly zero for edge cases (#692)'
-      sha: 2a3c562fffb3a95edc3fb69e0a57118d18593c31
+      commitTitle: 'feat: account migration deeplink (#678)...'
+      sha: 3f54ac89b06b90fe42258215b580337f4c554535
       tags:
-      - 0.22.21-1-g2a3c562ff
+      - 0.22.23
     path: schemas
   - git:
-      commitTitle: 'chore(migration): make the migration flow available to all accounts,
-        drain balance to exactly zero for edge cases (#692)'
-      sha: 2a3c562fffb3a95edc3fb69e0a57118d18593c31
+      commitTitle: 'feat: account migration deeplink (#678)...'
+      sha: 3f54ac89b06b90fe42258215b580337f4c554535
       tags:
-      - 0.22.21-1-g2a3c562ff
+      - 0.22.23
     path: gql
   path: graphql
 kind: LockConfig
