@@ -283,6 +283,9 @@ const windDownOperativeDate = (value: string): Date => {
 
 const windDownConfig: WindDownConfig = {
   ...yamlConfig.windDown,
+  excludedAccountIds: yamlConfig.windDown.excludedAccountIds.map((id) =>
+    id.toLowerCase(),
+  ),
   regions: yamlConfig.windDown.regions.map((region) => ({
     ...region,
     receiveDisabledAt: windDownOperativeDate(region.receiveDisabledAt),
