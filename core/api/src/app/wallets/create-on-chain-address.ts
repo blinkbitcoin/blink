@@ -1,3 +1,5 @@
+import { checkReceiveAllowed } from "@/app/wind-down/check-receive-allowed"
+
 import { AccountValidator } from "@/domain/accounts"
 import { OnChainAddressNotFoundError } from "@/domain/bitcoin/onchain"
 import { RateLimitConfig } from "@/domain/rate-limit"
@@ -25,6 +27,9 @@ export const createOnChainAddress = async ({
 
   const accountValidator = AccountValidator(account)
   if (accountValidator instanceof Error) return accountValidator
+
+  const receiveAllowed = await checkReceiveAllowed({ account })
+  if (receiveAllowed instanceof Error) return receiveAllowed
 
   const onChain = OnChainService()
 

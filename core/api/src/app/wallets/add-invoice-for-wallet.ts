@@ -1,5 +1,7 @@
 import { validateIsBtcWallet, validateIsUsdWallet } from "./validate"
 
+import { checkReceiveAllowed } from "@/app/wind-down/check-receive-allowed"
+
 import { getCallbackServiceConfig } from "@/config"
 import { AccountValidator } from "@/domain/accounts"
 import { checkedToLedgerExternalId } from "@/domain/ledger"
@@ -352,6 +354,9 @@ const addInvoice = async ({
 
   const accountValidator = AccountValidator(account)
   if (accountValidator instanceof Error) return accountValidator
+
+  const receiveAllowed = await checkReceiveAllowed({ account })
+  if (receiveAllowed instanceof Error) return receiveAllowed
 
   const limitOk = await limitCheckFn(wallet.accountId)
   if (limitOk instanceof Error) return limitOk
