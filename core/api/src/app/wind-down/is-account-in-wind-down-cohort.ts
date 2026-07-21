@@ -16,8 +16,10 @@ export const evaluateWindDownCohortMatch = async ({
 }: {
   account: Account
 }): Promise<WindDownCohortMatch | ApplicationError> => {
-  const { affectedCountries } = getWindDownConfig()
+  const { affectedCountries, excludedAccountIds } = getWindDownConfig()
   if (affectedCountries.length === 0) return { matched: false }
+
+  if (excludedAccountIds.includes(account.id)) return { matched: false }
 
   const user = await UsersRepository().findById(account.kratosUserId)
   if (user instanceof Error) return user
