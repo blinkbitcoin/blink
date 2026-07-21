@@ -2,24 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat: account migration deeplink (#678)...'
-      sha: 3f54ac89b06b90fe42258215b580337f4c554535
+      commitTitle: 'feat(wind-down): exclude configured accounts from the cohort (#697)'
+      sha: aa030b6d8b53e1f3723836c18541cbc58e97c786
       tags:
-      - 0.22.23
+      - 0.22.23-2-gaa030b6d8
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat: account migration deeplink (#678)...'
-      sha: 3f54ac89b06b90fe42258215b580337f4c554535
+      commitTitle: 'feat(wind-down): exclude configured accounts from the cohort (#697)'
+      sha: aa030b6d8b53e1f3723836c18541cbc58e97c786
       tags:
-      - 0.22.23
+      - 0.22.23-2-gaa030b6d8
     path: schemas
   - git:
-      commitTitle: 'feat: account migration deeplink (#678)...'
-      sha: 3f54ac89b06b90fe42258215b580337f4c554535
+      commitTitle: 'feat(wind-down): exclude configured accounts from the cohort (#697)'
+      sha: aa030b6d8b53e1f3723836c18541cbc58e97c786
       tags:
-      - 0.22.23
+      - 0.22.23-2-gaa030b6d8
     path: gql
   path: graphql
 kind: LockConfig
