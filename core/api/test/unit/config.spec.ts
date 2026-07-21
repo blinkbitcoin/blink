@@ -1,4 +1,6 @@
 import fs from "fs"
+import os from "os"
+import path from "path"
 
 import Ajv from "ajv"
 import addFormats from "ajv-formats"
@@ -121,6 +123,46 @@ describe("config.ts", () => {
       // @ts-ignore-next-line no-implicit-any error
       const valid = validate(freshYamlConfig)
       expect(valid).toBeFalsy()
+    })
+
+    it("fails when an excluded account id repeats", () => {
+      const freshYamlConfig = JSON.parse(JSON.stringify(yamlConfig))
+      freshYamlConfig.windDown.excludedAccountIds = [
+        "00000000-0000-0000-0000-000000000001",
+        "00000000-0000-0000-0000-000000000001",
+      ]
+
+      // @ts-ignore-next-line no-implicit-any error
+      const valid = validate(freshYamlConfig)
+      expect(valid).toBeFalsy()
+    })
+
+    it("lowercases an uppercase excluded account id at load", () => {
+      const customPath = path.join(os.tmpdir(), "winddown-uppercase-id.yaml")
+      fs.writeFileSync(
+        customPath,
+        yaml.dump({
+          windDown: { excludedAccountIds: ["00000000-0000-0000-0000-00000000000A"] },
+        }),
+      )
+      const originalArgv = process.argv[2]
+      process.argv[2] = customPath
+      try {
+        jest.isolateModules(() => {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const { getWindDownConfig } = require("@/config/yaml")
+          expect(getWindDownConfig().excludedAccountIds).toEqual([
+            "00000000-0000-0000-0000-00000000000a",
+          ])
+        })
+      } finally {
+        if (originalArgv === undefined) {
+          process.argv.splice(2, 1)
+        } else {
+          process.argv[2] = originalArgv
+        }
+        fs.unlinkSync(customPath)
+      }
     })
 
     it("fails validation missing required property", () => {
