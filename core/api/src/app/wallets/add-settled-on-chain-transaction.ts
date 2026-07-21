@@ -14,6 +14,7 @@ import { getCurrentPriceAsDisplayPriceRatio, usdFromBtcMidPriceFn } from "@/app/
 import { DepositFeeCalculator } from "@/domain/fees"
 import { DisplayAmountsConverter } from "@/domain/fiat"
 import { CouldNotFindError, LessThanDustThresholdError } from "@/domain/errors"
+import { ReceiveDisabledError } from "@/domain/wind-down"
 import { WalletAddressReceiver } from "@/domain/wallet-on-chain/wallet-address-receiver"
 import { toDisplayBaseAmount } from "@/domain/payments"
 
@@ -227,7 +228,9 @@ export const addSettledTransaction = async (args: {
       walletId: walletDescriptor.id,
       requestId: newAddressRequestId,
     })
-    if (newAddress instanceof Error) return newAddress
+    if (newAddress instanceof Error && !(newAddress instanceof ReceiveDisabledError)) {
+      return newAddress
+    }
   }
 
   return true
