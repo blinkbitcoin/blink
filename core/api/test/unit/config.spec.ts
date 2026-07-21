@@ -103,6 +103,26 @@ describe("config.ts", () => {
       expect(valid).toBeFalsy()
     })
 
+    it("passes with a valid windDown excluded account id", () => {
+      const freshYamlConfig = JSON.parse(JSON.stringify(yamlConfig))
+      freshYamlConfig.windDown.excludedAccountIds = [
+        "00000000-0000-0000-0000-000000000001",
+      ]
+
+      // @ts-ignore-next-line no-implicit-any error
+      const valid = validate(freshYamlConfig)
+      expect(valid).toBeTruthy()
+    })
+
+    it("fails when an excluded account id is not a uuid", () => {
+      const freshYamlConfig = JSON.parse(JSON.stringify(yamlConfig))
+      freshYamlConfig.windDown.excludedAccountIds = ["not-a-uuid"]
+
+      // @ts-ignore-next-line no-implicit-any error
+      const valid = validate(freshYamlConfig)
+      expect(valid).toBeFalsy()
+    })
+
     it("fails validation missing required property", () => {
       const clonedConfig = JSON.parse(JSON.stringify(yamlConfig))
       delete clonedConfig.buildVersion

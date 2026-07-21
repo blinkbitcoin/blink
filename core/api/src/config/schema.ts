@@ -1079,7 +1079,7 @@ export const configSchema = {
         },
         excludedAccountIds: {
           type: "array",
-          items: { type: "string" },
+          items: { type: "string", format: "uuid" },
           uniqueItems: true,
           default: [],
         },
