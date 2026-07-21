@@ -194,6 +194,21 @@ export type AccountLimits = {
   readonly withdrawal: ReadonlyArray<AccountLimit>;
 };
 
+export type AccountMigration = {
+  readonly __typename: 'AccountMigration';
+  readonly preview: AccountMigrationPreview;
+  readonly status: MigrationStatus;
+  readonly transferPaymentHash?: Maybe<Scalars['String']['output']>;
+};
+
+export type AccountMigrationPreview = {
+  readonly __typename: 'AccountMigrationPreview';
+  readonly balanceSats: Scalars['SatAmount']['output'];
+  readonly feeCoveredByBlink: Scalars['Boolean']['output'];
+  readonly feeSats: Scalars['SatAmount']['output'];
+  readonly receiveSats: Scalars['SatAmount']['output'];
+};
+
 export type AccountUpdateDefaultWalletIdInput = {
   readonly walletId: Scalars['WalletId']['input'];
 };
@@ -218,6 +233,15 @@ export type AccountUpdateNotificationSettingsPayload = {
   readonly __typename: 'AccountUpdateNotificationSettingsPayload';
   readonly account?: Maybe<ConsumerAccount>;
   readonly errors: ReadonlyArray<Error>;
+};
+
+export type AccountWindDown = {
+  readonly __typename: 'AccountWindDown';
+  readonly finalDeadline: Scalars['Timestamp']['output'];
+  readonly gateArmsAt: Scalars['Timestamp']['output'];
+  readonly receiveDisabledAt: Scalars['Timestamp']['output'];
+  readonly status: WindDownStatus;
+  readonly timezone: Scalars['String']['output'];
 };
 
 export type AuthTokenPayload = {
@@ -709,6 +733,7 @@ export type LnInvoiceCreateOnBehalfOfRecipientInput = {
   readonly memo?: InputMaybe<Scalars['Memo']['input']>;
   /** Wallet ID for a BTC wallet which belongs to any account. */
   readonly recipientWalletId: Scalars['WalletId']['input'];
+  readonly webhookUrl?: InputMaybe<Scalars['EndpointUrl']['input']>;
 };
 
 export type LnInvoiceFeeProbeInput = {
@@ -788,6 +813,7 @@ export type LnNoAmountInvoiceCreateOnBehalfOfRecipientInput = {
   readonly memo?: InputMaybe<Scalars['Memo']['input']>;
   /** ID for either a USD or BTC wallet which belongs to the account of any user. */
   readonly recipientWalletId: Scalars['WalletId']['input'];
+  readonly webhookUrl?: InputMaybe<Scalars['EndpointUrl']['input']>;
 };
 
 export type LnNoAmountInvoiceFeeProbeInput = {
@@ -851,6 +877,7 @@ export type LnUsdInvoiceBtcDenominatedCreateOnBehalfOfRecipientInput = {
   readonly memo?: InputMaybe<Scalars['Memo']['input']>;
   /** Wallet ID for a USD wallet which belongs to the account of any user. */
   readonly recipientWalletId: Scalars['WalletId']['input'];
+  readonly webhookUrl?: InputMaybe<Scalars['EndpointUrl']['input']>;
 };
 
 export type LnUsdInvoiceCreateInput = {
@@ -876,6 +903,7 @@ export type LnUsdInvoiceCreateOnBehalfOfRecipientInput = {
   readonly memo?: InputMaybe<Scalars['Memo']['input']>;
   /** Wallet ID for a USD wallet which belongs to the account of any user. */
   readonly recipientWalletId: Scalars['WalletId']['input'];
+  readonly webhookUrl?: InputMaybe<Scalars['EndpointUrl']['input']>;
 };
 
 export type LnUsdInvoiceFeeProbeInput = {
@@ -930,6 +958,57 @@ export type MerchantPayload = {
   readonly merchant?: Maybe<Merchant>;
 };
 
+export type MigrationCommitInput = {
+  readonly backupAttested: Scalars['Boolean']['input'];
+  readonly disclosureVersion: Scalars['String']['input'];
+  readonly proofSignature: Scalars['String']['input'];
+  readonly proofTimestamp: Scalars['SafeInt']['input'];
+  readonly sparkInvoice: Scalars['LnPaymentRequest']['input'];
+  readonly sparkPubkey: Scalars['String']['input'];
+};
+
+export type MigrationLnAddressTransferInput = {
+  readonly proofSignature: Scalars['String']['input'];
+  readonly proofTimestamp: Scalars['SafeInt']['input'];
+  readonly sparkPubkey: Scalars['String']['input'];
+};
+
+export type MigrationLnAddressTransferPayload = {
+  readonly __typename: 'MigrationLnAddressTransferPayload';
+  readonly errors: ReadonlyArray<Error>;
+  readonly results: ReadonlyArray<MigrationLnAddressTransferResult>;
+};
+
+export type MigrationLnAddressTransferResult = {
+  readonly __typename: 'MigrationLnAddressTransferResult';
+  readonly identifier: Scalars['String']['output'];
+  readonly lightningAddress?: Maybe<Scalars['String']['output']>;
+  readonly status: MigrationLnAddressTransferStatus;
+};
+
+export const MigrationLnAddressTransferStatus = {
+  AlreadyTransferred: 'ALREADY_TRANSFERRED',
+  Failed: 'FAILED',
+  SkippedNotRegistered: 'SKIPPED_NOT_REGISTERED',
+  Transferred: 'TRANSFERRED'
+} as const;
+
+export type MigrationLnAddressTransferStatus = typeof MigrationLnAddressTransferStatus[keyof typeof MigrationLnAddressTransferStatus];
+export type MigrationPayload = {
+  readonly __typename: 'MigrationPayload';
+  readonly errors: ReadonlyArray<Error>;
+  readonly migration?: Maybe<AccountMigration>;
+};
+
+export const MigrationStatus = {
+  Completed: 'COMPLETED',
+  Failed: 'FAILED',
+  InProgress: 'IN_PROGRESS',
+  NotStarted: 'NOT_STARTED',
+  Transferring: 'TRANSFERRING'
+} as const;
+
+export type MigrationStatus = typeof MigrationStatus[keyof typeof MigrationStatus];
 export type MobileVersions = {
   readonly __typename: 'MobileVersions';
   readonly currentSupported: Scalars['Int']['output'];
@@ -1039,6 +1118,9 @@ export type Mutation = {
   /** Sends a payment to a lightning address. */
   readonly lnurlPaymentSend: PaymentSendPayload;
   readonly merchantMapSuggest: MerchantPayload;
+  readonly migrationCommit: MigrationPayload;
+  readonly migrationLnAddressTransfer: MigrationLnAddressTransferPayload;
+  readonly migrationStart: MigrationPayload;
   readonly onChainAddressCreate: OnChainAddressPayload;
   readonly onChainAddressCurrent: OnChainAddressPayload;
   readonly onChainPaymentSend: PaymentSendPayload;
@@ -1226,6 +1308,16 @@ export type MutationLnurlPaymentSendArgs = {
 
 export type MutationMerchantMapSuggestArgs = {
   input: MerchantMapSuggestInput;
+};
+
+
+export type MutationMigrationCommitArgs = {
+  input: MigrationCommitInput;
+};
+
+
+export type MutationMigrationLnAddressTransferArgs = {
+  input: MigrationLnAddressTransferInput;
 };
 
 
@@ -1588,6 +1680,7 @@ export type Query = {
   readonly lnInvoicePaymentStatusByHash: LnInvoicePaymentStatus;
   readonly lnInvoicePaymentStatusByPaymentRequest: LnInvoicePaymentStatus;
   readonly me?: Maybe<User>;
+  readonly migration?: Maybe<AccountMigration>;
   readonly mobileVersions?: Maybe<ReadonlyArray<Maybe<MobileVersions>>>;
   readonly onChainTxFee: OnChainTxFee;
   readonly onChainUsdTxFee: OnChainUsdTxFee;
@@ -1599,6 +1692,7 @@ export type Query = {
   /** @deprecated will be migrated to AccountDefaultWalletId */
   readonly userDefaultWalletId: Scalars['WalletId']['output'];
   readonly usernameAvailable?: Maybe<Scalars['Boolean']['output']>;
+  readonly windDown?: Maybe<AccountWindDown>;
 };
 
 
@@ -2276,6 +2370,13 @@ export const WalletCurrency = {
 } as const;
 
 export type WalletCurrency = typeof WalletCurrency[keyof typeof WalletCurrency];
+export const WindDownStatus = {
+  GatedClosed: 'GATED_CLOSED',
+  PreCutoff: 'PRE_CUTOFF',
+  ReceiveDisabled: 'RECEIVE_DISABLED'
+} as const;
+
+export type WindDownStatus = typeof WindDownStatus[keyof typeof WindDownStatus];
 export type CountryCodesQueryVariables = Exact<{ [key: string]: never; }>;
 
 
