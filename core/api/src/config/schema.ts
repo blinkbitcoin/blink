@@ -1077,6 +1077,12 @@ export const configSchema = {
           type: "array",
           items: { type: "string", pattern: countryCodePattern },
         },
+        excludedAccountIds: {
+          type: "array",
+          items: { type: "string", format: "uuid" },
+          uniqueItems: true,
+          default: [],
+        },
         regions: {
           type: "array",
           minItems: 1,
@@ -1113,11 +1119,12 @@ export const configSchema = {
           },
         },
       },
-      required: ["enabled", "affectedCountries", "regions"],
+      required: ["enabled", "affectedCountries", "excludedAccountIds", "regions"],
       additionalProperties: false,
       default: {
         enabled: true,
         affectedCountries: ["NL"],
+        excludedAccountIds: [],
         regions: [
           {
             code: DEFAULT_WIND_DOWN_REGION_CODE,

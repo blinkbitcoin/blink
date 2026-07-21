@@ -35,6 +35,7 @@ const windDownConfig = (overrides: Partial<WindDownConfig> = {}): WindDownConfig
   ({
     enabled: true,
     affectedCountries: ["FR", "DE", "IS"],
+    excludedAccountIds: [],
     regions: [],
     ...overrides,
   }) as WindDownConfig
@@ -201,6 +202,47 @@ describe("isAccountInWindDownCohort", () => {
     mockGetWindDownConfig.mockReturnValue(windDownConfig({ affectedCountries: [] }))
 
     expect(await isAccountInWindDownCohort({ account: makeAccount() })).toBe(false)
+
+    expect(mockFindById).not.toHaveBeenCalled()
+    expect(mockFindEarliestByAccountId).not.toHaveBeenCalled()
+  })
+
+  it("excludes an account listed in excludedAccountIds without reading repositories", async () => {
+    withUser(FR_PHONE)
+    const account = makeAccount()
+    mockGetWindDownConfig.mockReturnValue(
+      windDownConfig({ excludedAccountIds: [account.id] }),
+    )
+
+    expect(await evaluateWindDownCohortMatch({ account })).toEqual({ matched: false })
+
+    expect(mockFindById).not.toHaveBeenCalled()
+    expect(mockFindEarliestByAccountId).not.toHaveBeenCalled()
+  })
+
+  it("still matches an account when a different id is excluded", async () => {
+    withUser(FR_PHONE)
+    mockGetWindDownConfig.mockReturnValue(
+      windDownConfig({ excludedAccountIds: [crypto.randomUUID()] }),
+    )
+
+    expect(await evaluateWindDownCohortMatch({ account: makeAccount() })).toEqual({
+      matched: true,
+      matchedCountry: "FR",
+    })
+  })
+
+  it("returns not-matched when the account is excluded and affectedCountries is empty", async () => {
+    withUser(FR_PHONE)
+    const account = makeAccount()
+    mockGetWindDownConfig.mockReturnValue(
+      windDownConfig({
+        affectedCountries: [],
+        excludedAccountIds: [account.id],
+      }),
+    )
+
+    expect(await evaluateWindDownCohortMatch({ account })).toEqual({ matched: false })
 
     expect(mockFindById).not.toHaveBeenCalled()
     expect(mockFindEarliestByAccountId).not.toHaveBeenCalled()

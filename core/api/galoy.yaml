@@ -318,6 +318,7 @@ windDown:
   enabled: true
   affectedCountries:
     - NL
+  excludedAccountIds: []
   regions:
     - code: default
       timezone: Europe/Paris
