@@ -270,6 +270,68 @@ ln_address_transfer_input() {
   [[ "$(btc_balance_for "$token_name")" == "0" ]] || exit 1
 }
 
+@test "migration: failed drain reclaims the de-minimis top-up" {
+  token_name='migrator_reclaim_sync'
+  login_user "$token_name" "$(random_phone)"
+
+  funding_sats=50
+  fund_user_lightning "$token_name" "$token_name.btc_wallet_id" "$funding_sats"
+
+  exec_graphql "$token_name" 'migration-start'
+  [[ "$(graphql_output '.data.migrationStart.errors | length')" == "0" ]] || exit 1
+
+  secret=$(xxd -l 32 -c 256 -p /dev/urandom)
+  payment_hash=$(echo -n $secret | xxd -r -p | sha256sum | cut -d ' ' -f1)
+  invoice_response="$(lnd_outside_cli addholdinvoice $payment_hash)"
+  payment_request="$(echo $invoice_response | jq -r '.payment_request')"
+  [[ "${payment_request}" != "null" ]] || exit 1
+  lnd_outside_cli cancelinvoice "$payment_hash"
+
+  variables="$(commit_variables_for "$token_name" "$payment_request")"
+  exec_graphql "$token_name" 'migration-commit' "$variables"
+  [[ "$(graphql_output '.data.migrationCommit.errors | length')" != "0" ]] || exit 1
+
+  exec_graphql "$token_name" 'migration'
+  [[ "$(graphql_output '.data.migration.status')" == "FAILED" ]] || exit 1
+
+  [[ "$(btc_balance_for "$token_name")" == "$funding_sats" ]] || exit 1
+}
+
+@test "migration: drain that fails after pending reclaims the de-minimis top-up" {
+  token_name='migrator_reclaim_async'
+  login_user "$token_name" "$(random_phone)"
+
+  funding_sats=50
+  fund_user_lightning "$token_name" "$token_name.btc_wallet_id" "$funding_sats"
+
+  exec_graphql "$token_name" 'migration-start'
+  [[ "$(graphql_output '.data.migrationStart.errors | length')" == "0" ]] || exit 1
+
+  secret=$(xxd -l 32 -c 256 -p /dev/urandom)
+  payment_hash=$(echo -n $secret | xxd -r -p | sha256sum | cut -d ' ' -f1)
+  invoice_response="$(lnd_outside_cli addholdinvoice $payment_hash)"
+  payment_request="$(echo $invoice_response | jq -r '.payment_request')"
+  [[ "${payment_request}" != "null" ]] || exit 1
+
+  variables="$(commit_variables_for "$token_name" "$payment_request")"
+  exec_graphql "$token_name" 'migration-commit' "$variables"
+  [[ "$(graphql_output '.data.migrationCommit.errors | length')" == "0" ]] || exit 1
+  [[ "$(graphql_output '.data.migrationCommit.migration.status')" == "TRANSFERRING" ]] || exit 1
+
+  lnd_outside_cli cancelinvoice "$payment_hash"
+
+  migration_failed() {
+    exec_graphql "$token_name" 'migration'
+    [[ "$(graphql_output '.data.migration.status')" == "FAILED" ]] || exit 1
+  }
+  retry 30 1 migration_failed
+
+  balance_restored() {
+    [[ "$(btc_balance_for "$token_name")" == "$funding_sats" ]] || exit 1
+  }
+  retry 15 1 balance_restored
+}
+
 @test "migration: skipped balance gets a 1-sat top-up and drains to zero" {
   token_name='migrator_residual'
   phone="$(random_nl_phone)"
