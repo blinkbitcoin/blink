@@ -36,6 +36,7 @@ type MigrationFlow = {
   destinationSparkPubkey?: SparkPubkey
   destinationProofVerified: boolean
   lnPaymentHash?: PaymentHash
+  topUpSats?: Satoshis
   disclosureVersion?: string
   steps: MigrationFlowStep[]
   createdAt: Date
@@ -80,6 +81,17 @@ type MigrationFlowAddStepArgs = {
   step: MigrationFlowStepInput
 }
 
+type MigrationFlowRecordTopUpArgs = {
+  accountId: AccountId
+  topUpSats: Satoshis
+  step: MigrationFlowStepInput
+}
+
+type MigrationFlowClearTopUpArgs = {
+  accountId: AccountId
+  step: MigrationFlowStepInput
+}
+
 interface IMigrationFlowStateRepository {
   findByAccountId(accountId: AccountId): Promise<MigrationFlow | RepositoryError>
   findByLnPaymentHash(
@@ -92,4 +104,8 @@ interface IMigrationFlowStateRepository {
     args: MigrationFlowPhaseTransitionArgs,
   ): Promise<MigrationFlow | MigrationFlowError | RepositoryError>
   addStep(args: MigrationFlowAddStepArgs): Promise<MigrationFlow | RepositoryError>
+  recordTopUp(
+    args: MigrationFlowRecordTopUpArgs,
+  ): Promise<MigrationFlow | RepositoryError>
+  clearTopUp(args: MigrationFlowClearTopUpArgs): Promise<MigrationFlow | RepositoryError>
 }

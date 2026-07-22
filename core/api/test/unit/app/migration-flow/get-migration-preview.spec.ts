@@ -3,6 +3,10 @@ jest.mock("@/config", () => ({
   getCustodialMigrationFlowConfig: jest.fn(),
 }))
 
+jest.mock("@/app/migration-flow/reclaim-top-up", () => ({
+  reclaimMigrationTopUp: jest.fn(),
+}))
+
 jest.mock("@/app/migration-flow/settle-migration-flow", () => ({
   completeMigrationFlowForSettledPayment: jest.fn(),
 }))

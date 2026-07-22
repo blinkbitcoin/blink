@@ -147,12 +147,56 @@ export const MigrationFlowStateRepository = (): IMigrationFlowStateRepository =>
     }
   }
 
+  const recordTopUp = async ({
+    accountId,
+    topUpSats,
+    step,
+  }: MigrationFlowRecordTopUpArgs): Promise<MigrationFlow | RepositoryError> => {
+    try {
+      const result = await MigrationFlowState.findOneAndUpdate(
+        { accountId },
+        {
+          $set: { topUpSats, updatedAt: new Date() },
+          $push: { steps: { step: step.step, detail: step.detail } },
+        },
+        { new: true },
+      )
+      if (!result) return new CouldNotFindMigrationFlowStateError(accountId)
+      return migrationFlowFromRaw(result)
+    } catch (err) {
+      return parseRepositoryError(err)
+    }
+  }
+
+  const clearTopUp = async ({
+    accountId,
+    step,
+  }: MigrationFlowClearTopUpArgs): Promise<MigrationFlow | RepositoryError> => {
+    try {
+      const result = await MigrationFlowState.findOneAndUpdate(
+        { accountId },
+        {
+          $set: { updatedAt: new Date() },
+          $unset: { topUpSats: "" },
+          $push: { steps: { step: step.step, detail: step.detail } },
+        },
+        { new: true },
+      )
+      if (!result) return new CouldNotFindMigrationFlowStateError(accountId)
+      return migrationFlowFromRaw(result)
+    } catch (err) {
+      return parseRepositoryError(err)
+    }
+  }
+
   return {
     findByAccountId,
     findByLnPaymentHash,
     upsertByAccountId,
     updatePhase,
     addStep,
+    recordTopUp,
+    clearTopUp,
   }
 }
 
@@ -162,6 +206,7 @@ const migrationFlowFromRaw = (result: MigrationFlowStateRecord): MigrationFlow =
   destinationSparkPubkey: (result.destinationSparkPubkey as SparkPubkey) || undefined,
   destinationProofVerified: result.destinationProofVerified,
   lnPaymentHash: (result.lnPaymentHash as PaymentHash) || undefined,
+  topUpSats: (result.topUpSats as Satoshis) || undefined,
   disclosureVersion: result.disclosureVersion || undefined,
   steps: (result.steps || []).map((step) => ({
     step: step.step,

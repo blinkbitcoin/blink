@@ -212,6 +212,7 @@ interface MigrationFlowStateRecord {
   destinationSparkPubkey?: string
   destinationProofVerified: boolean
   lnPaymentHash?: string
+  topUpSats?: number
   disclosureVersion?: string
   steps: MigrationFlowStateStepRecord[]
   createdAt: Date

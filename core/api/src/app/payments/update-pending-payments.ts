@@ -237,7 +237,7 @@ const updatePendingPayment = wrapAsyncToRunInSpan({
     if (accountWalletDescriptors instanceof Error) return accountWalletDescriptors
 
     // Pass on to lock
-    return LockService().lockWalletId(walletId, () =>
+    const stepsResult = await LockService().lockWalletId(walletId, () =>
       lockedPendingPaymentSteps({
         paymentHash,
         destination: decodedInvoice?.destination,
@@ -250,6 +250,13 @@ const updatePendingPayment = wrapAsyncToRunInSpan({
         logger,
       }),
     )
+    if (stepsResult instanceof Error) return stepsResult
+
+    if (stepsResult.paymentFailed) {
+      // after lock release: the reclaim inside re-takes the same wallet lock
+      await failMigrationFlowForFailedPayment({ paymentHash })
+    }
+    return stepsResult.result
   },
 })
 
@@ -273,7 +280,9 @@ const lockedPendingPaymentSteps = async ({
   notificationRecipient: NotificationRecipient
 
   logger: Logger
-}): Promise<true | ApplicationError> => {
+}): Promise<
+  { result: true | ApplicationError; paymentFailed: boolean } | ApplicationError
+> => {
   const { journalId } = pendingPayment
   const { walletId } = notificationRecipient
 
@@ -301,7 +310,7 @@ const lockedPendingPaymentSteps = async ({
 
   if (recorded) {
     paymentLogger.info("payment has already been processed")
-    return true
+    return { result: true, paymentFailed: false }
   }
 
   const inputAmount = inputAmountFromLedgerTransaction(pendingPayment)
@@ -383,8 +392,7 @@ const lockedPendingPaymentSteps = async ({
         journalId,
         notificationRecipient,
       })
-      await failMigrationFlowForFailedPayment({ paymentHash })
-      return finalized
+      return { result: finalized, paymentFailed: true }
     }
 
     const reimbursed = await reimburseFailedUsdPayment({
@@ -416,8 +424,7 @@ const lockedPendingPaymentSteps = async ({
       journalId,
       notificationRecipient,
     })
-    await failMigrationFlowForFailedPayment({ paymentHash })
-    return finalized
+    return { result: finalized, paymentFailed: true }
   }
 
   paymentLogger.info(
@@ -442,7 +449,7 @@ const lockedPendingPaymentSteps = async ({
       notificationRecipient,
     })
     await completeMigrationFlowForSettledPayment({ paymentHash })
-    return finalized
+    return { result: finalized, paymentFailed: false }
   }
 
   const { displayAmount, displayFee, displayCurrency } = pendingPayment
@@ -468,7 +475,7 @@ const lockedPendingPaymentSteps = async ({
     notificationRecipient,
   })
   await completeMigrationFlowForSettledPayment({ paymentHash })
-  return finalized
+  return { result: finalized, paymentFailed: false }
 }
 
 const reconstructPendingPaymentFlow = async <

@@ -3,6 +3,10 @@ jest.mock("@/config", () => ({
   getCustodialMigrationFlowConfig: jest.fn(),
 }))
 
+jest.mock("@/app/migration-flow/reclaim-top-up", () => ({
+  reclaimMigrationTopUp: jest.fn(),
+}))
+
 jest.mock("@/app/migration-flow/settle-migration-flow", () => ({
   completeMigrationFlowForSettledPayment: jest.fn(),
 }))
@@ -29,6 +33,7 @@ jest.mock("@/services/mongoose", () => ({
     findWalletById: jest.fn(),
     addFlowStep: jest.fn(),
     updateFlowPhase: jest.fn(),
+    recordFlowTopUp: jest.fn(),
   },
   AccountsRepository: () => ({
     findById: jest.requireMock("@/services/mongoose").__mocks.findAccountById,
@@ -36,6 +41,7 @@ jest.mock("@/services/mongoose", () => ({
   MigrationFlowStateRepository: () => ({
     addStep: jest.requireMock("@/services/mongoose").__mocks.addFlowStep,
     updatePhase: jest.requireMock("@/services/mongoose").__mocks.updateFlowPhase,
+    recordTopUp: jest.requireMock("@/services/mongoose").__mocks.recordFlowTopUp,
   }),
   WalletsRepository: () => ({
     findById: jest.requireMock("@/services/mongoose").__mocks.findWalletById,
@@ -47,6 +53,7 @@ jest.mock("@/services/tracing", () => ({
 }))
 
 import { executeMigrationTransfer } from "@/app/migration-flow/execute-transfer"
+import { reclaimMigrationTopUp } from "@/app/migration-flow/reclaim-top-up"
 import { completeMigrationFlowForSettledPayment } from "@/app/migration-flow/settle-migration-flow"
 import { intraledgerPaymentSendWalletIdForBtcWallet } from "@/app/payments/send-intraledger"
 import { payNoAmountInvoiceByWalletId } from "@/app/payments/send-lightning"
@@ -64,7 +71,9 @@ const mocks = jest.requireMock("@/services/mongoose").__mocks as {
   findWalletById: jest.Mock
   addFlowStep: jest.Mock
   updateFlowPhase: jest.Mock
+  recordFlowTopUp: jest.Mock
 }
+const mockReclaimTopUp = reclaimMigrationTopUp as jest.Mock
 const mockGetBalanceForWallet = getBalanceForWallet as jest.Mock
 const mockPayNoAmountInvoice = payNoAmountInvoiceByWalletId as jest.Mock
 const mockIntraledgerSend = intraledgerPaymentSendWalletIdForBtcWallet as jest.Mock
@@ -90,6 +99,8 @@ describe("executeMigrationTransfer", () => {
     jest.clearAllMocks()
     mocks.addFlowStep.mockResolvedValue({} as MigrationFlow)
     mocks.updateFlowPhase.mockResolvedValue({} as MigrationFlow)
+    mocks.recordFlowTopUp.mockResolvedValue({} as MigrationFlow)
+    mockReclaimTopUp.mockResolvedValue(undefined)
     mocks.findWalletById.mockResolvedValue({
       id: bankOwnerWalletId,
       accountId: bankOwnerAccount.id,
@@ -150,6 +161,7 @@ describe("executeMigrationTransfer", () => {
 
     expect(result).toBe(topUpError)
     expect(mockPayNoAmountInvoice).not.toHaveBeenCalled()
+    expect(mockReclaimTopUp).not.toHaveBeenCalled()
     expect(mocks.updateFlowPhase).toHaveBeenCalledWith(
       expect.objectContaining({
         accountId,
@@ -200,11 +212,12 @@ describe("executeMigrationTransfer", () => {
     expect(mockPayNoAmountInvoice).toHaveBeenCalledWith(
       expect.objectContaining({ amount: 50, skipChecks: true }),
     )
-    const feeStep = mocks.addFlowStep.mock.calls.find(
+    const feeStep = mocks.recordFlowTopUp.mock.calls.find(
       ([arg]) => arg.step.step === "reserve-top-up",
     )
     expect(feeStep).toBeDefined()
     expect(feeStep[0].step.detail).toMatch(/Spark network fee|de-minimis/i)
+    expect(feeStep[0].topUpSats).toBe(10)
   })
 
   it("subsidizes exactly at the threshold (B = 100) and drains the full balance to zero", async () => {
@@ -312,6 +325,7 @@ describe("executeMigrationTransfer", () => {
         toPhase: MigrationFlowPhase.Failed,
       }),
     )
+    expect(mockReclaimTopUp).not.toHaveBeenCalled()
     expect(mockCompleteFlow).not.toHaveBeenCalled()
   })
 
@@ -392,5 +406,77 @@ describe("executeMigrationTransfer", () => {
         toPhase: MigrationFlowPhase.Failed,
       }),
     )
+  })
+
+  it("reclaims the top-up when the drain fails after a de-minimis subsidy", async () => {
+    mockGetBalanceForWallet.mockResolvedValue(50)
+    const routeError = new RouteNotFoundError()
+    mockPayNoAmountInvoice.mockResolvedValue(routeError)
+
+    const result = await executeMigrationTransfer(transferArgs)
+
+    expect(result).toBe(routeError)
+    expect(mockReclaimTopUp).toHaveBeenCalledTimes(1)
+    expect(mockReclaimTopUp).toHaveBeenCalledWith({ accountId, topUpSats: 10 })
+    expect(mockReclaimTopUp.mock.invocationCallOrder[0]).toBeGreaterThan(
+      mocks.updateFlowPhase.mock.invocationCallOrder[0],
+    )
+  })
+
+  it("reclaims the top-up when the invoice was already paid after a subsidy", async () => {
+    mockGetBalanceForWallet.mockResolvedValue(50)
+    mockPayNoAmountInvoice.mockResolvedValue({ status: PaymentSendStatus.AlreadyPaid })
+
+    const result = await executeMigrationTransfer(transferArgs)
+
+    expect(result).toBeInstanceOf(MigrationStateConflictError)
+    expect(mockReclaimTopUp).toHaveBeenCalledTimes(1)
+    expect(mockReclaimTopUp).toHaveBeenCalledWith({ accountId, topUpSats: 10 })
+  })
+
+  it("does not reclaim while the drain is pending and persists the top-up", async () => {
+    mockGetBalanceForWallet.mockResolvedValue(50)
+    mockPayNoAmountInvoice.mockResolvedValue({ status: PaymentSendStatus.Pending })
+
+    const result = await executeMigrationTransfer(transferArgs)
+
+    expect(result).toBe(PaymentSendStatus.Pending)
+    expect(mockReclaimTopUp).not.toHaveBeenCalled()
+    expect(mocks.recordFlowTopUp).toHaveBeenCalledWith(
+      expect.objectContaining({ accountId, topUpSats: 10 }),
+    )
+  })
+
+  it("does not reclaim when the FAILED transition loses the CAS", async () => {
+    mockGetBalanceForWallet.mockResolvedValue(50)
+    const routeError = new RouteNotFoundError()
+    mockPayNoAmountInvoice.mockResolvedValue(routeError)
+    mocks.updateFlowPhase.mockResolvedValue(
+      new MigrationStateConflictError("already failed"),
+    )
+
+    const result = await executeMigrationTransfer(transferArgs)
+
+    expect(result).toBe(routeError)
+    expect(mockReclaimTopUp).not.toHaveBeenCalled()
+  })
+
+  it("reclaims the residual top-up when the drain fails after a residual subsidy", async () => {
+    mockGetBalanceForWallet.mockResolvedValue(2111)
+    const routeError = new RouteNotFoundError()
+    mockPayNoAmountInvoice.mockResolvedValue(routeError)
+
+    const result = await executeMigrationTransfer(transferArgs)
+
+    expect(result).toBe(routeError)
+    expect(mocks.recordFlowTopUp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accountId,
+        topUpSats: 1,
+        step: expect.objectContaining({ step: "residual-top-up" }),
+      }),
+    )
+    expect(mockReclaimTopUp).toHaveBeenCalledTimes(1)
+    expect(mockReclaimTopUp).toHaveBeenCalledWith({ accountId, topUpSats: 1 })
   })
 })
