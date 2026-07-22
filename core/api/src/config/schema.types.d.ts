@@ -254,6 +254,8 @@ type YamlSchema = {
   custodialMigrationFlow: {
     enabled: boolean
     deMinimisThresholdSats: number
+    recentDepositThresholdUsdCents: number
+    recentDepositWindowDays: number
   }
   smsAuthUnsupportedCountries: string[]
   whatsAppAuthUnsupportedCountries: string[]

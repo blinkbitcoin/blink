@@ -3,6 +3,10 @@ jest.mock("@/config", () => ({
   getCustodialMigrationFlowConfig: jest.fn(),
 }))
 
+jest.mock("@/app/migration-flow/check-deposit-hold", () => ({
+  checkDepositHold: jest.fn(),
+}))
+
 jest.mock("@/app/wallets/get-balance-for-wallet", () => ({
   getBalanceForWallet: jest.fn(),
 }))
@@ -28,9 +32,11 @@ jest.mock("@/services/mongoose", () => ({
   }),
 }))
 
+import { checkDepositHold } from "@/app/migration-flow/check-deposit-hold"
 import { startMigrationFlow } from "@/app/migration-flow/start-migration-flow"
 import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
 import { AccountStatus } from "@/domain/accounts"
+import { toSats } from "@/domain/bitcoin"
 import {
   CouldNotFindMigrationFlowStateError,
   InactiveAccountError,
@@ -40,6 +46,7 @@ import {
   MigrationDollarBalanceNotEmptyError,
   MigrationFlowDisabledError,
   MigrationFlowPhase,
+  MigrationOnHoldError,
 } from "@/domain/migration-flow"
 import { getCustodialMigrationFlowConfig } from "@/config"
 
@@ -51,6 +58,7 @@ const mocks = jest.requireMock("@/services/mongoose").__mocks as {
 }
 const mockGetConfig = getCustodialMigrationFlowConfig as jest.Mock
 const mockGetBalanceForWallet = getBalanceForWallet as jest.Mock
+const mockCheckDepositHold = checkDepositHold as jest.Mock
 
 describe("startMigrationFlow", () => {
   const accountId = "account-id" as AccountId
@@ -75,6 +83,7 @@ describe("startMigrationFlow", () => {
     )
     mocks.findAccountWalletsByAccountId.mockResolvedValue(accountWallets)
     mockGetBalanceForWallet.mockResolvedValue(0)
+    mockCheckDepositHold.mockResolvedValue({})
     mocks.upsertFlowByAccountId.mockResolvedValue(inProgressFlow)
   })
 
@@ -138,6 +147,33 @@ describe("startMigrationFlow", () => {
     expect(mocks.upsertFlowByAccountId).toHaveBeenCalledWith({
       accountId,
       phase: MigrationFlowPhase.InProgress,
+    })
+  })
+
+  it("refuses a start on deposit hold without creating a flow record", async () => {
+    const holdError = new MigrationOnHoldError()
+    mockCheckDepositHold.mockResolvedValue(holdError)
+
+    const result = await startMigrationFlow({ accountId })
+
+    expect(result).toBe(holdError)
+    expect(mockCheckDepositHold).toHaveBeenCalledWith({
+      account,
+      btcWalletDescriptor: accountWallets.BTC,
+    })
+    expect(mocks.upsertFlowByAccountId).not.toHaveBeenCalled()
+  })
+
+  it("persists the pinned threshold sats when the gate evaluates and passes", async () => {
+    mockCheckDepositHold.mockResolvedValue({ holdThresholdSats: toSats(10_000) })
+
+    const result = await startMigrationFlow({ accountId })
+
+    expect(result).toBe(inProgressFlow)
+    expect(mocks.upsertFlowByAccountId).toHaveBeenCalledWith({
+      accountId,
+      phase: MigrationFlowPhase.InProgress,
+      holdThresholdSats: 10_000,
     })
   })
 

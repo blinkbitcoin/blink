@@ -1,3 +1,4 @@
+import { checkDepositHold } from "./check-deposit-hold"
 import { executeMigrationTransfer } from "./execute-transfer"
 import { resumeMigrationFlow } from "./resume-migration-flow"
 
@@ -125,6 +126,13 @@ export const commitMigrationFlow = async ({
       `Dollar balance must be empty before migration. walletId: ${accountWallets.USD.id}, balance: ${usdBalance}`,
     )
   }
+
+  const holdCheck = await checkDepositHold({
+    account,
+    btcWalletDescriptor: accountWallets.BTC,
+    pinnedThresholdSats: flow.holdThresholdSats,
+  })
+  if (holdCheck instanceof Error) return holdCheck
 
   const transferring = await migrationFlowRepo.updatePhase({
     accountId,

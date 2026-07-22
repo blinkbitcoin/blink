@@ -1043,12 +1043,21 @@ export const configSchema = {
       properties: {
         enabled: { type: "boolean" },
         deMinimisThresholdSats: { type: "integer", minimum: 10, default: 100 },
+        recentDepositThresholdUsdCents: { type: "integer", minimum: 0, default: 0 },
+        recentDepositWindowDays: { type: "integer", minimum: 1, default: 30 },
       },
-      required: ["enabled", "deMinimisThresholdSats"],
+      required: [
+        "enabled",
+        "deMinimisThresholdSats",
+        "recentDepositThresholdUsdCents",
+        "recentDepositWindowDays",
+      ],
       additionalProperties: false,
       default: {
         enabled: true,
         deMinimisThresholdSats: 100,
+        recentDepositThresholdUsdCents: 0,
+        recentDepositWindowDays: 30,
       },
     },
     smsAuthUnsupportedCountries: {

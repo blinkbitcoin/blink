@@ -44,6 +44,7 @@ import {
   MigrationInvalidDestinationError,
   MigrationApiKeyForbiddenError,
   ReceiveDisabledError,
+  MigrationOnHoldError,
 } from "@/graphql/error"
 import { baseLogger } from "@/services/logger"
 
@@ -669,6 +670,10 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       message =
         "This account can no longer receive payments. If this is your account, please update the Blink app to migrate your funds."
       return new ReceiveDisabledError({ message, logger: baseLogger })
+
+    case "MigrationOnHoldError":
+      message = "Migration is not available for this account right now."
+      return new MigrationOnHoldError({ message, logger: baseLogger })
 
     // ----------
     // Unhandled below here

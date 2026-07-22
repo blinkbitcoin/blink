@@ -206,6 +206,7 @@ export type AccountMigrationPreview = {
   readonly balanceSats: Scalars['SatAmount']['output'];
   readonly feeCoveredByBlink: Scalars['Boolean']['output'];
   readonly feeSats: Scalars['SatAmount']['output'];
+  readonly onHold: Scalars['Boolean']['output'];
   readonly receiveSats: Scalars['SatAmount']['output'];
 };
 

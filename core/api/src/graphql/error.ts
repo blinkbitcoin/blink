@@ -114,6 +114,16 @@ export class MigrationInvalidDestinationError extends CustomGraphQLError {
   }
 }
 
+export class MigrationOnHoldError extends CustomGraphQLError {
+  constructor(errData: CustomGraphQLErrorData) {
+    super({
+      code: "MIGRATION_ON_HOLD",
+      forwardToClient: true,
+      ...errData,
+    })
+  }
+}
+
 export class MigrationApiKeyForbiddenError extends CustomGraphQLError {
   constructor(errData: CustomGraphQLErrorData) {
     super({

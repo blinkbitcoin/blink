@@ -20,6 +20,7 @@ type MigrationPreview = {
   feeSats: Satoshis
   feeCoveredByBlink: boolean
   receiveSats: Satoshis
+  onHold: boolean
 }
 
 type SparkPubkey = string & { readonly brand: unique symbol }
@@ -38,6 +39,7 @@ type MigrationFlow = {
   lnPaymentHash?: PaymentHash
   topUpSats?: Satoshis
   disclosureVersion?: string
+  holdThresholdSats?: Satoshis
   steps: MigrationFlowStep[]
   createdAt: Date
   updatedAt: Date
@@ -63,6 +65,7 @@ type UpsertMigrationFlowArgs = {
   accountId: AccountId
   phase: MigrationFlowPhase
   disclosureVersion?: string
+  holdThresholdSats?: Satoshis
 }
 
 type MigrationFlowPhaseTransitionArgs = {

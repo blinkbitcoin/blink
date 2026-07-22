@@ -3,6 +3,10 @@ jest.mock("@/config", () => ({
   getCustodialMigrationFlowConfig: jest.fn(),
 }))
 
+jest.mock("@/app/migration-flow/check-deposit-hold", () => ({
+  checkDepositHold: jest.fn(),
+}))
+
 jest.mock("@/app/migration-flow/execute-transfer", () => ({
   executeMigrationTransfer: jest.fn(),
 }))
@@ -57,11 +61,13 @@ import { createHash } from "crypto"
 import { createSignedRequest, createUnsignedRequest } from "invoices"
 import * as ecc from "tiny-secp256k1"
 
+import { checkDepositHold } from "@/app/migration-flow/check-deposit-hold"
 import { commitMigrationFlow } from "@/app/migration-flow/commit-migration-flow"
 import { executeMigrationTransfer } from "@/app/migration-flow/execute-transfer"
 import { resumeMigrationFlow } from "@/app/migration-flow/resume-migration-flow"
 import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
 import { AccountStatus } from "@/domain/accounts"
+import { toSats } from "@/domain/bitcoin"
 import {
   decodeInvoice,
   RouteNotFoundError,
@@ -78,6 +84,7 @@ import {
   MigrationFlowDisabledError,
   MigrationFlowPhase,
   MigrationInvalidDestinationError,
+  MigrationOnHoldError,
   MigrationProofExpiredError,
   MigrationStateConflictError,
 } from "@/domain/migration-flow"
@@ -168,6 +175,7 @@ const mockListAllPubkeys = jest.requireMock("@/services/lnd")
   .__mockListAllPubkeys as jest.Mock
 const mockGetConfig = getCustodialMigrationFlowConfig as jest.Mock
 const mockGetBalanceForWallet = getBalanceForWallet as jest.Mock
+const mockCheckDepositHold = checkDepositHold as jest.Mock
 const mockExecuteMigrationTransfer = executeMigrationTransfer as jest.Mock
 const mockResumeMigrationFlow = resumeMigrationFlow as jest.Mock
 const mockTransferIdentifierToSpark = jest.requireMock("@/app/accounts/lnurl-server")
@@ -216,6 +224,7 @@ describe("commitMigrationFlow", () => {
     mocks.findAccountWalletsByAccountId.mockResolvedValue(accountWallets)
     mockListAllPubkeys.mockReturnValue([])
     mockGetBalanceForWallet.mockResolvedValue(0)
+    mockCheckDepositHold.mockResolvedValue({})
     mockExecuteMigrationTransfer.mockResolvedValue(PaymentSendStatus.Pending)
   })
 
@@ -240,6 +249,27 @@ describe("commitMigrationFlow", () => {
     expect(mockExecuteMigrationTransfer).not.toHaveBeenCalled()
   })
 
+  it("refuses a held commit before any phase transition, passing the pinned threshold", async () => {
+    const pinnedFlow = {
+      ...inProgressFlow,
+      holdThresholdSats: toSats(4_000),
+    } as MigrationFlow
+    mocks.findFlowByAccountId.mockResolvedValue(pinnedFlow)
+    const holdError = new MigrationOnHoldError()
+    mockCheckDepositHold.mockResolvedValue(holdError)
+
+    const result = await commitMigrationFlow(validCommitArgs())
+
+    expect(result).toBe(holdError)
+    expect(mockCheckDepositHold).toHaveBeenCalledWith({
+      account,
+      btcWalletDescriptor: accountWallets.BTC,
+      pinnedThresholdSats: toSats(4_000),
+    })
+    expect(mocks.updateFlowPhase).not.toHaveBeenCalled()
+    expect(mockExecuteMigrationTransfer).not.toHaveBeenCalled()
+  })
+
   it("reconciles an in-flight transfer via the resume path", async () => {
     mocks.findFlowByAccountId.mockResolvedValue(transferringFlow)
     mockResumeMigrationFlow.mockResolvedValue(transferringFlow)
@@ -249,6 +279,7 @@ describe("commitMigrationFlow", () => {
     expect(result).toBe(transferringFlow)
     expect(mockResumeMigrationFlow).toHaveBeenCalledTimes(1)
     expect(mockExecuteMigrationTransfer).not.toHaveBeenCalled()
+    expect(mockCheckDepositHold).not.toHaveBeenCalled()
   })
 
   it("rejects when the backup is not attested", async () => {

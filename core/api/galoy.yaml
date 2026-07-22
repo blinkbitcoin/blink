@@ -314,6 +314,8 @@ captcha:
 custodialMigrationFlow:
   enabled: true
   deMinimisThresholdSats: 100
+  recentDepositThresholdUsdCents: 0
+  recentDepositWindowDays: 30
 smsAuthUnsupportedCountries: []
 whatsAppAuthUnsupportedCountries: []
 telegramAuthUnsupportedCountries: []

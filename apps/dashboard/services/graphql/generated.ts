@@ -212,6 +212,7 @@ export type AccountMigrationPreview = {
   readonly balanceSats: Scalars['SatAmount']['output'];
   readonly feeCoveredByBlink: Scalars['Boolean']['output'];
   readonly feeSats: Scalars['SatAmount']['output'];
+  readonly onHold: Scalars['Boolean']['output'];
   readonly receiveSats: Scalars['SatAmount']['output'];
 };
 
@@ -4370,6 +4371,7 @@ export type AccountMigrationPreviewResolvers<ContextType = any, ParentType exten
   balanceSats?: Resolver<ResolversTypes['SatAmount'], ParentType, ContextType>;
   feeCoveredByBlink?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   feeSats?: Resolver<ResolversTypes['SatAmount'], ParentType, ContextType>;
+  onHold?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   receiveSats?: Resolver<ResolversTypes['SatAmount'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };

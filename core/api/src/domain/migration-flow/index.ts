@@ -2,6 +2,7 @@ import { MigrationStateConflictError, InvalidMigrationFlowPhaseError } from "./e
 
 import { MigrationFlowPhase } from "./primitives"
 
+export * from "./deposit-hold"
 export * from "./errors"
 export * from "./primitives"
 export * from "./proof-of-possession"
