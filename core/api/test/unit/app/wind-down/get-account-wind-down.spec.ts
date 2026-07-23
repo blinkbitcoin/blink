@@ -56,6 +56,7 @@ const windDownConfig = (overrides: Partial<WindDownConfig> = {}): WindDownConfig
     enabled: true,
     affectedCountries: ["FR", "DE", "IS"],
     excludedAccountIds: [],
+    includeLevelZero: false,
     regions: [region()],
     ...overrides,
   }) as WindDownConfig
@@ -200,6 +201,24 @@ describe("getAccountWindDown", () => {
     })) as WindDownState
     expect(result.timezone).toBe("Europe/Paris")
     expect(result.finalDeadline).toEqual(new Date("2026-08-31T23:59:59+02:00"))
+  })
+
+  it("resolves the default region's state for a Level 0 account with no country signal when includeLevelZero is on", async () => {
+    mockGetWindDownConfig.mockReturnValue(
+      windDownConfig({ includeLevelZero: true, regions: [euRegion, region()] }),
+    )
+    withPhoneCountry("US")
+
+    const result = await getAccountWindDown({
+      account: makeAccount({ level: 0 as AccountLevel }),
+    })
+    expect(result).toEqual({
+      status: "PRE_CUTOFF",
+      receiveDisabledAt: new Date("2026-08-01T00:00:00+02:00"),
+      finalDeadline: new Date("2026-08-31T23:59:59+02:00"),
+      gateArmsAt: new Date("2026-09-01T00:00:00+02:00"),
+      timezone: "Europe/Paris",
+    })
   })
 
   it("propagates a repository error rather than returning null", async () => {
