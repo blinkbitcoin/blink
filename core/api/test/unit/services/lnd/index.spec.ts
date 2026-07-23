@@ -174,6 +174,60 @@ describe("LndService", () => {
     })
   })
 
+  describe("payInvoiceViaPaymentDetails multipath payments", () => {
+    it("passes max_paths so lnd can split payments across channels", async () => {
+      const lndConnect = createMockLndConnect(PUBKEYS.active1)
+      mockGetLnds.mockImplementation(({ active, type } = {}) => {
+        if (active === true && type === "offchain") return [lndConnect]
+        if (type === "offchain") return [lndConnect]
+        return []
+      })
+
+      mockPayViaPaymentDetails.mockImplementation((async () => ({
+        safe_fee: 0,
+        secret: "c".repeat(64),
+      })) as unknown as typeof payViaPaymentDetails)
+
+      const lndService = LndService()
+      if (lndService instanceof Error) throw lndService
+
+      const decodedInvoice = {
+        paymentHash: "a".repeat(64),
+        destination: PUBKEYS.external,
+        paymentRequest: "lnbc1test",
+        milliSatsAmount: 1000,
+        description: "test",
+        paymentSecret: "b".repeat(64),
+        cltvDelta: 40,
+        amount: 1,
+        paymentAmount: {
+          amount: 1n,
+          currency: "BTC",
+        },
+        features: [],
+        routeHints: [],
+        expiresAt: new Date(Date.now() + 60_000),
+        isExpired: false,
+      } as unknown as LnInvoice
+
+      const btcPaymentAmount = {
+        amount: 1n,
+        currency: "BTC",
+      } as BtcPaymentAmount
+
+      const result = await lndService.payInvoiceViaPaymentDetails({
+        decodedInvoice,
+        btcPaymentAmount,
+        maxFeeAmount: undefined,
+      })
+
+      expect(result).not.toBeInstanceOf(Error)
+      expect(mockPayViaPaymentDetails).toHaveBeenCalledWith(
+        expect.objectContaining({ max_paths: 16 }),
+      )
+    })
+  })
+
   describe("payInvoiceViaPaymentDetails error mapping", () => {
     it("maps missing feature dependency error to FeatureCompatibilityError", async () => {
       const lndConnect = createMockLndConnect(PUBKEYS.active1)
