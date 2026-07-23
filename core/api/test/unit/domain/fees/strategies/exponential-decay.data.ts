@@ -41,6 +41,8 @@ export const exponentialDecayConfigData = {
   targetFeeRate: 0.0025,
   networkFeeOffset: 1.1,
   networkFeeFactor: 1,
+  minFee: 0,
+  effectiveRateCap: 0,
 }
 
 export const payoutQueueConfigData: PayoutQueueConfigTestData[] = [
@@ -236,6 +238,50 @@ export const feeCapCasesData: {
     { feeRate: 150, satsAmount: 100000, minerFee: 8340, expectedSats: 10612 },
     { feeRate: 200, satsAmount: 100000, minerFee: 11120, expectedSats: 13636 },
   ],
+}
+
+export const standardTierSpecParams = {
+  decayStartAmount: 100000000,
+  baseAmount: 21000,
+  decaySpeed: 6,
+  minFeeRate: 1,
+  maxFeeRate: 2000,
+  minRate: 0.005,
+  maxRate: 0.009,
+  terminalDivisor: 20000,
+  targetFeeRate: 0.005,
+  networkFeeOffset: 0.6,
+  networkFeeFactor: 1,
+  minFee: 100,
+  effectiveRateCap: 0.009,
+}
+
+export const capBindingSpecVectors: FeeCase[] = [
+  { feeRate: 2, satsAmount: 10000, minerFee: 282, expectedSats: 372 },
+  { feeRate: 2, satsAmount: 20000, minerFee: 282, expectedSats: 462 },
+  { feeRate: 2, satsAmount: 50000, minerFee: 282, expectedSats: 732 },
+  { feeRate: 2, satsAmount: 100000, minerFee: 282, expectedSats: 1182 },
+]
+
+export const nonBindingSpecVectors: FeeCase[] = [
+  { feeRate: 2, satsAmount: 500000, minerFee: 418, expectedSats: 4902 },
+  { feeRate: 2, satsAmount: 1000000, minerFee: 418, expectedSats: 9230 },
+  { feeRate: 2, satsAmount: 5000000, minerFee: 554, expectedSats: 40436 },
+  { feeRate: 2, satsAmount: 25000000, minerFee: 826, expectedSats: 148232 },
+]
+
+export const floorBindingSpecCase = {
+  feeRate: 1,
+  satsAmount: 1000,
+  minerFee: 50,
+  expectedSats: 100,
+}
+
+export const capFloorConflictSpecCase = {
+  feeRate: 1,
+  satsAmount: 1000,
+  minerFee: 50,
+  expectedBankFee: 9,
 }
 
 export const multiplierCasesData: {
