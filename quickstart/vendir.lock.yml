@@ -2,27 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat(migration): reclaim the bank-owner top-up when the migration
-        flow fails (#702)...'
-      sha: 73ba0984f49c3f0c1efe27b1b8e5a34cfca47f2a
+      commitTitle: 'chore: add includeLevelZero cohort config (#708)'
+      sha: 6822ad7076c841a0a9c5904f0402726e581b997e
       tags:
-      - 0.22.24-1-g73ba0984f
+      - 0.22.25-2-g6822ad707
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat(migration): reclaim the bank-owner top-up when the migration
-        flow fails (#702)...'
-      sha: 73ba0984f49c3f0c1efe27b1b8e5a34cfca47f2a
+      commitTitle: 'chore: add includeLevelZero cohort config (#708)'
+      sha: 6822ad7076c841a0a9c5904f0402726e581b997e
       tags:
-      - 0.22.24-1-g73ba0984f
+      - 0.22.25-2-g6822ad707
     path: schemas
   - git:
-      commitTitle: 'feat(migration): reclaim the bank-owner top-up when the migration
-        flow fails (#702)...'
-      sha: 73ba0984f49c3f0c1efe27b1b8e5a34cfca47f2a
+      commitTitle: 'chore: add includeLevelZero cohort config (#708)'
+      sha: 6822ad7076c841a0a9c5904f0402726e581b997e
       tags:
-      - 0.22.24-1-g73ba0984f
+      - 0.22.25-2-g6822ad707
     path: gql
   path: graphql
 kind: LockConfig
