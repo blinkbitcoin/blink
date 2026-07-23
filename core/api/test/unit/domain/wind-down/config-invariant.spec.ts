@@ -26,6 +26,22 @@ describe("windDown region flags", () => {
   })
 })
 
+describe("windDown includeLevelZero backfill invariant", () => {
+  it("accepts a config that predates the key and backfills false", () => {
+    const config = cloneConfig()
+    delete config.windDown.includeLevelZero
+    expect(validate(config)).toBe(true)
+    expect(config.windDown.includeLevelZero).toBe(false)
+  })
+
+  it("keeps an explicit true — the default never overwrites a set value", () => {
+    const config = cloneConfig()
+    config.windDown.includeLevelZero = true
+    expect(validate(config)).toBe(true)
+    expect(config.windDown.includeLevelZero).toBe(true)
+  })
+})
+
 describe("windDown region resolution invariant", () => {
   it("rejects an empty regions list", () => {
     const config = cloneConfig()
