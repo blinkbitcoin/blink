@@ -1,4 +1,4 @@
-import { standardTierSpecParams } from "./strategies/exponential-decay.data"
+import { standardTierParams } from "./strategies/exponential-decay.data"
 
 import { calculateCompositeFee } from "@/domain/fees"
 import {
@@ -304,7 +304,7 @@ describe("calculateCompositeFee", () => {
       {
         name: "ExponentialDecay",
         strategy: "exponentialDecay",
-        params: standardTierSpecParams,
+        params: standardTierParams,
       },
       {
         name: "Internal Discount",

@@ -3,11 +3,11 @@ import {
   exponentialDecayConfigData,
   payoutQueueConfigData,
   multiplierCasesData,
-  standardTierSpecParams,
-  capBindingSpecVectors,
-  nonBindingSpecVectors,
-  floorBindingSpecCase,
-  capFloorConflictSpecCase,
+  standardTierParams,
+  capBindingVectors,
+  nonBindingVectors,
+  floorBindingCase,
+  capFloorConflictCase,
 } from "./exponential-decay.data"
 
 import { WalletCurrency } from "@/domain/shared"
@@ -221,7 +221,7 @@ describe("ExponentialDecayStrategy", () => {
   })
 })
 
-describe("ExponentialDecayStrategy minFee floor + effectiveRateCap (spec vectors)", () => {
+describe("ExponentialDecayStrategy minFee floor + effectiveRateCap (reference model vectors)", () => {
   const calculateBankFee = async (
     calculator: IFeeStrategy,
     {
@@ -254,10 +254,10 @@ describe("ExponentialDecayStrategy minFee floor + effectiveRateCap (spec vectors
     return bankFee.amount
   }
 
-  const clampedCalculator = ExponentialDecayStrategy(standardTierSpecParams)
+  const clampedCalculator = ExponentialDecayStrategy(standardTierParams)
 
-  describe("cap-binding spec vectors (exact)", () => {
-    test.each(capBindingSpecVectors)(
+  describe("cap-binding reference vectors (exact)", () => {
+    test.each(capBindingVectors)(
       "amount=$satsAmount sats, feeRate=$feeRate, minerFee=$minerFee => total $expectedSats sats",
       async ({ satsAmount, feeRate, minerFee, expectedSats }) => {
         const bankFee = await calculateBankFee(clampedCalculator, {
@@ -270,9 +270,9 @@ describe("ExponentialDecayStrategy minFee floor + effectiveRateCap (spec vectors
     )
   })
 
-  describe("non-binding spec vectors (within ±1 sat)", () => {
-    // ±1 sat vs the spec totals: core ceils the bank fee where the spec rounds the total
-    test.each(nonBindingSpecVectors)(
+  describe("non-binding reference vectors (within ±1 sat)", () => {
+    // ±1 sat: core ceils the bank fee where the reference model rounds the total
+    test.each(nonBindingVectors)(
       "amount=$satsAmount sats, feeRate=$feeRate, minerFee=$minerFee => total $expectedSats ±1 sats",
       async ({ satsAmount, feeRate, minerFee, expectedSats }) => {
         const bankFee = await calculateBankFee(clampedCalculator, {
@@ -289,10 +289,10 @@ describe("ExponentialDecayStrategy minFee floor + effectiveRateCap (spec vectors
   describe("minFee floor", () => {
     it("lifts total to exactly minFee when the floor binds", async () => {
       const floorCalculator = ExponentialDecayStrategy({
-        ...standardTierSpecParams,
+        ...standardTierParams,
         effectiveRateCap: 0,
       })
-      const { satsAmount, feeRate, minerFee, expectedSats } = floorBindingSpecCase
+      const { satsAmount, feeRate, minerFee, expectedSats } = floorBindingCase
       const bankFee = await calculateBankFee(floorCalculator, {
         satsAmount,
         feeRate,
@@ -305,7 +305,7 @@ describe("ExponentialDecayStrategy minFee floor + effectiveRateCap (spec vectors
 
   describe("cap vs floor conflict", () => {
     it("applies the cap after the floor when they overlap", async () => {
-      const { satsAmount, feeRate, minerFee, expectedBankFee } = capFloorConflictSpecCase
+      const { satsAmount, feeRate, minerFee, expectedBankFee } = capFloorConflictCase
       const bankFee = await calculateBankFee(clampedCalculator, {
         satsAmount,
         feeRate,

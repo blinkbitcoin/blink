@@ -240,7 +240,7 @@ export const feeCapCasesData: {
   ],
 }
 
-export const standardTierSpecParams = {
+export const standardTierParams = {
   decayStartAmount: 100000000,
   baseAmount: 21000,
   decaySpeed: 6,
@@ -256,28 +256,28 @@ export const standardTierSpecParams = {
   effectiveRateCap: 0.009,
 }
 
-export const capBindingSpecVectors: FeeCase[] = [
+export const capBindingVectors: FeeCase[] = [
   { feeRate: 2, satsAmount: 10000, minerFee: 282, expectedSats: 372 },
   { feeRate: 2, satsAmount: 20000, minerFee: 282, expectedSats: 462 },
   { feeRate: 2, satsAmount: 50000, minerFee: 282, expectedSats: 732 },
   { feeRate: 2, satsAmount: 100000, minerFee: 282, expectedSats: 1182 },
 ]
 
-export const nonBindingSpecVectors: FeeCase[] = [
+export const nonBindingVectors: FeeCase[] = [
   { feeRate: 2, satsAmount: 500000, minerFee: 418, expectedSats: 4902 },
   { feeRate: 2, satsAmount: 1000000, minerFee: 418, expectedSats: 9230 },
   { feeRate: 2, satsAmount: 5000000, minerFee: 554, expectedSats: 40436 },
   { feeRate: 2, satsAmount: 25000000, minerFee: 826, expectedSats: 148232 },
 ]
 
-export const floorBindingSpecCase = {
+export const floorBindingCase = {
   feeRate: 1,
   satsAmount: 1000,
   minerFee: 50,
   expectedSats: 100,
 }
 
-export const capFloorConflictSpecCase = {
+export const capFloorConflictCase = {
   feeRate: 1,
   satsAmount: 1000,
   minerFee: 50,
