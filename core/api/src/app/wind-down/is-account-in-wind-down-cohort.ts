@@ -2,6 +2,7 @@ import { parsePhoneNumberFromString } from "libphonenumber-js"
 
 import { getWindDownConfig } from "@/config"
 
+import { AccountLevel } from "@/domain/accounts"
 import { matchedCohortCountry } from "@/domain/wind-down"
 import { CouldNotFindAccountIpError } from "@/domain/errors"
 
@@ -16,10 +17,11 @@ export const evaluateWindDownCohortMatch = async ({
 }: {
   account: Account
 }): Promise<WindDownCohortMatch | ApplicationError> => {
-  const { affectedCountries, excludedAccountIds } = getWindDownConfig()
-  if (affectedCountries.length === 0) return { matched: false }
-
+  const { affectedCountries, excludedAccountIds, includeLevelZero } = getWindDownConfig()
   if (excludedAccountIds.includes(account.id)) return { matched: false }
+
+  const levelZeroMatched = includeLevelZero && account.level === AccountLevel.Zero
+  if (affectedCountries.length === 0) return { matched: levelZeroMatched }
 
   const user = await UsersRepository().findById(account.kratosUserId)
   if (user instanceof Error) return user
@@ -51,7 +53,9 @@ export const evaluateWindDownCohortMatch = async ({
     affectedCountries,
   })
 
-  return { matched: matchedCountry !== undefined, matchedCountry }
+  if (matchedCountry !== undefined) return { matched: true, matchedCountry }
+
+  return { matched: levelZeroMatched }
 }
 
 export const isAccountInWindDownCohort = async ({

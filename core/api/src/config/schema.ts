@@ -1083,6 +1083,7 @@ export const configSchema = {
           uniqueItems: true,
           default: [],
         },
+        includeLevelZero: { type: "boolean", default: false },
         regions: {
           type: "array",
           minItems: 1,
@@ -1119,12 +1120,19 @@ export const configSchema = {
           },
         },
       },
-      required: ["enabled", "affectedCountries", "excludedAccountIds", "regions"],
+      required: [
+        "enabled",
+        "affectedCountries",
+        "excludedAccountIds",
+        "includeLevelZero",
+        "regions",
+      ],
       additionalProperties: false,
       default: {
         enabled: true,
         affectedCountries: ["NL"],
         excludedAccountIds: [],
+        includeLevelZero: false,
         regions: [
           {
             code: DEFAULT_WIND_DOWN_REGION_CODE,
