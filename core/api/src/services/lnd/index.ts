@@ -93,6 +93,11 @@ import { timeoutWithCancel } from "@/utils"
 
 const TIMEOUT_PAYMENT = NETWORK !== "regtest" ? 45000 : 3000
 
+// Without max_paths the lightning lib defaults to max_parts=1, so a payment
+// must fit in a single path. Allowing multiple paths lets lnd split large
+// payouts across channels (MPP) when no single route has enough liquidity.
+const MAX_PAYMENT_PATHS = 16
+
 export const LndService = (): ILightningService | LightningServiceError => {
   const activeNode = getActiveLnd()
   if (activeNode instanceof Error) return activeNode
@@ -852,6 +857,7 @@ export const LndService = (): ILightningService | LightningServiceError => {
       mtokens: milliSatsAmount.toString(),
       payment: decodedInvoice.paymentSecret as string,
       max_fee: maxFee,
+      max_paths: MAX_PAYMENT_PATHS,
       cltv_delta: decodedInvoice.cltvDelta || undefined,
       features: decodedInvoice.features
         ? decodedInvoice.features.map((f) => ({
