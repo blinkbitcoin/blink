@@ -36,6 +36,7 @@ const windDownConfig = (overrides: Partial<WindDownConfig> = {}): WindDownConfig
     enabled: true,
     affectedCountries: ["FR", "DE", "IS"],
     excludedAccountIds: [],
+    includeLevelZero: false,
     regions: [],
     ...overrides,
   }) as WindDownConfig
@@ -246,5 +247,95 @@ describe("isAccountInWindDownCohort", () => {
 
     expect(mockFindById).not.toHaveBeenCalled()
     expect(mockFindEarliestByAccountId).not.toHaveBeenCalled()
+  })
+
+  it("does not include a Level 0 account when includeLevelZero is off", async () => {
+    const result = await isAccountInWindDownCohort({
+      account: makeAccount({ level: 0 as AccountLevel }),
+    })
+    expect(result).toBe(false)
+  })
+
+  it("includes a Level 0 account with no affected-country signal when includeLevelZero is on", async () => {
+    mockGetWindDownConfig.mockReturnValue(windDownConfig({ includeLevelZero: true }))
+    const result = await evaluateWindDownCohortMatch({
+      account: makeAccount({ level: 0 as AccountLevel }),
+    })
+    expect(result).toEqual({ matched: true })
+  })
+
+  it("reports the country match, not the level fallback, for a Level 0 account with an affected creation-IP signal", async () => {
+    mockGetWindDownConfig.mockReturnValue(windDownConfig({ includeLevelZero: true }))
+    mockFindEarliestByAccountId.mockResolvedValue({ metadata: { isoCode: "FR" } })
+    const result = await evaluateWindDownCohortMatch({
+      account: makeAccount({ level: 0 as AccountLevel }),
+    })
+    expect(result).toEqual({ matched: true, matchedCountry: "FR" })
+  })
+
+  it("does not include a non-Level-0 account without a country match when includeLevelZero is on", async () => {
+    mockGetWindDownConfig.mockReturnValue(windDownConfig({ includeLevelZero: true }))
+    const result = await isAccountInWindDownCohort({ account: makeAccount() })
+    expect(result).toBe(false)
+  })
+
+  it("excludes a Level 0 account listed in excludedAccountIds without reading repositories", async () => {
+    const account = makeAccount({ level: 0 as AccountLevel })
+    mockGetWindDownConfig.mockReturnValue(
+      windDownConfig({ includeLevelZero: true, excludedAccountIds: [account.id] }),
+    )
+
+    expect(await evaluateWindDownCohortMatch({ account })).toEqual({ matched: false })
+
+    expect(mockFindById).not.toHaveBeenCalled()
+    expect(mockFindEarliestByAccountId).not.toHaveBeenCalled()
+  })
+
+  it("does not treat a missing level as Level 0, and still evaluates country signals", async () => {
+    mockGetWindDownConfig.mockReturnValue(windDownConfig({ includeLevelZero: true }))
+    const account = makeAccount({ level: undefined })
+
+    expect(await isAccountInWindDownCohort({ account })).toBe(false)
+
+    withUser(FR_PHONE)
+    expect(await isAccountInWindDownCohort({ account })).toBe(true)
+  })
+
+  it("includes a Level 0 account without reading repositories when affectedCountries is empty", async () => {
+    mockGetWindDownConfig.mockReturnValue(
+      windDownConfig({ includeLevelZero: true, affectedCountries: [] }),
+    )
+
+    expect(
+      await evaluateWindDownCohortMatch({
+        account: makeAccount({ level: 0 as AccountLevel }),
+      }),
+    ).toEqual({ matched: true })
+
+    expect(mockFindById).not.toHaveBeenCalled()
+    expect(mockFindEarliestByAccountId).not.toHaveBeenCalled()
+  })
+
+  it("still short-circuits a non-Level-0 account when affectedCountries is empty and includeLevelZero is on", async () => {
+    withUser(FR_PHONE)
+    mockGetWindDownConfig.mockReturnValue(
+      windDownConfig({ includeLevelZero: true, affectedCountries: [] }),
+    )
+
+    expect(await isAccountInWindDownCohort({ account: makeAccount() })).toBe(false)
+
+    expect(mockFindById).not.toHaveBeenCalled()
+    expect(mockFindEarliestByAccountId).not.toHaveBeenCalled()
+  })
+
+  it("returns the users-lookup error for a Level 0 account instead of matching through it", async () => {
+    mockGetWindDownConfig.mockReturnValue(windDownConfig({ includeLevelZero: true }))
+    const error = new UnknownRepositoryError("users down")
+    mockFindById.mockResolvedValue(error)
+
+    const result = await isAccountInWindDownCohort({
+      account: makeAccount({ level: 0 as AccountLevel }),
+    })
+    expect(result).toBe(error)
   })
 })

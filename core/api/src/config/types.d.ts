@@ -29,6 +29,7 @@ type WindDownYamlConfig = {
   enabled: boolean
   affectedCountries: string[]
   excludedAccountIds: string[]
+  includeLevelZero: boolean
   regions: WindDownRegionYamlConfig[]
 }
 
@@ -45,6 +46,7 @@ type WindDownConfig = {
   enabled: boolean
   affectedCountries: string[]
   excludedAccountIds: string[]
+  includeLevelZero: boolean
   regions: WindDownRegionConfig[]
 }
 
