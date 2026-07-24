@@ -1,3 +1,5 @@
+import { standardTierParams } from "./strategies/exponential-decay.data"
+
 import { calculateCompositeFee } from "@/domain/fees"
 import {
   WalletCurrency,
@@ -293,6 +295,33 @@ describe("calculateCompositeFee", () => {
     expect(fee).not.toBeInstanceOf(Error)
     if (fee instanceof Error) throw fee
 
+    expect(fee.totalFee.amount).toEqual(mockNetworkFee.amount.amount)
+    expect(fee.totalFee.currency).toEqual(mockNetworkFee.amount.currency)
+  })
+
+  it("should zero the bank fee for an exempt role with clamped exponentialDecay", async () => {
+    const strategies = [
+      {
+        name: "ExponentialDecay",
+        strategy: "exponentialDecay",
+        params: standardTierParams,
+      },
+      {
+        name: "Internal Discount",
+        strategy: "exemptAccount",
+        params: { roles: ["dealer"], accountIds: [], exemptValidatedMerchants: false },
+      },
+    ]
+
+    const fee = await calculateCompositeFee({
+      ...baseFeeCalculationArgs,
+      accountRole: "dealer",
+      strategies,
+    } as CalculateCompositeFeeArgs)
+
+    expect(fee).not.toBeInstanceOf(Error)
+    if (fee instanceof Error) throw fee
+    expect(fee.bankFee.amount).toEqual(0n)
     expect(fee.totalFee.amount).toEqual(mockNetworkFee.amount.amount)
     expect(fee.totalFee.currency).toEqual(mockNetworkFee.amount.currency)
   })
