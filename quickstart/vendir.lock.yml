@@ -2,27 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat(fees): add minFee and effectiveRateCap to exponential decay
-        strategy (#705)'
-      sha: 0643709c47d60052969daf69030a8cc747ef8274
+      commitTitle: 'fix: pnpm audit critical next-auth advisory (#710)'
+      sha: 3e7cab23a517ee00a8a9ffa868b42cf5483dca89
       tags:
-      - 0.22.26-1-g0643709c4
+      - 0.22.27
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat(fees): add minFee and effectiveRateCap to exponential decay
-        strategy (#705)'
-      sha: 0643709c47d60052969daf69030a8cc747ef8274
+      commitTitle: 'fix: pnpm audit critical next-auth advisory (#710)'
+      sha: 3e7cab23a517ee00a8a9ffa868b42cf5483dca89
       tags:
-      - 0.22.26-1-g0643709c4
+      - 0.22.27
     path: schemas
   - git:
-      commitTitle: 'feat(fees): add minFee and effectiveRateCap to exponential decay
-        strategy (#705)'
-      sha: 0643709c47d60052969daf69030a8cc747ef8274
+      commitTitle: 'fix: pnpm audit critical next-auth advisory (#710)'
+      sha: 3e7cab23a517ee00a8a9ffa868b42cf5483dca89
       tags:
-      - 0.22.26-1-g0643709c4
+      - 0.22.27
     path: gql
   path: graphql
 kind: LockConfig
