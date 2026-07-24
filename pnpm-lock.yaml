@@ -70,8 +70,8 @@ importers:
         specifier: 14.2.26
         version: 14.2.26(@babel/core@7.29.7)(@opentelemetry/api@1.9.0)(react-dom@18.3.1)(react@18.3.1)
       next-auth:
-        specifier: ^4.24.11
-        version: 4.24.11(next@14.2.26)(react-dom@18.3.1)(react@18.3.1)
+        specifier: ^4.24.15
+        version: 4.24.15(next@14.2.26)(react-dom@18.3.1)(react@18.3.1)
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -366,8 +366,8 @@ importers:
         specifier: 14.2.26
         version: 14.2.26(@babel/core@7.29.7)(@opentelemetry/api@1.9.0)(react-dom@18.2.0)(react@18.2.0)
       next-auth:
-        specifier: ^4.24.11
-        version: 4.24.11(next@14.2.26)(react-dom@18.2.0)(react@18.2.0)
+        specifier: ^4.24.15
+        version: 4.24.15(next@14.2.26)(react-dom@18.2.0)(react@18.2.0)
       react:
         specifier: 18.2.0
         version: 18.2.0
@@ -680,8 +680,8 @@ importers:
         specifier: 14.2.26
         version: 14.2.26(@babel/core@7.29.7)(@opentelemetry/api@1.9.0)(react-dom@18.3.1)(react@18.3.1)
       next-auth:
-        specifier: ^4.24.11
-        version: 4.24.11(next@14.2.26)(react-dom@18.3.1)(react@18.3.1)
+        specifier: ^4.24.15
+        version: 4.24.15(next@14.2.26)(react-dom@18.3.1)(react@18.3.1)
       pino:
         specifier: 8.20.0
         version: 8.20.0
@@ -960,8 +960,8 @@ importers:
         specifier: 14.2.26
         version: 14.2.26(@babel/core@7.29.7)(@opentelemetry/api@1.9.0)(react-dom@18.2.0)(react@18.2.0)
       next-auth:
-        specifier: ^4.24.11
-        version: 4.24.11(next@14.2.26)(react-dom@18.2.0)(react@18.2.0)
+        specifier: ^4.24.15
+        version: 4.24.15(next@14.2.26)(react-dom@18.2.0)(react@18.2.0)
       pg:
         specifier: ^8.11.0
         version: 8.16.3
@@ -25689,12 +25689,12 @@ packages:
     engines: {node: '>= 0.4.0'}
     dev: true
 
-  /next-auth@4.24.11(next@14.2.26)(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-pCFXzIDQX7xmHFs4KVH4luCjaCbuPRtZ9oBUjUhOk84mZ9WVPf94n87TxYI4rSRf9HmfHEF8Yep3JrYDVOo3Cw==}
+  /next-auth@4.24.15(next@14.2.26)(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-NnjYtjrSOAx/TIVFGTX4IfI/9yHnNpi4B7FuLUwuV20v2Zxgr2OGP/YN0ynJuI7y8QOnTBPitfOdEXZrVvhIuA==}
     peerDependencies:
-      '@auth/core': 0.34.2
-      next: ^12.2.5 || ^13 || ^14 || ^15
-      nodemailer: ^6.6.5
+      '@auth/core': 0.34.3
+      next: ^12.2.5 || ^13 || ^14 || ^15 || ^16
+      nodemailer: ^7.0.7
       react: ^17.0.2 || ^18 || ^19
       react-dom: ^17.0.2 || ^18 || ^19
     peerDependenciesMeta:
@@ -25714,15 +25714,15 @@ packages:
       preact-render-to-string: 5.2.6(preact@10.26.9)
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
-      uuid: 8.3.2
+      uuid: 11.1.1
     dev: false
 
-  /next-auth@4.24.11(next@14.2.26)(react-dom@18.3.1)(react@18.3.1):
-    resolution: {integrity: sha512-pCFXzIDQX7xmHFs4KVH4luCjaCbuPRtZ9oBUjUhOk84mZ9WVPf94n87TxYI4rSRf9HmfHEF8Yep3JrYDVOo3Cw==}
+  /next-auth@4.24.15(next@14.2.26)(react-dom@18.3.1)(react@18.3.1):
+    resolution: {integrity: sha512-NnjYtjrSOAx/TIVFGTX4IfI/9yHnNpi4B7FuLUwuV20v2Zxgr2OGP/YN0ynJuI7y8QOnTBPitfOdEXZrVvhIuA==}
     peerDependencies:
-      '@auth/core': 0.34.2
-      next: ^12.2.5 || ^13 || ^14 || ^15
-      nodemailer: ^6.6.5
+      '@auth/core': 0.34.3
+      next: ^12.2.5 || ^13 || ^14 || ^15 || ^16
+      nodemailer: ^7.0.7
       react: ^17.0.2 || ^18 || ^19
       react-dom: ^17.0.2 || ^18 || ^19
     peerDependenciesMeta:
@@ -25742,7 +25742,7 @@ packages:
       preact-render-to-string: 5.2.6(preact@10.26.9)
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
-      uuid: 8.3.2
+      uuid: 11.1.1
     dev: false
 
   /next-themes@0.2.1(next@14.2.26)(react-dom@18.2.0)(react@18.2.0):
@@ -31402,6 +31402,11 @@ packages:
 
   /uuid@11.1.0:
     resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
+    hasBin: true
+    dev: false
+
+  /uuid@11.1.1:
+    resolution: {integrity: sha512-vIYxrBCC/N/K+Js3qSN88go7kIfNPssr/hHCesKCQNAjmgvYS2oqr69kIufEG+O4+PfezOH4EbIeHCfFov8ZgQ==}
     hasBin: true
     dev: false
 
