@@ -118,7 +118,7 @@ const windDownConfig = (armed: boolean): WindDownConfig =>
     enabled: true,
     affectedCountries: ["FR"],
     excludedAccountIds: [],
-    excludedRoles: [],
+    includeLevelZero: false,
     regions: [region({ receiveDisabled: armed })],
   }) as WindDownConfig
 

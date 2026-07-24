@@ -48,7 +48,7 @@ const windDownConfig = (overrides: Partial<WindDownConfig> = {}): WindDownConfig
     enabled: true,
     affectedCountries: ["FR", "DE"],
     excludedAccountIds: [],
-    excludedRoles: [],
+    includeLevelZero: false,
     regions: [region()],
     ...overrides,
   }) as WindDownConfig
