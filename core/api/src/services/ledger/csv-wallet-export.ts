@@ -32,6 +32,16 @@ const headers_field = [
 
 const header = headers_field.map((item) => ({ id: item, title: item }))
 
+// The legacy fee/feeUsd/usd ledger fields are only written by admin entries;
+// user transactions carry satsFee/centsFee/centsAmount instead (cents-denominated
+// for the fiat values, hence the / 100).
+const toCsvRecord = (tx: LedgerTransaction<WalletCurrency>) => ({
+  ...tx,
+  fee: tx.satsFee ?? tx.fee,
+  feeUsd: tx.centsFee !== undefined ? tx.centsFee / 100 : tx.feeUsd,
+  usd: tx.centsAmount !== undefined ? tx.centsAmount / 100 : tx.usd,
+})
+
 export class CsvWalletsExport {
   entries: LedgerTransaction<WalletCurrency>[] = []
 
@@ -41,7 +51,7 @@ export class CsvWalletsExport {
     })
 
     const header_stringify = csvWriter.getHeaderString()
-    const records = csvWriter.stringifyRecords(this.entries)
+    const records = csvWriter.stringifyRecords(this.entries.map(toCsvRecord))
 
     const str = header_stringify + records
 
@@ -60,7 +70,7 @@ export class CsvWalletsExport {
       header,
     })
 
-    await csvWriter.writeRecords(this.entries)
+    await csvWriter.writeRecords(this.entries.map(toCsvRecord))
     baseLogger.info("saving complete")
   }
 
