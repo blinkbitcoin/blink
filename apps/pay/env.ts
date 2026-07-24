@@ -16,6 +16,11 @@ export const env = createEnv({
     HYDRA_PUBLIC: z.string().default("http://localhost:4444"),
     NEXTAUTH_URL: z.string().default(""),
     NEXTAUTH_SECRET: z.string().default("secret"),
+    // Non-custodial migration: when a username is deactivated on custodial Blink
+    // (migrated to a non-custodial account), look it up on the lnurl-server via
+    // this well-known host and, if registered, redirect to Blink Terminal.
+    WELL_KNOWN_LNURL_URL: z.string().default("https://blink.sv"),
+    BLINK_TERMINAL_URL: z.string().default("https://terminal.blinkbtc.com"),
   },
   // DO NOT USE THESE, EXCEPT FOR LOCAL DEVELOPMENT
   client: {
@@ -39,5 +44,7 @@ export const env = createEnv({
     HYDRA_PUBLIC: process.env.HYDRA_PUBLIC,
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
     NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
+    WELL_KNOWN_LNURL_URL: process.env.WELL_KNOWN_LNURL_URL,
+    BLINK_TERMINAL_URL: process.env.BLINK_TERMINAL_URL,
   },
 })
