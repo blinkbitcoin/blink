@@ -2,24 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'chore: add includeLevelZero cohort config (#708)'
-      sha: 6822ad7076c841a0a9c5904f0402726e581b997e
+      commitTitle: 'feat(fees): add minFee and effectiveRateCap to exponential decay
+        strategy (#705)'
+      sha: 0643709c47d60052969daf69030a8cc747ef8274
       tags:
-      - 0.22.25-2-g6822ad707
+      - 0.22.26-1-g0643709c4
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'chore: add includeLevelZero cohort config (#708)'
-      sha: 6822ad7076c841a0a9c5904f0402726e581b997e
+      commitTitle: 'feat(fees): add minFee and effectiveRateCap to exponential decay
+        strategy (#705)'
+      sha: 0643709c47d60052969daf69030a8cc747ef8274
       tags:
-      - 0.22.25-2-g6822ad707
+      - 0.22.26-1-g0643709c4
     path: schemas
   - git:
-      commitTitle: 'chore: add includeLevelZero cohort config (#708)'
-      sha: 6822ad7076c841a0a9c5904f0402726e581b997e
+      commitTitle: 'feat(fees): add minFee and effectiveRateCap to exponential decay
+        strategy (#705)'
+      sha: 0643709c47d60052969daf69030a8cc747ef8274
       tags:
-      - 0.22.25-2-g6822ad707
+      - 0.22.26-1-g0643709c4
     path: gql
   path: graphql
 kind: LockConfig
