@@ -1,0 +1,8 @@
+query csvTransactions($walletIds: [WalletId!]!) {
+  me {
+    defaultAccount {
+      id
+      csvTransactions(walletIds: $walletIds)
+    }
+  }
+}
