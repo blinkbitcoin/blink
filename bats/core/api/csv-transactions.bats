@@ -16,6 +16,8 @@ setup_file() {
   fund_wallet_intraledger "$ALICE" "$ALICE.btc_wallet_id" "$BOB.btc_wallet_id" '1000'
 }
 
+# Sets the "csv" variable; exec_graphql prints debug output to stdout, so this
+# must not be called inside command substitution
 fetch_csv() {
   local token_name=$1
 
@@ -30,11 +32,11 @@ fetch_csv() {
   csv_b64="$(graphql_output '.data.me.defaultAccount.csvTransactions')"
   [[ -n "$csv_b64" && "$csv_b64" != "null" ]]
 
-  echo "$csv_b64" | base64 -d
+  csv="$(echo "$csv_b64" | base64 -d)"
 }
 
 @test "csv-transactions: fee column is populated for all exported transactions" {
-  csv="$(fetch_csv "$ALICE")"
+  fetch_csv "$ALICE"
 
   # "fee" is column 6 (id,walletId,type,credit,debit,fee,...); all preceding
   # columns are comma-free so splitting on "," is safe for these assertions
@@ -49,7 +51,7 @@ fetch_csv() {
 }
 
 @test "csv-transactions: intraledger transaction exports zero fee, not empty" {
-  csv="$(fetch_csv "$ALICE")"
+  fetch_csv "$ALICE"
 
   on_us_fee="$(echo "$csv" | awk -F',' '$3 == "on_us" { print $6; exit }')"
   [[ "$on_us_fee" == "0" ]]
