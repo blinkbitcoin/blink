@@ -3,6 +3,11 @@ import {
   exponentialDecayConfigData,
   payoutQueueConfigData,
   multiplierCasesData,
+  standardTierParams,
+  capBindingVectors,
+  nonBindingVectors,
+  floorBindingCase,
+  capFloorConflictCase,
 } from "./exponential-decay.data"
 
 import { WalletCurrency } from "@/domain/shared"
@@ -212,6 +217,101 @@ describe("ExponentialDecayStrategy", () => {
           ).toBeCloseTo(expectedMultiplier, 6)
         },
       )
+    })
+  })
+})
+
+describe("ExponentialDecayStrategy minFee floor + effectiveRateCap (reference model vectors)", () => {
+  const calculateBankFee = async (
+    calculator: IFeeStrategy,
+    {
+      satsAmount,
+      feeRate,
+      minerFee,
+    }: { satsAmount: number; feeRate: number; minerFee: number },
+  ): Promise<bigint> => {
+    const bankFee = await calculator.calculate({
+      paymentAmount: { amount: BigInt(satsAmount), currency: WalletCurrency.Btc },
+      networkFee: {
+        amount: { amount: BigInt(minerFee), currency: WalletCurrency.Btc },
+        feeRate,
+      },
+      accountId: "dummyAccountId" as AccountId,
+      wallet: {
+        id: "dummyWalletId" as WalletId,
+        currency: WalletCurrency.Btc,
+        accountId: "dummyAccountId" as AccountId,
+      },
+      previousFee: {
+        totalFee: { amount: BigInt(0), currency: WalletCurrency.Btc },
+        bankFee: { amount: BigInt(0), currency: WalletCurrency.Btc },
+        minerFee: { amount: BigInt(0), currency: WalletCurrency.Btc },
+      },
+    })
+    if (bankFee instanceof Error) {
+      throw bankFee
+    }
+    return bankFee.amount
+  }
+
+  const clampedCalculator = ExponentialDecayStrategy(standardTierParams)
+
+  describe("cap-binding reference vectors (exact)", () => {
+    test.each(capBindingVectors)(
+      "amount=$satsAmount sats, feeRate=$feeRate, minerFee=$minerFee => total $expectedSats sats",
+      async ({ satsAmount, feeRate, minerFee, expectedSats }) => {
+        const bankFee = await calculateBankFee(clampedCalculator, {
+          satsAmount,
+          feeRate,
+          minerFee,
+        })
+        expect(bankFee + BigInt(minerFee)).toEqual(BigInt(expectedSats))
+      },
+    )
+  })
+
+  describe("non-binding reference vectors (within ±1 sat)", () => {
+    // ±1 sat: core ceils the bank fee where the reference model rounds the total
+    test.each(nonBindingVectors)(
+      "amount=$satsAmount sats, feeRate=$feeRate, minerFee=$minerFee => total $expectedSats ±1 sats",
+      async ({ satsAmount, feeRate, minerFee, expectedSats }) => {
+        const bankFee = await calculateBankFee(clampedCalculator, {
+          satsAmount,
+          feeRate,
+          minerFee,
+        })
+        const actualTotal = Number(bankFee) + minerFee
+        expect(Math.abs(actualTotal - expectedSats)).toBeLessThanOrEqual(1)
+      },
+    )
+  })
+
+  describe("minFee floor", () => {
+    it("lifts total to exactly minFee when the floor binds", async () => {
+      const floorCalculator = ExponentialDecayStrategy({
+        ...standardTierParams,
+        effectiveRateCap: 0,
+      })
+      const { satsAmount, feeRate, minerFee, expectedSats } = floorBindingCase
+      const bankFee = await calculateBankFee(floorCalculator, {
+        satsAmount,
+        feeRate,
+        minerFee,
+      })
+      expect(bankFee + BigInt(minerFee)).toEqual(BigInt(expectedSats))
+      expect(bankFee).toEqual(50n)
+    })
+  })
+
+  describe("cap vs floor conflict", () => {
+    it("applies the cap after the floor when they overlap", async () => {
+      const { satsAmount, feeRate, minerFee, expectedBankFee } = capFloorConflictCase
+      const bankFee = await calculateBankFee(clampedCalculator, {
+        satsAmount,
+        feeRate,
+        minerFee,
+      })
+      expect(bankFee).toEqual(BigInt(expectedBankFee))
     })
   })
 })
