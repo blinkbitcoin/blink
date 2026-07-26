@@ -1,6 +1,10 @@
 import { createEnv } from "@t3-oss/env-nextjs"
 import { z } from "zod"
 
+// URL base values are interpolated as `${BASE}/${path}` — strip trailing
+// slashes at parse time so a misconfigured value can't produce "//" in URLs.
+const urlWithoutTrailingSlash = z.string().transform((s) => s.replace(/\/+$/, ""))
+
 export const env = createEnv({
   server: {
     CORE_GQL_URL_INTRANET: z.string().default("http://localhost:4455/graphql"), // Use intranet URL to preserve tracing headers
@@ -19,8 +23,8 @@ export const env = createEnv({
     // Non-custodial migration: when a username is deactivated on custodial Blink
     // (migrated to a non-custodial account), look it up on the lnurl-server via
     // this well-known host and, if registered, redirect to Blink Terminal.
-    WELL_KNOWN_LNURL_URL: z.string().default("https://blink.sv"),
-    BLINK_TERMINAL_URL: z.string().default("https://terminal.blinkbtc.com"),
+    WELL_KNOWN_LNURL_URL: urlWithoutTrailingSlash.default("https://blink.sv"),
+    BLINK_TERMINAL_URL: urlWithoutTrailingSlash.default("https://terminal.blinkbtc.com"),
   },
   // DO NOT USE THESE, EXCEPT FOR LOCAL DEVELOPMENT
   client: {

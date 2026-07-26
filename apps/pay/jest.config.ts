@@ -11,6 +11,13 @@ const config: Config = {
 
   coverageDirectory: "coverage",
   coverageProvider: "v8",
+
+  // Imports with the "@/" alias are rewritten by SWC from tsconfig paths, but
+  // jest.mock("@/...") specifiers are not — map them explicitly so mocks of
+  // aliased modules resolve.
+  moduleNameMapper: {
+    "^@/(.*)$": "<rootDir>/$1",
+  },
 }
 
 export default createJestConfig(config)
