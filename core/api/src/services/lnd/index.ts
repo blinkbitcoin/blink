@@ -43,7 +43,12 @@ import { checkAllLndHealth } from "./health"
 
 import { KnownLndErrorDetails } from "./errors"
 
-import { NETWORK, SECS_PER_5_MINS, getHistoricalLndPubkeys } from "@/config"
+import {
+  LND_MAX_PAYMENT_PATHS,
+  NETWORK,
+  SECS_PER_5_MINS,
+  getHistoricalLndPubkeys,
+} from "@/config"
 
 import {
   BadPaymentDataError,
@@ -93,10 +98,13 @@ import { timeoutWithCancel } from "@/utils"
 
 const TIMEOUT_PAYMENT = NETWORK !== "regtest" ? 45000 : 3000
 
-// Without max_paths the lightning lib defaults to max_parts=1, so a payment
-// must fit in a single path. Allowing multiple paths lets lnd split large
-// payouts across channels (MPP) when no single route has enough liquidity.
-const MAX_PAYMENT_PATHS = 16
+// The lightning lib's max_paths option maps to lnd's max_parts: the maximum
+// number of shards a payment may be split into (MPP). When unset, lnd uses a
+// single part, so a payment must fit in one route. Each in-flight part
+// consumes an HTLC slot on its channel, so a higher value trades success rate
+// on large payouts for slot pressure under concurrent load. Configurable via
+// LND_MAX_PAYMENT_PATHS (default 4); set to 1 to disable MPP at runtime.
+const MAX_PAYMENT_PATHS = LND_MAX_PAYMENT_PATHS
 
 export const LndService = (): ILightningService | LightningServiceError => {
   const activeNode = getActiveLnd()

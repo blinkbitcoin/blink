@@ -13,6 +13,7 @@ jest.mock("@/services/redis/connection", () => ({
 
 jest.mock("@/config", () => ({
   getHistoricalLndPubkeys: jest.fn(),
+  LND_MAX_PAYMENT_PATHS: 4,
 }))
 
 jest.mock("@/services/lnd/config", () => ({
@@ -223,7 +224,7 @@ describe("LndService", () => {
 
       expect(result).not.toBeInstanceOf(Error)
       expect(mockPayViaPaymentDetails).toHaveBeenCalledWith(
-        expect.objectContaining({ max_paths: 16 }),
+        expect.objectContaining({ max_paths: 4 }),
       )
     })
   })
