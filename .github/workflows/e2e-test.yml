@@ -16,6 +16,18 @@ jobs:
     # plus stack boot take ~16 minutes before the 234 tests start).
     timeout-minutes: 40
     steps:
+      # A run killed by timeout or cancellation never executes Tilt's teardown,
+      # leaving the compose stack running (holding ports) and root-owned files
+      # in the workspace (lnurl-server runs as root and writes into dev/.data,
+      # which makes the next checkout fail with EACCES). Clean both up front.
+      - name: Clean up leftovers from previous runs
+        run: |
+          docker ps -aq --filter "name=galoy-dev" | xargs -r docker rm -f
+          docker network rm galoy-dev_default 2>/dev/null || true
+          if [ -d "$GITHUB_WORKSPACE/dev/.data" ]; then
+            docker run --rm -v "$GITHUB_WORKSPACE:/ws" busybox rm -rf /ws/dev/.data
+          fi
+
       - uses: actions/checkout@v4
 
       - name: Install Nix
