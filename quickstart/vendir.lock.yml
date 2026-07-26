@@ -2,24 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix: pnpm audit critical next-auth advisory (#710)'
-      sha: 3e7cab23a517ee00a8a9ffa868b42cf5483dca89
+      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1599
+        (#720)...'
+      sha: 43fa823e76763f40ddce8d20e2d2d60f1d9d6b50
       tags:
-      - 0.22.27
+      - 0.22.28
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'fix: pnpm audit critical next-auth advisory (#710)'
-      sha: 3e7cab23a517ee00a8a9ffa868b42cf5483dca89
+      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1599
+        (#720)...'
+      sha: 43fa823e76763f40ddce8d20e2d2d60f1d9d6b50
       tags:
-      - 0.22.27
+      - 0.22.28
     path: schemas
   - git:
-      commitTitle: 'fix: pnpm audit critical next-auth advisory (#710)'
-      sha: 3e7cab23a517ee00a8a9ffa868b42cf5483dca89
+      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1599
+        (#720)...'
+      sha: 43fa823e76763f40ddce8d20e2d2d60f1d9d6b50
       tags:
-      - 0.22.27
+      - 0.22.28
     path: gql
   path: graphql
 kind: LockConfig
