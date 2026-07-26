@@ -11,29 +11,13 @@ concurrency:
 jobs:
   tests:
     name: execute via bats
-    runs-on: ubuntu-latest
-    env:
-      # Fresh GitHub runners do not have Buck's downloaded Rust crate archives.
-      # Bound Buck fanout on hosted runners while crate archives come from CDN URLs.
-      BUCK2_JOBS: "4"
-    # The bats suite takes ~24-25 min on a clean run, and can spend several more
-    # minutes resetting lightning state between files, especially after the cron
-    # channel tests. Keep the cap high enough that slow teardown does not cancel
-    # a run that is still progressing.
-    timeout-minutes: 60
+    runs-on: [self-hosted, blink, heavy]
+    timeout-minutes: 25
     steps:
-      - name: Free disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
-          df -h /
-
       - uses: actions/checkout@v4
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v14
-
-      - name: Run the Magic Nix Cache
-        uses: DeterminateSystems/magic-nix-cache-action@v8
 
       - name: Run bats tests
         run: |
