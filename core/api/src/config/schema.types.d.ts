@@ -57,6 +57,8 @@ type ExponentialDecayFeeStrategyParams = {
   targetFeeRate: number
   networkFeeOffset: number
   networkFeeFactor: number
+  minFee: number
+  effectiveRateCap: number
 }
 
 type FeeStrategy =
