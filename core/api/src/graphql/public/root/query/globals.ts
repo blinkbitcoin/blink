@@ -26,20 +26,19 @@ const GlobalsQuery = GT.Field({
       blockInfo = undefined
     }
 
-    let minBankFee = "0"
-    let minBankFeeThreshold = "0"
-    const ratio = "0"
-
     const tieredFlatStrategy = onchainConfig.receive.feeStrategies.find(
       (s) => s.strategy === "tieredFlat",
     )
-    if (tieredFlatStrategy) {
-      const firstTier = tieredFlatStrategy.params.tiers[0]
-      if (firstTier) {
-        minBankFee = `${firstTier.amount}`
-        minBankFeeThreshold = `${firstTier.maxAmount}`
-      }
-    }
+    const tiers = [...(tieredFlatStrategy?.params.tiers ?? [])]
+      .sort((a, b) => (a.maxAmount ?? Infinity) - (b.maxAmount ?? Infinity))
+      .map((tier) => ({
+        maxAmount: tier.maxAmount === null ? undefined : `${tier.maxAmount}`,
+        amount: `${tier.amount}`,
+      }))
+
+    const minBankFee = tiers[0]?.amount ?? "0"
+    const minBankFeeThreshold = tiers[0]?.maxAmount ?? "0"
+    const ratio = "0"
 
     return {
       nodesIds,
@@ -53,6 +52,7 @@ const GlobalsQuery = GT.Field({
         deposit: {
           minBankFee,
           minBankFeeThreshold,
+          tiers,
           ratio,
         },
       },

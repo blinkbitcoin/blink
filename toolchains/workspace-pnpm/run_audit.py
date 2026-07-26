@@ -5,12 +5,15 @@ Audits npm dependencies against the npm registry bulk advisory endpoint.
 The legacy audit endpoints (/-/npm/v1/security/audits) that `pnpm audit` uses
 were retired by npmjs.org on 2026-07-15 (they respond 410), so packages are
 read from pnpm-lock.yaml and posted to the replacement endpoint directly.
+
+Since 2026-07-26 the endpoint returns gzip-compressed bodies with no
+Content-Encoding header, so responses are sniffed rather than trusting headers.
 """
 import argparse
+import gzip
 import json
 import re
 import sys
-import urllib.error
 import urllib.request
 
 BULK_ADVISORY_URL = "https://registry.npmjs.org/-/npm/v1/security/advisories/bulk"
@@ -62,8 +65,14 @@ def fetch_advisories(packages):
             headers={"content-type": "application/json"},
         )
         with urllib.request.urlopen(request, timeout=60) as response:
-            advisories.update(json.load(response))
+            advisories.update(json.loads(decode_body(response.read())))
     return advisories
+
+
+def decode_body(body):
+    if body[:2] == b"\x1f\x8b":
+        return gzip.decompress(body)
+    return body
 
 
 def severity_meets_threshold(severity, audit_level):
@@ -105,9 +114,15 @@ if __name__ == "__main__":
 
     try:
         advisories = fetch_advisories(packages)
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as err:
-        print(f"Could not fetch advisories: {err}", file=sys.stderr)
-        sys.exit(0 if ignore_registry_errors else 1)
+    # OSError covers URLError/TimeoutError/BadGzipFile, ValueError covers
+    # JSONDecodeError/UnicodeDecodeError - a narrower tuple lets an unexpected
+    # wire format escape and defeat --ignore-registry-errors.
+    except (OSError, ValueError) as err:
+        print(f"Could not fetch advisories: {err!r}", file=sys.stderr)
+        if not ignore_registry_errors:
+            sys.exit(1)
+        print("audit skipped: registry unreachable or unreadable", file=sys.stderr)
+        sys.exit(0)
 
     matching = [
         (name, advisory)
