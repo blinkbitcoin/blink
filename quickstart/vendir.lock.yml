@@ -2,27 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1599
-        (#720)...'
-      sha: 43fa823e76763f40ddce8d20e2d2d60f1d9d6b50
+      commitTitle: 'feat(api): expose the onchain deposit fee tiers (#717)'
+      sha: d397f9f1f6ac7942b801c5afb3f936a7c9bde6c5
       tags:
-      - 0.22.28
+      - 0.22.28-2-gd397f9f1f
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1599
-        (#720)...'
-      sha: 43fa823e76763f40ddce8d20e2d2d60f1d9d6b50
+      commitTitle: 'feat(api): expose the onchain deposit fee tiers (#717)'
+      sha: d397f9f1f6ac7942b801c5afb3f936a7c9bde6c5
       tags:
-      - 0.22.28
+      - 0.22.28-2-gd397f9f1f
     path: schemas
   - git:
-      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1599
-        (#720)...'
-      sha: 43fa823e76763f40ddce8d20e2d2d60f1d9d6b50
+      commitTitle: 'feat(api): expose the onchain deposit fee tiers (#717)'
+      sha: d397f9f1f6ac7942b801c5afb3f936a7c9bde6c5
       tags:
-      - 0.22.28
+      - 0.22.28-2-gd397f9f1f
     path: gql
   path: graphql
 kind: LockConfig
