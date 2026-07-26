@@ -12,7 +12,9 @@ jobs:
   tests:
     name: execute via bats
     runs-on: [self-hosted, blink, heavy]
-    timeout-minutes: 25
+    # The full suite needs ~35 minutes on the self-hosted runners (buck2 builds
+    # plus stack boot take ~16 minutes before the 234 tests start).
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
 
