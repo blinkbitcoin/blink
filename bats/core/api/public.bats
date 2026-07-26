@@ -16,6 +16,29 @@ load "../../helpers/subscriber.bash"
   [[ "${block_hash}" != "null" ]] || exit 1
 }
 
+@test "public: globals exposes the onchain deposit fee tiers" {
+  exec_graphql 'anon' 'globals'
+
+  min_bank_fee="$(graphql_output '.data.globals.feesInformation.deposit.minBankFee')"
+  [[ "${min_bank_fee}" = "2500" ]] || exit 1
+
+  threshold="$(graphql_output '.data.globals.feesInformation.deposit.minBankFeeThreshold')"
+  [[ "${threshold}" = "1000000" ]] || exit 1
+
+  tiers_count="$(graphql_output '.data.globals.feesInformation.deposit.tiers | length')"
+  [[ "${tiers_count}" = "2" ]] || exit 1
+
+  first_tier_max="$(graphql_output '.data.globals.feesInformation.deposit.tiers[0].maxAmount')"
+  first_tier_amount="$(graphql_output '.data.globals.feesInformation.deposit.tiers[0].amount')"
+  [[ "${first_tier_max}" = "1000000" ]] || exit 1
+  [[ "${first_tier_amount}" = "2500" ]] || exit 1
+
+  last_tier_max="$(graphql_output '.data.globals.feesInformation.deposit.tiers[1].maxAmount')"
+  last_tier_amount="$(graphql_output '.data.globals.feesInformation.deposit.tiers[1].amount')"
+  [[ "${last_tier_max}" = "null" ]] || exit 1
+  [[ "${last_tier_amount}" = "0" ]] || exit 1
+}
+
 @test "public: can query realtime price" {
   currency="EUR"
   variables=$(
