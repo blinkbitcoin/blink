@@ -1,5 +1,9 @@
 import { createElement } from "react"
 
+import UsernameLayout from "../../app/[username]/layout"
+
+import ErrorMessage from "@/components/error"
+
 // This app's tsconfig program includes Cypress (Chai) types, whose global
 // `expect` shadows jest's — re-alias it to jest's Expect type for this file.
 const expect = globalThis.expect as unknown as jest.Expect
@@ -17,7 +21,7 @@ jest.mock("next/headers", () => ({
 }))
 
 const mockQuery = jest.fn()
-jest.mock("../../ssr-client", () => ({
+jest.mock("../../app/ssr-client", () => ({
   apollo: {
     unauthenticated: () => ({
       getClient: () => ({ query: mockQuery }),
@@ -25,12 +29,12 @@ jest.mock("../../ssr-client", () => ({
   },
 }))
 
-jest.mock("../../currency-metadata", () => ({
+jest.mock("../../app/currency-metadata", () => ({
   defaultCurrencyMetadata: {},
 }))
 
 const mockMigratedTerminalUrl = jest.fn()
-jest.mock("../migrated-terminal-url", () => ({
+jest.mock("../../app/[username]/migrated-terminal-url", () => ({
   migratedTerminalUrl: (username: string, subpath?: string, search?: string) =>
     mockMigratedTerminalUrl(username, subpath, search),
 }))
@@ -56,10 +60,6 @@ jest.mock("@/components/error", () => ({
     return null
   },
 }))
-
-import UsernameLayout from "../layout"
-
-import ErrorMessage from "@/components/error"
 
 const renderLayout = (username: string) =>
   UsernameLayout({ children: createElement("div"), params: { username } })
