@@ -2,24 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat(api): expose the onchain deposit fee tiers (#717)'
-      sha: d397f9f1f6ac7942b801c5afb3f936a7c9bde6c5
+      commitTitle: 'ci: decode gzip advisory responses and widen the audit fail-open
+        guard (#725)...'
+      sha: 1f30b6bcad4a8a81119e4e5c45ef48e3aecbc752
       tags:
-      - 0.22.28-2-gd397f9f1f
+      - 0.22.29
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat(api): expose the onchain deposit fee tiers (#717)'
-      sha: d397f9f1f6ac7942b801c5afb3f936a7c9bde6c5
+      commitTitle: 'ci: decode gzip advisory responses and widen the audit fail-open
+        guard (#725)...'
+      sha: 1f30b6bcad4a8a81119e4e5c45ef48e3aecbc752
       tags:
-      - 0.22.28-2-gd397f9f1f
+      - 0.22.29
     path: schemas
   - git:
-      commitTitle: 'feat(api): expose the onchain deposit fee tiers (#717)'
-      sha: d397f9f1f6ac7942b801c5afb3f936a7c9bde6c5
+      commitTitle: 'ci: decode gzip advisory responses and widen the audit fail-open
+        guard (#725)...'
+      sha: 1f30b6bcad4a8a81119e4e5c45ef48e3aecbc752
       tags:
-      - 0.22.28-2-gd397f9f1f
+      - 0.22.29
     path: gql
   path: graphql
 kind: LockConfig
