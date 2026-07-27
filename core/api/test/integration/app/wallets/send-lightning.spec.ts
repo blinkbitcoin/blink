@@ -67,6 +67,7 @@ const armedUsCohortConfig = {
   enabled: true,
   affectedCountries: ["US"],
   excludedAccountIds: [],
+  receiveBlockedAccountIds: [],
   includeLevelZero: false,
   regions: [
     {

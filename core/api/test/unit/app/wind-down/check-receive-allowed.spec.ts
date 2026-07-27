@@ -45,6 +45,7 @@ const windDownConfig = (overrides: Partial<WindDownConfig> = {}): WindDownConfig
     enabled: true,
     affectedCountries: ["FR", "DE"],
     excludedAccountIds: [],
+    receiveBlockedAccountIds: [],
     includeLevelZero: false,
     regions: [region()],
     ...overrides,
@@ -145,6 +146,31 @@ describe("checkReceiveAllowed", () => {
       }),
     )
     mockFindById.mockResolvedValue({ phone: FR_PHONE, deletedPhones: [] })
+
+    const result = await checkReceiveAllowed({ account })
+
+    expect(result).toBe(true)
+  })
+
+  it("refuses a receive-blocked account even while every region flag is dark", async () => {
+    const account = makeAccount()
+    mockGetWindDownConfig.mockReturnValue(
+      windDownConfig({ receiveBlockedAccountIds: [account.id] }),
+    )
+
+    const result = await checkReceiveAllowed({ account })
+
+    expect(result).toBeInstanceOf(ReceiveDisabledError)
+    // block list is independent of the cohort: no membership evaluation, no reads
+    expect(mockFindById).not.toHaveBeenCalled()
+    expect(mockFindEarliestByAccountId).not.toHaveBeenCalled()
+  })
+
+  it("allows an account that is not on the block list while dark", async () => {
+    const account = makeAccount()
+    mockGetWindDownConfig.mockReturnValue(
+      windDownConfig({ receiveBlockedAccountIds: [crypto.randomUUID()] }),
+    )
 
     const result = await checkReceiveAllowed({ account })
 

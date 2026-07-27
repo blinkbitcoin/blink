@@ -13,6 +13,11 @@ export const checkReceiveAllowed = async ({
   account: Account
 }): Promise<true | ApplicationError> => {
   const config = getWindDownConfig()
+  // independent of the region flags: an id here is blocked as soon as the config applies
+  if (config.receiveBlockedAccountIds.includes(account.id)) {
+    return new ReceiveDisabledError()
+  }
+
   if (!config.regions.some(regionArmed)) return true
 
   const match = await evaluateWindDownCohortMatch({ account })
