@@ -12,7 +12,9 @@ jobs:
   tests:
     name: execute via bats
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # The bats suite now takes ~24-25 min on a clean run, so the previous
+    # 25-minute cap was cancelling green runs at the finish line.
+    timeout-minutes: 40
     steps:
       - name: Free disk space
         run: |
