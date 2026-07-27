@@ -17,6 +17,7 @@ import {
   validateIsBtcWallet,
   validateIsUsdWallet,
 } from "@/app/wallets"
+import { checkReceiveAllowed } from "@/app/wind-down/check-receive-allowed"
 
 import { AccountValidator } from "@/domain/accounts"
 import { PaymentSendStatus } from "@/domain/bitcoin/lightning"
@@ -282,6 +283,11 @@ const executePaymentViaIntraledger = async <
 
   const accountValidator = AccountValidator(recipientAccount)
   if (accountValidator instanceof Error) return accountValidator
+
+  const receiveAllowed = await checkReceiveAllowed({ account: recipientAccount })
+  if (receiveAllowed instanceof Error && recipientAccount.id !== senderAccount.id) {
+    return receiveAllowed
+  }
 
   const recipientUser = await UsersRepository().findById(recipientAccount.kratosUserId)
   if (recipientUser instanceof Error) return recipientUser

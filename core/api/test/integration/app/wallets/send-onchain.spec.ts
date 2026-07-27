@@ -3,6 +3,7 @@ import { randomUUID } from "crypto"
 import { Accounts, Prices, Wallets, Payments } from "@/app"
 
 import { getAccountLimits, getOnChainWalletConfig, ONE_DAY } from "@/config"
+import * as ConfigImpl from "@/config"
 
 import { AccountStatus } from "@/domain/accounts"
 import { toSats } from "@/domain/bitcoin"
@@ -42,6 +43,26 @@ import {
 } from "test/helpers"
 import { getBalanceHelper } from "test/helpers/wallet"
 import { LedgerTransactionType } from "@/domain/ledger"
+import { ReceiveDisabledError } from "@/domain/wind-down"
+
+// "US" matches because test/helpers/random.ts randomPhone() emits +1415.
+const armedUsCohortConfig = {
+  enabled: true,
+  affectedCountries: ["US"],
+  excludedAccountIds: [],
+  includeLevelZero: false,
+  regions: [
+    {
+      code: "default",
+      timezone: "Europe/Paris",
+      receiveDisabledAt: new Date("2026-07-31T22:00:00Z"),
+      finalDeadline: new Date("2026-08-31T21:59:59Z"),
+      gateArmsAt: new Date("2026-08-31T22:00:00Z"),
+      receiveDisabled: true,
+      gateClosed: false,
+    },
+  ],
+}
 
 let outsideAddress: OnChainAddress
 let memo: string
@@ -607,6 +628,84 @@ describe("onChainPay", () => {
         memo,
       })
       expect(res).toBeInstanceOf(InactiveAccountError)
+    })
+
+    it("fails if recipient is receive-disabled by the wind-down", async () => {
+      const newWalletDescriptor = await createRandomUserAndBtcWallet()
+      const newAccount = await AccountsRepository().findById(
+        newWalletDescriptor.accountId,
+      )
+      if (newAccount instanceof Error) throw newAccount
+
+      const recipientWalletDescriptor = await createRandomUserAndBtcWallet()
+
+      // Fund balance for send
+      const receive = await recordReceiveLnPayment({
+        walletDescriptor: newWalletDescriptor,
+        paymentAmount: receiveAmounts,
+        bankFee: receiveBankFee,
+        displayAmounts: receiveDisplayAmounts,
+        memo,
+      })
+      if (receive instanceof Error) throw receive
+
+      // Address is issued while dark, as it would be before the cutoff
+      const recipientWalletIdAddress = await Wallets.createOnChainAddress({
+        walletId: recipientWalletDescriptor.id,
+      })
+      if (recipientWalletIdAddress instanceof Error) throw recipientWalletIdAddress
+
+      jest.spyOn(ConfigImpl, "getWindDownConfig").mockReturnValue(armedUsCohortConfig)
+
+      const res = await Payments.payOnChainByWalletIdForBtcWallet({
+        senderWalletId: newWalletDescriptor.id,
+        senderAccount: newAccount,
+        amount,
+        address: recipientWalletIdAddress,
+        speed: PayoutSpeed.Fast,
+        memo,
+      })
+      expect(res).toBeInstanceOf(ReceiveDisabledError)
+    })
+
+    it("allows a send to the sender's own wallet when receive-disabled", async () => {
+      const { btcWalletDescriptor: newWalletDescriptor, usdWalletDescriptor } =
+        await createRandomUserAndWallets()
+      const newAccount = await AccountsRepository().findById(
+        newWalletDescriptor.accountId,
+      )
+      if (newAccount instanceof Error) throw newAccount
+
+      // Fund balance for send
+      const receive = await recordReceiveLnPayment({
+        walletDescriptor: newWalletDescriptor,
+        paymentAmount: receiveAmounts,
+        bankFee: receiveBankFee,
+        displayAmounts: receiveDisplayAmounts,
+        memo,
+      })
+      if (receive instanceof Error) throw receive
+
+      const recipientWalletIdAddress = await Wallets.createOnChainAddress({
+        walletId: usdWalletDescriptor.id,
+      })
+      if (recipientWalletIdAddress instanceof Error) throw recipientWalletIdAddress
+
+      jest.spyOn(ConfigImpl, "getWindDownConfig").mockReturnValue(armedUsCohortConfig)
+
+      // same account on both sides: the self exemption keeps own-funds moves working
+      const paymentResult = await Payments.payOnChainByWalletIdForBtcWallet({
+        senderWalletId: newWalletDescriptor.id,
+        senderAccount: newAccount,
+        amount,
+        address: recipientWalletIdAddress,
+        speed: PayoutSpeed.Fast,
+        memo,
+      })
+      expect(paymentResult).not.toBeInstanceOf(Error)
+      expect(paymentResult).toEqual(
+        expect.objectContaining({ status: PaymentSendStatus.Success }),
+      )
     })
 
     it("records transaction with onchain-trade-intra-account metadata on intraledger send", async () => {
