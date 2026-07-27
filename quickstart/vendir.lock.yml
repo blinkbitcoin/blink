@@ -2,27 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'ci: decode gzip advisory responses and widen the audit fail-open
-        guard (#725)...'
-      sha: 1f30b6bcad4a8a81119e4e5c45ef48e3aecbc752
+      commitTitle: 'feat(pay): redirect migrated usernames to Blink Terminal (#719)...'
+      sha: ea2b7dc0ed2e2955ac0bf1ae70f728c9a2811b47
       tags:
-      - 0.22.29
+      - 0.22.29-2-gea2b7dc0e
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'ci: decode gzip advisory responses and widen the audit fail-open
-        guard (#725)...'
-      sha: 1f30b6bcad4a8a81119e4e5c45ef48e3aecbc752
+      commitTitle: 'feat(pay): redirect migrated usernames to Blink Terminal (#719)...'
+      sha: ea2b7dc0ed2e2955ac0bf1ae70f728c9a2811b47
       tags:
-      - 0.22.29
+      - 0.22.29-2-gea2b7dc0e
     path: schemas
   - git:
-      commitTitle: 'ci: decode gzip advisory responses and widen the audit fail-open
-        guard (#725)...'
-      sha: 1f30b6bcad4a8a81119e4e5c45ef48e3aecbc752
+      commitTitle: 'feat(pay): redirect migrated usernames to Blink Terminal (#719)...'
+      sha: ea2b7dc0ed2e2955ac0bf1ae70f728c9a2811b47
       tags:
-      - 0.22.29
+      - 0.22.29-2-gea2b7dc0e
     path: gql
   path: graphql
 kind: LockConfig
