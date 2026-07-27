@@ -666,7 +666,8 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       return new MigrationApiKeyForbiddenError({ message, logger: baseLogger })
 
     case "ReceiveDisabledError":
-      message = "This account can no longer receive payments."
+      message =
+        "This account can no longer receive payments. If this is your account, please update the Blink app to migrate your funds."
       return new ReceiveDisabledError({ message, logger: baseLogger })
 
     // ----------
