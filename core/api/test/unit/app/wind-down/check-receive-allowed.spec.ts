@@ -10,10 +10,7 @@ jest.mock("@/services/mongoose/accounts-ips", () => ({
   AccountsIpsRepository: jest.fn(),
 }))
 
-import {
-  checkReceiveAllowed,
-  isReceiveEnforcementArmed,
-} from "@/app/wind-down/check-receive-allowed"
+import { checkReceiveAllowed } from "@/app/wind-down/check-receive-allowed"
 
 import { getWindDownConfig } from "@/config"
 import { ReceiveDisabledError } from "@/domain/wind-down"
@@ -194,25 +191,5 @@ describe("checkReceiveAllowed", () => {
     const result = await checkReceiveAllowed({ account: makeAccount() })
 
     expect(result).toBe(true)
-  })
-})
-
-describe("isReceiveEnforcementArmed", () => {
-  beforeEach(() => {
-    jest.resetAllMocks()
-  })
-
-  it("is false when every region flag is off", () => {
-    mockGetWindDownConfig.mockReturnValue(windDownConfig())
-    expect(isReceiveEnforcementArmed()).toBe(false)
-  })
-
-  it("is true when any region has receiveDisabled or gateClosed", () => {
-    mockGetWindDownConfig.mockReturnValue(
-      windDownConfig({
-        regions: [region(), region({ code: "de", gateClosed: true })],
-      }),
-    )
-    expect(isReceiveEnforcementArmed()).toBe(true)
   })
 })
