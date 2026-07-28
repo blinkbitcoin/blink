@@ -1,6 +1,6 @@
 import { WalletCurrency } from "@/domain/shared"
 import { toSats } from "@/domain/bitcoin"
-import { toCents } from "@/domain/fiat"
+import { centsToDollars, toCents } from "@/domain/fiat"
 
 import { TWILIO_WELCOME_CONTENT_SID } from "@/config"
 
@@ -12,7 +12,7 @@ export const welcomeSmsTemplate = ({
   const currencyAmount =
     currency === WalletCurrency.Btc
       ? Number(toSats(amount))
-      : Number(toCents(amount)) / 100
+      : centsToDollars(Number(toCents(amount)))
 
   const formattedAmount =
     currency === WalletCurrency.Btc
