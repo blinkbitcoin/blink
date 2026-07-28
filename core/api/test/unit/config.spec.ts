@@ -165,6 +165,36 @@ describe("config.ts", () => {
       }
     })
 
+    it("lowercases an uppercase receive-blocked account id at load", () => {
+      const customPath = path.join(os.tmpdir(), "winddown-uppercase-blocked-id.yaml")
+      fs.writeFileSync(
+        customPath,
+        yaml.dump({
+          windDown: {
+            receiveBlockedAccountIds: ["00000000-0000-0000-0000-00000000000B"],
+          },
+        }),
+      )
+      const originalArgv = process.argv[2]
+      process.argv[2] = customPath
+      try {
+        jest.isolateModules(() => {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const { getWindDownConfig } = require("@/config/yaml")
+          expect(getWindDownConfig().receiveBlockedAccountIds).toEqual([
+            "00000000-0000-0000-0000-00000000000b",
+          ])
+        })
+      } finally {
+        if (originalArgv === undefined) {
+          process.argv.splice(2, 1)
+        } else {
+          process.argv[2] = originalArgv
+        }
+        fs.unlinkSync(customPath)
+      }
+    })
+
     it("fails validation missing required property", () => {
       const clonedConfig = JSON.parse(JSON.stringify(yamlConfig))
       delete clonedConfig.buildVersion

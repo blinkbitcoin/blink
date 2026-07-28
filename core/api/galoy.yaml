@@ -325,6 +325,7 @@ windDown:
   affectedCountries:
     - NL
   excludedAccountIds: []
+  receiveBlockedAccountIds: []
   includeLevelZero: false
   regions:
     - code: default

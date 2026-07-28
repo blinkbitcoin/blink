@@ -18,6 +18,7 @@ import {
   validateIsBtcWallet,
   validateIsUsdWallet,
 } from "@/app/wallets"
+import { checkReceiveAllowed } from "@/app/wind-down/check-receive-allowed"
 
 import {
   InvalidLightningPaymentFlowBuilderStateError,
@@ -33,6 +34,7 @@ import { checkedToWalletId, SettlementMethod } from "@/domain/wallets"
 
 import { LockService } from "@/services/lock"
 import { LedgerService } from "@/services/ledger"
+import { getBankOwnerWalletId } from "@/services/ledger/caching"
 import * as LedgerFacade from "@/services/ledger/facade"
 import { DealerPriceService } from "@/services/dealer-price"
 import {
@@ -201,6 +203,15 @@ const validateIntraledgerPaymentInputs = async ({
 
   const recipientAccountValidator = AccountValidator(recipientAccount)
   if (recipientAccountValidator instanceof Error) return recipientAccountValidator
+
+  const receiveAllowed = await checkReceiveAllowed({ account: recipientAccount })
+  if (
+    receiveAllowed instanceof Error &&
+    recipientAccount.id !== senderWallet.accountId &&
+    senderWallet.id !== (await getBankOwnerWalletId())
+  ) {
+    return receiveAllowed
+  }
 
   const recipientUser = await UsersRepository().findById(recipientAccount.kratosUserId)
   if (recipientUser instanceof Error) return recipientUser

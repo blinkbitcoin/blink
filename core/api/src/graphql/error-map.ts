@@ -43,6 +43,7 @@ import {
   MigrationStateConflictError,
   MigrationInvalidDestinationError,
   MigrationApiKeyForbiddenError,
+  ReceiveDisabledError,
 } from "@/graphql/error"
 import { baseLogger } from "@/services/logger"
 
@@ -664,6 +665,11 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       message = "Migration is not available via API key. Please use a session."
       return new MigrationApiKeyForbiddenError({ message, logger: baseLogger })
 
+    case "ReceiveDisabledError":
+      message =
+        "This account can no longer receive payments. If this is your account, please update the Blink app to migrate your funds."
+      return new ReceiveDisabledError({ message, logger: baseLogger })
+
     // ----------
     // Unhandled below here
     // ----------
@@ -774,6 +780,7 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "InvalidAccountStatusError":
     case "MigrationFlowError":
     case "InvalidMigrationFlowPhaseError":
+    case "WindDownError":
     case "InvalidOnChainAddress":
     case "InvalidScanDepthAmount":
     case "InsufficientBalanceForRoutingError":

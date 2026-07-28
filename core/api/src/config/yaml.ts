@@ -286,6 +286,9 @@ const windDownConfig: WindDownConfig = {
   excludedAccountIds: yamlConfig.windDown.excludedAccountIds.map((id) =>
     id.toLowerCase(),
   ),
+  receiveBlockedAccountIds: yamlConfig.windDown.receiveBlockedAccountIds.map((id) =>
+    id.toLowerCase(),
+  ),
   regions: yamlConfig.windDown.regions.map((region) => ({
     ...region,
     receiveDisabledAt: windDownOperativeDate(region.receiveDisabledAt),
