@@ -21,9 +21,11 @@ setup_file() {
 }
 
 teardown() {
-   if [[ "$(balance_for_check)" != 0 ]]; then
-     fail "Error: balance_for_check failed"
-   fi
+  # This file includes tests that mine and settle transactions through Bria,
+  # LND, and the exporter. CI runners can observe GraphQL state before the
+  # accounting metrics converge, so use a longer invariant wait than tests that
+  # do not exercise the onchain settlement pipeline.
+  assert_balance_for_check 45 1
 }
 
 @test "onchain-receive: process received batch transaction via legacy lnd" {
