@@ -10,6 +10,7 @@ jest.mock("@/services/mongoose", () => ({
     findUserById: jest.fn(),
     isRecorded: jest.fn(),
     persistNew: jest.fn(),
+    findLastByWalletId: jest.fn(),
   },
   WalletsRepository: () => ({
     findById: jest.requireMock("@/services/mongoose").__mocks.findWalletById,
@@ -25,6 +26,8 @@ jest.mock("@/services/mongoose", () => ({
   }),
   WalletOnChainAddressesRepository: () => ({
     isRecorded: jest.requireMock("@/services/mongoose").__mocks.isRecorded,
+    findLastByWalletId:
+      jest.requireMock("@/services/mongoose").__mocks.findLastByWalletId,
   }),
 }))
 
@@ -82,6 +85,7 @@ jest.mock("@/services/tracing", () => ({
 
 import { addInvoiceForSelfForBtcWallet } from "@/app/wallets/add-invoice-for-wallet"
 import { createOnChainAddress } from "@/app/wallets/create-on-chain-address"
+import { getLastOnChainAddress } from "@/app/wallets/get-last-on-chain-address"
 
 import { getWindDownConfig } from "@/config"
 import { consumeLimiter } from "@/services/rate-limit"
@@ -94,6 +98,7 @@ const mocks = jest.requireMock("@/services/mongoose").__mocks as {
   findUserById: jest.Mock
   isRecorded: jest.Mock
   persistNew: jest.Mock
+  findLastByWalletId: jest.Mock
 }
 const mockGetWindDownConfig = getWindDownConfig as jest.MockedFunction<
   typeof getWindDownConfig
@@ -172,6 +177,33 @@ describe("receive-disable at the wallet entry points", () => {
 
       expect(result).not.toBeInstanceOf(ReceiveDisabledError)
       expect(mockConsumeLimiter).toHaveBeenCalled()
+    })
+  })
+
+  describe("getLastOnChainAddress", () => {
+    it("refuses to serve a persisted address for a cohort account when armed", async () => {
+      mockGetWindDownConfig.mockReturnValue(windDownConfig(true))
+      mocks.findLastByWalletId.mockResolvedValue({
+        address: "bc1qexisting",
+        pubkey: "pubkey",
+      })
+
+      const result = await getLastOnChainAddress(walletId)
+
+      expect(result).toBeInstanceOf(ReceiveDisabledError)
+      expect(mocks.findLastByWalletId).not.toHaveBeenCalled()
+    })
+
+    it("serves the persisted address while the flags are dark", async () => {
+      mockGetWindDownConfig.mockReturnValue(windDownConfig(false))
+      mocks.findLastByWalletId.mockResolvedValue({
+        address: "bc1qexisting",
+        pubkey: "pubkey",
+      })
+
+      const result = await getLastOnChainAddress(walletId)
+
+      expect(result).toBe("bc1qexisting")
     })
   })
 

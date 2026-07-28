@@ -228,6 +228,8 @@ export const addSettledTransaction = async (args: {
       walletId: walletDescriptor.id,
       requestId: newAddressRequestId,
     })
+    // deposits to pre-issued addresses still credit post-flip (recorded residual);
+    // a refused rotation must not block the bria event stream
     if (newAddress instanceof Error && !(newAddress instanceof ReceiveDisabledError)) {
       return newAddress
     }
