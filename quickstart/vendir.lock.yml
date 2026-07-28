@@ -2,24 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat(pay): redirect migrated usernames to Blink Terminal (#719)...'
-      sha: ea2b7dc0ed2e2955ac0bf1ae70f728c9a2811b47
+      commitTitle: 'feat(wind-down): enforce receive-disable across inbound rails
+        (#728)'
+      sha: 3680236f6e6f1b5aae0ab560a4157a5bafcf44a5
       tags:
-      - 0.22.29-2-gea2b7dc0e
+      - 0.22.30-1-g3680236f6
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat(pay): redirect migrated usernames to Blink Terminal (#719)...'
-      sha: ea2b7dc0ed2e2955ac0bf1ae70f728c9a2811b47
+      commitTitle: 'feat(wind-down): enforce receive-disable across inbound rails
+        (#728)'
+      sha: 3680236f6e6f1b5aae0ab560a4157a5bafcf44a5
       tags:
-      - 0.22.29-2-gea2b7dc0e
+      - 0.22.30-1-g3680236f6
     path: schemas
   - git:
-      commitTitle: 'feat(pay): redirect migrated usernames to Blink Terminal (#719)...'
-      sha: ea2b7dc0ed2e2955ac0bf1ae70f728c9a2811b47
+      commitTitle: 'feat(wind-down): enforce receive-disable across inbound rails
+        (#728)'
+      sha: 3680236f6e6f1b5aae0ab560a4157a5bafcf44a5
       tags:
-      - 0.22.29-2-gea2b7dc0e
+      - 0.22.31
     path: gql
   path: graphql
 kind: LockConfig
