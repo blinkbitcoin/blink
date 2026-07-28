@@ -75,6 +75,7 @@ describe("CsvWalletsExport", () => {
 
     expect(row.fee).toBe("0")
     expect(row.feeUsd).toBe("0")
+    expect(row.usd).toBe("5")
   })
 
   it("falls back to legacy fee fields for admin entries", async () => {
