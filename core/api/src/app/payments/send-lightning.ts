@@ -73,6 +73,7 @@ import {
   validateIsBtcWallet,
   validateIsUsdWallet,
 } from "@/app/wallets"
+import { checkReceiveAllowed } from "@/app/wind-down/check-receive-allowed"
 
 import { ResourceExpiredLockServiceError } from "@/domain/lock"
 
@@ -84,8 +85,10 @@ const getValidatedIntraledgerRecipientAccount = async <
   R extends WalletCurrency,
 >({
   paymentFlow,
+  senderAccount,
 }: {
   paymentFlow: PaymentFlow<S, R>
+  senderAccount: Account
 }): Promise<Account | ApplicationError> => {
   const { walletDescriptor: recipientWalletDescriptor } = paymentFlow.recipientDetails()
   if (!recipientWalletDescriptor) {
@@ -101,6 +104,11 @@ const getValidatedIntraledgerRecipientAccount = async <
 
   const accountValidator = AccountValidator(recipientAccount)
   if (accountValidator instanceof Error) return accountValidator
+
+  const receiveAllowed = await checkReceiveAllowed({ account: recipientAccount })
+  if (receiveAllowed instanceof Error && recipientAccount.id !== senderAccount.id) {
+    return receiveAllowed
+  }
 
   return recipientAccount
 }
@@ -170,7 +178,10 @@ export const payInvoiceByWalletId = async ({
     })
   }
 
-  const recipientAccount = await getValidatedIntraledgerRecipientAccount({ paymentFlow })
+  const recipientAccount = await getValidatedIntraledgerRecipientAccount({
+    paymentFlow,
+    senderAccount,
+  })
   if (recipientAccount instanceof Error) return recipientAccount
 
   const paymentSendResult = await executePaymentViaIntraledger({
@@ -241,7 +252,10 @@ export const payNoAmountInvoiceByWalletId = async ({
     })
   }
 
-  const recipientAccount = await getValidatedIntraledgerRecipientAccount({ paymentFlow })
+  const recipientAccount = await getValidatedIntraledgerRecipientAccount({
+    paymentFlow,
+    senderAccount,
+  })
   if (recipientAccount instanceof Error) return recipientAccount
 
   const paymentSendResult = await executePaymentViaIntraledger({

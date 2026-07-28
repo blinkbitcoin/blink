@@ -1093,6 +1093,12 @@ export const configSchema = {
           uniqueItems: true,
           default: [],
         },
+        receiveBlockedAccountIds: {
+          type: "array",
+          items: { type: "string", format: "uuid" },
+          uniqueItems: true,
+          default: [],
+        },
         includeLevelZero: { type: "boolean", default: false },
         regions: {
           type: "array",
@@ -1134,6 +1140,7 @@ export const configSchema = {
         "enabled",
         "affectedCountries",
         "excludedAccountIds",
+        "receiveBlockedAccountIds",
         "includeLevelZero",
         "regions",
       ],
@@ -1142,6 +1149,7 @@ export const configSchema = {
         enabled: true,
         affectedCountries: ["NL"],
         excludedAccountIds: [],
+        receiveBlockedAccountIds: [],
         includeLevelZero: false,
         regions: [
           {

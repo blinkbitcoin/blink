@@ -1,5 +1,7 @@
 import { createOnChainAddress } from "./create-on-chain-address"
 
+import { checkReceiveAllowed } from "@/app/wind-down/check-receive-allowed"
+
 import { AccountValidator } from "@/domain/accounts"
 import { CouldNotFindError } from "@/domain/errors"
 import {
@@ -17,6 +19,9 @@ export const getLastOnChainAddress = async (
   if (account instanceof Error) return account
   const accountValidator = AccountValidator(account)
   if (accountValidator instanceof Error) return accountValidator
+
+  const receiveAllowed = await checkReceiveAllowed({ account })
+  if (receiveAllowed instanceof Error) return receiveAllowed
 
   const onChainAddressesRepo = WalletOnChainAddressesRepository()
   const lastOnChainAddress = await onChainAddressesRepo.findLastByWalletId(walletId)
