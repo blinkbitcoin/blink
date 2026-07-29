@@ -50,6 +50,11 @@ jest.mock("@/config", () => {
 const calc = AmountCalculator()
 const usdHedgeEnabled = getDealerConfig().usd.hedgingEnabled
 
+// These scenarios share a beforeAll hook that bootstraps LND nodes, opens channels,
+// and then exercise repeated invoice probes/payments. CI runners have exceeded the
+// default 60s/120s timeouts, and the shared bootstrap has exceeded 300s.
+jest.setTimeout(600000)
+
 const USD_STARTING_BALANCE = 100 as UsdCents
 
 const ONE_CENT = { amount: 1n, currency: WalletCurrency.Usd } as UsdPaymentAmount

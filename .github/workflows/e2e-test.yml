@@ -12,9 +12,15 @@ jobs:
   tests:
     name: execute via bats
     runs-on: ubuntu-latest
-    # The bats suite now takes ~24-25 min on a clean run, so the previous
-    # 25-minute cap was cancelling green runs at the finish line.
-    timeout-minutes: 40
+    env:
+      # Fresh GitHub runners do not have Buck's downloaded Rust crate archives.
+      # Bound Buck fanout on hosted runners while crate archives come from CDN URLs.
+      BUCK2_JOBS: "4"
+    # The bats suite takes ~24-25 min on a clean run, and can spend several more
+    # minutes resetting lightning state between files, especially after the cron
+    # channel tests. Keep the cap high enough that slow teardown does not cancel
+    # a run that is still progressing.
+    timeout-minutes: 60
     steps:
       - name: Free disk space
         run: |
