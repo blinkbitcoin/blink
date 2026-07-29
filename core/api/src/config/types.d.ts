@@ -31,6 +31,7 @@ type WindDownYamlConfig = {
   excludedAccountIds: string[]
   receiveBlockedAccountIds: string[]
   includeLevelZero: boolean
+  convertUsdToBtcAtMidPrice: boolean
   regions: WindDownRegionYamlConfig[]
 }
 
@@ -49,6 +50,7 @@ type WindDownConfig = {
   excludedAccountIds: string[]
   receiveBlockedAccountIds: string[]
   includeLevelZero: boolean
+  convertUsdToBtcAtMidPrice: boolean
   regions: WindDownRegionConfig[]
 }
 

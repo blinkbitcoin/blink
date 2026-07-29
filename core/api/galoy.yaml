@@ -327,6 +327,7 @@ windDown:
   excludedAccountIds: []
   receiveBlockedAccountIds: []
   includeLevelZero: false
+  convertUsdToBtcAtMidPrice: false
   regions:
     - code: default
       timezone: Europe/Paris

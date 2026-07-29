@@ -1100,6 +1100,7 @@ export const configSchema = {
           default: [],
         },
         includeLevelZero: { type: "boolean", default: false },
+        convertUsdToBtcAtMidPrice: { type: "boolean", default: false },
         regions: {
           type: "array",
           minItems: 1,
@@ -1142,6 +1143,7 @@ export const configSchema = {
         "excludedAccountIds",
         "receiveBlockedAccountIds",
         "includeLevelZero",
+        "convertUsdToBtcAtMidPrice",
         "regions",
       ],
       additionalProperties: false,
@@ -1151,6 +1153,7 @@ export const configSchema = {
         excludedAccountIds: [],
         receiveBlockedAccountIds: [],
         includeLevelZero: false,
+        convertUsdToBtcAtMidPrice: false,
         regions: [
           {
             code: DEFAULT_WIND_DOWN_REGION_CODE,

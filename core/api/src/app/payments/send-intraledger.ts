@@ -5,7 +5,7 @@ import {
   withSpendingLimits,
 } from "./spending-limits"
 
-import { getValuesToSkipProbe } from "@/config"
+import { getValuesToSkipProbe, getWindDownConfig } from "@/config"
 
 import { createIntraledgerContact } from "@/app/accounts"
 import {
@@ -19,6 +19,7 @@ import {
   validateIsUsdWallet,
 } from "@/app/wallets"
 import { checkReceiveAllowed } from "@/app/wind-down/check-receive-allowed"
+import { isAccountInWindDownCohort } from "@/app/wind-down/is-account-in-wind-down-cohort"
 
 import {
   InvalidLightningPaymentFlowBuilderStateError,
@@ -27,7 +28,7 @@ import {
 } from "@/domain/payments"
 import { AccountValidator } from "@/domain/accounts"
 import { DisplayAmountsConverter } from "@/domain/fiat"
-import { ErrorLevel } from "@/domain/shared"
+import { ErrorLevel, WalletCurrency } from "@/domain/shared"
 import { PaymentSendStatus } from "@/domain/bitcoin/lightning"
 import { ResourceExpiredLockServiceError } from "@/domain/lock"
 import { checkedToWalletId, SettlementMethod } from "@/domain/wallets"
@@ -101,16 +102,37 @@ const intraledgerPaymentSendWalletId = async ({
     recipientArgsForBuilder,
   )
 
+  const shouldUseMidPrice = async (): Promise<boolean> => {
+    const { convertUsdToBtcAtMidPrice } = getWindDownConfig()
+    if (!convertUsdToBtcAtMidPrice) return false
+    if (senderWallet.currency !== WalletCurrency.Usd) return false
+    if (recipientWallet.currency !== WalletCurrency.Btc) return false
+    if (recipientAccount.id !== senderWallet.accountId) return false
+    if (senderAccount.id !== senderWallet.accountId) return false
+    const inCohort = await isAccountInWindDownCohort({ account: senderAccount })
+    if (inCohort instanceof Error) {
+      recordExceptionInCurrentSpan({ error: inCohort, level: ErrorLevel.Warn })
+      return false
+    }
+    return inCohort
+  }
+
+  const useMidPrice = await shouldUseMidPrice()
+  if (useMidPrice) addAttributesToCurrentSpan({ "payment.midPriceConversion": "true" })
+  const hedgeSellUsd = useMidPrice
+    ? { usdFromBtc: usdFromBtcMidPriceFn, btcFromUsd: btcFromUsdMidPriceFn }
+    : {
+        usdFromBtc: dealer.getCentsFromSatsForImmediateSell,
+        btcFromUsd: dealer.getSatsFromCentsForImmediateSell,
+      }
+
   const builderWithConversion = builderAfterRecipientStep.withConversion({
     mid: { usdFromBtc: usdFromBtcMidPriceFn, btcFromUsd: btcFromUsdMidPriceFn },
     hedgeBuyUsd: {
       usdFromBtc: dealer.getCentsFromSatsForImmediateBuy,
       btcFromUsd: dealer.getSatsFromCentsForImmediateBuy,
     },
-    hedgeSellUsd: {
-      usdFromBtc: dealer.getCentsFromSatsForImmediateSell,
-      btcFromUsd: dealer.getSatsFromCentsForImmediateSell,
-    },
+    hedgeSellUsd,
   })
   if (builderWithConversion instanceof Error) return builderWithConversion
 

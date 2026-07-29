@@ -120,6 +120,7 @@ const windDownConfig = (armed: boolean): WindDownConfig =>
     excludedAccountIds: [],
     receiveBlockedAccountIds: [],
     includeLevelZero: false,
+    convertUsdToBtcAtMidPrice: false,
     regions: [region({ receiveDisabled: armed })],
   }) as WindDownConfig
 
