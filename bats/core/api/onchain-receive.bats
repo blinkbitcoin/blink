@@ -95,15 +95,25 @@ teardown() {
   retry 3 1 check_for_incoming_broadcast 'alice' "$alice_usd_address"
   retry 3 1 check_for_incoming_broadcast 'bob' "$bob_btc_address"
 
-  # Mine transactions
+  # Mine transactions.
+  #
+  # This receive is booked by onchainBlockEventHandler, which rescans only
+  # ONCHAIN_MIN_CONFIRMATIONS + 1 blocks deep (3 with the dev config's
+  # minConfirmations: 2). Mining six blocks back-to-back could push the tx out of
+  # that window before the handler had processed it; the sats then sat in lnd's
+  # onchain wallet with no ledger entry and no user credit, and
+  # galoy_lndBalanceSync stayed off by the received amount for the rest of the
+  # suite. Mine only what is needed to confirm, and never mine past the scan
+  # window while waiting.
   # Note: subscription event operates in a delayed way from lnd1 state
   bitcoin_cli -generate 2
-  sleep 1
-  bitcoin_cli -generate 2
-  sleep 1
-  bitcoin_cli -generate 2
 
-  retry 45 1 check_for_onchain_initiated_settled 'alice' "$alice_btc_address" 10
+  if ! retry 20 1 check_for_onchain_initiated_settled 'alice' "$alice_btc_address" 10; then
+    # One more block keeps the tx at the edge of the scan window (depth 3) and
+    # re-fires the handler. Past this it can no longer be seen by the rescan.
+    bitcoin_cli -generate 1
+    retry 25 1 check_for_onchain_initiated_settled 'alice' "$alice_btc_address" 10
+  fi
   retry 3 1 check_for_onchain_initiated_settled 'alice' "$alice_usd_address" 10
   retry 3 1 check_for_onchain_initiated_settled 'bob' "$bob_btc_address" 10
 
