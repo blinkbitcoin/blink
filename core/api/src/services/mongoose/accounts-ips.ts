@@ -83,6 +83,35 @@ export const AccountsIpsRepository = (): IAccountsIPsRepository => {
     }
   }
 
+  const findLastByAccountIdBefore = async ({
+    accountId,
+    cutoff,
+  }: FindLastByAccountIdBeforeArgs): Promise<AccountIP | RepositoryError> => {
+    try {
+      // lastConnection mutates in place, so rank by min(lastConnection, cutoff): a row
+      // spanning the cutoff scores exactly cutoff and outranks every pre-cutoff row
+      const spanning = await AccountIps.findOne({
+        accountId,
+        firstConnection: { $lte: cutoff },
+        lastConnection: { $gte: cutoff },
+      }).sort({ _id: -1 })
+      if (spanning) return accountIPFromRaw(spanning)
+
+      const result = await AccountIps.findOne({
+        accountId,
+        lastConnection: { $lte: cutoff },
+      }).sort({ lastConnection: -1, _id: -1 })
+
+      if (!result) {
+        return new CouldNotFindAccountIpError(accountId)
+      }
+
+      return accountIPFromRaw(result)
+    } catch (error) {
+      return parseRepositoryError(error)
+    }
+  }
+
   const findEarliestByAccountId = async (
     accountId: AccountId,
   ): Promise<AccountIP | RepositoryError> => {
@@ -104,6 +133,7 @@ export const AccountsIpsRepository = (): IAccountsIPsRepository => {
   return {
     update,
     findLastByAccountId,
+    findLastByAccountIdBefore,
     findEarliestByAccountId,
     findByAccountIdAndIp,
   }

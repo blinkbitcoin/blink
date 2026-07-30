@@ -219,6 +219,23 @@ interface MigrationFlowStateRecord {
   updatedAt: Date
 }
 
+type WindDownCohortAssessmentSignalsRecord = {
+  phoneCountry?: string
+  newestDeletedPhoneCountry?: string
+  creationIpCountry?: string
+  latestIpCountry?: string
+}
+
+interface WindDownCohortAssessmentRecord {
+  accountId: string
+  matched: boolean
+  assignedCountry?: string
+  rule: WindDownCohortRule
+  signals?: WindDownCohortAssessmentSignalsRecord
+  createdAt: Date
+  updatedAt: Date
+}
+
 type WalletOnChainPendingReceiveRecord = {
   walletId: string
   address: string

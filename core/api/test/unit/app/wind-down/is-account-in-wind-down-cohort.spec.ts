@@ -4,6 +4,7 @@ jest.mock("@/config", () => ({
 
 jest.mock("@/services/mongoose", () => ({
   UsersRepository: jest.fn(),
+  WindDownCohortAssessmentsRepository: jest.fn(),
 }))
 
 jest.mock("@/services/mongoose/accounts-ips", () => ({
@@ -16,8 +17,12 @@ import {
 } from "@/app/wind-down/is-account-in-wind-down-cohort"
 
 import { getWindDownConfig } from "@/config"
-import { CouldNotFindAccountIpError, UnknownRepositoryError } from "@/domain/errors"
-import { UsersRepository } from "@/services/mongoose"
+import {
+  CouldNotFindAccountIpError,
+  CouldNotFindWindDownCohortAssessmentError,
+  UnknownRepositoryError,
+} from "@/domain/errors"
+import { UsersRepository, WindDownCohortAssessmentsRepository } from "@/services/mongoose"
 import { AccountsIpsRepository } from "@/services/mongoose/accounts-ips"
 
 const mockGetWindDownConfig = getWindDownConfig as jest.MockedFunction<
@@ -30,6 +35,37 @@ const mockAccountsIpsRepository = AccountsIpsRepository as jest.MockedFunction<
 
 const mockFindById = jest.fn()
 const mockFindEarliestByAccountId = jest.fn()
+
+const mockWindDownCohortAssessmentsRepository =
+  WindDownCohortAssessmentsRepository as jest.MockedFunction<
+    typeof WindDownCohortAssessmentsRepository
+  >
+const mockFindLastByAccountIdBefore = jest.fn()
+const mockFindAssessmentByAccountId = jest.fn()
+const mockPersistAssessment = jest.fn()
+
+const setupRepositoryMocks = () => {
+  mockUsersRepository.mockReturnValue({
+    findById: mockFindById,
+  } as unknown as ReturnType<typeof UsersRepository>)
+  mockAccountsIpsRepository.mockReturnValue({
+    findEarliestByAccountId: mockFindEarliestByAccountId,
+    findLastByAccountIdBefore: mockFindLastByAccountIdBefore,
+  } as unknown as ReturnType<typeof AccountsIpsRepository>)
+  mockWindDownCohortAssessmentsRepository.mockReturnValue({
+    findByAccountId: mockFindAssessmentByAccountId,
+    persist: mockPersistAssessment,
+  } as unknown as ReturnType<typeof WindDownCohortAssessmentsRepository>)
+  mockFindEarliestByAccountId.mockResolvedValue(new CouldNotFindAccountIpError())
+  mockFindLastByAccountIdBefore.mockResolvedValue(new CouldNotFindAccountIpError())
+  mockFindAssessmentByAccountId.mockResolvedValue(
+    new CouldNotFindWindDownCohortAssessmentError(),
+  )
+  mockPersistAssessment.mockImplementation(async (args) => ({
+    ...args,
+    createdAt: new Date(),
+  }))
+}
 
 const windDownConfig = (overrides: Partial<WindDownConfig> = {}): WindDownConfig =>
   ({
@@ -338,5 +374,251 @@ describe("isAccountInWindDownCohort", () => {
       account: makeAccount({ level: 0 as AccountLevel }),
     })
     expect(result).toBe(error)
+  })
+})
+
+describe("evaluateWindDownCohortMatch with cohort flags on", () => {
+  const CUTOFF = new Date("2026-07-01T00:00:00Z")
+
+  // arbitrary non-deployed codes: MX/AR/PE affected, KE/FJ strict, GT neither
+  const GT_PHONE = "+50251234567"
+  const MX_PHONE = "+525512345678"
+  const KE_PHONE = "+254712345678"
+
+  const flagsConfig = (overrides: Partial<WindDownConfig> = {}): WindDownConfig =>
+    windDownConfig({
+      affectedCountries: ["MX", "AR", "PE"],
+      usePersistedCohortFlag: true,
+      ipEvidenceCutoff: CUTOFF,
+      strictCountries: ["KE", "FJ"],
+      ...overrides,
+    })
+
+  const storedAssessment = (
+    overrides: Partial<WindDownCohortAssessment> = {},
+  ): WindDownCohortAssessment =>
+    ({
+      accountId: "stored-account-id" as AccountId,
+      matched: true,
+      assignedCountry: "MX" as CohortCountry,
+      rule: "hierarchy" as WindDownCohortRule,
+      signals: { phoneCountry: "MX" },
+      createdAt: new Date("2026-07-15T00:00:00Z"),
+      ...overrides,
+    }) as WindDownCohortAssessment
+
+  beforeEach(() => {
+    jest.resetAllMocks()
+    mockGetWindDownConfig.mockReturnValue(flagsConfig())
+    setupRepositoryMocks()
+    withUser(GT_PHONE)
+  })
+
+  it("returns the stored verdict with no users or accountips reads", async () => {
+    mockFindAssessmentByAccountId.mockResolvedValue(storedAssessment())
+
+    const result = await evaluateWindDownCohortMatch({ account: makeAccount() })
+
+    expect(result).toEqual({ matched: true, matchedCountry: "MX" })
+    expect(mockFindById).not.toHaveBeenCalled()
+    expect(mockFindEarliestByAccountId).not.toHaveBeenCalled()
+    expect(mockFindLastByAccountIdBefore).not.toHaveBeenCalled()
+    expect(mockPersistAssessment).not.toHaveBeenCalled()
+  })
+
+  it("maps a stored not-matched verdict through the live level-zero overlay", async () => {
+    mockFindAssessmentByAccountId.mockResolvedValue(
+      storedAssessment({ matched: false, assignedCountry: undefined }),
+    )
+    mockGetWindDownConfig.mockReturnValue(flagsConfig({ includeLevelZero: true }))
+
+    expect(
+      await evaluateWindDownCohortMatch({
+        account: makeAccount({ level: 0 as AccountLevel }),
+      }),
+    ).toEqual({ matched: true })
+
+    expect(
+      await evaluateWindDownCohortMatch({
+        account: makeAccount({ level: 1 as AccountLevel }),
+      }),
+    ).toEqual({ matched: false })
+  })
+
+  it("assesses and persists exactly once on first evaluation", async () => {
+    withUser(MX_PHONE)
+    const account = makeAccount()
+
+    const result = await evaluateWindDownCohortMatch({ account })
+
+    expect(result).toEqual({ matched: true, matchedCountry: "MX" })
+    expect(mockPersistAssessment).toHaveBeenCalledTimes(1)
+    expect(mockPersistAssessment).toHaveBeenCalledWith({
+      accountId: account.id,
+      matched: true,
+      assignedCountry: "MX",
+      rule: "hierarchy",
+      signals: {
+        phoneCountry: "MX",
+        newestDeletedPhoneCountry: undefined,
+        creationIpCountry: undefined,
+        latestIpCountry: undefined,
+      },
+    })
+  })
+
+  it("persists the strict-list rule when a strict phone matches", async () => {
+    withUser(KE_PHONE)
+    const account = makeAccount()
+
+    const result = await evaluateWindDownCohortMatch({ account })
+
+    expect(result).toEqual({ matched: true, matchedCountry: "KE" })
+    expect(mockPersistAssessment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        matched: true,
+        assignedCountry: "KE",
+        rule: "strict-list",
+      }),
+    )
+  })
+
+  it("persists the released country and rule on an exclusion override", async () => {
+    withUser(MX_PHONE)
+    mockFindEarliestByAccountId.mockResolvedValue({ metadata: { isoCode: "GT" } })
+    mockFindLastByAccountIdBefore.mockResolvedValue({ metadata: { isoCode: "GT" } })
+    const account = makeAccount()
+
+    const result = await evaluateWindDownCohortMatch({ account })
+
+    expect(result).toEqual({ matched: false })
+    expect(mockPersistAssessment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        matched: false,
+        assignedCountry: "GT",
+        rule: "exclusion-override",
+      }),
+    )
+  })
+
+  it("consults only the newest deleted phone, never an older one", async () => {
+    // stored append-only, newest last: the affected number is the older deletion
+    withUser(undefined, [MX_PHONE, GT_PHONE])
+    const account = makeAccount()
+
+    const result = await evaluateWindDownCohortMatch({ account })
+
+    expect(result).toEqual({ matched: false })
+    expect(mockPersistAssessment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        matched: false,
+        assignedCountry: "GT",
+        rule: "hierarchy",
+        signals: expect.objectContaining({ newestDeletedPhoneCountry: "GT" }),
+      }),
+    )
+  })
+
+  it("bounds the lazy assessment's latest-IP evidence to the configured cutoff", async () => {
+    withUser(MX_PHONE)
+    const account = makeAccount()
+
+    await evaluateWindDownCohortMatch({ account })
+
+    expect(mockFindLastByAccountIdBefore).toHaveBeenCalledWith({
+      accountId: account.id,
+      cutoff: CUTOFF,
+    })
+  })
+
+  it("reuses the persisted verdict even when the signals change later", async () => {
+    withUser(MX_PHONE)
+    const account = makeAccount()
+
+    const first = await evaluateWindDownCohortMatch({ account })
+    expect(first).toEqual({ matched: true, matchedCountry: "MX" })
+
+    mockFindAssessmentByAccountId.mockResolvedValue(storedAssessment())
+    withUser(GT_PHONE)
+
+    const second = await evaluateWindDownCohortMatch({ account })
+    expect(second).toEqual({ matched: true, matchedCountry: "MX" })
+
+    expect(mockFindById).toHaveBeenCalledTimes(1)
+    expect(mockPersistAssessment).toHaveBeenCalledTimes(1)
+  })
+
+  it("trusts the concurrent winner's persisted verdict over its own computation", async () => {
+    withUser(MX_PHONE)
+    mockPersistAssessment.mockResolvedValue(
+      storedAssessment({ matched: false, assignedCountry: undefined }),
+    )
+
+    const result = await evaluateWindDownCohortMatch({ account: makeAccount() })
+
+    expect(result).toEqual({ matched: false })
+  })
+
+  it("short-circuits an excluded account before the assessment lookup", async () => {
+    const account = makeAccount()
+    mockGetWindDownConfig.mockReturnValue(
+      flagsConfig({ excludedAccountIds: [account.id] }),
+    )
+
+    expect(await evaluateWindDownCohortMatch({ account })).toEqual({ matched: false })
+
+    expect(mockFindAssessmentByAccountId).not.toHaveBeenCalled()
+    expect(mockFindById).not.toHaveBeenCalled()
+    expect(mockPersistAssessment).not.toHaveBeenCalled()
+  })
+
+  it("still assesses when affectedCountries is empty — no kill-switch on this path", async () => {
+    withUser(MX_PHONE)
+    mockGetWindDownConfig.mockReturnValue(flagsConfig({ affectedCountries: [] }))
+    const account = makeAccount()
+
+    const result = await evaluateWindDownCohortMatch({ account })
+
+    expect(result).toEqual({ matched: false })
+    expect(mockFindAssessmentByAccountId).toHaveBeenCalledTimes(1)
+    expect(mockPersistAssessment).toHaveBeenCalledWith(
+      expect.objectContaining({ accountId: account.id, matched: false }),
+    )
+  })
+
+  it("propagates an assessment-lookup failure", async () => {
+    const error = new UnknownRepositoryError("assessments down")
+    mockFindAssessmentByAccountId.mockResolvedValue(error)
+
+    expect(await evaluateWindDownCohortMatch({ account: makeAccount() })).toBe(error)
+    expect(mockPersistAssessment).not.toHaveBeenCalled()
+  })
+
+  it("propagates a persist failure", async () => {
+    withUser(MX_PHONE)
+    const error = new UnknownRepositoryError("assessments down")
+    mockPersistAssessment.mockResolvedValue(error)
+
+    expect(await evaluateWindDownCohortMatch({ account: makeAccount() })).toBe(error)
+  })
+
+  it("propagates a gathering failure instead of assessing", async () => {
+    const error = new UnknownRepositoryError("users down")
+    mockFindById.mockResolvedValue(error)
+
+    expect(await evaluateWindDownCohortMatch({ account: makeAccount() })).toBe(error)
+    expect(mockPersistAssessment).not.toHaveBeenCalled()
+  })
+
+  it("never touches the assessment repository while the flag is off", async () => {
+    mockGetWindDownConfig.mockReturnValue(flagsConfig({ usePersistedCohortFlag: false }))
+    withUser(MX_PHONE)
+
+    const result = await evaluateWindDownCohortMatch({ account: makeAccount() })
+
+    expect(result).toEqual({ matched: true, matchedCountry: "MX" })
+    expect(mockFindAssessmentByAccountId).not.toHaveBeenCalled()
+    expect(mockPersistAssessment).not.toHaveBeenCalled()
+    expect(mockFindLastByAccountIdBefore).not.toHaveBeenCalled()
   })
 })

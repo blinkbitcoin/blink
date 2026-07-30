@@ -5,6 +5,7 @@ import mongoose from "mongoose"
 import { getDefaultAccountsConfig, Levels } from "@/config"
 import { AccountIdRegex, AccountStatus, UsernameRegex } from "@/domain/accounts"
 import { MigrationFlowPhase } from "@/domain/migration-flow"
+import { WindDownCohortRule } from "@/domain/wind-down"
 import { WalletIdRegex, WalletType } from "@/domain/wallets"
 import { WalletCurrency } from "@/domain/shared"
 import { WalletInvoiceWebhookStatus } from "@/domain/wallet-invoices"
@@ -603,6 +604,52 @@ migrationFlowStateSchema.index({ lnPaymentHash: 1 }, { unique: true, sparse: tru
 export const MigrationFlowState = mongoose.model<MigrationFlowStateRecord>(
   "MigrationFlowState",
   migrationFlowStateSchema,
+)
+
+const windDownCohortAssessmentSchema = new Schema<WindDownCohortAssessmentRecord>(
+  {
+    accountId: {
+      type: String,
+      ref: "Account",
+      required: true,
+    },
+    matched: {
+      type: Boolean,
+      required: true,
+    },
+    assignedCountry: String,
+    rule: {
+      type: String,
+      required: true,
+      enum: Object.values(WindDownCohortRule),
+    },
+    signals: {
+      type: {
+        phoneCountry: String,
+        newestDeletedPhoneCountry: String,
+        creationIpCountry: String,
+        latestIpCountry: String,
+      },
+      required: true,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now,
+      required: true,
+    },
+  },
+  { id: false },
+)
+
+windDownCohortAssessmentSchema.index({ accountId: 1 }, { unique: true })
+
+export const WindDownCohortAssessment = mongoose.model<WindDownCohortAssessmentRecord>(
+  "WindDownCohortAssessment",
+  windDownCohortAssessmentSchema,
 )
 
 const WalletOnChainPendingReceiveSchema = new Schema<WalletOnChainPendingReceiveRecord>(
