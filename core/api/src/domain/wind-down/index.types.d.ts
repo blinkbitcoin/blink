@@ -13,7 +13,7 @@ type MatchCohortSignalsArgs = {
   affectedCountries: string[]
 }
 
-// deletedPhoneCountries is newest-first; undefined marks an unparseable number
+// deletedPhoneCountries is newest-first; undefined marks an unparsable number
 type WindDownCohortSignals = {
   phoneCountry?: string
   deletedPhoneCountries: (string | undefined)[]

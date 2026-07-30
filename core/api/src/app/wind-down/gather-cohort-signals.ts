@@ -23,7 +23,7 @@ export const gatherCohortSignals = async ({
   const phoneCountry = user.phone ? countryOfPhone(user.phone) : undefined
 
   // deletedPhones is stored append-only with the newest phone last; the matcher contract
-  // is newest-first with unparseable entries kept as undefined holes
+  // is newest-first with unparsable entries kept as undefined holes
   const deletedPhoneCountries = [...(user.deletedPhones ?? [])]
     .reverse()
     .map(countryOfPhone)

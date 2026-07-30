@@ -56,7 +56,7 @@ describe("gatherCohortSignals", () => {
     )
   })
 
-  it("keeps unparseable deleted phones as undefined holes in position", async () => {
+  it("keeps unparsable deleted phones as undefined holes in position", async () => {
     mockFindById.mockResolvedValue({
       phone: undefined,
       deletedPhones: [MX_PHONE, "not-a-phone"],
