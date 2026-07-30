@@ -519,6 +519,23 @@ describe("evaluateWindDownCohortMatch with cohort flags on", () => {
     )
   })
 
+  it("does not skip past an unparsable newest deleted phone to an older affected one", async () => {
+    withUser(undefined, [MX_PHONE, "not-a-phone"])
+    mockFindEarliestByAccountId.mockResolvedValue({ metadata: { isoCode: "GT" } })
+
+    const result = await evaluateWindDownCohortMatch({ account: makeAccount() })
+
+    expect(result).toEqual({ matched: false })
+    expect(mockPersistAssessment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        matched: false,
+        assignedCountry: "GT",
+        rule: "hierarchy",
+        signals: expect.objectContaining({ creationIpCountry: "GT" }),
+      }),
+    )
+  })
+
   it("bounds the lazy assessment's latest-IP evidence to the configured cutoff", async () => {
     withUser(MX_PHONE)
     const account = makeAccount()
@@ -546,6 +563,23 @@ describe("evaluateWindDownCohortMatch with cohort flags on", () => {
 
     expect(mockFindById).toHaveBeenCalledTimes(1)
     expect(mockPersistAssessment).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps a released account out even when its live signals turn affected", async () => {
+    mockFindAssessmentByAccountId.mockResolvedValue(
+      storedAssessment({
+        matched: false,
+        assignedCountry: "GT" as CohortCountry,
+        rule: "exclusion-override" as WindDownCohortRule,
+      }),
+    )
+    withUser(MX_PHONE)
+
+    const result = await evaluateWindDownCohortMatch({ account: makeAccount() })
+
+    expect(result).toEqual({ matched: false })
+    expect(mockFindById).not.toHaveBeenCalled()
+    expect(mockPersistAssessment).not.toHaveBeenCalled()
   })
 
   it("trusts the concurrent winner's persisted verdict over its own computation", async () => {
