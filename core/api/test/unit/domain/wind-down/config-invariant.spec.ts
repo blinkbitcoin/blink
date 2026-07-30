@@ -65,6 +65,21 @@ describe("windDown cohort flag invariants", () => {
     expect(validate(config)).toBe(false)
   })
 
+  it("rejects the flag on with an empty affectedCountries list — the legacy kill-switch instinct must not persist mass releases", () => {
+    const config = cloneConfig()
+    config.windDown.usePersistedCohortFlag = true
+    config.windDown.strictCountries = ["KE", "FJ"]
+    config.windDown.affectedCountries = []
+    expect(validate(config)).toBe(false)
+  })
+
+  it("accepts an empty affectedCountries list while the flag is off", () => {
+    const config = cloneConfig()
+    config.windDown.usePersistedCohortFlag = false
+    config.windDown.affectedCountries = []
+    expect(validate(config)).toBe(true)
+  })
+
   it("accepts an empty strictCountries list while the flag is off", () => {
     const config = cloneConfig()
     config.windDown.usePersistedCohortFlag = false

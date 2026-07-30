@@ -1163,7 +1163,10 @@ export const configSchema = {
         required: ["usePersistedCohortFlag"],
       },
       then: {
-        properties: { strictCountries: { minItems: 1 } },
+        properties: {
+          strictCountries: { minItems: 1 },
+          affectedCountries: { minItems: 1 },
+        },
       },
       default: {
         enabled: true,
