@@ -32,7 +32,7 @@ type WindDownYamlConfig = {
   excludedAccountIds: string[]
   receiveBlockedAccountIds: string[]
   includeLevelZero: boolean
-  usePersistedCohortFlag?: boolean
+  usePersistedCohortFlag: boolean
   ipEvidenceCutoff: string
   regions: WindDownRegionYamlConfig[]
 }
@@ -53,7 +53,7 @@ type WindDownConfig = {
   excludedAccountIds: string[]
   receiveBlockedAccountIds: string[]
   includeLevelZero: boolean
-  usePersistedCohortFlag?: boolean
+  usePersistedCohortFlag: boolean
   ipEvidenceCutoff: Date
   regions: WindDownRegionConfig[]
 }

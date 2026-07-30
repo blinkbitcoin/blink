@@ -121,6 +121,7 @@ const windDownConfig = (armed: boolean): WindDownConfig =>
     enabled: true,
     affectedCountries: ["MX"],
     strictCountries: [],
+    usePersistedCohortFlag: false,
     ipEvidenceCutoff: new Date("2026-07-30T23:59:59Z"),
     excludedAccountIds: [],
     receiveBlockedAccountIds: [],
