@@ -122,7 +122,7 @@ describe("windDown region resolution invariant", () => {
 
   it("rejects a regions list with no default region", () => {
     const config = cloneConfig()
-    config.windDown.regions[0].code = "latam"
+    config.windDown.regions[0].code = "eea"
     expect(validate(config)).toBe(false)
   })
 
@@ -130,9 +130,9 @@ describe("windDown region resolution invariant", () => {
     const config = cloneConfig()
     config.windDown.regions.push({
       ...cloneConfig().windDown.regions[0],
-      code: "panama",
-      countries: ["PA"],
-      timezone: "America/Panama",
+      code: "iceland",
+      countries: ["IS"],
+      timezone: "Atlantic/Reykjavik",
     })
     expect(validate(config)).toBe(true)
   })
@@ -183,13 +183,13 @@ describe("windDown date and country format invariants", () => {
 
   it("rejects an affectedCountries entry that is not an alpha-2 code", () => {
     const config = cloneConfig()
-    config.windDown.affectedCountries = ["MEX"]
+    config.windDown.affectedCountries = ["FRA"]
     expect(validate(config)).toBe(false)
   })
 
   it("accepts alpha-2 affectedCountries entries", () => {
     const config = cloneConfig()
-    config.windDown.affectedCountries = ["MX", "ar", "PE"]
+    config.windDown.affectedCountries = ["FR", "de", "IS"]
     expect(validate(config)).toBe(true)
   })
 })

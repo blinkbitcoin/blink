@@ -32,13 +32,14 @@ const mockUsersRepository = UsersRepository as jest.MockedFunction<typeof UsersR
 const mockAccountsIpsRepository = AccountsIpsRepository as jest.MockedFunction<
   typeof AccountsIpsRepository
 >
+
+const mockFindById = jest.fn()
+const mockFindEarliestByAccountId = jest.fn()
+
 const mockWindDownCohortAssessmentsRepository =
   WindDownCohortAssessmentsRepository as jest.MockedFunction<
     typeof WindDownCohortAssessmentsRepository
   >
-
-const mockFindById = jest.fn()
-const mockFindEarliestByAccountId = jest.fn()
 const mockFindLastByAccountIdBefore = jest.fn()
 const mockFindAssessmentByAccountId = jest.fn()
 const mockPersistAssessment = jest.fn()
@@ -66,16 +67,13 @@ const setupRepositoryMocks = () => {
   }))
 }
 
-// arbitrary non-deployed codes: MX/AR/PE affected, KE/FJ strict, GT neither
 const windDownConfig = (overrides: Partial<WindDownConfig> = {}): WindDownConfig =>
   ({
     enabled: true,
-    affectedCountries: ["MX", "AR", "PE"],
-    strictCountries: [],
+    affectedCountries: ["FR", "DE", "IS"],
     excludedAccountIds: [],
     receiveBlockedAccountIds: [],
     includeLevelZero: false,
-    ipEvidenceCutoff: new Date("2026-07-30T23:59:59Z"),
     regions: [],
     ...overrides,
   }) as WindDownConfig
@@ -95,9 +93,8 @@ const makeAccount = (overrides: Partial<Account> = {}): Account =>
     ...overrides,
   }) as Account
 
-const GT_PHONE = "+50251234567"
-const MX_PHONE = "+525512345678"
-const KE_PHONE = "+254712345678"
+const US_PHONE = "+14155552671"
+const FR_PHONE = "+33612345678"
 
 const withUser = (
   phone: string | undefined,
@@ -116,8 +113,14 @@ describe("isAccountInWindDownCohort", () => {
   beforeEach(() => {
     jest.resetAllMocks()
     mockGetWindDownConfig.mockReturnValue(windDownConfig())
-    setupRepositoryMocks()
-    withUser(GT_PHONE)
+    mockUsersRepository.mockReturnValue({
+      findById: mockFindById,
+    } as unknown as ReturnType<typeof UsersRepository>)
+    mockAccountsIpsRepository.mockReturnValue({
+      findEarliestByAccountId: mockFindEarliestByAccountId,
+    } as unknown as ReturnType<typeof AccountsIpsRepository>)
+    withUser(US_PHONE)
+    mockFindEarliestByAccountId.mockResolvedValue(new CouldNotFindAccountIpError())
   })
 
   it("returns false when no signal matches the affected countries", async () => {
@@ -126,31 +129,31 @@ describe("isAccountInWindDownCohort", () => {
   })
 
   it("returns true when the current phone number resolves to an affected country", async () => {
-    withUser(MX_PHONE)
+    withUser(FR_PHONE)
     const result = await evaluateWindDownCohortMatch({ account: makeAccount() })
-    expect(result).toEqual({ matched: true, matchedCountry: "MX" })
+    expect(result).toEqual({ matched: true, matchedCountry: "FR" })
   })
 
-  it("returns true for a deleted affected-country phone when the current phone is unaffected", async () => {
-    withUser(GT_PHONE, [MX_PHONE])
+  it("returns true for a deleted EU phone when the current phone is non-EU", async () => {
+    withUser(US_PHONE, [FR_PHONE])
     const result = await evaluateWindDownCohortMatch({ account: makeAccount() })
-    expect(result).toEqual({ matched: true, matchedCountry: "MX" })
+    expect(result).toEqual({ matched: true, matchedCountry: "FR" })
   })
 
-  it("ignores an affected phoneMetadata.countryCode on an unaffected number, so nobody is enforced against without being notified", async () => {
-    withUser(GT_PHONE, [], "MX")
+  it("ignores an EU phoneMetadata.countryCode on a non-EU number, so nobody is enforced against without being notified", async () => {
+    withUser(US_PHONE, [], "FR")
     const result = await isAccountInWindDownCohort({ account: makeAccount() })
     expect(result).toBe(false)
   })
 
-  it("matches an affected number even when phoneMetadata.countryCode reports an unaffected country", async () => {
-    withUser(MX_PHONE, [], "GT")
+  it("matches an EU number even when phoneMetadata.countryCode reports a non-EU country", async () => {
+    withUser(FR_PHONE, [], "US")
     const result = await evaluateWindDownCohortMatch({ account: makeAccount() })
-    expect(result).toEqual({ matched: true, matchedCountry: "MX" })
+    expect(result).toEqual({ matched: true, matchedCountry: "FR" })
   })
 
   it("skips an unparsable current phone number without losing the other signals", async () => {
-    withUser("not-a-phone", [MX_PHONE])
+    withUser("not-a-phone", [FR_PHONE])
     const result = await isAccountInWindDownCohort({ account: makeAccount() })
     expect(result).toBe(true)
   })
@@ -162,13 +165,13 @@ describe("isAccountInWindDownCohort", () => {
   })
 
   it("skips an unparsable deleted phone and still evaluates the remaining signals", async () => {
-    withUser(GT_PHONE, ["not-a-phone", MX_PHONE])
+    withUser(US_PHONE, ["not-a-phone", FR_PHONE])
     const result = await isAccountInWindDownCohort({ account: makeAccount() })
     expect(result).toBe(true)
   })
 
-  it("matches on the creation-IP country when the phone country is unaffected", async () => {
-    mockFindEarliestByAccountId.mockResolvedValue({ metadata: { isoCode: "MX" } })
+  it("matches on the creation-IP country when the phone country is non-EU", async () => {
+    mockFindEarliestByAccountId.mockResolvedValue({ metadata: { isoCode: "FR" } })
     const result = await isAccountInWindDownCohort({ account: makeAccount() })
     expect(result).toBe(true)
   })
@@ -180,7 +183,7 @@ describe("isAccountInWindDownCohort", () => {
   })
 
   it("treats a missing accountips row as an absent creation-IP signal, not an error", async () => {
-    withUser(MX_PHONE)
+    withUser(FR_PHONE)
     mockFindEarliestByAccountId.mockResolvedValue(new CouldNotFindAccountIpError())
     const result = await isAccountInWindDownCohort({ account: makeAccount() })
     expect(result).toBe(true)
@@ -204,7 +207,7 @@ describe("isAccountInWindDownCohort", () => {
     const account = makeAccount()
     mockFindById
       .mockResolvedValueOnce(new UnknownRepositoryError("transient"))
-      .mockResolvedValue({ phone: MX_PHONE, deletedPhones: [] })
+      .mockResolvedValue({ phone: FR_PHONE, deletedPhones: [] })
 
     const first = await isAccountInWindDownCohort({ account })
     expect(first).toBeInstanceOf(UnknownRepositoryError)
@@ -215,7 +218,7 @@ describe("isAccountInWindDownCohort", () => {
   })
 
   it("recomputes from the repositories on every call — the result is not memoised", async () => {
-    withUser(MX_PHONE)
+    withUser(FR_PHONE)
     const account = makeAccount()
 
     expect(await isAccountInWindDownCohort({ account })).toBe(true)
@@ -226,14 +229,14 @@ describe("isAccountInWindDownCohort", () => {
   })
 
   it("stays in-cohort regardless of the windDown.enabled status switch", async () => {
-    withUser(MX_PHONE)
+    withUser(FR_PHONE)
     mockGetWindDownConfig.mockReturnValue(windDownConfig({ enabled: false }))
     const result = await isAccountInWindDownCohort({ account: makeAccount() })
     expect(result).toBe(true)
   })
 
   it("short-circuits without reading repositories when affectedCountries is empty", async () => {
-    withUser(MX_PHONE)
+    withUser(FR_PHONE)
     mockGetWindDownConfig.mockReturnValue(windDownConfig({ affectedCountries: [] }))
 
     expect(await isAccountInWindDownCohort({ account: makeAccount() })).toBe(false)
@@ -243,7 +246,7 @@ describe("isAccountInWindDownCohort", () => {
   })
 
   it("excludes an account listed in excludedAccountIds without reading repositories", async () => {
-    withUser(MX_PHONE)
+    withUser(FR_PHONE)
     const account = makeAccount()
     mockGetWindDownConfig.mockReturnValue(
       windDownConfig({ excludedAccountIds: [account.id] }),
@@ -256,19 +259,19 @@ describe("isAccountInWindDownCohort", () => {
   })
 
   it("still matches an account when a different id is excluded", async () => {
-    withUser(MX_PHONE)
+    withUser(FR_PHONE)
     mockGetWindDownConfig.mockReturnValue(
       windDownConfig({ excludedAccountIds: [crypto.randomUUID()] }),
     )
 
     expect(await evaluateWindDownCohortMatch({ account: makeAccount() })).toEqual({
       matched: true,
-      matchedCountry: "MX",
+      matchedCountry: "FR",
     })
   })
 
   it("returns not-matched when the account is excluded and affectedCountries is empty", async () => {
-    withUser(MX_PHONE)
+    withUser(FR_PHONE)
     const account = makeAccount()
     mockGetWindDownConfig.mockReturnValue(
       windDownConfig({
@@ -300,11 +303,11 @@ describe("isAccountInWindDownCohort", () => {
 
   it("reports the country match, not the level fallback, for a Level 0 account with an affected creation-IP signal", async () => {
     mockGetWindDownConfig.mockReturnValue(windDownConfig({ includeLevelZero: true }))
-    mockFindEarliestByAccountId.mockResolvedValue({ metadata: { isoCode: "MX" } })
+    mockFindEarliestByAccountId.mockResolvedValue({ metadata: { isoCode: "FR" } })
     const result = await evaluateWindDownCohortMatch({
       account: makeAccount({ level: 0 as AccountLevel }),
     })
-    expect(result).toEqual({ matched: true, matchedCountry: "MX" })
+    expect(result).toEqual({ matched: true, matchedCountry: "FR" })
   })
 
   it("does not include a non-Level-0 account without a country match when includeLevelZero is on", async () => {
@@ -331,7 +334,7 @@ describe("isAccountInWindDownCohort", () => {
 
     expect(await isAccountInWindDownCohort({ account })).toBe(false)
 
-    withUser(MX_PHONE)
+    withUser(FR_PHONE)
     expect(await isAccountInWindDownCohort({ account })).toBe(true)
   })
 
@@ -351,7 +354,7 @@ describe("isAccountInWindDownCohort", () => {
   })
 
   it("still short-circuits a non-Level-0 account when affectedCountries is empty and includeLevelZero is on", async () => {
-    withUser(MX_PHONE)
+    withUser(FR_PHONE)
     mockGetWindDownConfig.mockReturnValue(
       windDownConfig({ includeLevelZero: true, affectedCountries: [] }),
     )
@@ -372,23 +375,19 @@ describe("isAccountInWindDownCohort", () => {
     })
     expect(result).toBe(error)
   })
-
-  it("never touches the assessment repository while the toggle is off", async () => {
-    withUser(MX_PHONE)
-
-    expect(await isAccountInWindDownCohort({ account: makeAccount() })).toBe(true)
-
-    expect(mockFindAssessmentByAccountId).not.toHaveBeenCalled()
-    expect(mockPersistAssessment).not.toHaveBeenCalled()
-    expect(mockFindLastByAccountIdBefore).not.toHaveBeenCalled()
-  })
 })
 
 describe("evaluateWindDownCohortMatch with cohort flags on", () => {
   const CUTOFF = new Date("2026-07-01T00:00:00Z")
 
+  // arbitrary non-deployed codes: MX/AR/PE affected, KE/FJ strict, GT neither
+  const GT_PHONE = "+50251234567"
+  const MX_PHONE = "+525512345678"
+  const KE_PHONE = "+254712345678"
+
   const flagsConfig = (overrides: Partial<WindDownConfig> = {}): WindDownConfig =>
     windDownConfig({
+      affectedCountries: ["MX", "AR", "PE"],
       usePersistedCohortFlag: true,
       ipEvidenceCutoff: CUTOFF,
       strictCountries: ["KE", "FJ"],
@@ -609,5 +608,17 @@ describe("evaluateWindDownCohortMatch with cohort flags on", () => {
 
     expect(await evaluateWindDownCohortMatch({ account: makeAccount() })).toBe(error)
     expect(mockPersistAssessment).not.toHaveBeenCalled()
+  })
+
+  it("never touches the assessment repository while the flag is off", async () => {
+    mockGetWindDownConfig.mockReturnValue(flagsConfig({ usePersistedCohortFlag: false }))
+    withUser(MX_PHONE)
+
+    const result = await evaluateWindDownCohortMatch({ account: makeAccount() })
+
+    expect(result).toEqual({ matched: true, matchedCountry: "MX" })
+    expect(mockFindAssessmentByAccountId).not.toHaveBeenCalled()
+    expect(mockPersistAssessment).not.toHaveBeenCalled()
+    expect(mockFindLastByAccountIdBefore).not.toHaveBeenCalled()
   })
 })

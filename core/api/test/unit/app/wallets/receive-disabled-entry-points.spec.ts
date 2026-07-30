@@ -119,7 +119,7 @@ const region = (overrides: Partial<WindDownRegionConfig> = {}): WindDownRegionCo
 const windDownConfig = (armed: boolean): WindDownConfig =>
   ({
     enabled: true,
-    affectedCountries: ["MX"],
+    affectedCountries: ["FR"],
     strictCountries: [],
     usePersistedCohortFlag: false,
     ipEvidenceCutoff: new Date("2026-07-30T23:59:59Z"),
@@ -148,7 +148,7 @@ describe("receive-disable at the wallet entry points", () => {
     } as unknown as Account)
     mocks.findUserById.mockResolvedValue({
       id: "user-id",
-      phone: "+525512345678",
+      phone: "+33612345678",
       deletedPhones: [],
     })
     mockConsumeLimiter.mockResolvedValue(true)

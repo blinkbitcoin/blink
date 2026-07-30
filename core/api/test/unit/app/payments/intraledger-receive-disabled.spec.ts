@@ -116,7 +116,7 @@ const region = (overrides: Partial<WindDownRegionConfig> = {}): WindDownRegionCo
 const windDownConfig = (armed: boolean): WindDownConfig =>
   ({
     enabled: true,
-    affectedCountries: ["MX"],
+    affectedCountries: ["FR"],
     strictCountries: [],
     usePersistedCohortFlag: false,
     ipEvidenceCutoff: new Date("2026-07-30T23:59:59Z"),
@@ -126,8 +126,8 @@ const windDownConfig = (armed: boolean): WindDownConfig =>
     regions: [region({ receiveDisabled: armed })],
   }) as WindDownConfig
 
-const MX_PHONE = "+525512345678"
-const GT_PHONE = "+50251234567"
+const FR_PHONE = "+33612345678"
+const US_PHONE = "+14155552671"
 
 const senderAccountId = crypto.randomUUID() as AccountId
 const cohortAccountId = crypto.randomUUID() as AccountId
@@ -173,9 +173,9 @@ const accounts: Record<string, Account> = {
 }
 
 const phones: Record<string, string> = {
-  [`user-${senderAccountId}`]: GT_PHONE,
-  [`user-${cohortAccountId}`]: MX_PHONE,
-  [`user-${bankOwnerAccountId}`]: GT_PHONE,
+  [`user-${senderAccountId}`]: US_PHONE,
+  [`user-${cohortAccountId}`]: FR_PHONE,
+  [`user-${bankOwnerAccountId}`]: US_PHONE,
 }
 
 const send = ({
@@ -257,7 +257,7 @@ describe("intraledger receive-disable", () => {
     const funderAccountId = crypto.randomUUID() as AccountId
     wallets[funderWalletId] = wallet(funderWalletId, funderAccountId)
     accounts[funderAccountId] = account(funderAccountId)
-    phones[`user-${funderAccountId}`] = GT_PHONE
+    phones[`user-${funderAccountId}`] = US_PHONE
     mockGetWindDownConfig.mockReturnValue(windDownConfig(true))
 
     const result = await send({
@@ -283,7 +283,7 @@ describe("intraledger receive-disable", () => {
     const repoError = new UnknownRepositoryError("boom")
     mockGetWindDownConfig.mockReturnValue(windDownConfig(true))
     mocks.findUserById.mockImplementation(async (id: string) =>
-      id === `user-${cohortAccountId}` ? repoError : { id, phone: GT_PHONE },
+      id === `user-${cohortAccountId}` ? repoError : { id, phone: US_PHONE },
     )
 
     const result = await send({
