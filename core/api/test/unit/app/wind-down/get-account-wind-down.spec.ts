@@ -40,10 +40,10 @@ const region = (overrides: Partial<WindDownRegionConfig> = {}): WindDownRegionCo
   ...overrides,
 })
 
-const euRegion: WindDownRegionConfig = {
-  code: "eu",
-  timezone: "Europe/Berlin",
-  countries: ["FR", "DE"],
+const northRegion: WindDownRegionConfig = {
+  code: "north",
+  timezone: "America/Mexico_City",
+  countries: ["MX", "AR"],
   receiveDisabledAt: new Date("2026-08-15T00:00:00+02:00"),
   finalDeadline: new Date("2026-09-15T23:59:59+02:00"),
   gateArmsAt: new Date("2026-09-16T00:00:00+02:00"),
@@ -54,7 +54,8 @@ const euRegion: WindDownRegionConfig = {
 const windDownConfig = (overrides: Partial<WindDownConfig> = {}): WindDownConfig =>
   ({
     enabled: true,
-    affectedCountries: ["FR", "DE", "IS"],
+    affectedCountries: ["MX", "AR", "PE"],
+    strictCountries: [],
     excludedAccountIds: [],
     includeLevelZero: false,
     regions: [region()],
@@ -77,10 +78,10 @@ const makeAccount = (overrides: Partial<Account> = {}): Account =>
   }) as Account
 
 const PHONE_BY_COUNTRY: Record<string, string> = {
-  FR: "+33612345678",
-  US: "+14155552671",
-  DE: "+4915112345678",
-  IS: "+3546112345",
+  MX: "+525512345678",
+  GT: "+50251234567",
+  AR: "+5491123456789",
+  PE: "+51912345678",
 }
 
 const withPhoneCountry = (phoneCountry: string) =>
@@ -99,7 +100,7 @@ describe("getAccountWindDown", () => {
     mockAccountsIpsRepository.mockReturnValue({
       findEarliestByAccountId: mockFindEarliestByAccountId,
     } as unknown as ReturnType<typeof AccountsIpsRepository>)
-    withPhoneCountry("FR")
+    withPhoneCountry("MX")
     mockFindEarliestByAccountId.mockResolvedValue(new CouldNotFindAccountIpError())
   })
 
@@ -120,7 +121,7 @@ describe("getAccountWindDown", () => {
   })
 
   it("returns null when no signal matches", async () => {
-    withPhoneCountry("US")
+    withPhoneCountry("GT")
     const result = await getAccountWindDown({ account: makeAccount() })
     expect(result).toBeNull()
   })
@@ -179,22 +180,22 @@ describe("getAccountWindDown", () => {
 
   it("returns the matching region's dates and timezone, not the default region's", async () => {
     mockGetWindDownConfig.mockReturnValue(
-      windDownConfig({ regions: [euRegion, region()] }),
+      windDownConfig({ regions: [northRegion, region()] }),
     )
-    withPhoneCountry("DE")
+    withPhoneCountry("AR")
 
     const result = (await getAccountWindDown({
       account: makeAccount(),
     })) as WindDownState
-    expect(result.timezone).toBe("Europe/Berlin")
+    expect(result.timezone).toBe("America/Mexico_City")
     expect(result.finalDeadline).toEqual(new Date("2026-09-15T23:59:59+02:00"))
   })
 
   it("falls back to the default region when the matched country is not in any region list", async () => {
     mockGetWindDownConfig.mockReturnValue(
-      windDownConfig({ regions: [euRegion, region()] }),
+      windDownConfig({ regions: [northRegion, region()] }),
     )
-    withPhoneCountry("IS")
+    withPhoneCountry("PE")
 
     const result = (await getAccountWindDown({
       account: makeAccount(),
@@ -205,9 +206,9 @@ describe("getAccountWindDown", () => {
 
   it("resolves the default region's state for a Level 0 account with no country signal when includeLevelZero is on", async () => {
     mockGetWindDownConfig.mockReturnValue(
-      windDownConfig({ includeLevelZero: true, regions: [euRegion, region()] }),
+      windDownConfig({ includeLevelZero: true, regions: [northRegion, region()] }),
     )
-    withPhoneCountry("US")
+    withPhoneCountry("GT")
 
     const result = await getAccountWindDown({
       account: makeAccount({ level: 0 as AccountLevel }),

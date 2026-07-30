@@ -66,6 +66,8 @@ const DEFAULT_PUBKEY =
 const armedUsCohortConfig = {
   enabled: true,
   affectedCountries: ["US"],
+  strictCountries: [],
+  ipEvidenceCutoff: new Date("2026-07-30T23:59:59Z"),
   excludedAccountIds: [],
   receiveBlockedAccountIds: [],
   includeLevelZero: false,

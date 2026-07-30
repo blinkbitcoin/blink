@@ -42,6 +42,62 @@ describe("windDown includeLevelZero backfill invariant", () => {
   })
 })
 
+describe("windDown cohort flag invariants", () => {
+  it("backfills usePersistedCohortFlag false for a config that predates the key", () => {
+    const config = cloneConfig()
+    delete config.windDown.usePersistedCohortFlag
+    expect(validate(config)).toBe(true)
+    expect(config.windDown.usePersistedCohortFlag).toBe(false)
+  })
+
+  it("keeps an explicit usePersistedCohortFlag true when the strict list is populated", () => {
+    const config = cloneConfig()
+    config.windDown.usePersistedCohortFlag = true
+    config.windDown.strictCountries = ["KE", "FJ"]
+    expect(validate(config)).toBe(true)
+    expect(config.windDown.usePersistedCohortFlag).toBe(true)
+  })
+
+  it("rejects the flag on with an empty strictCountries list — refuses to boot", () => {
+    const config = cloneConfig()
+    config.windDown.usePersistedCohortFlag = true
+    config.windDown.strictCountries = []
+    expect(validate(config)).toBe(false)
+  })
+
+  it("accepts an empty strictCountries list while the flag is off", () => {
+    const config = cloneConfig()
+    config.windDown.usePersistedCohortFlag = false
+    config.windDown.strictCountries = []
+    expect(validate(config)).toBe(true)
+  })
+
+  it("backfills the agreed ipEvidenceCutoff default when unset", () => {
+    const config = cloneConfig()
+    delete config.windDown.ipEvidenceCutoff
+    expect(validate(config)).toBe(true)
+    expect(config.windDown.ipEvidenceCutoff).toBe("2026-07-30T23:59:59Z")
+  })
+
+  it("accepts a well-formed ipEvidenceCutoff", () => {
+    const config = cloneConfig()
+    config.windDown.ipEvidenceCutoff = "2026-07-01T00:00:00Z"
+    expect(validate(config)).toBe(true)
+  })
+
+  it("rejects an ipEvidenceCutoff without a UTC offset", () => {
+    const config = cloneConfig()
+    config.windDown.ipEvidenceCutoff = "2026-07-01T00:00:00"
+    expect(validate(config)).toBe(false)
+  })
+
+  it("rejects a malformed ipEvidenceCutoff", () => {
+    const config = cloneConfig()
+    config.windDown.ipEvidenceCutoff = "1 July 2026"
+    expect(validate(config)).toBe(false)
+  })
+})
+
 describe("windDown region resolution invariant", () => {
   it("rejects an empty regions list", () => {
     const config = cloneConfig()
@@ -51,7 +107,7 @@ describe("windDown region resolution invariant", () => {
 
   it("rejects a regions list with no default region", () => {
     const config = cloneConfig()
-    config.windDown.regions[0].code = "eea"
+    config.windDown.regions[0].code = "latam"
     expect(validate(config)).toBe(false)
   })
 
@@ -59,9 +115,9 @@ describe("windDown region resolution invariant", () => {
     const config = cloneConfig()
     config.windDown.regions.push({
       ...cloneConfig().windDown.regions[0],
-      code: "iceland",
-      countries: ["IS"],
-      timezone: "Atlantic/Reykjavik",
+      code: "panama",
+      countries: ["PA"],
+      timezone: "America/Panama",
     })
     expect(validate(config)).toBe(true)
   })
@@ -112,13 +168,41 @@ describe("windDown date and country format invariants", () => {
 
   it("rejects an affectedCountries entry that is not an alpha-2 code", () => {
     const config = cloneConfig()
-    config.windDown.affectedCountries = ["FRA"]
+    config.windDown.affectedCountries = ["MEX"]
     expect(validate(config)).toBe(false)
   })
 
   it("accepts alpha-2 affectedCountries entries", () => {
     const config = cloneConfig()
-    config.windDown.affectedCountries = ["FR", "de", "IS"]
+    config.windDown.affectedCountries = ["MX", "ar", "PE"]
     expect(validate(config)).toBe(true)
+  })
+})
+
+describe("windDown strictCountries invariants", () => {
+  it("backfills an empty strictCountries list for a config that predates the key", () => {
+    const config = cloneConfig()
+    delete config.windDown.strictCountries
+    expect(validate(config)).toBe(true)
+    expect(config.windDown.strictCountries).toEqual([])
+  })
+
+  it("keeps an explicit strictCountries list — the default never overwrites a set value", () => {
+    const config = cloneConfig()
+    config.windDown.strictCountries = ["KE", "FJ"]
+    expect(validate(config)).toBe(true)
+    expect(config.windDown.strictCountries).toEqual(["KE", "FJ"])
+  })
+
+  it("accepts alpha-2 strictCountries entries", () => {
+    const config = cloneConfig()
+    config.windDown.strictCountries = ["KE", "fj"]
+    expect(validate(config)).toBe(true)
+  })
+
+  it("rejects a strictCountries entry that is not an alpha-2 code", () => {
+    const config = cloneConfig()
+    config.windDown.strictCountries = ["KEN"]
+    expect(validate(config)).toBe(false)
   })
 })

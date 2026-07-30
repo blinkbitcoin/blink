@@ -43,7 +43,8 @@ const region = (overrides: Partial<WindDownRegionConfig> = {}): WindDownRegionCo
 const windDownConfig = (overrides: Partial<WindDownConfig> = {}): WindDownConfig =>
   ({
     enabled: true,
-    affectedCountries: ["FR", "DE"],
+    affectedCountries: ["MX", "AR"],
+    strictCountries: [],
     excludedAccountIds: [],
     receiveBlockedAccountIds: [],
     includeLevelZero: false,
@@ -65,8 +66,8 @@ const makeAccount = (overrides: Partial<Account> = {}): Account =>
     ...overrides,
   }) as Account
 
-const FR_PHONE = "+33612345678"
-const US_PHONE = "+14155552671"
+const MX_PHONE = "+525512345678"
+const GT_PHONE = "+50251234567"
 
 describe("checkReceiveAllowed", () => {
   beforeEach(() => {
@@ -82,7 +83,7 @@ describe("checkReceiveAllowed", () => {
 
   it("allows and reads nothing when no region is armed", async () => {
     mockGetWindDownConfig.mockReturnValue(windDownConfig())
-    mockFindById.mockResolvedValue({ phone: FR_PHONE, deletedPhones: [] })
+    mockFindById.mockResolvedValue({ phone: MX_PHONE, deletedPhones: [] })
 
     const result = await checkReceiveAllowed({ account: makeAccount() })
 
@@ -95,7 +96,7 @@ describe("checkReceiveAllowed", () => {
     mockGetWindDownConfig.mockReturnValue(
       windDownConfig({ regions: [region({ receiveDisabled: true })] }),
     )
-    mockFindById.mockResolvedValue({ phone: FR_PHONE, deletedPhones: [] })
+    mockFindById.mockResolvedValue({ phone: MX_PHONE, deletedPhones: [] })
 
     const result = await checkReceiveAllowed({ account: makeAccount() })
 
@@ -108,7 +109,7 @@ describe("checkReceiveAllowed", () => {
         regions: [region({ receiveDisabled: false, gateClosed: true })],
       }),
     )
-    mockFindById.mockResolvedValue({ phone: FR_PHONE, deletedPhones: [] })
+    mockFindById.mockResolvedValue({ phone: MX_PHONE, deletedPhones: [] })
 
     const result = await checkReceiveAllowed({ account: makeAccount() })
 
@@ -119,7 +120,7 @@ describe("checkReceiveAllowed", () => {
     mockGetWindDownConfig.mockReturnValue(
       windDownConfig({ enabled: false, regions: [region({ receiveDisabled: true })] }),
     )
-    mockFindById.mockResolvedValue({ phone: FR_PHONE, deletedPhones: [] })
+    mockFindById.mockResolvedValue({ phone: MX_PHONE, deletedPhones: [] })
 
     const result = await checkReceiveAllowed({ account: makeAccount() })
 
@@ -130,7 +131,7 @@ describe("checkReceiveAllowed", () => {
     mockGetWindDownConfig.mockReturnValue(
       windDownConfig({ regions: [region({ receiveDisabled: true })] }),
     )
-    mockFindById.mockResolvedValue({ phone: US_PHONE, deletedPhones: [] })
+    mockFindById.mockResolvedValue({ phone: GT_PHONE, deletedPhones: [] })
 
     const result = await checkReceiveAllowed({ account: makeAccount() })
 
@@ -145,7 +146,7 @@ describe("checkReceiveAllowed", () => {
         regions: [region({ receiveDisabled: true })],
       }),
     )
-    mockFindById.mockResolvedValue({ phone: FR_PHONE, deletedPhones: [] })
+    mockFindById.mockResolvedValue({ phone: MX_PHONE, deletedPhones: [] })
 
     const result = await checkReceiveAllowed({ account })
 
@@ -194,12 +195,12 @@ describe("checkReceiveAllowed", () => {
     mockGetWindDownConfig.mockReturnValue(
       windDownConfig({
         regions: [
-          region({ code: "fr", countries: ["FR"], receiveDisabled: true }),
+          region({ code: "mx", countries: ["MX"], receiveDisabled: true }),
           region({ code: "default", receiveDisabled: false }),
         ],
       }),
     )
-    mockFindById.mockResolvedValue({ phone: FR_PHONE, deletedPhones: [] })
+    mockFindById.mockResolvedValue({ phone: MX_PHONE, deletedPhones: [] })
 
     const result = await checkReceiveAllowed({ account: makeAccount() })
 
@@ -209,10 +210,10 @@ describe("checkReceiveAllowed", () => {
   it("allows when the matched country resolves to no region", async () => {
     mockGetWindDownConfig.mockReturnValue(
       windDownConfig({
-        regions: [region({ code: "de", countries: ["DE"], receiveDisabled: true })],
+        regions: [region({ code: "ar", countries: ["AR"], receiveDisabled: true })],
       }),
     )
-    mockFindById.mockResolvedValue({ phone: FR_PHONE, deletedPhones: [] })
+    mockFindById.mockResolvedValue({ phone: MX_PHONE, deletedPhones: [] })
 
     const result = await checkReceiveAllowed({ account: makeAccount() })
 

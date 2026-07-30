@@ -6,50 +6,50 @@ const args = (
   phoneCountry: undefined,
   deletedPhoneCountries: [],
   creationIpCountry: undefined,
-  affectedCountries: ["FR", "DE", "IS"],
+  affectedCountries: ["MX", "AR", "PE"],
   ...overrides,
 })
 
 describe("matchedCohortCountry", () => {
   it("returns undefined when no signal matches", () => {
     expect(
-      matchedCohortCountry(args({ phoneCountry: "US", creationIpCountry: "GB" })),
+      matchedCohortCountry(args({ phoneCountry: "GT", creationIpCountry: "TH" })),
     ).toBeUndefined()
   })
 
   it("returns the matched country when the current phone country is affected", () => {
-    expect(matchedCohortCountry(args({ phoneCountry: "DE" }))).toBe("DE")
+    expect(matchedCohortCountry(args({ phoneCountry: "AR" }))).toBe("AR")
   })
 
-  it("matches a deleted-phone country when the current phone is non-EU", () => {
+  it("matches a deleted-phone country when the current phone is unaffected", () => {
     expect(
-      matchedCohortCountry(args({ phoneCountry: "US", deletedPhoneCountries: ["FR"] })),
-    ).toBe("FR")
+      matchedCohortCountry(args({ phoneCountry: "GT", deletedPhoneCountries: ["MX"] })),
+    ).toBe("MX")
   })
 
   it("matches the creation-IP country when no phone signal matches", () => {
     expect(
-      matchedCohortCountry(args({ phoneCountry: "US", creationIpCountry: "FR" })),
-    ).toBe("FR")
+      matchedCohortCountry(args({ phoneCountry: "GT", creationIpCountry: "MX" })),
+    ).toBe("MX")
   })
 
   it("matches the creation-IP country when the account has no phone at all", () => {
-    expect(matchedCohortCountry(args({ creationIpCountry: "IS" }))).toBe("IS")
+    expect(matchedCohortCountry(args({ creationIpCountry: "PE" }))).toBe("PE")
   })
 
   it("prefers the phone country over deleted-phone and creation-IP signals", () => {
     expect(
       matchedCohortCountry(
         args({
-          phoneCountry: "FR",
-          deletedPhoneCountries: ["DE"],
-          creationIpCountry: "IS",
+          phoneCountry: "MX",
+          deletedPhoneCountries: ["AR"],
+          creationIpCountry: "PE",
         }),
       ),
-    ).toBe("FR")
+    ).toBe("MX")
   })
 
   it("matches case-insensitively", () => {
-    expect(matchedCohortCountry(args({ phoneCountry: "fr" }))).toBe("FR")
+    expect(matchedCohortCountry(args({ phoneCountry: "mx" }))).toBe("MX")
   })
 })
