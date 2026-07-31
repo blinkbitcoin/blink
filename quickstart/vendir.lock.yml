@@ -2,24 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix(quickstart): use ytt comment syntax in deps compose (#738)...'
-      sha: 703358d30e6717e7b2e1e8c62922372d53eb6b1d
+      commitTitle: 'fix(ledger): record bankowner float-balance exception at warn
+        instead of critical (#741)'
+      sha: e7d9f6a7675c51800c0946040eccafde9dc973f8
       tags:
-      - 0.22.33-1-g703358d30
+      - 0.22.34-2-ge7d9f6a76
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'fix(quickstart): use ytt comment syntax in deps compose (#738)...'
-      sha: 703358d30e6717e7b2e1e8c62922372d53eb6b1d
+      commitTitle: 'fix(ledger): record bankowner float-balance exception at warn
+        instead of critical (#741)'
+      sha: e7d9f6a7675c51800c0946040eccafde9dc973f8
       tags:
-      - 0.22.34
+      - 0.22.34-2-ge7d9f6a76
     path: schemas
   - git:
-      commitTitle: 'fix(quickstart): use ytt comment syntax in deps compose (#738)...'
-      sha: 703358d30e6717e7b2e1e8c62922372d53eb6b1d
+      commitTitle: 'fix(ledger): record bankowner float-balance exception at warn
+        instead of critical (#741)'
+      sha: e7d9f6a7675c51800c0946040eccafde9dc973f8
       tags:
-      - 0.22.34
+      - 0.22.34-2-ge7d9f6a76
     path: gql
   path: graphql
 kind: LockConfig
