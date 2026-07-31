@@ -10,11 +10,7 @@ jest.mock("@/services/tracing", () => ({
   wrapAsyncFunctionsToRunInSpan: ({ fns }: { fns: Record<string, unknown> }) => fns,
 }))
 
-import {
-  BigIntFloatConversionError,
-  ErrorLevel,
-  WalletCurrency,
-} from "@/domain/shared"
+import { BigIntFloatConversionError, ErrorLevel, WalletCurrency } from "@/domain/shared"
 import { LedgerService } from "@/services/ledger"
 import { MainBook } from "@/services/ledger/books"
 import * as caching from "@/services/ledger/caching"
