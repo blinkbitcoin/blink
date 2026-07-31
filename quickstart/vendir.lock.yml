@@ -2,27 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat(wind-down): enforce receive-disable across inbound rails
-        (#728)'
-      sha: 3680236f6e6f1b5aae0ab560a4157a5bafcf44a5
+      commitTitle: 'fix(quickstart): use ytt comment syntax in deps compose (#738)...'
+      sha: 703358d30e6717e7b2e1e8c62922372d53eb6b1d
       tags:
-      - 0.22.30-1-g3680236f6
+      - 0.22.33-1-g703358d30
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat(wind-down): enforce receive-disable across inbound rails
-        (#728)'
-      sha: 3680236f6e6f1b5aae0ab560a4157a5bafcf44a5
+      commitTitle: 'fix(quickstart): use ytt comment syntax in deps compose (#738)...'
+      sha: 703358d30e6717e7b2e1e8c62922372d53eb6b1d
       tags:
-      - 0.22.30-1-g3680236f6
+      - 0.22.34
     path: schemas
   - git:
-      commitTitle: 'feat(wind-down): enforce receive-disable across inbound rails
-        (#728)'
-      sha: 3680236f6e6f1b5aae0ab560a4157a5bafcf44a5
+      commitTitle: 'fix(quickstart): use ytt comment syntax in deps compose (#738)...'
+      sha: 703358d30e6717e7b2e1e8c62922372d53eb6b1d
       tags:
-      - 0.22.31
+      - 0.22.34
     path: gql
   path: graphql
 kind: LockConfig
