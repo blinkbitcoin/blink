@@ -20,7 +20,6 @@ type MigrationPreview = {
   feeSats: Satoshis
   feeCoveredByBlink: boolean
   receiveSats: Satoshis
-  onHold: boolean
 }
 
 type SparkPubkey = string & { readonly brand: unique symbol }

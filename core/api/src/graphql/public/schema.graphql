@@ -109,7 +109,6 @@ type AccountMigrationPreview {
   balanceSats: SatAmount!
   feeCoveredByBlink: Boolean!
   feeSats: SatAmount!
-  onHold: Boolean!
   receiveSats: SatAmount!
 }
 

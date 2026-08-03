@@ -16,9 +16,6 @@ const AccountMigrationPreview = GT.Object<MigrationPreview>({
     receiveSats: {
       type: GT.NonNull(SatAmount),
     },
-    onHold: {
-      type: GT.NonNull(GT.Boolean),
-    },
   }),
 })
 
