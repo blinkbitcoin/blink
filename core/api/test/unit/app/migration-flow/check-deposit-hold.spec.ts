@@ -7,6 +7,10 @@ jest.mock("@/app/prices", () => ({
   getCurrentPriceAsWalletPriceRatio: jest.fn(),
 }))
 
+jest.mock("@/app/wallets/get-balance-for-wallet", () => ({
+  getBalanceForWallet: jest.fn(),
+}))
+
 jest.mock("@/app/wind-down", () => ({
   isAccountInWindDownCohort: jest.fn(),
 }))
@@ -22,6 +26,7 @@ jest.mock("@/services/tracing", () => ({
 
 import { checkDepositHold } from "@/app/migration-flow/check-deposit-hold"
 import { getCurrentPriceAsWalletPriceRatio } from "@/app/prices"
+import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
 import { isAccountInWindDownCohort } from "@/app/wind-down"
 import { getCustodialMigrationFlowConfig } from "@/config"
 import { toSats } from "@/domain/bitcoin"
@@ -34,6 +39,7 @@ import { grossInAllTxBaseVolumeAmountSince } from "@/services/ledger/facade"
 
 const mockGetConfig = getCustodialMigrationFlowConfig as jest.Mock
 const mockGetPriceRatio = getCurrentPriceAsWalletPriceRatio as jest.Mock
+const mockGetBalance = getBalanceForWallet as jest.Mock
 const mockIsInCohort = isAccountInWindDownCohort as jest.Mock
 const mockGrossInVolume = grossInAllTxBaseVolumeAmountSince as jest.Mock
 
@@ -68,6 +74,7 @@ describe("checkDepositHold", () => {
     })
     mockIsInCohort.mockResolvedValue(false)
     mockGetPriceRatio.mockResolvedValue(priceRatio)
+    mockGetBalance.mockResolvedValue(50_000)
     volumeOf(0n)
   })
 
@@ -85,6 +92,7 @@ describe("checkDepositHold", () => {
     })
 
     expect(result).toEqual({})
+    expect(mockGetBalance).not.toHaveBeenCalled()
     expect(mockIsInCohort).not.toHaveBeenCalled()
     expect(mockGrossInVolume).not.toHaveBeenCalled()
     expect(mockGetPriceRatio).not.toHaveBeenCalled()
@@ -101,11 +109,40 @@ describe("checkDepositHold", () => {
       })
 
       expect(result).toEqual({})
+      expect(mockGetBalance).not.toHaveBeenCalled()
       expect(mockIsInCohort).not.toHaveBeenCalled()
       expect(mockGrossInVolume).not.toHaveBeenCalled()
       expect(mockGetPriceRatio).not.toHaveBeenCalled()
     },
   )
+
+  it("exempts a zero-balance account before the cohort lookup", async () => {
+    mockGetBalance.mockResolvedValue(0)
+    volumeOf(1_000_000n)
+
+    const result = await checkDepositHold({
+      account: makeAccount(1),
+      btcWalletDescriptor,
+    })
+
+    expect(result).toEqual({})
+    expect(mockGetBalance).toHaveBeenCalledWith({ walletId: btcWalletDescriptor.id })
+    expect(mockIsInCohort).not.toHaveBeenCalled()
+    expect(mockGrossInVolume).not.toHaveBeenCalled()
+    expect(mockGetPriceRatio).not.toHaveBeenCalled()
+  })
+
+  it("still applies the gate when the balance lookup errors", async () => {
+    mockGetBalance.mockResolvedValue(new UnknownLedgerError("balance down"))
+    volumeOf(20_000n)
+
+    const result = await checkDepositHold({
+      account: makeAccount(1),
+      btcWalletDescriptor,
+    })
+
+    expect(result).toBeInstanceOf(MigrationOnHoldError)
+  })
 
   it("exempts a wind-down cohort member regardless of volume", async () => {
     mockIsInCohort.mockResolvedValue(true)

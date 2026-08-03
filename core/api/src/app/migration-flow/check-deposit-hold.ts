@@ -1,6 +1,7 @@
 import { getCustodialMigrationFlowConfig } from "@/config"
 
 import { getCurrentPriceAsWalletPriceRatio } from "@/app/prices"
+import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
 import { isAccountInWindDownCohort } from "@/app/wind-down"
 
 import { AccountLevel } from "@/domain/accounts"
@@ -46,6 +47,17 @@ export const checkDepositHold = async ({
 
   if (account.level >= AccountLevel.Two) {
     addAttributesToCurrentSpan({ "migrationFlow.depositHold.verdict": "exempt-level" })
+    return {}
+  }
+
+  const balance = await getBalanceForWallet({ walletId: btcWalletDescriptor.id })
+  if (balance instanceof Error) {
+    recordExceptionInCurrentSpan({ error: balance, level: ErrorLevel.Warn })
+  }
+  if (!(balance instanceof Error) && balance === 0) {
+    addAttributesToCurrentSpan({
+      "migrationFlow.depositHold.verdict": "exempt-zero-balance",
+    })
     return {}
   }
 
