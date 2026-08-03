@@ -474,6 +474,11 @@ describe("commitMigrationFlow", () => {
       }),
     )
     expect(mockTransferIdentifierToSpark).not.toHaveBeenCalled()
+    expect(mockCheckDepositHold).toHaveBeenCalledWith({
+      account,
+      btcWalletDescriptor: accountWallets.BTC,
+      pinnedThresholdSats: undefined,
+    })
     expect(mockExecuteMigrationTransfer).toHaveBeenCalledTimes(1)
     expect(mockExecuteMigrationTransfer).toHaveBeenCalledWith({
       account,
