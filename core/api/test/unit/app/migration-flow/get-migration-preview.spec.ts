@@ -58,7 +58,10 @@ import { migrationDrainAmount } from "@/app/migration-flow/execute-transfer"
 import { getMigrationPreview } from "@/app/migration-flow/get-migration-preview"
 import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
 import { getCustodialMigrationFlowConfig } from "@/config"
-import { CouldNotFindMigrationFlowStateError } from "@/domain/errors"
+import {
+  CouldNotFindMigrationFlowStateError,
+  UnknownRepositoryError,
+} from "@/domain/errors"
 import { MigrationOnHoldError } from "@/domain/migration-flow"
 import { toSats } from "@/domain/bitcoin"
 
@@ -211,6 +214,24 @@ describe("getMigrationPreview", () => {
     expect(mockCheckDepositHold).toHaveBeenCalledWith(
       expect.objectContaining({ pinnedThresholdSats: toSats(7_000) }),
     )
+  })
+
+  it("returns a real flow-lookup error instead of evaluating with a fresh threshold", async () => {
+    mockGetConfig.mockReturnValue({
+      enabled: true,
+      deMinimisThresholdSats: 100,
+      recentDepositThresholdUsdCents: 1000,
+      recentDepositWindowDays: 30,
+    })
+    mocks.findAccountById.mockResolvedValue({ id: accountId } as Account)
+    const error = new UnknownRepositoryError("mongo down")
+    mocks.findMigrationFlow.mockResolvedValue(error)
+    mockGetBalance.mockResolvedValue(2111)
+
+    const result = await getMigrationPreview({ accountId })
+
+    expect(result).toBe(error)
+    expect(mockCheckDepositHold).not.toHaveBeenCalled()
   })
 
   it("propagates a non-hold checker error instead of masking it", async () => {

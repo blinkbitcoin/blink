@@ -6,6 +6,7 @@ import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
 import { getCustodialMigrationFlowConfig } from "@/config"
 
 import { toSats } from "@/domain/bitcoin"
+import { CouldNotFindError } from "@/domain/errors"
 import { MigrationOnHoldError } from "@/domain/migration-flow"
 
 import {
@@ -29,6 +30,7 @@ const previewDepositHold = async ({
   if (account instanceof Error) return account
 
   const flow = await MigrationFlowStateRepository().findByAccountId(accountId)
+  if (flow instanceof Error && !(flow instanceof CouldNotFindError)) return flow
   const pinnedThresholdSats = flow instanceof Error ? undefined : flow.holdThresholdSats
 
   const holdCheck = await checkDepositHold({
