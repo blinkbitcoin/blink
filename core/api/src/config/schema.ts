@@ -1087,6 +1087,11 @@ export const configSchema = {
           type: "array",
           items: { type: "string", pattern: countryCodePattern },
         },
+        strictCountries: {
+          type: "array",
+          items: { type: "string", pattern: countryCodePattern },
+          default: [],
+        },
         excludedAccountIds: {
           type: "array",
           items: { type: "string", format: "uuid" },
@@ -1100,6 +1105,12 @@ export const configSchema = {
           default: [],
         },
         includeLevelZero: { type: "boolean", default: false },
+        usePersistedCohortFlag: { type: "boolean", default: false },
+        ipEvidenceCutoff: {
+          type: "string",
+          format: "date-time",
+          default: "2026-07-30T23:59:59Z",
+        },
         convertUsdToBtcAtMidPrice: { type: "boolean", default: false },
         regions: {
           type: "array",
@@ -1143,16 +1154,31 @@ export const configSchema = {
         "excludedAccountIds",
         "receiveBlockedAccountIds",
         "includeLevelZero",
+        "usePersistedCohortFlag",
+        "ipEvidenceCutoff",
         "convertUsdToBtcAtMidPrice",
         "regions",
       ],
       additionalProperties: false,
+      if: {
+        properties: { usePersistedCohortFlag: { const: true } },
+        required: ["usePersistedCohortFlag"],
+      },
+      then: {
+        properties: {
+          strictCountries: { minItems: 1 },
+          affectedCountries: { minItems: 1 },
+        },
+      },
       default: {
         enabled: true,
         affectedCountries: ["NL"],
+        strictCountries: [],
         excludedAccountIds: [],
         receiveBlockedAccountIds: [],
         includeLevelZero: false,
+        usePersistedCohortFlag: false,
+        ipEvidenceCutoff: "2026-07-30T23:59:59Z",
         convertUsdToBtcAtMidPrice: false,
         regions: [
           {

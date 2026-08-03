@@ -28,9 +28,12 @@ type WindDownRegionYamlConfig = {
 type WindDownYamlConfig = {
   enabled: boolean
   affectedCountries: string[]
+  strictCountries: string[]
   excludedAccountIds: string[]
   receiveBlockedAccountIds: string[]
   includeLevelZero: boolean
+  usePersistedCohortFlag: boolean
+  ipEvidenceCutoff: string
   convertUsdToBtcAtMidPrice: boolean
   regions: WindDownRegionYamlConfig[]
 }
@@ -47,9 +50,12 @@ type WindDownRegionConfig = Omit<
 type WindDownConfig = {
   enabled: boolean
   affectedCountries: string[]
+  strictCountries: string[]
   excludedAccountIds: string[]
   receiveBlockedAccountIds: string[]
   includeLevelZero: boolean
+  usePersistedCohortFlag: boolean
+  ipEvidenceCutoff: Date
   convertUsdToBtcAtMidPrice: boolean
   regions: WindDownRegionConfig[]
 }

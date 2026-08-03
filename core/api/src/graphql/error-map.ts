@@ -948,6 +948,7 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "UnknownApiKeysServiceError":
     case "CouldNotFindAccountError":
     case "CouldNotFindMigrationFlowStateError":
+    case "CouldNotFindWindDownCohortAssessmentError":
     case "OathkeeperError":
     case "OathkeeperUnauthorizedServiceError":
     case "OathkeeperMissingAuthorizationHeaderError":

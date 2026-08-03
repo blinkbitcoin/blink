@@ -2,27 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat(wind-down): enforce receive-disable across inbound rails
-        (#728)'
-      sha: 3680236f6e6f1b5aae0ab560a4157a5bafcf44a5
+      commitTitle: 'fix(ledger): record bankowner float-balance exception at warn
+        instead of critical (#741)'
+      sha: e7d9f6a7675c51800c0946040eccafde9dc973f8
       tags:
-      - 0.22.30-1-g3680236f6
+      - 0.22.34-2-ge7d9f6a76
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat(wind-down): enforce receive-disable across inbound rails
-        (#728)'
-      sha: 3680236f6e6f1b5aae0ab560a4157a5bafcf44a5
+      commitTitle: 'fix(ledger): record bankowner float-balance exception at warn
+        instead of critical (#741)'
+      sha: e7d9f6a7675c51800c0946040eccafde9dc973f8
       tags:
-      - 0.22.30-1-g3680236f6
+      - 0.22.34-2-ge7d9f6a76
     path: schemas
   - git:
-      commitTitle: 'feat(wind-down): enforce receive-disable across inbound rails
-        (#728)'
-      sha: 3680236f6e6f1b5aae0ab560a4157a5bafcf44a5
+      commitTitle: 'fix(ledger): record bankowner float-balance exception at warn
+        instead of critical (#741)'
+      sha: e7d9f6a7675c51800c0946040eccafde9dc973f8
       tags:
-      - 0.22.31
+      - 0.22.34-2-ge7d9f6a76
     path: gql
   path: graphql
 kind: LockConfig

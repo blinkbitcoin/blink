@@ -189,9 +189,12 @@ const windDownConfig = ({
   ({
     enabled,
     affectedCountries: ["FR"],
+    strictCountries: [],
     excludedAccountIds,
     receiveBlockedAccountIds: [],
     includeLevelZero: false,
+    usePersistedCohortFlag: false,
+    ipEvidenceCutoff: new Date("2026-07-30T23:59:59Z"),
     convertUsdToBtcAtMidPrice,
     regions: [region()],
   }) as WindDownConfig

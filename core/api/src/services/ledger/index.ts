@@ -363,9 +363,13 @@ export const LedgerService = (): ILedgerService => {
       })
       // FIXME: correct database entries in staging/prod to remove this check
       if (balanceAmount instanceof BigIntFloatConversionError) {
+        const bankOwnerWalletId = await caching.getBankOwnerWalletId()
         recordExceptionInCurrentSpan({
           error: balanceAmount,
-          level: ErrorLevel.Critical,
+          level:
+            walletDescriptor.id === bankOwnerWalletId
+              ? ErrorLevel.Warn
+              : ErrorLevel.Critical,
           attributes: {
             ["error.message"]: `Inconsistent float balance from db: ${balance}`,
           },
