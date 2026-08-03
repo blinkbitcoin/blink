@@ -18,8 +18,7 @@ import {
   validateIsBtcWallet,
   validateIsUsdWallet,
 } from "@/app/wallets"
-import { checkReceiveAllowed } from "@/app/wind-down/check-receive-allowed"
-import { isAccountInWindDownCohort } from "@/app/wind-down/is-account-in-wind-down-cohort"
+import { checkReceiveAllowed, isAccountInWindDownCohort } from "@/app/wind-down"
 
 import {
   InvalidLightningPaymentFlowBuilderStateError,
