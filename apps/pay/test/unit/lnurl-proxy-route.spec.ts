@@ -276,6 +276,15 @@ describe("POST /api/lnurl-proxy", () => {
     expect(result.json).toEqual({ error: "LNURL service unreachable or not allowed" })
   })
 
+  it("maps callback fetch failures to a client error", async () => {
+    mockSafeFetchJsonResponse.mockResolvedValueOnce(serviceResponse(withdrawParams()))
+    mockSafeFetchJson.mockRejectedValueOnce(new SafeFetchError("unavailable"))
+
+    const result = await post({ lnurl: SERVICE_URL, paymentRequest: PAYMENT_REQUEST })
+    expect(result.response.status).toBe(400)
+    expect(result.json).toEqual({ error: "LNURL service unreachable or not allowed" })
+  })
+
   it("does not expose unexpected processing errors", async () => {
     const error = new Error("unexpected detail")
     mockSafeFetchJsonResponse.mockRejectedValueOnce(error)

@@ -9,6 +9,7 @@ type RequestOptions = {
   path?: string
   timeout?: number
   lookup?: LookupFunction
+  signal?: AbortSignal
 }
 
 class FakeRequest extends EventEmitter {
@@ -249,6 +250,7 @@ describe("safeFetchJson", () => {
     expect(mockRequest.mock.calls[1][0]).toEqual(
       expect.objectContaining({ hostname: "other.example", path: "/final" }),
     )
+    expect(mockRequest.mock.calls[0][0].signal).toBe(mockRequest.mock.calls[1][0].signal)
   })
 
   it("rejects a redirect to a non-HTTPS URL before another request", async () => {
@@ -305,7 +307,7 @@ describe("safeFetchJson", () => {
     expect(mockRequest).toHaveBeenCalledTimes(4)
   })
 
-  it("rejects unsuccessful and non-JSON responses", async () => {
+  it("rejects unsuccessful responses", async () => {
     const missingStatus = queueResponse({ chunks: [] })
     missingStatus.statusCode = undefined
     await expect(safeFetchJson("https://service.example/data")).rejects.toThrow(
@@ -317,51 +319,38 @@ describe("safeFetchJson", () => {
       "upstream returned HTTP 503",
     )
     expect(unsuccessful.resume).toHaveBeenCalled()
-
-    const html = queueResponse({
-      headers: { "content-type": "text/html" },
-      chunks: [],
-    })
-    await expect(safeFetchJson("https://service.example/data")).rejects.toThrow(
-      "upstream did not return JSON",
-    )
-    expect(html.resume).toHaveBeenCalled()
-
-    queueResponse({
-      headers: { "content-type": ["application/json"] },
-      chunks: [],
-    })
-    await expect(safeFetchJson("https://service.example/data")).rejects.toThrow(
-      "upstream did not return JSON",
-    )
-
-    queueResponse({
-      headers: { "content-type": "text/application/json" },
-      chunks: [],
-    })
-    await expect(safeFetchJson("https://service.example/data")).rejects.toThrow(
-      "upstream did not return JSON",
-    )
-
-    queueResponse({
-      headers: { "content-type": undefined },
-      chunks: [],
-    })
-    await expect(safeFetchJson("https://service.example/data")).rejects.toThrow(
-      "upstream did not return JSON",
-    )
   })
 
-  it("accepts JSON media types case-insensitively", async () => {
-    queueResponse({ headers: { "content-type": "Application/JSON; charset=utf-8" } })
-    await expect(safeFetchJson("https://service.example/data")).resolves.toEqual({
-      status: "OK",
-    })
+  jestIt.each(["text/plain", undefined])(
+    "accepts valid JSON with content type %s",
+    async (contentType) => {
+      queueResponse({ headers: { "content-type": contentType } })
+      await expect(safeFetchJson("https://service.example/data")).resolves.toEqual({
+        status: "OK",
+      })
+    },
+  )
 
-    queueResponse({ headers: { "content-type": "application/problem+json" } })
-    await expect(safeFetchJson("https://service.example/data")).resolves.toEqual({
-      status: "OK",
-    })
+  it("enforces a total request deadline", async () => {
+    jest.useFakeTimers()
+    try {
+      mockRequest.mockImplementationOnce(() => new FakeRequest())
+      const result = safeFetchJson("https://service.example/data")
+      const rejection = expect(result).rejects.toThrow(
+        "upstream request deadline exceeded",
+      )
+
+      await jest.advanceTimersByTimeAsync(0)
+      expect(mockRequest).toHaveBeenCalledTimes(1)
+      const signal = mockRequest.mock.calls[0][0].signal
+      expect(signal?.aborted).toBe(false)
+
+      await jest.advanceTimersByTimeAsync(15_000)
+      await rejection
+      expect(signal?.aborted).toBe(true)
+    } finally {
+      jest.useRealTimers()
+    }
   })
 
   it("rejects oversized and malformed JSON bodies", async () => {

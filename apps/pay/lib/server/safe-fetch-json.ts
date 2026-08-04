@@ -5,6 +5,7 @@ import { isIP, type LookupFunction } from "node:net"
 const MAX_REDIRECTS = 3
 const MAX_BODY_BYTES = 16 * 1024
 const TIMEOUT_MS = 5_000
+const DEADLINE_MS = 15_000
 
 export class SafeFetchError extends Error {}
 
@@ -111,9 +112,11 @@ const pinnedLookup =
 const requestJsonOnce = async ({
   url,
   redirectsLeft,
+  signal,
 }: {
   url: URL
   redirectsLeft: number
+  signal: AbortSignal
 }): Promise<{ data: unknown } | { redirect: URL }> => {
   if (url.protocol !== "https:") {
     throw new SafeFetchError("only https URLs are allowed")
@@ -132,6 +135,7 @@ const requestJsonOnce = async ({
         lookup: pinnedLookup(addresses),
         headers: { "Accept": "application/json", "User-Agent": "blink-pay/1.0" },
         timeout: TIMEOUT_MS,
+        signal,
       },
       (res) => {
         const status = res.statusCode ?? 0
@@ -160,16 +164,6 @@ const requestJsonOnce = async ({
         if (status < 200 || status >= 300) {
           res.resume()
           reject(new SafeFetchError(`upstream returned HTTP ${status}`))
-          return
-        }
-
-        const contentType = res.headers["content-type"] ?? ""
-        const mediaType = Array.isArray(contentType)
-          ? ""
-          : contentType.split(";", 1)[0].trim().toLowerCase()
-        if (mediaType !== "application/json" && !mediaType.endsWith("+json")) {
-          res.resume()
-          reject(new SafeFetchError("upstream did not return JSON"))
           return
         }
 
@@ -212,14 +206,44 @@ type SafeFetchJsonResponse = { data: unknown; url: string }
 const fetchWithRedirects = async ({
   url,
   redirectsLeft,
+  signal,
 }: {
   url: URL
   redirectsLeft: number
+  signal: AbortSignal
 }): Promise<SafeFetchJsonResponse> => {
-  const result = await requestJsonOnce({ url, redirectsLeft })
+  const result = await requestJsonOnce({ url, redirectsLeft, signal })
   if ("data" in result) return { data: result.data, url: url.toString() }
-  return fetchWithRedirects({ url: result.redirect, redirectsLeft: redirectsLeft - 1 })
+  return fetchWithRedirects({
+    url: result.redirect,
+    redirectsLeft: redirectsLeft - 1,
+    signal,
+  })
 }
+
+const withRequestDeadline = ({
+  controller,
+  operation,
+}: {
+  controller: AbortController
+  operation: () => Promise<SafeFetchJsonResponse>
+}): Promise<SafeFetchJsonResponse> =>
+  new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new SafeFetchError("upstream request deadline exceeded"))
+      controller.abort()
+    }, DEADLINE_MS)
+    operation().then(
+      (result) => {
+        clearTimeout(timer)
+        resolve(result)
+      },
+      (error) => {
+        clearTimeout(timer)
+        reject(error)
+      },
+    )
+  })
 
 export const safeFetchJsonResponse = async (
   input: string,
@@ -231,8 +255,18 @@ export const safeFetchJsonResponse = async (
     throw new SafeFetchError("invalid URL")
   }
 
+  const controller = new AbortController()
+
   try {
-    return await fetchWithRedirects({ url, redirectsLeft: MAX_REDIRECTS })
+    return await withRequestDeadline({
+      controller,
+      operation: () =>
+        fetchWithRedirects({
+          url,
+          redirectsLeft: MAX_REDIRECTS,
+          signal: controller.signal,
+        }),
+    })
   } catch (error) {
     if (error instanceof SafeFetchError) throw error
     throw new SafeFetchError("upstream request failed")
