@@ -47,6 +47,11 @@ selfservice:
       enabled: true
     password:
       enabled: true
+      config:
+        # Skip the haveibeenpwned.com breach check: the outbound call stalls for
+        # ~20s on egress-restricted CI runners, which trips the request timeout
+        # and breaks the api bootstrap registration.
+        haveibeenpwned_enabled: false
 
     code:
       enabled: true

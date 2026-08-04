@@ -11,29 +11,30 @@ concurrency:
 jobs:
   tests:
     name: execute via bats
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, blink, heavy]
     env:
-      # Fresh GitHub runners do not have Buck's downloaded Rust crate archives.
-      # Bound Buck fanout on hosted runners while crate archives come from CDN URLs.
-      BUCK2_JOBS: "4"
-    # The bats suite takes ~24-25 min on a clean run, and can spend several more
-    # minutes resetting lightning state between files, especially after the cron
-    # channel tests. Keep the cap high enough that slow teardown does not cancel
-    # a run that is still progressing.
-    timeout-minutes: 60
+      # The heavy runner has enough CPU to compile more Buck actions in parallel.
+      BUCK2_JOBS: "8"
+    # The full suite needs ~35 minutes on the self-hosted runners (buck2 builds
+    # plus stack boot take ~16 minutes before the 234 tests start).
+    timeout-minutes: 40
     steps:
-      - name: Free disk space
+      # A run killed by timeout or cancellation never executes Tilt's teardown,
+      # leaving the compose stack running (holding ports) and root-owned files
+      # in the workspace (lnurl-server runs as root and writes into dev/.data,
+      # which makes the next checkout fail with EACCES). Clean both up front.
+      - name: Clean up leftovers from previous runs
         run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
-          df -h /
+          docker ps -aq --filter "name=galoy-dev" | xargs -r docker rm -f
+          docker network rm galoy-dev_default 2>/dev/null || true
+          if [ -d "$GITHUB_WORKSPACE/dev/.data" ]; then
+            docker run --rm -v "$GITHUB_WORKSPACE:/ws" busybox rm -rf /ws/dev/.data
+          fi
 
       - uses: actions/checkout@v4
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v14
-
-      - name: Run the Magic Nix Cache
-        uses: DeterminateSystems/magic-nix-cache-action@v8
 
       - name: Run bats tests
         run: |
