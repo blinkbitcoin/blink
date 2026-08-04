@@ -16,8 +16,8 @@ fund_user_onchain() {
   [[ "${address}" != "null" ]] || exit 1
 
   bitcoin_cli sendtoaddress "$address" "$btc_amount_in_btc"
-  bitcoin_cli -generate 2
-  retry 30 1 check_for_onchain_initiated_settled "$token_name" "$address"
+  bitcoin_cli -generate 4
+  retry 60 1 check_for_onchain_initiated_settled "$token_name" "$address"
 }
 
 get_from_transaction_by_address() {
