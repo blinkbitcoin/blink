@@ -99,6 +99,7 @@ describe("Tx metadata", () => {
         | {
             paymentHash: PaymentHash
             pubkey: Pubkey
+            memoForRecipient?: string
           }
         | undefined
       /* eslint @typescript-eslint/ban-ts-comment: "off" */
@@ -395,6 +396,27 @@ describe("Tx metadata", () => {
         expectedCommonMetadata: { memoPayer: undefined },
         expectedAdditionalDebitMetadata: { memoPayer: memoOfPayer },
         expectedAdditionalCreditMetadata: { memoPayer: memoForRecipient },
+        crossAccount: {
+          title: "LnIntraledgerLedgerMetadata",
+          MetadataFn: LnIntraledgerLedgerMetadata,
+          type: LedgerTransactionType.LnIntraLedger,
+        },
+        selfTrade: {
+          title: "LnTradeIntraAccountLedgerMetadata",
+          MetadataFn: LnTradeIntraAccountLedgerMetadata,
+          type: LedgerTransactionType.LnTradeIntraAccount,
+        },
+      },
+
+      {
+        title: "ln without recipient memo",
+        commonMetadataArgs: {
+          paymentHash,
+          pubkey,
+        },
+        expectedCommonMetadata: { memoPayer: undefined },
+        expectedAdditionalDebitMetadata: { memoPayer: memoOfPayer },
+        expectedAdditionalCreditMetadata: {},
         crossAccount: {
           title: "LnIntraledgerLedgerMetadata",
           MetadataFn: LnIntraledgerLedgerMetadata,

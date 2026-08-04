@@ -674,6 +674,21 @@ const lockedPaymentViaIntraledgerSteps = async ({
     )
   }
 
+  const lndService = LndService()
+  if (lndService instanceof Error) return IntraLedgerSendAttemptResult.err(lndService)
+
+  let memoForRecipient: string | undefined
+  if (!paymentFlow.descriptionFromInvoice) {
+    const lnInvoiceLookup = await lndService.lookupInvoice({
+      pubkey: recipientPubkey,
+      paymentHash,
+    })
+    if (lnInvoiceLookup instanceof Error) {
+      return IntraLedgerSendAttemptResult.err(lnInvoiceLookup)
+    }
+    memoForRecipient = lnInvoiceLookup.lnInvoice.description || undefined
+  }
+
   let metadata: AddLnIntraledgerSendLedgerMetadata | AddLnTradeIntraAccountLedgerMetadata
   let additionalDebitMetadata: {
     [key: string]:
@@ -710,7 +725,7 @@ const lockedPaymentViaIntraledgerSteps = async ({
       senderDisplayCurrency,
 
       memoOfPayer: memo || undefined,
-      memoForRecipient: paymentFlow.descriptionFromInvoice || undefined,
+      memoForRecipient,
     }))
   } else {
     ;({
@@ -732,7 +747,7 @@ const lockedPaymentViaIntraledgerSteps = async ({
       recipientDisplayCurrency,
 
       memoOfPayer: memo || undefined,
-      memoForRecipient: paymentFlow.descriptionFromInvoice || undefined,
+      memoForRecipient,
       senderUsername,
       recipientUsername,
     }))
@@ -758,9 +773,6 @@ const lockedPaymentViaIntraledgerSteps = async ({
     additionalInternalMetadata,
   })
   if (journal instanceof Error) return IntraLedgerSendAttemptResult.err(journal)
-
-  const lndService = LndService()
-  if (lndService instanceof Error) return IntraLedgerSendAttemptResult.err(lndService)
 
   const deletedLnInvoice = await lndService.cancelInvoice({
     pubkey: recipientPubkey,
