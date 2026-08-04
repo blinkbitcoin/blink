@@ -2,27 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix(ledger): record bankowner float-balance exception at warn
-        instead of critical (#741)'
-      sha: e7d9f6a7675c51800c0946040eccafde9dc973f8
+      commitTitle: 'feat(wind-down): price cohort USD->BTC self-conversions at mid
+        rate (#733)'
+      sha: 2987de755245679547700105e2b737faa84510a2
       tags:
-      - 0.22.34-2-ge7d9f6a76
+      - 0.22.35-1-g2987de755
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'fix(ledger): record bankowner float-balance exception at warn
-        instead of critical (#741)'
-      sha: e7d9f6a7675c51800c0946040eccafde9dc973f8
+      commitTitle: 'feat(wind-down): price cohort USD->BTC self-conversions at mid
+        rate (#733)'
+      sha: 2987de755245679547700105e2b737faa84510a2
       tags:
-      - 0.22.34-2-ge7d9f6a76
+      - 0.22.35-1-g2987de755
     path: schemas
   - git:
-      commitTitle: 'fix(ledger): record bankowner float-balance exception at warn
-        instead of critical (#741)'
-      sha: e7d9f6a7675c51800c0946040eccafde9dc973f8
+      commitTitle: 'feat(wind-down): price cohort USD->BTC self-conversions at mid
+        rate (#733)'
+      sha: 2987de755245679547700105e2b737faa84510a2
       tags:
-      - 0.22.34-2-ge7d9f6a76
+      - 0.22.35-1-g2987de755
     path: gql
   path: graphql
 kind: LockConfig
