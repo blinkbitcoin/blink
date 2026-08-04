@@ -43,6 +43,25 @@ teardown() {
   [[ "${last_tier_amount}" = "0" ]] || exit 1
 }
 
+@test "public: globals exposes daily limits for every account level" {
+  exec_graphql 'anon' 'globals'
+
+  levels_count="$(graphql_output '.data.globals.accountLimitsByLevel | length')"
+  [[ "${levels_count}" = "4" ]] || exit 1
+
+  level_one="$(graphql_output '.data.globals.accountLimitsByLevel[] | select(.level == "ONE")')"
+  [[ -n "${level_one}" ]] || exit 1
+
+  interval="$(echo "${level_one}" | jq -r '.interval')"
+  withdrawal="$(echo "${level_one}" | jq -r '.withdrawal')"
+  internal_send="$(echo "${level_one}" | jq -r '.internalSend')"
+  convert="$(echo "${level_one}" | jq -r '.convert')"
+  [[ "${interval}" = "86400" ]] || exit 1
+  [[ "${withdrawal}" = "100000" ]] || exit 1
+  [[ "${internal_send}" = "200000" ]] || exit 1
+  [[ "${convert}" = "5000000" ]] || exit 1
+}
+
 @test "public: can query realtime price" {
   currency="EUR"
   variables=$(
