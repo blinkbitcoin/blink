@@ -19,4 +19,9 @@ setupMongoConnection({ syncIndexes: true })
       startApolloServerForAdminSchema(),
     ])
   })
-  .catch((err) => baseLogger.error(err, "server error"))
+  .catch((err) => {
+    baseLogger.error(err, "server error")
+    // Exit so the failure is visible to supervisors (Tilt, k8s) instead of
+    // leaving a process that never listens on any port.
+    process.exit(1)
+  })
