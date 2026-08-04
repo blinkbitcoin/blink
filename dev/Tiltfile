@@ -178,6 +178,7 @@ local_resource(
     ),
     deps = _buck2_dep_inputs(admin_panel_target),
     allow_parallel = True,
+    auto_init = run_apps,
     resource_deps = [
         "api",
         "apollo-router",
@@ -210,6 +211,7 @@ local_resource(
     ),
     deps = _buck2_dep_inputs(map_target),
     allow_parallel = True,
+    auto_init = run_apps,
     resource_deps = [
         "api",
         "apollo-router",
@@ -243,6 +245,7 @@ local_resource(
     ),
     deps = _buck2_dep_inputs(voucher_target),
     allow_parallel = True,
+    auto_init = run_apps,
     resource_deps = [
         "api",
         "apollo-router",
@@ -267,6 +270,7 @@ local_resource(
     'http://localhost:3006/api/auth/callback/blink',
   ],
   allow_parallel = True,
+  auto_init = run_apps,
   resource_deps = [
     "hydra",
     "api",
@@ -757,7 +761,7 @@ for service in docker_groups["bitcoin"]:
 for service in docker_groups["tracing"]:
     dc_resource(service, labels = ["tracing"])
 for service in docker_groups["apps"]:
-    dc_resource(service, labels = ["apps"])
+    dc_resource(service, labels = ["apps"], auto_init = run_apps)
 for service in docker_groups["core"]:
     dc_resource(service, labels = ["core"])
 for service in docker_groups["auth"]:

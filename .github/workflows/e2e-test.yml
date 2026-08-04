@@ -12,6 +12,12 @@ jobs:
   tests:
     name: execute via bats
     runs-on: [self-hosted, blink, heavy]
+    env:
+      # The heavy runner has enough CPU to compile more Buck actions in parallel.
+      BUCK2_JOBS: "8"
+      # Traces are not asserted by the Bats suite, and exporting every test span
+      # produces a ~200 MB Tilt log while adding avoidable CPU and disk I/O.
+      OTEL_SDK_DISABLED: "true"
     # The full suite needs ~35 minutes on the self-hosted runners (buck2 builds
     # plus stack boot take ~16 minutes before the 234 tests start).
     timeout-minutes: 40
