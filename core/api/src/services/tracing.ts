@@ -189,69 +189,64 @@ const recordGqlErrors = ({
   })
 }
 
-const tracingDisabled = process.env.OTEL_SDK_DISABLED?.toLowerCase() === "true"
-let provider: NodeTracerProvider | undefined
-
-if (!tracingDisabled) {
-  registerInstrumentations({
-    instrumentations: [
-      new NetInstrumentation(),
-      new HttpInstrumentation({
-        ignoreIncomingPaths: ["/healthz"],
-        headersToSpanAttributes: {
-          server: {
-            requestHeaders: [
-              "apollographql-client-name",
-              "apollographql-client-version",
-              "x-real-ip",
-              "x-forwarded-for",
-              "x-appcheck-jti",
-              "user-agent",
-            ],
-          },
+registerInstrumentations({
+  instrumentations: [
+    new NetInstrumentation(),
+    new HttpInstrumentation({
+      ignoreIncomingPaths: ["/healthz"],
+      headersToSpanAttributes: {
+        server: {
+          requestHeaders: [
+            "apollographql-client-name",
+            "apollographql-client-version",
+            "x-real-ip",
+            "x-forwarded-for",
+            "x-appcheck-jti",
+            "user-agent",
+          ],
         },
-      }),
-      new GraphQLInstrumentation({
-        mergeItems: true,
-        allowValues: true,
-        responseHook: gqlResponseHook,
-      }),
-      new MongoDBInstrumentation(),
-      new GrpcInstrumentation({
-        ignoreGrpcMethods: [/GetPrice/],
-      }),
-      new IORedisInstrumentation(),
-    ],
-  })
+      },
+    }),
+    new GraphQLInstrumentation({
+      mergeItems: true,
+      allowValues: true,
+      responseHook: gqlResponseHook,
+    }),
+    new MongoDBInstrumentation(),
+    new GrpcInstrumentation({
+      ignoreGrpcMethods: [/GetPrice/],
+    }),
+    new IORedisInstrumentation(),
+  ],
+})
 
-  // FIXME we should be using OTEL_SERVICE_NAME and not have to set it manually
-  // but it doesn't seem to work
-  provider = new NodeTracerProvider({
-    resource: Resource.default().merge(
-      new Resource({
-        [ATTR_SERVICE_NAME]: process.env.TRACING_SERVICE_NAME || "galoy-dev",
-      }),
-    ),
-  })
-  class SpanProcessorWrapper extends SimpleSpanProcessor {
-    onStart(span: SdkSpan, parentContext: Context) {
-      const ctx = context.active()
-      if (ctx) {
-        const baggage = propagation.getBaggage(ctx)
-        if (baggage) {
-          baggage.getAllEntries().forEach(([key, entry]) => {
-            span.setAttribute(key, entry.value)
-          })
-        }
+// FIXME we should be using OTEL_SERVICE_NAME and not have to set it manually
+// but it doesn't seem to work
+const provider = new NodeTracerProvider({
+  resource: Resource.default().merge(
+    new Resource({
+      [ATTR_SERVICE_NAME]: process.env.TRACING_SERVICE_NAME || "galoy-dev",
+    }),
+  ),
+})
+class SpanProcessorWrapper extends SimpleSpanProcessor {
+  onStart(span: SdkSpan, parentContext: Context) {
+    const ctx = context.active()
+    if (ctx) {
+      const baggage = propagation.getBaggage(ctx)
+      if (baggage) {
+        baggage.getAllEntries().forEach(([key, entry]) => {
+          span.setAttribute(key, entry.value)
+        })
       }
-      super.onStart(span, parentContext)
     }
+    super.onStart(span, parentContext)
   }
-
-  provider.addSpanProcessor(new SpanProcessorWrapper(new OTLPTraceExporter()))
-
-  provider.register()
 }
+
+provider.addSpanProcessor(new SpanProcessorWrapper(new OTLPTraceExporter()))
+
+provider.register()
 
 // the reason we have to use process.env.COMMITHASH instead of env.COMMITHASH
 // is because tracing is been initialized before any other code is imported,
@@ -511,19 +506,17 @@ export const wrapAsyncToRunInSpan = <
       ignoreFnArgs,
     })
     const ret = tracer.startActiveSpan(spanName, spanOptions, async (span) => {
-      if (span.isRecording()) {
-        baseLogger.info(
-          {
-            function: spanOptions.attributes?.["code.function"],
-            isRecording: true,
-            spanId: span.spanContext().spanId,
-            parentSpanIsRecording,
-            parentSpanId: activeSpan?.spanContext().spanId,
-            parentSpanName,
-          },
-          `spanName: ${spanName}`,
-        )
-      }
+      baseLogger.info(
+        {
+          function: spanOptions.attributes?.["code.function"],
+          isRecording: span.isRecording(),
+          spanId: span.spanContext().spanId,
+          parentSpanIsRecording,
+          parentSpanId: activeSpan?.spanContext().spanId,
+          parentSpanName,
+        },
+        `spanName: ${spanName}`,
+      )
       try {
         const ret = await fn(...args)
         if (ret instanceof Error) recordException(span, ret)
@@ -620,8 +613,8 @@ export const addAttributesToCurrentSpanAndPropagate = <F extends () => ReturnTyp
 }
 
 export const shutdownTracing = async () => {
-  await provider?.forceFlush()
-  await provider?.shutdown()
+  await provider.forceFlush()
+  await provider.shutdown()
 }
 
 export const SemanticResourceAttributes = {
