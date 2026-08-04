@@ -2,27 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat(wind-down): price cohort USD->BTC self-conversions at mid
-        rate (#733)'
-      sha: 2987de755245679547700105e2b737faa84510a2
+      commitTitle: 'ci: run e2e tests on self-hosted runner (#727)...'
+      sha: bfa701e224d5a0e5f752d8fd9e1a644dfe65dcdb
       tags:
-      - 0.22.35-1-g2987de755
+      - 0.22.36-2-gbfa701e22
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat(wind-down): price cohort USD->BTC self-conversions at mid
-        rate (#733)'
-      sha: 2987de755245679547700105e2b737faa84510a2
+      commitTitle: 'ci: run e2e tests on self-hosted runner (#727)...'
+      sha: bfa701e224d5a0e5f752d8fd9e1a644dfe65dcdb
       tags:
-      - 0.22.35-1-g2987de755
+      - 0.22.36-2-gbfa701e22
     path: schemas
   - git:
-      commitTitle: 'feat(wind-down): price cohort USD->BTC self-conversions at mid
-        rate (#733)'
-      sha: 2987de755245679547700105e2b737faa84510a2
+      commitTitle: 'ci: run e2e tests on self-hosted runner (#727)...'
+      sha: bfa701e224d5a0e5f752d8fd9e1a644dfe65dcdb
       tags:
-      - 0.22.35-1-g2987de755
+      - 0.22.36-2-gbfa701e22
     path: gql
   path: graphql
 kind: LockConfig
