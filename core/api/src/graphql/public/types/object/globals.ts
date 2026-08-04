@@ -6,8 +6,11 @@ import Country from "./country"
 import FeesInformation from "./fees-information"
 import BuildInformation from "./build-information"
 import BlockInfo from "./block-info"
+import AccountLevelLimits from "./account-level-limits"
 
 import { GT } from "@/graphql/index"
+import { getAccountLimits, SECS_PER_DAY } from "@/config"
+import { AccountLevel } from "@/domain/accounts"
 
 const Globals = GT.Object({
   name: "Globals",
@@ -41,6 +44,21 @@ const Globals = GT.Object({
     },
     feesInformation: {
       type: GT.NonNull(FeesInformation),
+    },
+    accountLimitsByLevel: {
+      type: GT.NonNullList(AccountLevelLimits),
+      description: dedent`Daily transaction limits enforced for each account level, in USD cents.`,
+      resolve: () =>
+        Object.values(AccountLevel).map((level) => {
+          const accountLimits = getAccountLimits({ level })
+          return {
+            level,
+            interval: SECS_PER_DAY,
+            withdrawal: accountLimits.withdrawalLimit,
+            internalSend: accountLimits.intraLedgerLimit,
+            convert: accountLimits.tradeIntraAccountLimit,
+          }
+        }),
     },
   }),
 })

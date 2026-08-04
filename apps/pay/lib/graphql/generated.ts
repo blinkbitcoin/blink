@@ -176,6 +176,20 @@ export const AccountLevel = {
 } as const;
 
 export type AccountLevel = typeof AccountLevel[keyof typeof AccountLevel];
+/** Daily transaction limits enforced for a given account level. */
+export type AccountLevelLimits = {
+  readonly __typename: 'AccountLevelLimits';
+  /** Max amount that can be converted between currencies among an account's own wallets. */
+  readonly convert: Scalars['CentAmount']['output'];
+  /** Max amount that can be sent to other internal accounts. */
+  readonly internalSend: Scalars['CentAmount']['output'];
+  /** The rolling time interval in seconds that the limits apply for. */
+  readonly interval: Scalars['Seconds']['output'];
+  readonly level: AccountLevel;
+  /** Max amount that can be withdrawn to external onchain or lightning destinations. */
+  readonly withdrawal: Scalars['CentAmount']['output'];
+};
+
 export type AccountLimit = {
   /** The rolling time interval in seconds that the limits would apply for. */
   readonly interval?: Maybe<Scalars['Seconds']['output']>;
@@ -578,6 +592,8 @@ export type FeesInformation = {
 /** Provides global settings for the application which might have an impact for the user. */
 export type Globals = {
   readonly __typename: 'Globals';
+  /** Daily transaction limits enforced for each account level, in USD cents. */
+  readonly accountLimitsByLevel: ReadonlyArray<AccountLevelLimits>;
   /** Current block height and block hash */
   readonly blockInfo?: Maybe<BlockInfo>;
   readonly buildInformation: BuildInformation;
