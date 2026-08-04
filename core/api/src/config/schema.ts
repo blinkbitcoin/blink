@@ -1111,6 +1111,7 @@ export const configSchema = {
           format: "date-time",
           default: "2026-07-30T23:59:59Z",
         },
+        convertUsdToBtcAtMidPrice: { type: "boolean", default: false },
         regions: {
           type: "array",
           minItems: 1,
@@ -1155,6 +1156,7 @@ export const configSchema = {
         "includeLevelZero",
         "usePersistedCohortFlag",
         "ipEvidenceCutoff",
+        "convertUsdToBtcAtMidPrice",
         "regions",
       ],
       additionalProperties: false,
@@ -1177,6 +1179,7 @@ export const configSchema = {
         includeLevelZero: false,
         usePersistedCohortFlag: false,
         ipEvidenceCutoff: "2026-07-30T23:59:59Z",
+        convertUsdToBtcAtMidPrice: false,
         regions: [
           {
             code: DEFAULT_WIND_DOWN_REGION_CODE,

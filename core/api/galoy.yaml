@@ -330,6 +330,7 @@ windDown:
   includeLevelZero: false
   usePersistedCohortFlag: false
   ipEvidenceCutoff: "2026-07-30T23:59:59Z"
+  convertUsdToBtcAtMidPrice: false
   regions:
     - code: default
       timezone: Europe/Paris

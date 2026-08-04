@@ -72,6 +72,7 @@ const armedUsCohortConfig = {
   excludedAccountIds: [],
   receiveBlockedAccountIds: [],
   includeLevelZero: false,
+  convertUsdToBtcAtMidPrice: false,
   regions: [
     {
       code: "default",

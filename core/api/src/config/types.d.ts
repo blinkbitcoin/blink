@@ -34,6 +34,7 @@ type WindDownYamlConfig = {
   includeLevelZero: boolean
   usePersistedCohortFlag: boolean
   ipEvidenceCutoff: string
+  convertUsdToBtcAtMidPrice: boolean
   regions: WindDownRegionYamlConfig[]
 }
 
@@ -55,6 +56,7 @@ type WindDownConfig = {
   includeLevelZero: boolean
   usePersistedCohortFlag: boolean
   ipEvidenceCutoff: Date
+  convertUsdToBtcAtMidPrice: boolean
   regions: WindDownRegionConfig[]
 }
 
