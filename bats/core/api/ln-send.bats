@@ -425,6 +425,80 @@ usd_amount=50
   [[ "$status" == "0" ]] || exit 1
 }
 
+@test "ln-send: intraledger settled - lnurl comment shown to recipient from descriptionHash invoice" {
+  token_name="$ALICE"
+  btc_wallet_name="$token_name.btc_wallet_id"
+  comment="Great post, here is a tip"
+
+  create_user "$BOB"
+  user_update_username "$BOB"
+  bob_btc_wallet_name="$BOB.btc_wallet_id"
+
+  initial_lnd1_balance=$(lnd_cli channelbalance | jq -r '.balance')
+
+  # LNURL-pay style invoice created anonymously on behalf of the recipient: the
+  # comment is stored as the LND invoice description while the bolt11 only
+  # carries the description hash
+  metadata='[["text/plain","Payment to bob"]]'
+  description_hash=$(printf '%s' "$metadata" | sha256sum | cut -d ' ' -f1)
+  variables=$(
+    jq -n \
+    --arg wallet_id "$(read_value $bob_btc_wallet_name)" \
+    --arg amount "$btc_amount" \
+    --arg description_hash "$description_hash" \
+    --arg memo "$comment" \
+    '{input: {recipientWalletId: $wallet_id, amount: $amount, descriptionHash: $description_hash, memo: $memo}}'
+  )
+  exec_graphql 'anon' 'ln-invoice-create-on-behalf-of-recipient' "$variables"
+  invoice="$(graphql_output '.data.lnInvoiceCreateOnBehalfOfRecipient.invoice')"
+
+  payment_request="$(echo $invoice | jq -r '.paymentRequest')"
+  [[ "${payment_request}" != "null" ]] || exit 1
+  payment_hash="$(echo $invoice | jq -r '.paymentHash')"
+  [[ "${payment_hash}" != "null" ]] || exit 1
+
+  # Pay without a sender memo so the recipient memo can only come from the invoice
+  variables=$(
+    jq -n \
+    --arg wallet_id "$(read_value $btc_wallet_name)" \
+    --arg payment_request "$payment_request" \
+    '{input: {walletId: $wallet_id, paymentRequest: $payment_request}}'
+  )
+  exec_graphql "$token_name" 'ln-invoice-payment-send' "$variables"
+  send_status="$(graphql_output '.data.lnInvoicePaymentSend.status')"
+  [[ "${send_status}" = "SUCCESS" ]] || exit 1
+
+  # Check for settled
+  retry 15 1 check_for_ln_initiated_settled "$token_name" "$payment_hash"
+  check_for_ln_initiated_settled "$BOB" "$payment_hash"
+
+  final_lnd1_balance=$(lnd_cli channelbalance | jq -r '.balance')
+  lnd1_diff="$(( $initial_lnd1_balance - $final_lnd1_balance ))"
+  [[ "$lnd1_diff" == "0" ]] || exit 1
+
+  # Recipient sees the lnurl comment as the transaction memo
+  variables=$(
+    jq -n \
+    --arg wallet_id "$(read_value $bob_btc_wallet_name)" \
+    --arg payment_hash "$payment_hash" \
+    '{walletId: $wallet_id, paymentHash: $payment_hash}'
+  )
+  exec_graphql "$BOB" 'transactions-for-wallet-by-payment-hash' "$variables"
+  recipient_memo="$(graphql_output '.data.me.defaultAccount.walletById.transactionsByPaymentHash[0].memo')"
+  [[ "${recipient_memo}" == "${comment}" ]] || exit 1
+
+  # The comment does not leak to the sender side
+  variables=$(
+    jq -n \
+    --arg wallet_id "$(read_value $btc_wallet_name)" \
+    --arg payment_hash "$payment_hash" \
+    '{walletId: $wallet_id, paymentHash: $payment_hash}'
+  )
+  exec_graphql "$token_name" 'transactions-for-wallet-by-payment-hash' "$variables"
+  sender_memo="$(graphql_output '.data.me.defaultAccount.walletById.transactionsByPaymentHash[0].memo')"
+  [[ "${sender_memo}" == "null" ]] || exit 1
+}
+
 @test "ln-send: intraledger settled - lnInvoicePaymentSend from usd to btc" {
   token_name="$ALICE"
   usd_wallet_name="$token_name.usd_wallet_id"
