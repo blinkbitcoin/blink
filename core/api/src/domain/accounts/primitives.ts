@@ -12,6 +12,7 @@ export const AccountStatus = {
   Active: "active",
   Locked: "locked",
   Closed: "closed",
+  Migrated: "migrated",
 } as const
 
 export const AccountLimitsRange = {

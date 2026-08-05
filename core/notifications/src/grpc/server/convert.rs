@@ -246,6 +246,9 @@ impl From<proto::DeepLinkScreen> for notification_event::DeepLinkScreen {
             proto::DeepLinkScreen::CardOnboardingApproved => {
                 notification_event::DeepLinkScreen::CardOnboardingApproved
             }
+            proto::DeepLinkScreen::AccountMigration => {
+                notification_event::DeepLinkScreen::AccountMigration
+            }
         }
     }
 }

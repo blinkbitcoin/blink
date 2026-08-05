@@ -28,6 +28,7 @@ enum AccountStatus {
   CLOSED
   INVITED
   LOCKED
+  MIGRATED
   NEW
   PENDING
 }
@@ -152,6 +153,7 @@ enum DeepLinkAction {
 }
 
 enum DeepLinkScreen {
+  ACCOUNT_MIGRATION
   CARD_ONBOARDING
   CARD_ONBOARDING_APPROVED
   CARD_ONBOARDING_LOADING

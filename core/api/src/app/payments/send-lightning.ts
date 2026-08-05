@@ -75,6 +75,7 @@ import {
   validateIsBtcWallet,
   validateIsUsdWallet,
 } from "@/app/wallets"
+import { checkReceiveAllowed } from "@/app/wind-down/check-receive-allowed"
 
 import { ResourceExpiredLockServiceError } from "@/domain/lock"
 
@@ -87,8 +88,10 @@ const getValidatedIntraledgerRecipientAccount = async <
   R extends WalletCurrency,
 >({
   paymentFlow,
+  senderAccount,
 }: {
   paymentFlow: PaymentFlow<S, R>
+  senderAccount: Account
 }): Promise<Account | ApplicationError> => {
   const { walletDescriptor: recipientWalletDescriptor } = paymentFlow.recipientDetails()
   if (!recipientWalletDescriptor) {
@@ -104,6 +107,11 @@ const getValidatedIntraledgerRecipientAccount = async <
 
   const accountValidator = AccountValidator(recipientAccount)
   if (accountValidator instanceof Error) return accountValidator
+
+  const receiveAllowed = await checkReceiveAllowed({ account: recipientAccount })
+  if (receiveAllowed instanceof Error && recipientAccount.id !== senderAccount.id) {
+    return receiveAllowed
+  }
 
   return recipientAccount
 }
@@ -169,10 +177,14 @@ export const payInvoiceByWalletId = async ({
       senderAccount,
       memo,
       apiKeyId,
+      skipChecks: false,
     })
   }
 
-  const recipientAccount = await getValidatedIntraledgerRecipientAccount({ paymentFlow })
+  const recipientAccount = await getValidatedIntraledgerRecipientAccount({
+    paymentFlow,
+    senderAccount,
+  })
   if (recipientAccount instanceof Error) return recipientAccount
 
   const paymentSendResult = await executePaymentViaIntraledger({
@@ -190,14 +202,17 @@ export const payInvoiceByWalletId = async ({
   return paymentSendResult
 }
 
-const payNoAmountInvoiceByWalletId = async ({
+export const payNoAmountInvoiceByWalletId = async ({
   uncheckedPaymentRequest,
   amount,
   memo,
   senderWalletId: uncheckedSenderWalletId,
   senderAccount,
   apiKeyId,
-}: PayNoAmountInvoiceByWalletIdArgs): Promise<PaymentSendResult | ApplicationError> => {
+  skipChecks = false,
+}: PayNoAmountInvoiceByWalletIdInternalArgs): Promise<
+  PaymentSendResult | ApplicationError
+> => {
   addAttributesToCurrentSpan({
     "payment.initiation_method": PaymentInitiationMethod.Lightning,
   })
@@ -236,10 +251,14 @@ const payNoAmountInvoiceByWalletId = async ({
       senderAccount,
       memo,
       apiKeyId,
+      skipChecks,
     })
   }
 
-  const recipientAccount = await getValidatedIntraledgerRecipientAccount({ paymentFlow })
+  const recipientAccount = await getValidatedIntraledgerRecipientAccount({
+    paymentFlow,
+    senderAccount,
+  })
   if (recipientAccount instanceof Error) return recipientAccount
 
   const paymentSendResult = await executePaymentViaIntraledger({
@@ -261,14 +280,18 @@ export const payNoAmountInvoiceByWalletIdForBtcWallet = async (
   args: PayNoAmountInvoiceByWalletIdArgs,
 ): Promise<PaymentSendResult | ApplicationError> => {
   const validated = await validateIsBtcWallet(args.senderWalletId)
-  return validated instanceof Error ? validated : payNoAmountInvoiceByWalletId(args)
+  return validated instanceof Error
+    ? validated
+    : payNoAmountInvoiceByWalletId({ ...args, skipChecks: false })
 }
 
 export const payNoAmountInvoiceByWalletIdForUsdWallet = async (
   args: PayNoAmountInvoiceByWalletIdArgs,
 ): Promise<PaymentSendResult | ApplicationError> => {
   const validated = await validateIsUsdWallet(args.senderWalletId)
-  return validated instanceof Error ? validated : payNoAmountInvoiceByWalletId(args)
+  return validated instanceof Error
+    ? validated
+    : payNoAmountInvoiceByWalletId({ ...args, skipChecks: false })
 }
 
 const validateInvoicePaymentInputs = async ({
@@ -757,15 +780,18 @@ const executePaymentViaLn = async ({
   senderAccount,
   memo,
   apiKeyId,
+  skipChecks,
 }: {
   decodedInvoice: LnInvoice
   paymentFlow: PaymentFlow<WalletCurrency, WalletCurrency>
   senderAccount: Account
   memo: string | null
   apiKeyId?: ApiKeyId
+  skipChecks: boolean
 }): Promise<PaymentSendResult | ApplicationError> => {
   addAttributesToCurrentSpan({
     "payment.settlement_method": SettlementMethod.Lightning,
+    "payment.skipChecks": skipChecks,
   })
 
   const { id: senderWalletId } = paymentFlow.senderWalletDescriptor()
@@ -797,6 +823,7 @@ const executePaymentViaLn = async ({
     priceRatioForLimits,
     apiKeyId,
     btcPaymentAmount: paymentFlow.btcPaymentAmount,
+    skipChecks,
     execute: async () => {
       const paymentSendAttemptResult = await LockService().lockWalletId(
         senderWalletId,

@@ -4,6 +4,10 @@ import { reimburseFailedUsdPayment } from "./reimburse-failed-usd"
 
 import { PaymentFlowFromLedgerTransaction } from "./translations"
 
+import {
+  completeMigrationFlowForSettledPayment,
+  failMigrationFlowForFailedPayment,
+} from "@/app/migration-flow/settle-migration-flow"
 import { getTransactionForWalletByJournalId } from "@/app/wallets"
 
 import { toSats } from "@/domain/bitcoin"
@@ -234,7 +238,7 @@ const updatePendingPayment = wrapAsyncToRunInSpan({
     if (accountWalletDescriptors instanceof Error) return accountWalletDescriptors
 
     // Pass on to lock
-    return LockService().lockWalletId(walletId, () =>
+    const stepsResult = await LockService().lockWalletId(walletId, () =>
       lockedPendingPaymentSteps({
         paymentHash,
         destination: decodedInvoice?.destination,
@@ -247,6 +251,13 @@ const updatePendingPayment = wrapAsyncToRunInSpan({
         logger,
       }),
     )
+    if (stepsResult instanceof Error) return stepsResult
+
+    if (stepsResult.paymentFailed) {
+      // after lock release: the reclaim inside re-takes the same wallet lock
+      await failMigrationFlowForFailedPayment({ paymentHash })
+    }
+    return stepsResult.result
   },
 })
 
@@ -270,7 +281,9 @@ const lockedPendingPaymentSteps = async ({
   notificationRecipient: NotificationRecipient
 
   logger: Logger
-}): Promise<true | ApplicationError> => {
+}): Promise<
+  { result: true | ApplicationError; paymentFailed: boolean } | ApplicationError
+> => {
   const { journalId } = pendingPayment
   const { walletId } = notificationRecipient
 
@@ -298,7 +311,7 @@ const lockedPendingPaymentSteps = async ({
 
   if (recorded) {
     paymentLogger.info("payment has already been processed")
-    return true
+    return { result: true, paymentFailed: false }
   }
 
   const inputAmount = inputAmountFromLedgerTransaction(pendingPayment)
@@ -373,13 +386,14 @@ const lockedPendingPaymentSteps = async ({
           },
         })
       }
-      return finalizePaymentUpdate({
+      const finalized = await finalizePaymentUpdate({
         result: voided,
         walletIds,
         paymentHash,
         journalId,
         notificationRecipient,
       })
+      return { result: finalized, paymentFailed: true }
     }
 
     const reimbursed = await reimburseFailedUsdPayment({
@@ -405,13 +419,14 @@ const lockedPendingPaymentSteps = async ({
         },
       })
     }
-    return finalizePaymentUpdate({
+    const finalized = await finalizePaymentUpdate({
       result: reimbursed,
       walletIds,
       paymentHash,
       journalId,
       notificationRecipient,
     })
+    return { result: finalized, paymentFailed: true }
   }
 
   paymentLogger.info(
@@ -428,13 +443,15 @@ const lockedPendingPaymentSteps = async ({
   }
 
   if (pendingPayment.feeKnownInAdvance) {
-    return finalizePaymentUpdate({
+    const finalized = await finalizePaymentUpdate({
       result: true,
       walletIds,
       paymentHash,
       journalId,
       notificationRecipient,
     })
+    await completeMigrationFlowForSettledPayment({ paymentHash })
+    return { result: finalized, paymentFailed: false }
   }
 
   const { displayAmount, displayFee, displayCurrency } = pendingPayment
@@ -452,13 +469,15 @@ const lockedPendingPaymentSteps = async ({
   })
   if (reimbursed instanceof Error) return reimbursed
 
-  return finalizePaymentUpdate({
+  const finalized = await finalizePaymentUpdate({
     result: reimbursed,
     walletIds,
     paymentHash,
     journalId,
     notificationRecipient,
   })
+  await completeMigrationFlowForSettledPayment({ paymentHash })
+  return { result: finalized, paymentFailed: false }
 }
 
 const reconstructPendingPaymentFlow = async <

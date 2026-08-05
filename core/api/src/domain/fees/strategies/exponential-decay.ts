@@ -19,6 +19,8 @@
  * - `terminalDivisor`: Divisor for linear decay above threshold.
  * - `targetFeeRate`: Target fee rate for dynamic adjustment.
  * - `networkFeeOffset`/`networkFeeFactor`: Offset and factor for base multiplier on network fees.
+ * - `minFee`: Floor on the total fee (bank fee + network fee) in sats. 0 disables.
+ * - `effectiveRateCap`: Caps the total fee at `amount * cap + networkFee`. 0 disables.
  *
  * Mathematical Model:
  * 1. Exponential Decay: rate = minRate + (maxRate - minRate) * exp(-decaySpeed * ((amount - baseAmount) / (decayStartAmount - baseAmount)))
@@ -26,6 +28,8 @@
  * 3. Dynamic Rate: decay + normalizedFactor * (targetFeeRate - decay)
  * 4. Base Multiplier: networkFeeFactor / feeRate + networkFeeOffset (if feeRate > MIN_FEE_RATE, else networkFeeOffset)
  * 5. Final Fee: ceil(amount * dynamicRate + networkFee * baseMultiplier) - networkFee
+ * 6. Floor: fee = max(fee, minFee - networkFee) when minFee > 0
+ * 7. Cap: fee = min(fee, round(amount * effectiveRateCap)) when effectiveRateCap > 0
  *
  * References:
  * - Original implementation: https://github.com/pretyflaco/BlinkFeeCalculator
@@ -155,9 +159,25 @@ export const ExponentialDecayStrategy = (
       return new ValidationError("Calculated bank fee is not a finite number")
     }
 
-    const bankFeeAmount = rawBankFeeAmount.isNegative()
+    let bankFeeAmount = rawBankFeeAmount.isNegative()
       ? new BigNumber(0)
       : rawBankFeeAmount.integerValue(BigNumber.ROUND_CEIL)
+
+    const { minFee, effectiveRateCap } = config
+    if (minFee > 0) {
+      bankFeeAmount = BigNumber.max(
+        bankFeeAmount,
+        BigNumber.max(new BigNumber(minFee).minus(minerFeeSats), 0),
+      )
+    }
+
+    if (effectiveRateCap > 0) {
+      bankFeeAmount = BigNumber.min(
+        bankFeeAmount,
+        satoshis.times(effectiveRateCap).integerValue(BigNumber.ROUND_HALF_UP),
+      )
+    }
+
     const bankFee = safeBigInt(bankFeeAmount.toFixed(0))
     if (bankFee instanceof BigIntFloatConversionError) {
       return new ValidationError(

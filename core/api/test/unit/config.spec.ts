@@ -1,6 +1,9 @@
 import fs from "fs"
+import os from "os"
+import path from "path"
 
 import Ajv from "ajv"
+import addFormats from "ajv-formats"
 import * as yaml from "js-yaml"
 
 import mergeWith from "lodash.mergewith"
@@ -13,7 +16,7 @@ import {
   getOnchainNetworkConfig,
 } from "@/config"
 
-const ajv = new Ajv({ discriminator: true, $data: true })
+const ajv = addFormats(new Ajv({ discriminator: true, $data: true }))
 
 /* eslint @typescript-eslint/ban-ts-comment: "off" */
 // @ts-ignore-next-line no-implicit-any error
@@ -100,6 +103,96 @@ describe("config.ts", () => {
       // @ts-ignore-next-line no-implicit-any error
       const valid = validate(updatedYamlConfig)
       expect(valid).toBeFalsy()
+    })
+
+    it("passes with a valid windDown excluded account id", () => {
+      const freshYamlConfig = JSON.parse(JSON.stringify(yamlConfig))
+      freshYamlConfig.windDown.excludedAccountIds = [
+        "00000000-0000-0000-0000-000000000001",
+      ]
+
+      // @ts-ignore-next-line no-implicit-any error
+      const valid = validate(freshYamlConfig)
+      expect(valid).toBeTruthy()
+    })
+
+    it("fails when an excluded account id is not a uuid", () => {
+      const freshYamlConfig = JSON.parse(JSON.stringify(yamlConfig))
+      freshYamlConfig.windDown.excludedAccountIds = ["not-a-uuid"]
+
+      // @ts-ignore-next-line no-implicit-any error
+      const valid = validate(freshYamlConfig)
+      expect(valid).toBeFalsy()
+    })
+
+    it("fails when an excluded account id repeats", () => {
+      const freshYamlConfig = JSON.parse(JSON.stringify(yamlConfig))
+      freshYamlConfig.windDown.excludedAccountIds = [
+        "00000000-0000-0000-0000-000000000001",
+        "00000000-0000-0000-0000-000000000001",
+      ]
+
+      // @ts-ignore-next-line no-implicit-any error
+      const valid = validate(freshYamlConfig)
+      expect(valid).toBeFalsy()
+    })
+
+    it("lowercases an uppercase excluded account id at load", () => {
+      const customPath = path.join(os.tmpdir(), "winddown-uppercase-id.yaml")
+      fs.writeFileSync(
+        customPath,
+        yaml.dump({
+          windDown: { excludedAccountIds: ["00000000-0000-0000-0000-00000000000A"] },
+        }),
+      )
+      const originalArgv = process.argv[2]
+      process.argv[2] = customPath
+      try {
+        jest.isolateModules(() => {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const { getWindDownConfig } = require("@/config/yaml")
+          expect(getWindDownConfig().excludedAccountIds).toEqual([
+            "00000000-0000-0000-0000-00000000000a",
+          ])
+        })
+      } finally {
+        if (originalArgv === undefined) {
+          process.argv.splice(2, 1)
+        } else {
+          process.argv[2] = originalArgv
+        }
+        fs.unlinkSync(customPath)
+      }
+    })
+
+    it("lowercases an uppercase receive-blocked account id at load", () => {
+      const customPath = path.join(os.tmpdir(), "winddown-uppercase-blocked-id.yaml")
+      fs.writeFileSync(
+        customPath,
+        yaml.dump({
+          windDown: {
+            receiveBlockedAccountIds: ["00000000-0000-0000-0000-00000000000B"],
+          },
+        }),
+      )
+      const originalArgv = process.argv[2]
+      process.argv[2] = customPath
+      try {
+        jest.isolateModules(() => {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const { getWindDownConfig } = require("@/config/yaml")
+          expect(getWindDownConfig().receiveBlockedAccountIds).toEqual([
+            "00000000-0000-0000-0000-00000000000b",
+          ])
+        })
+      } finally {
+        if (originalArgv === undefined) {
+          process.argv.splice(2, 1)
+        } else {
+          process.argv[2] = originalArgv
+        }
+        fs.unlinkSync(customPath)
+      }
     })
 
     it("fails validation missing required property", () => {

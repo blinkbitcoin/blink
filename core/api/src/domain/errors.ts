@@ -65,6 +65,8 @@ export class CouldNotFindBtcWalletForAccountError extends CouldNotFindError {
   level = ErrorLevel.Critical
 }
 export class CouldNotFindLnPaymentFromHashError extends CouldNotFindError {}
+export class CouldNotFindMigrationFlowStateError extends CouldNotFindError {}
+export class CouldNotFindWindDownCohortAssessmentError extends CouldNotFindError {}
 
 export class CouldNotFindAccountFromIdError extends CouldNotFindError {}
 export class CouldNotFindAccountFromUsernameError extends CouldNotFindError {}

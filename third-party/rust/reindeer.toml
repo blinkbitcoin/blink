@@ -5,6 +5,10 @@
 
 # Build dependencies through http_archive downloaded from crates.io, rather than
 # vendoring sources into this repo.
+#
+# Reindeer emits crates.io API redirect URLs in this mode. Keep the checked-in
+# BUCK file on static.crates.io archive URLs so CI does not depend on the
+# rate-limited API endpoint when fresh GitHub runners download the crate set.
 vendor = false
 
 # Parse Rust code to work out the precise set of source files for each crate.

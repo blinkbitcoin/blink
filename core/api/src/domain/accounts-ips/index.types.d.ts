@@ -27,10 +27,19 @@ type FindByAccountIdAndIpArgs = {
   ip: IpAddress
 }
 
+type FindLastByAccountIdBeforeArgs = {
+  accountId: AccountId
+  cutoff: Date
+}
+
 interface IAccountsIPsRepository {
   update(accountIp: AccountIP | AccountIPNew): Promise<true | RepositoryError>
   findByAccountIdAndIp(
     input: FindByAccountIdAndIpArgs,
   ): Promise<AccountIP | RepositoryError>
   findLastByAccountId(accountId: AccountId): Promise<AccountIP | RepositoryError>
+  findLastByAccountIdBefore(
+    input: FindLastByAccountIdBeforeArgs,
+  ): Promise<AccountIP | RepositoryError>
+  findEarliestByAccountId(accountId: AccountId): Promise<AccountIP | RepositoryError>
 }

@@ -2,24 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix(ci): remove root-owned lnurl state (#666)'
-      sha: 66e312de4d436480f7f2474793a49550dee3bf2c
+      commitTitle: 'ci: run e2e tests on self-hosted runner (#727)...'
+      sha: bfa701e224d5a0e5f752d8fd9e1a644dfe65dcdb
       tags:
-      - 0.22.17-4-g66e312de4
+      - 0.22.36-2-gbfa701e22
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'fix(ci): remove root-owned lnurl state (#666)'
-      sha: 66e312de4d436480f7f2474793a49550dee3bf2c
+      commitTitle: 'ci: run e2e tests on self-hosted runner (#727)...'
+      sha: bfa701e224d5a0e5f752d8fd9e1a644dfe65dcdb
       tags:
-      - 0.22.17-4-g66e312de4
+      - 0.22.36-2-gbfa701e22
     path: schemas
   - git:
-      commitTitle: 'fix(ci): remove root-owned lnurl state (#666)'
-      sha: 66e312de4d436480f7f2474793a49550dee3bf2c
+      commitTitle: 'ci: run e2e tests on self-hosted runner (#727)...'
+      sha: bfa701e224d5a0e5f752d8fd9e1a644dfe65dcdb
       tags:
-      - 0.22.17-4-g66e312de4
+      - 0.22.36-2-gbfa701e22
     path: gql
   path: graphql
 kind: LockConfig

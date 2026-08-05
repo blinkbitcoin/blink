@@ -1,0 +1,10 @@
+mutation migrationCommit($input: MigrationCommitInput!) {
+  migrationCommit(input: $input) {
+    errors {
+      message
+    }
+    migration {
+      status
+    }
+  }
+}

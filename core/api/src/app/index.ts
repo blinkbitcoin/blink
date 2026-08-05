@@ -5,6 +5,7 @@ import * as CallbackMod from "./callback"
 import * as CommMod from "./comm"
 import * as QuizMod from "./quiz"
 import * as LightningMod from "./lightning"
+import * as MigrationFlowMod from "./migration-flow"
 import * as OnChainMod from "./on-chain"
 import * as PricesMod from "./prices"
 import * as TransactionsMod from "./transactions"
@@ -13,6 +14,7 @@ import * as WalletsMod from "./wallets"
 import * as PaymentsMod from "./payments"
 import * as MerchantsMod from "./merchants"
 import * as SupportChatMod from "./support"
+import * as WindDownMod from "./wind-down"
 
 import { wrapAsyncToRunInSpan } from "@/services/tracing"
 
@@ -24,6 +26,7 @@ const allFunctions = {
   Comm: { ...CommMod },
   Quiz: { ...QuizMod },
   Lightning: { ...LightningMod },
+  MigrationFlow: { ...MigrationFlowMod },
   OnChain: { ...OnChainMod },
   Prices: { ...PricesMod },
   Transactions: { ...TransactionsMod },
@@ -32,6 +35,7 @@ const allFunctions = {
   Payments: { ...PaymentsMod },
   Merchants: { ...MerchantsMod },
   SupportChat: { ...SupportChatMod },
+  WindDown: { ...WindDownMod },
 } as const
 
 let subModule: keyof typeof allFunctions
@@ -55,6 +59,7 @@ export const {
   Comm,
   Quiz,
   Lightning,
+  MigrationFlow,
   OnChain,
   Prices,
   Transactions,
@@ -63,4 +68,5 @@ export const {
   Payments,
   Merchants,
   SupportChat,
+  WindDown,
 } = allFunctions

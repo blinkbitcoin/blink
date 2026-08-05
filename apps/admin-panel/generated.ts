@@ -89,6 +89,7 @@ export const AccountStatus = {
   Closed: 'CLOSED',
   Invited: 'INVITED',
   Locked: 'LOCKED',
+  Migrated: 'MIGRATED',
   New: 'NEW',
   Pending: 'PENDING'
 } as const;
@@ -223,6 +224,7 @@ export const DeepLinkAction = {
 
 export type DeepLinkAction = typeof DeepLinkAction[keyof typeof DeepLinkAction];
 export const DeepLinkScreen = {
+  AccountMigration: 'ACCOUNT_MIGRATION',
   CardOnboarding: 'CARD_ONBOARDING',
   CardOnboardingApproved: 'CARD_ONBOARDING_APPROVED',
   CardOnboardingLoading: 'CARD_ONBOARDING_LOADING',

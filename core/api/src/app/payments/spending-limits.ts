@@ -91,6 +91,7 @@ export const withSpendingLimits = async ({
   priceRatioForLimits,
   apiKeyId,
   btcPaymentAmount,
+  skipChecks = false,
   execute,
 }: {
   settlementMethod: SettlementMethod
@@ -100,8 +101,14 @@ export const withSpendingLimits = async ({
   priceRatioForLimits: WalletPriceRatio
   apiKeyId?: ApiKeyId
   btcPaymentAmount: BtcPaymentAmount
+  skipChecks?: boolean
   execute: () => Promise<SpendingLimitsExecutionResult>
 }): Promise<PaymentSendResult | ApplicationError> => {
+  if (skipChecks && !apiKeyId) {
+    const executionResult = await execute()
+    return executionResult.result
+  }
+
   const checkLimit = getLimitCheck({ settlementMethod, accountId, recipientAccountId })
 
   const limitCheck = await checkLimit({

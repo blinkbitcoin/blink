@@ -3,6 +3,7 @@ import fs from "fs"
 import path from "path"
 
 import Ajv from "ajv"
+import addFormats from "ajv-formats"
 import * as yaml from "js-yaml"
 
 import mergeWith from "lodash.mergewith"
@@ -36,9 +37,7 @@ try {
   baseLogger.debug({ err }, "no custom.yaml available. using default values")
 }
 
-// TODO: fix errors
-// const ajv = new Ajv({ allErrors: true, strict: "log" })
-const ajv = new Ajv({ useDefaults: true, discriminator: true, $data: true })
+const ajv = addFormats(new Ajv({ useDefaults: true, discriminator: true, $data: true }))
 
 const defaultConfig = {}
 const validate = ajv.compile<YamlSchema>(configSchema)
@@ -149,6 +148,11 @@ export const getValuesToSkipProbe = (): SkipFeeProbeConfig => {
 
 export const getSkipFeeReimbursement = (): boolean =>
   yamlConfig.paymentNetworks.lightning.send.skipFeeReimbursement
+
+export const getCustodialMigrationFlowConfig = (): CustodialMigrationFlowConfig => ({
+  enabled: yamlConfig.custodialMigrationFlow.enabled,
+  deMinimisThresholdSats: yamlConfig.custodialMigrationFlow.deMinimisThresholdSats,
+})
 
 export const getDisplayCurrencyConfig = (): {
   code: DisplayCurrency
@@ -268,6 +272,33 @@ export const getTestAccounts = (config = yamlConfig): TestAccount[] =>
 export const getCronConfig = (config = yamlConfig): CronConfig => config.cronConfig
 
 export const getCaptcha = (config = yamlConfig): CaptchaConfig => config.captcha
+
+const windDownOperativeDate = (value: string): Date => {
+  const date = new Date(value)
+  if (isNaN(date.getTime())) {
+    throw new ConfigError("Invalid windDown operative date", value)
+  }
+  return date
+}
+
+const windDownConfig: WindDownConfig = {
+  ...yamlConfig.windDown,
+  excludedAccountIds: yamlConfig.windDown.excludedAccountIds.map((id) =>
+    id.toLowerCase(),
+  ),
+  receiveBlockedAccountIds: yamlConfig.windDown.receiveBlockedAccountIds.map((id) =>
+    id.toLowerCase(),
+  ),
+  ipEvidenceCutoff: windDownOperativeDate(yamlConfig.windDown.ipEvidenceCutoff),
+  regions: yamlConfig.windDown.regions.map((region) => ({
+    ...region,
+    receiveDisabledAt: windDownOperativeDate(region.receiveDisabledAt),
+    finalDeadline: windDownOperativeDate(region.finalDeadline),
+    gateArmsAt: windDownOperativeDate(region.gateArmsAt),
+  })),
+}
+
+export const getWindDownConfig = (): WindDownConfig => windDownConfig
 
 export const getQuizzesConfig = (): QuizzesConfig => {
   const denyPhoneCountries = yamlConfig.quizzes.denyPhoneCountries || []

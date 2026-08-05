@@ -3,6 +3,10 @@
 load "../../helpers/_common.bash"
 load "../../helpers/subscriber.bash"
 
+teardown() {
+  stop_subscriber
+}
+
 @test "public: can query globals" {
   exec_graphql 'anon' 'globals'
   network="$(graphql_output '.data.globals.network')"
@@ -14,6 +18,29 @@ load "../../helpers/subscriber.bash"
   [[ "${block_height}" != "null" ]] || exit 1
   [[ -n "${block_hash}" ]] || exit 1
   [[ "${block_hash}" != "null" ]] || exit 1
+}
+
+@test "public: globals exposes the onchain deposit fee tiers" {
+  exec_graphql 'anon' 'globals'
+
+  min_bank_fee="$(graphql_output '.data.globals.feesInformation.deposit.minBankFee')"
+  [[ "${min_bank_fee}" = "2500" ]] || exit 1
+
+  threshold="$(graphql_output '.data.globals.feesInformation.deposit.minBankFeeThreshold')"
+  [[ "${threshold}" = "1000000" ]] || exit 1
+
+  tiers_count="$(graphql_output '.data.globals.feesInformation.deposit.tiers | length')"
+  [[ "${tiers_count}" = "2" ]] || exit 1
+
+  first_tier_max="$(graphql_output '.data.globals.feesInformation.deposit.tiers[0].maxAmount')"
+  first_tier_amount="$(graphql_output '.data.globals.feesInformation.deposit.tiers[0].amount')"
+  [[ "${first_tier_max}" = "1000000" ]] || exit 1
+  [[ "${first_tier_amount}" = "2500" ]] || exit 1
+
+  last_tier_max="$(graphql_output '.data.globals.feesInformation.deposit.tiers[1].maxAmount')"
+  last_tier_amount="$(graphql_output '.data.globals.feesInformation.deposit.tiers[1].amount')"
+  [[ "${last_tier_max}" = "null" ]] || exit 1
+  [[ "${last_tier_amount}" = "0" ]] || exit 1
 }
 
 @test "public: can query realtime price" {
@@ -82,11 +109,9 @@ load "../../helpers/subscriber.bash"
   num_errors=$(
     grep 'Data.*\bprice\b' "${SUBSCRIBER_LOG_FILE}" \
       | awk '{print $2}' \
-      | jq -r '.data.price.errors | length'
+      | jq -s -r 'map(.data.price.errors | length) | add'
   )
   [[ "$num_errors" == "0" ]] || exit 1
-
-  stop_subscriber
 }
 
 @test "public: can subscribe to realtime price" {
@@ -96,11 +121,9 @@ load "../../helpers/subscriber.bash"
   num_errors=$(
     grep 'Data.*\brealtimePrice\b.*EUR' "${SUBSCRIBER_LOG_FILE}" \
       | awk '{print $2}' \
-      | jq -r '.data.brealtimePrice.errors | length'
+      | jq -s -r 'map(.data.realtimePrice.errors | length) | add'
   )
   [[ "$num_errors" == "0" ]] || exit 1
-
-  stop_subscriber
 }
 
 @test "public: can query currency conversion estimation" {

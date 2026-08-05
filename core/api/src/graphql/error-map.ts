@@ -40,6 +40,10 @@ import {
   PriceServiceOfflineError,
   OperationRestrictedError,
   AuthorizationError,
+  MigrationStateConflictError,
+  MigrationInvalidDestinationError,
+  MigrationApiKeyForbiddenError,
+  ReceiveDisabledError,
 } from "@/graphql/error"
 import { baseLogger } from "@/services/logger"
 
@@ -640,6 +644,32 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       message = "Invalid or inactive speed"
       return new ValidationInternalError({ message, logger: baseLogger })
 
+    case "MigrationStateConflictError":
+      message = error.message || "Migration is already in progress or committed"
+      return new MigrationStateConflictError({ message, logger: baseLogger })
+
+    case "MigrationDollarBalanceNotEmptyError":
+      message = error.message || "Dollar balance must be empty before migration"
+      return new MigrationStateConflictError({ message, logger: baseLogger })
+
+    case "MigrationInvalidDestinationError":
+    case "MigrationProofExpiredError":
+      message = error.message || "Invalid migration destination"
+      return new MigrationInvalidDestinationError({ message, logger: baseLogger })
+
+    case "MigrationFlowDisabledError":
+      message = "Migration is not available."
+      return new OperationRestrictedError({ message, logger: baseLogger })
+
+    case "MigrationApiKeyForbiddenError":
+      message = "Migration is not available via API key. Please use a session."
+      return new MigrationApiKeyForbiddenError({ message, logger: baseLogger })
+
+    case "ReceiveDisabledError":
+      message =
+        "This account can no longer receive payments. If this is your account, please update the Blink app to migrate your funds."
+      return new ReceiveDisabledError({ message, logger: baseLogger })
+
     // ----------
     // Unhandled below here
     // ----------
@@ -748,6 +778,9 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "UndefinedIPError":
     case "UnauthorizedIPMetadataASNError":
     case "InvalidAccountStatusError":
+    case "MigrationFlowError":
+    case "InvalidMigrationFlowPhaseError":
+    case "WindDownError":
     case "InvalidOnChainAddress":
     case "InvalidScanDepthAmount":
     case "InsufficientBalanceForRoutingError":
@@ -914,6 +947,8 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "UnknownBriaEventError":
     case "UnknownApiKeysServiceError":
     case "CouldNotFindAccountError":
+    case "CouldNotFindMigrationFlowStateError":
+    case "CouldNotFindWindDownCohortAssessmentError":
     case "OathkeeperError":
     case "OathkeeperUnauthorizedServiceError":
     case "OathkeeperMissingAuthorizationHeaderError":

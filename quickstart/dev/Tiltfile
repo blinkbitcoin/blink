@@ -123,7 +123,9 @@ pay_env = {
   "NEXT_PUBLIC_CORE_GQL_WEB_SOCKET_URL": "ws://localhost:4455/graphqlws",
   "NEXT_PUBLIC_PAY_DOMAIN": "localhost:3002",
   "NEXTAUTH_URL":"http://localhost:3002",
-  "NEXTAUTH_SECRET":"secret"
+  "NEXTAUTH_SECRET":"secret",
+  "WELL_KNOWN_LNURL_URL": "https://blink.sv",
+  "BLINK_TERMINAL_URL": "https://terminal.blinkbtc.com"
 }
 local_resource(
     "pay",

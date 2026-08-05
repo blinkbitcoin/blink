@@ -292,6 +292,7 @@ enum DeepLinkScreen {
   CardOnboardingProcessing = 25;
   CardOnboardingPreapproved = 26;
   CardOnboardingApproved = 27;
+  AccountMigration = 28;
 }
 
 enum DeepLinkAction {

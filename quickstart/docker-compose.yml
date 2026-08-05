@@ -54,7 +54,7 @@ services:
     - 4433:4433
     - 4434:4434
     entrypoint: sh -c
-    command: '"kratos migrate sql up -y -e && kratos serve -c /home/ory/kratos.yml --watch-courier --sqa-opt-out"'
+    command: '"kratos migrate sql up -y -e && kratos serve -c /home/ory/kratos.yml --sqa-opt-out"'
     environment:
       DSN: postgres://dbuser:secret@kratos-pg:5432/default?sslmode=disable
     depends_on:
@@ -100,7 +100,7 @@ services:
     - POSTGRES_PASSWORD=secret
     - POSTGRES_DB=hydra
   galoy:
-    image: us.gcr.io/galoy-org/galoy-api@sha256:490116db3f065a6db51f05703ac031d51836d4bd99fb9e1e14a1b966b7dd4dfc
+    image: us.gcr.io/galoy-org/galoy-api@sha256:f03be00f67f49e1646b3e3866abc6dcbe7427919d661682e210519ac1b59c0a7
     environment:
     - HELMREVISION=dev
     - NETWORK=regtest
@@ -159,7 +159,7 @@ services:
         aliases:
         - bats-tests
   trigger:
-    image: us.gcr.io/galoy-org/galoy-api-trigger@sha256:79e479cba2df448732e23ce9236f970039b32b4fdaf36aa13ce1d123f12120da
+    image: us.gcr.io/galoy-org/galoy-api-trigger@sha256:9afc628c4f6806ea34a335ecfce919c9051da8ddc4506a2bdf90120b59945e4c
     environment:
     - HELMREVISION=dev
     - NETWORK=regtest
@@ -202,7 +202,7 @@ services:
     depends_on:
     - galoy
   notifications:
-    image: us.gcr.io/galoy-org/galoy-notifications@sha256:5e3e42781c293857ba923dab3b51adf87b18cb8a1c83d6d7f0d75efc8df49a51
+    image: us.gcr.io/galoy-org/galoy-notifications@sha256:5f21c931ac9693adbabdd0faa826c9fa74a940b5b5eece646c1c55615efb9b94
     environment:
     - PG_CON=postgres://user:password@notifications-pg:5432/pg
     - PG_READ_CON=postgres://user:password@notifications-pg:5432/pg
@@ -271,7 +271,7 @@ services:
     environment:
     - MONGO_INITDB_DATABASE=galoy
   mongodb-migrate:
-    image: us.gcr.io/galoy-org/galoy-api-migrate@sha256:8f759f48c049988e40ab07fbd7412853be58d617bf2be6049693f26b220b6d7e
+    image: us.gcr.io/galoy-org/galoy-api-migrate@sha256:228c5291d6149456f53e5ab69204ae6f6d22d15d53b2d1fcb16c58b75d72bc6b
     depends_on:
     - mongodb
     environment:

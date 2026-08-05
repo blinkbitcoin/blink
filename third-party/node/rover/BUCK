@@ -2,6 +2,17 @@ load("@toolchains//simple-pnpm:macros.bzl", "build_node_modules", "npm_bin")
 
 build_node_modules(
   name = "node_modules",
+  visibility = ["PUBLIC"],
+)
+
+# Rover lazily downloads this plugin during `rover supergraph compose`. Pin it
+# as a Buck input so CI does not depend on a runtime fetch from rover.apollo.dev.
+remote_file(
+  name = "supergraph-v2.3.2.tar.gz",
+  out = "supergraph-v2.3.2.tar.gz",
+  sha256 = "8e700d2c7a0aa2c626551889c5c4e859c25102e5dcddff2df892ad214beb648e",
+  url = "https://rover.apollo.dev/tar/supergraph/x86_64-unknown-linux-gnu/v2.3.2",
+  visibility = ["PUBLIC"],
 )
 
 npm_bin(

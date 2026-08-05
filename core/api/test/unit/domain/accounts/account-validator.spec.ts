@@ -42,6 +42,18 @@ describe("AccountValidator", () => {
     expect(result).toHaveProperty("validateWalletForAccount")
   })
 
+  it("returns error for migrated account", () => {
+    const migratedAccount = {
+      ...baseAccountProps,
+      id: "account-id-4" as AccountId,
+      status: AccountStatus.Migrated,
+    }
+
+    const result = AccountValidator(migratedAccount)
+    expect(result).toBeInstanceOf(InactiveAccountError)
+    expect(result).toHaveProperty("message", "account-id-4")
+  })
+
   it("returns error if account status is not active or invited", () => {
     const inactiveAccount = {
       ...baseAccountProps,
@@ -53,6 +65,14 @@ describe("AccountValidator", () => {
     expect(result).toBeInstanceOf(InactiveAccountError)
     expect(result).toHaveProperty("message", "account-id-3")
   })
+
+  it.each([AccountStatus.New, AccountStatus.Pending, AccountStatus.Closed])(
+    "rejects %s status",
+    (status) => {
+      const account = { ...baseAccountProps, id: "account-id-5" as AccountId, status }
+      expect(AccountValidator(account)).toBeInstanceOf(InactiveAccountError)
+    },
+  )
 
   it("returns true if wallet.accountId matches account.id", () => {
     const validAccount = {

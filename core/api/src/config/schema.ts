@@ -1,5 +1,8 @@
 import { AccountStatus } from "@/domain/accounts/primitives"
 import { WalletCurrency } from "@/domain/shared"
+import { DEFAULT_WIND_DOWN_REGION_CODE } from "@/domain/wind-down"
+
+const countryCodePattern = "^[A-Za-z]{2}$"
 
 const displayCurrencyConfigSchema = {
   type: "object",
@@ -216,6 +219,8 @@ const feeStrategySchema = {
             "targetFeeRate",
             "networkFeeOffset",
             "networkFeeFactor",
+            "minFee",
+            "effectiveRateCap",
           ],
           additionalProperties: false,
           properties: {
@@ -238,6 +243,8 @@ const feeStrategySchema = {
             targetFeeRate: { type: "number", minimum: 0 },
             networkFeeOffset: { type: "number", minimum: 0 },
             networkFeeFactor: { type: "number", minimum: 0 },
+            minFee: { type: "integer", minimum: 0 },
+            effectiveRateCap: { type: "number", minimum: 0 },
           },
         },
       },
@@ -502,7 +509,7 @@ const paymentNetworksSchema = {
           pubkeys: [],
           chanIds: [],
         },
-        skipFeeReimbursement: false,
+        skipFeeReimbursement: true,
       },
       historicalPubkeys: [],
     },
@@ -987,6 +994,8 @@ export const configSchema = {
             targetFeeRate: 0.005,
             networkFeeOffset: 1.3,
             networkFeeFactor: 2.0,
+            minFee: 100,
+            effectiveRateCap: 0.04,
           },
         },
         {
@@ -1004,6 +1013,8 @@ export const configSchema = {
             targetFeeRate: 0.0025,
             networkFeeOffset: 1.1,
             networkFeeFactor: 1.0,
+            minFee: 100,
+            effectiveRateCap: 0.03,
           },
         },
         {
@@ -1021,6 +1032,8 @@ export const configSchema = {
             targetFeeRate: 0.001,
             networkFeeOffset: 1.1,
             networkFeeFactor: 2.0,
+            minFee: 100,
+            effectiveRateCap: 0.02,
           },
         },
       ],
@@ -1048,6 +1061,19 @@ export const configSchema = {
       required: ["mandatory"],
       additionalProperties: false,
       default: { mandatory: false },
+    },
+    custodialMigrationFlow: {
+      type: "object",
+      properties: {
+        enabled: { type: "boolean" },
+        deMinimisThresholdSats: { type: "integer", minimum: 10, default: 100 },
+      },
+      required: ["enabled", "deMinimisThresholdSats"],
+      additionalProperties: false,
+      default: {
+        enabled: true,
+        deMinimisThresholdSats: 100,
+      },
     },
     smsAuthUnsupportedCountries: {
       type: "array",
@@ -1077,6 +1103,120 @@ export const configSchema = {
         transactional: "twilio",
       },
     },
+    windDown: {
+      type: "object",
+      properties: {
+        enabled: { type: "boolean" },
+        affectedCountries: {
+          type: "array",
+          items: { type: "string", pattern: countryCodePattern },
+        },
+        strictCountries: {
+          type: "array",
+          items: { type: "string", pattern: countryCodePattern },
+          default: [],
+        },
+        excludedAccountIds: {
+          type: "array",
+          items: { type: "string", format: "uuid" },
+          uniqueItems: true,
+          default: [],
+        },
+        receiveBlockedAccountIds: {
+          type: "array",
+          items: { type: "string", format: "uuid" },
+          uniqueItems: true,
+          default: [],
+        },
+        includeLevelZero: { type: "boolean", default: false },
+        usePersistedCohortFlag: { type: "boolean", default: false },
+        ipEvidenceCutoff: {
+          type: "string",
+          format: "date-time",
+          default: "2026-07-30T23:59:59Z",
+        },
+        convertUsdToBtcAtMidPrice: { type: "boolean", default: false },
+        regions: {
+          type: "array",
+          minItems: 1,
+          contains: {
+            type: "object",
+            properties: { code: { const: DEFAULT_WIND_DOWN_REGION_CODE } },
+            required: ["code"],
+          },
+          items: {
+            type: "object",
+            properties: {
+              code: { type: "string" },
+              timezone: { type: "string" },
+              countries: {
+                type: "array",
+                items: { type: "string", pattern: countryCodePattern },
+              },
+              receiveDisabledAt: { type: "string", format: "date-time" },
+              finalDeadline: { type: "string", format: "date-time" },
+              gateArmsAt: { type: "string", format: "date-time" },
+              receiveDisabled: { type: "boolean", default: false },
+              gateClosed: { type: "boolean", default: false },
+            },
+            required: [
+              "code",
+              "timezone",
+              "receiveDisabledAt",
+              "finalDeadline",
+              "gateArmsAt",
+              "receiveDisabled",
+              "gateClosed",
+            ],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: [
+        "enabled",
+        "affectedCountries",
+        "excludedAccountIds",
+        "receiveBlockedAccountIds",
+        "includeLevelZero",
+        "usePersistedCohortFlag",
+        "ipEvidenceCutoff",
+        "convertUsdToBtcAtMidPrice",
+        "regions",
+      ],
+      additionalProperties: false,
+      if: {
+        properties: { usePersistedCohortFlag: { const: true } },
+        required: ["usePersistedCohortFlag"],
+      },
+      then: {
+        properties: {
+          strictCountries: { minItems: 1 },
+          affectedCountries: { minItems: 1 },
+        },
+      },
+      default: {
+        enabled: true,
+        affectedCountries: ["NL"],
+        strictCountries: [],
+        excludedAccountIds: [],
+        receiveBlockedAccountIds: [],
+        includeLevelZero: false,
+        usePersistedCohortFlag: false,
+        ipEvidenceCutoff: "2026-07-30T23:59:59Z",
+        convertUsdToBtcAtMidPrice: false,
+        regions: [
+          {
+            code: DEFAULT_WIND_DOWN_REGION_CODE,
+            timezone: "Europe/Paris",
+            receiveDisabledAt: "2026-07-31T22:00:00Z",
+            finalDeadline: "2026-08-31T21:59:59Z",
+            gateArmsAt: "2026-08-31T22:00:00Z",
+            receiveDisabled: false,
+            gateClosed: false,
+          },
+        ],
+      },
+    },
   },
   required: [
     "locale",
@@ -1097,10 +1237,44 @@ export const configSchema = {
     "userActivenessMonthlyVolumeThreshold",
     "cronConfig",
     "captcha",
+    "custodialMigrationFlow",
     "smsAuthUnsupportedCountries",
     "whatsAppAuthUnsupportedCountries",
     "telegramAuthUnsupportedCountries",
     "phoneProvider",
+    "windDown",
   ],
   additionalProperties: false,
+  allOf: [
+    {
+      if: {
+        properties: {
+          custodialMigrationFlow: {
+            properties: { enabled: { const: true } },
+            required: ["enabled"],
+          },
+        },
+        required: ["custodialMigrationFlow"],
+      },
+      then: {
+        properties: {
+          paymentNetworks: {
+            properties: {
+              lightning: {
+                properties: {
+                  send: {
+                    properties: { skipFeeReimbursement: { const: true } },
+                    required: ["skipFeeReimbursement"],
+                  },
+                },
+                required: ["send"],
+              },
+            },
+            required: ["lightning"],
+          },
+        },
+        required: ["paymentNetworks"],
+      },
+    },
+  ],
 } as const

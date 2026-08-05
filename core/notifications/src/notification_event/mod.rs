@@ -115,6 +115,7 @@ pub enum DeepLinkScreen {
     CardOnboardingProcessing,
     CardOnboardingPreapproved,
     CardOnboardingApproved,
+    AccountMigration,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -223,6 +224,7 @@ impl DeepLink {
                     "card/onboarding/preapproved".to_string()
                 }
                 DeepLinkScreen::CardOnboardingApproved => "card/onboarding/approved".to_string(),
+                DeepLinkScreen::AccountMigration => "account-migration".to_string(),
             };
             link_string.push_str(&screen);
         }
@@ -370,7 +372,7 @@ impl From<LinkEmailReminder> for NotificationEventPayload {
 mod deep_link_tests {
     use super::*;
 
-    fn card_screen_link(screen: DeepLinkScreen) -> String {
+    fn screen_link(screen: DeepLinkScreen) -> String {
         DeepLink {
             screen: Some(screen),
             action: None,
@@ -382,32 +384,40 @@ mod deep_link_tests {
     #[test]
     fn card_onboarding_screens_produce_expected_links() {
         assert_eq!(
-            card_screen_link(DeepLinkScreen::CardOnboarding),
+            screen_link(DeepLinkScreen::CardOnboarding),
             "/card/onboarding"
         );
         assert_eq!(
-            card_screen_link(DeepLinkScreen::CardOnboardingSubscribe),
+            screen_link(DeepLinkScreen::CardOnboardingSubscribe),
             "/card/onboarding/subscribe"
         );
         assert_eq!(
-            card_screen_link(DeepLinkScreen::CardOnboardingLoading),
+            screen_link(DeepLinkScreen::CardOnboardingLoading),
             "/card/onboarding/loading"
         );
         assert_eq!(
-            card_screen_link(DeepLinkScreen::CardOnboardingPersonalInfo),
+            screen_link(DeepLinkScreen::CardOnboardingPersonalInfo),
             "/card/onboarding/personal-info"
         );
         assert_eq!(
-            card_screen_link(DeepLinkScreen::CardOnboardingProcessing),
+            screen_link(DeepLinkScreen::CardOnboardingProcessing),
             "/card/onboarding/processing"
         );
         assert_eq!(
-            card_screen_link(DeepLinkScreen::CardOnboardingPreapproved),
+            screen_link(DeepLinkScreen::CardOnboardingPreapproved),
             "/card/onboarding/preapproved"
         );
         assert_eq!(
-            card_screen_link(DeepLinkScreen::CardOnboardingApproved),
+            screen_link(DeepLinkScreen::CardOnboardingApproved),
             "/card/onboarding/approved"
+        );
+    }
+
+    #[test]
+    fn account_migration_screen_produces_expected_link() {
+        assert_eq!(
+            screen_link(DeepLinkScreen::AccountMigration),
+            "/account-migration"
         );
     }
 }

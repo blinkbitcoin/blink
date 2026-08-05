@@ -2,6 +2,8 @@ import { randomUUID } from "crypto"
 
 import { Accounts, Payments } from "@/app"
 
+import * as ConfigImpl from "@/config"
+
 import { AccountStatus } from "@/domain/accounts"
 import { toSats } from "@/domain/bitcoin"
 import {
@@ -23,6 +25,7 @@ import {
   WithdrawalLimitsExceededError,
   CouldNotFindLightningPaymentFlowError,
 } from "@/domain/errors"
+import { ReceiveDisabledError } from "@/domain/wind-down"
 import { AmountCalculator, WalletCurrency } from "@/domain/shared"
 import * as LnFeesImpl from "@/domain/payments"
 import * as DisplayAmountsConverterImpl from "@/domain/fiat"
@@ -60,6 +63,30 @@ const calc = AmountCalculator()
 
 const DEFAULT_PUBKEY =
   "03ca1907342d5d37744cb7038375e1867c24a87564c293157c95b2a9d38dcfb4c2" as Pubkey
+
+// "US" matches because test/helpers/random.ts randomPhone() emits +1415
+const armedUsCohortConfig = {
+  enabled: true,
+  affectedCountries: ["US"],
+  strictCountries: [],
+  usePersistedCohortFlag: false,
+  ipEvidenceCutoff: new Date("2026-07-30T23:59:59Z"),
+  excludedAccountIds: [],
+  receiveBlockedAccountIds: [],
+  includeLevelZero: false,
+  convertUsdToBtcAtMidPrice: false,
+  regions: [
+    {
+      code: "default",
+      timezone: "Europe/Paris",
+      receiveDisabledAt: new Date("2026-07-31T22:00:00Z"),
+      finalDeadline: new Date("2026-08-31T21:59:59Z"),
+      gateArmsAt: new Date("2026-08-31T22:00:00Z"),
+      receiveDisabled: true,
+      gateClosed: false,
+    },
+  ],
+}
 
 beforeAll(async () => {
   await createMandatoryUsers()
@@ -549,6 +576,7 @@ describe("initiated via lightning", () => {
 
     it("records transaction with fee reimbursement metadata on ln send", async () => {
       // Setup mocks
+      jest.spyOn(ConfigImpl, "getSkipFeeReimbursement").mockReturnValue(false)
       const { LndService: LnServiceOrig } = jest.requireActual("@/services/lnd")
       jest.spyOn(LndImpl, "LndService").mockReturnValue({
         ...LnServiceOrig(),
@@ -746,6 +774,68 @@ describe("initiated via lightning", () => {
         memo,
       })
       expect(res).toBeInstanceOf(InactiveAccountError)
+
+      // Restore system state
+      lndServiceSpy.mockRestore()
+    })
+
+    it("fails if recipient is receive-disabled by the wind-down", async () => {
+      const { paymentHash, destination } = lnInvoice
+
+      // Setup mocks
+      const { LndService: LnServiceOrig } = jest.requireActual("@/services/lnd")
+      const lndServiceSpy = jest.spyOn(LndImpl, "LndService").mockReturnValue({
+        ...LnServiceOrig(),
+        listAllPubkeys: () => [destination],
+      })
+
+      // Setup users and wallets
+      const newWalletDescriptor = await createRandomUserAndBtcWallet()
+      const newAccount = await AccountsRepository().findById(
+        newWalletDescriptor.accountId,
+      )
+      if (newAccount instanceof Error) throw newAccount
+
+      const recipientWalletDescriptor = await createRandomUserAndBtcWallet()
+
+      // Fund balance for send
+      const receive = await recordReceiveLnPayment({
+        walletDescriptor: newWalletDescriptor,
+        paymentAmount: receiveAmounts,
+        bankFee: receiveBankFee,
+        displayAmounts: receiveDisplayAmounts,
+        memo,
+      })
+      if (receive instanceof Error) throw receive
+
+      const externalId = randomLedgerExternalId()
+      if (externalId instanceof Error) throw externalId
+
+      // Recipient invoice was minted before the cutoff
+      const persisted = await WalletInvoicesRepository().persistNew({
+        paymentHash,
+        secret: "secret" as SecretPreImage,
+        selfGenerated: true,
+        pubkey: destination,
+        recipientWalletDescriptor,
+        paid: false,
+        lnInvoice,
+        processingCompleted: false,
+        externalId,
+      })
+      if (persisted instanceof Error) throw persisted
+
+      jest.spyOn(ConfigImpl, "getWindDownConfig").mockReturnValue(armedUsCohortConfig)
+
+      // Attempt send payment
+      const res = await Payments.payInvoiceByWalletId({
+        senderWalletId: newWalletDescriptor.id,
+        senderAccount: newAccount,
+        uncheckedPaymentRequest: lnInvoice.paymentRequest,
+
+        memo,
+      })
+      expect(res).toBeInstanceOf(ReceiveDisabledError)
 
       // Restore system state
       lndServiceSpy.mockRestore()

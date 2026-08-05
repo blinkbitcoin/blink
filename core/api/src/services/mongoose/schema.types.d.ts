@@ -203,6 +203,42 @@ type PaymentFlowStateRecordIndex = XOR<
   inputAmount: number
 }
 
+type MigrationFlowStateStepRecord = {
+  step: string
+  recordedAt: Date
+  detail?: string
+}
+
+interface MigrationFlowStateRecord {
+  accountId: string
+  phase: string
+  destinationSparkPubkey?: string
+  destinationProofVerified: boolean
+  lnPaymentHash?: string
+  topUpSats?: number
+  disclosureVersion?: string
+  steps: MigrationFlowStateStepRecord[]
+  createdAt: Date
+  updatedAt: Date
+}
+
+type WindDownCohortAssessmentSignalsRecord = {
+  phoneCountry?: string
+  newestDeletedPhoneCountry?: string
+  creationIpCountry?: string
+  latestIpCountry?: string
+}
+
+interface WindDownCohortAssessmentRecord {
+  accountId: string
+  matched: boolean
+  assignedCountry?: string
+  rule: WindDownCohortRule
+  signals?: WindDownCohortAssessmentSignalsRecord
+  createdAt: Date
+  updatedAt: Date
+}
+
 type WalletOnChainPendingReceiveRecord = {
   walletId: string
   address: string

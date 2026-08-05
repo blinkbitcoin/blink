@@ -1,0 +1,12 @@
+mutation migrationLnAddressTransfer($input: MigrationLnAddressTransferInput!) {
+  migrationLnAddressTransfer(input: $input) {
+    errors {
+      message
+    }
+    results {
+      identifier
+      lightningAddress
+      status
+    }
+  }
+}

@@ -62,6 +62,8 @@ type ExponentialDecayFeeStrategyParams = {
   targetFeeRate: number
   networkFeeOffset: number
   networkFeeFactor: number
+  minFee: number
+  effectiveRateCap: number
 }
 
 type FeeStrategy =
@@ -259,6 +261,10 @@ type YamlSchema = {
   captcha: {
     mandatory: boolean
   }
+  custodialMigrationFlow: {
+    enabled: boolean
+    deMinimisThresholdSats: number
+  }
   smsAuthUnsupportedCountries: string[]
   whatsAppAuthUnsupportedCountries: string[]
   telegramAuthUnsupportedCountries: string[]
@@ -266,4 +272,5 @@ type YamlSchema = {
     verify: "prelude" | "twilio"
     transactional: "prelude" | "twilio"
   }
+  windDown: WindDownYamlConfig
 }
