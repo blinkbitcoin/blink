@@ -533,6 +533,7 @@ const reconstructPendingPaymentFlow = async <
   const bankOwnerWalletId = await getBankOwnerWalletId()
   const bankOwnerCreditTxns = ledgerTxns.filter(
     (tx) =>
+      tx.journalId === payment.journalId &&
       tx.walletId === bankOwnerWalletId &&
       tx.type === LedgerTransactionType.Payment &&
       (tx.credit ?? 0) > 0,
