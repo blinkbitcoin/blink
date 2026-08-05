@@ -2,8 +2,6 @@ import { randomUUID } from "crypto"
 
 import { Accounts, Payments } from "@/app"
 
-import * as ConfigImpl from "@/config"
-
 import { AccountStatus } from "@/domain/accounts"
 import { toSats } from "@/domain/bitcoin"
 import {
