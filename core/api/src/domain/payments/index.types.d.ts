@@ -230,6 +230,7 @@ type LPFBWithError = {
 type LightningPaymentFlowBuilderConfig = {
   localNodeIds: Pubkey[]
   skipProbe: SkipFeeProbeConfig
+  skipBankFee?: boolean
 }
 
 type LPFBWithInvoiceState = LightningPaymentFlowBuilderConfig &

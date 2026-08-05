@@ -18,12 +18,14 @@ export const constructPaymentFlowBuilder = async <
   senderWallet,
   invoice,
   uncheckedAmount,
+  skipBankFee,
   hedgeBuyUsd,
   hedgeSellUsd,
 }: {
   senderWallet: WalletDescriptor<S>
   invoice: LnInvoice
   uncheckedAmount?: number
+  skipBankFee?: boolean
   hedgeBuyUsd: ConversionFns
   hedgeSellUsd: ConversionFns
 }): Promise<LPFBWithConversion<S, R> | ApplicationError> => {
@@ -32,6 +34,7 @@ export const constructPaymentFlowBuilder = async <
   const paymentBuilder = LightningPaymentFlowBuilder({
     localNodeIds: lndService.listAllPubkeys(),
     skipProbe: getValuesToSkipProbe(),
+    skipBankFee,
   })
   const builderWithInvoice = uncheckedAmount
     ? (paymentBuilder.withNoAmountInvoice({

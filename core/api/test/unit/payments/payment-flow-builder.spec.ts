@@ -1780,5 +1780,29 @@ describe("LightningPaymentFlowBuilder", () => {
         calc.add(usdReserve, usdService),
       )
     })
+
+    it("charges no service fee when the builder skips the bank fee (migration drain exemption)", async () => {
+      enableGate()
+
+      const payment = await LightningPaymentFlowBuilder({
+        localNodeIds: [],
+        skipProbe,
+        skipBankFee: true,
+      })
+        .withNoAmountInvoice({
+          invoice: invoiceWithNoAmount,
+          uncheckedAmount: aboveThresholdSats,
+        })
+        .withSenderWallet(senderBtcWalletDescriptor)
+        .withoutRecipientWallet()
+        .withConversion({ mid, hedgeBuyUsd, hedgeSellUsd })
+        .withoutRoute()
+      if (payment instanceof Error) throw payment
+
+      const reserve = LnFees().maxProtocolAndBankFee(btcPaymentAmount)
+      expect(payment.btcBankFee.amount).toStrictEqual(0n)
+      expect(payment.usdBankFee.amount).toStrictEqual(0n)
+      expect(payment.btcProtocolAndBankFee).toStrictEqual(reserve)
+    })
   })
 })

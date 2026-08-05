@@ -266,7 +266,7 @@ describe("executeMigrationTransfer", () => {
     )
   })
 
-  it("pays the drain amount with skipChecks for a normal balance", async () => {
+  it("pays the drain amount with skipChecks and the service-fee exemption for a normal balance", async () => {
     mockGetBalanceForWallet.mockResolvedValue(5000)
     mockPayNoAmountInvoice.mockResolvedValue({ status: PaymentSendStatus.Pending })
 
@@ -282,6 +282,7 @@ describe("executeMigrationTransfer", () => {
         senderWalletId: btcWalletId,
         senderAccount: account,
         skipChecks: true,
+        skipBankFee: true,
       }),
     )
     expect(mockCompleteFlow).not.toHaveBeenCalled()

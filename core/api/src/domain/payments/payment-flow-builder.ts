@@ -585,7 +585,7 @@ const LPFBWithConversion = <S extends WalletCurrency, R extends WalletCurrency>(
     | ValidationError
     | DealerPriceServiceError
   > => {
-    if (state.settlementMethod !== SettlementMethod.Lightning) {
+    if (state.skipBankFee || state.settlementMethod !== SettlementMethod.Lightning) {
       return { btcBankFee: ZERO_SATS, usdBankFee: ZERO_CENTS }
     }
 
