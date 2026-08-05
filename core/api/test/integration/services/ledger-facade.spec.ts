@@ -712,11 +712,11 @@ describe("Facade", () => {
       })
     })
 
-    describe("grossInAllTxBaseVolumeAmountSince", () => {
-      const grossInVolumeAmountSince = LedgerFacade.grossInAllTxBaseVolumeAmountSince
+    describe("inAllTxBaseVolumeAmountSince", () => {
+      const inVolumeAmountSince = LedgerFacade.inAllTxBaseVolumeAmountSince
 
       it("returns 0 volume for no transactions", async () => {
-        const volume = await grossInVolumeAmountSince({
+        const volume = await inVolumeAmountSince({
           walletDescriptor: accountWalletDescriptors.BTC,
           timestamp: timestamp1DayAgo,
         })
@@ -756,7 +756,7 @@ describe("Facade", () => {
           calc.add(sendAmount.btc, sendAmount.btc),
         )
 
-        const volume = await grossInVolumeAmountSince({
+        const volume = await inVolumeAmountSince({
           walletDescriptor: accountWalletDescriptors.BTC,
           timestamp: timestamp1DayAgo,
         })
@@ -773,7 +773,7 @@ describe("Facade", () => {
         })
         if (resBtc instanceof Error) throw resBtc
 
-        const volume = await grossInVolumeAmountSince({
+        const volume = await inVolumeAmountSince({
           walletDescriptor: accountWalletDescriptors.BTC,
           timestamp: timestamp1DayAgo,
         })

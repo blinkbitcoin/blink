@@ -77,7 +77,7 @@ export const checkDepositHold = async ({
   const windowStart = timestampDaysAgo(toDays(recentDepositWindowDays))
   if (windowStart instanceof Error) return windowStart
 
-  const volumeAmount = await LedgerFacade.grossInAllTxBaseVolumeAmountSince({
+  const volumeAmount = await LedgerFacade.inAllTxBaseVolumeAmountSince({
     walletDescriptor: btcWalletDescriptor,
     timestamp: windowStart,
   })

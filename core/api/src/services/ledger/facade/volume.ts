@@ -228,7 +228,7 @@ export const absoluteAllTxBaseVolumeAmountSince = async <S extends WalletCurrenc
   return VolumeCalculator(txBaseVolumeAmount).absolute()
 }
 
-export const grossInAllTxBaseVolumeAmountSince = async <S extends WalletCurrency>(
+export const inAllTxBaseVolumeAmountSince = async <S extends WalletCurrency>(
   args: IGetVolumeAmountArgs<S>,
 ): Promise<PaymentAmount<S> | LedgerServiceError> => {
   const allTxBaseVolumeAmountSince = txVolumeAmountFactory.create("allTxBaseVolumeSince")

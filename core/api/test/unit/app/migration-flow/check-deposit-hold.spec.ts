@@ -16,7 +16,7 @@ jest.mock("@/app/wind-down", () => ({
 }))
 
 jest.mock("@/services/ledger/facade", () => ({
-  grossInAllTxBaseVolumeAmountSince: jest.fn(),
+  inAllTxBaseVolumeAmountSince: jest.fn(),
 }))
 
 jest.mock("@/services/tracing", () => ({
@@ -35,13 +35,13 @@ import { UnknownLedgerError } from "@/domain/ledger"
 import { MigrationOnHoldError } from "@/domain/migration-flow"
 import { UnknownPriceServiceError } from "@/domain/price"
 import { WalletCurrency } from "@/domain/shared"
-import { grossInAllTxBaseVolumeAmountSince } from "@/services/ledger/facade"
+import { inAllTxBaseVolumeAmountSince } from "@/services/ledger/facade"
 
 const mockGetConfig = getCustodialMigrationFlowConfig as jest.Mock
 const mockGetPriceRatio = getCurrentPriceAsWalletPriceRatio as jest.Mock
 const mockGetBalance = getBalanceForWallet as jest.Mock
 const mockIsInCohort = isAccountInWindDownCohort as jest.Mock
-const mockGrossInVolume = grossInAllTxBaseVolumeAmountSince as jest.Mock
+const mockInVolume = inAllTxBaseVolumeAmountSince as jest.Mock
 
 const accountId = "account-id" as AccountId
 const makeAccount = (level: number): Account =>
@@ -61,7 +61,7 @@ const priceRatio = {
 }
 
 const volumeOf = (sats: bigint) =>
-  mockGrossInVolume.mockResolvedValue({ amount: sats, currency: WalletCurrency.Btc })
+  mockInVolume.mockResolvedValue({ amount: sats, currency: WalletCurrency.Btc })
 
 describe("checkDepositHold", () => {
   beforeEach(() => {
@@ -94,7 +94,7 @@ describe("checkDepositHold", () => {
     expect(result).toEqual({})
     expect(mockGetBalance).not.toHaveBeenCalled()
     expect(mockIsInCohort).not.toHaveBeenCalled()
-    expect(mockGrossInVolume).not.toHaveBeenCalled()
+    expect(mockInVolume).not.toHaveBeenCalled()
     expect(mockGetPriceRatio).not.toHaveBeenCalled()
   })
 
@@ -111,7 +111,7 @@ describe("checkDepositHold", () => {
       expect(result).toEqual({})
       expect(mockGetBalance).not.toHaveBeenCalled()
       expect(mockIsInCohort).not.toHaveBeenCalled()
-      expect(mockGrossInVolume).not.toHaveBeenCalled()
+      expect(mockInVolume).not.toHaveBeenCalled()
       expect(mockGetPriceRatio).not.toHaveBeenCalled()
     },
   )
@@ -128,7 +128,7 @@ describe("checkDepositHold", () => {
     expect(result).toEqual({})
     expect(mockGetBalance).toHaveBeenCalledWith({ walletId: btcWalletDescriptor.id })
     expect(mockIsInCohort).not.toHaveBeenCalled()
-    expect(mockGrossInVolume).not.toHaveBeenCalled()
+    expect(mockInVolume).not.toHaveBeenCalled()
     expect(mockGetPriceRatio).not.toHaveBeenCalled()
   })
 
@@ -154,7 +154,7 @@ describe("checkDepositHold", () => {
     })
 
     expect(result).toEqual({})
-    expect(mockGrossInVolume).not.toHaveBeenCalled()
+    expect(mockInVolume).not.toHaveBeenCalled()
     expect(mockGetPriceRatio).not.toHaveBeenCalled()
   })
 
@@ -190,11 +190,11 @@ describe("checkDepositHold", () => {
     })
 
     expect(result).toEqual({ holdThresholdSats: 10_000 })
-    expect(mockGrossInVolume).toHaveBeenCalledWith(
+    expect(mockInVolume).toHaveBeenCalledWith(
       expect.objectContaining({ walletDescriptor: btcWalletDescriptor }),
     )
 
-    const { timestamp } = mockGrossInVolume.mock.calls[0][0]
+    const { timestamp } = mockInVolume.mock.calls[0][0]
     const expectedWindowStart = Date.now() - 30 * 24 * 60 * 60 * 1000
     expect(Math.abs(timestamp.getTime() - expectedWindowStart)).toBeLessThan(5_000)
   })
@@ -233,7 +233,7 @@ describe("checkDepositHold", () => {
 
   it("fails closed on a volume lookup error", async () => {
     const error = new UnknownLedgerError("ledger down")
-    mockGrossInVolume.mockResolvedValue(error)
+    mockInVolume.mockResolvedValue(error)
 
     const result = await checkDepositHold({
       account: makeAccount(1),
@@ -253,6 +253,6 @@ describe("checkDepositHold", () => {
     })
 
     expect(result).toBe(error)
-    expect(mockGrossInVolume).not.toHaveBeenCalled()
+    expect(mockInVolume).not.toHaveBeenCalled()
   })
 })
