@@ -2,24 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'ci: run e2e tests on self-hosted runner (#727)...'
-      sha: bfa701e224d5a0e5f752d8fd9e1a644dfe65dcdb
+      commitTitle: 'feat(migration): gate flow entry on recent deposit volume (#745)'
+      sha: 604cb1c2af74eda803eb045ac24892d8e597f50e
       tags:
-      - 0.22.36-2-gbfa701e22
+      - 0.22.38
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'ci: run e2e tests on self-hosted runner (#727)...'
-      sha: bfa701e224d5a0e5f752d8fd9e1a644dfe65dcdb
+      commitTitle: 'feat(migration): gate flow entry on recent deposit volume (#745)'
+      sha: 604cb1c2af74eda803eb045ac24892d8e597f50e
       tags:
-      - 0.22.36-2-gbfa701e22
+      - 0.22.38
     path: schemas
   - git:
-      commitTitle: 'ci: run e2e tests on self-hosted runner (#727)...'
-      sha: bfa701e224d5a0e5f752d8fd9e1a644dfe65dcdb
+      commitTitle: 'feat(migration): gate flow entry on recent deposit volume (#745)'
+      sha: 604cb1c2af74eda803eb045ac24892d8e597f50e
       tags:
-      - 0.22.36-2-gbfa701e22
+      - 0.22.38
     path: gql
   path: graphql
 kind: LockConfig
