@@ -214,6 +214,7 @@ interface MigrationFlowStateRecord {
   lnPaymentHash?: string
   topUpSats?: number
   disclosureVersion?: string
+  holdThresholdSats?: number
   steps: MigrationFlowStateStepRecord[]
   createdAt: Date
   updatedAt: Date

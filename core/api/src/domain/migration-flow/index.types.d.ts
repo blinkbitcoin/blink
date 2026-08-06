@@ -38,6 +38,7 @@ type MigrationFlow = {
   lnPaymentHash?: PaymentHash
   topUpSats?: Satoshis
   disclosureVersion?: string
+  holdThresholdSats?: Satoshis
   steps: MigrationFlowStep[]
   createdAt: Date
   updatedAt: Date
@@ -63,6 +64,7 @@ type UpsertMigrationFlowArgs = {
   accountId: AccountId
   phase: MigrationFlowPhase
   disclosureVersion?: string
+  holdThresholdSats?: Satoshis
 }
 
 type MigrationFlowPhaseTransitionArgs = {

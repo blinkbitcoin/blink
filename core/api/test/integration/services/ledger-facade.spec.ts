@@ -711,6 +711,76 @@ describe("Facade", () => {
         expect(volume).toStrictEqual(expectedVolume)
       })
     })
+
+    describe("inAllTxBaseVolumeAmountSince", () => {
+      const inVolumeAmountSince = LedgerFacade.inAllTxBaseVolumeAmountSince
+
+      it("returns 0 volume for no transactions", async () => {
+        const volume = await inVolumeAmountSince({
+          walletDescriptor: accountWalletDescriptors.BTC,
+          timestamp: timestamp1DayAgo,
+        })
+        if (volume instanceof Error) throw volume
+        expect(volume.amount).toStrictEqual(0n)
+      })
+
+      it("sums incoming volume across external, intraledger and self-trade types", async () => {
+        const external = await recordReceiveLnPayment({
+          walletDescriptor: accountWalletDescriptors.BTC,
+          paymentAmount: receiveAmount,
+          bankFee,
+          displayAmounts: displayReceiveEurAmounts,
+        })
+        if (external instanceof Error) throw external
+
+        const intraLedger = await recordWalletIdIntraLedgerPayment({
+          senderWalletDescriptor: accountWalletDescriptors.USD,
+          recipientWalletDescriptor: accountWalletDescriptors.BTC,
+          paymentAmount: sendAmount,
+          senderDisplayAmounts,
+          recipientDisplayAmounts,
+        })
+        if (intraLedger instanceof Error) throw intraLedger
+
+        const selfTrade = await recordWalletIdTradeIntraAccountTxn({
+          senderWalletDescriptor: accountWalletDescriptors.USD,
+          recipientWalletDescriptor: accountWalletDescriptors.BTC,
+          paymentAmount: sendAmount,
+          senderDisplayAmounts,
+          recipientDisplayAmounts,
+        })
+        if (selfTrade instanceof Error) throw selfTrade
+
+        const expectedVolume = calc.add(
+          receiveAmount.btc,
+          calc.add(sendAmount.btc, sendAmount.btc),
+        )
+
+        const volume = await inVolumeAmountSince({
+          walletDescriptor: accountWalletDescriptors.BTC,
+          timestamp: timestamp1DayAgo,
+        })
+        if (volume instanceof Error) throw volume
+        expect(volume).toStrictEqual(expectedVolume)
+      })
+
+      it("does not count outgoing volume", async () => {
+        const resBtc = await recordSendLnPayment({
+          walletDescriptor: accountWalletDescriptors.BTC,
+          paymentAmount: sendAmount,
+          bankFee,
+          displayAmounts: displaySendEurAmounts,
+        })
+        if (resBtc instanceof Error) throw resBtc
+
+        const volume = await inVolumeAmountSince({
+          walletDescriptor: accountWalletDescriptors.BTC,
+          timestamp: timestamp1DayAgo,
+        })
+        if (volume instanceof Error) throw volume
+        expect(volume.amount).toStrictEqual(0n)
+      })
+    })
   })
 
   describe("update state", () => {

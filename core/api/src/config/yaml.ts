@@ -152,6 +152,9 @@ export const getSkipFeeReimbursement = (): boolean =>
 export const getCustodialMigrationFlowConfig = (): CustodialMigrationFlowConfig => ({
   enabled: yamlConfig.custodialMigrationFlow.enabled,
   deMinimisThresholdSats: yamlConfig.custodialMigrationFlow.deMinimisThresholdSats,
+  recentDepositThresholdUsdCents:
+    yamlConfig.custodialMigrationFlow.recentDepositThresholdUsdCents,
+  recentDepositWindowDays: yamlConfig.custodialMigrationFlow.recentDepositWindowDays,
 })
 
 export const getDisplayCurrencyConfig = (): {
