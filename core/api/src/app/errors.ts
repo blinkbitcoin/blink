@@ -19,6 +19,7 @@ import * as NotificationsErrors from "@/domain/notifications/errors"
 import * as CacheErrors from "@/domain/cache/errors"
 import * as PhoneProviderServiceErrors from "@/domain/phone-provider/errors"
 import * as DealerPriceErrors from "@/domain/dealer-price/errors"
+import * as QuotesErrors from "@/domain/quotes/errors"
 import * as PubSubErrors from "@/domain/pubsub/errors"
 import * as CaptchaErrors from "@/domain/captcha/errors"
 import * as AuthenticationErrors from "@/domain/authentication/errors"
@@ -45,6 +46,7 @@ export const ApplicationErrors = {
   ...LightningErrors,
   ...LnurlServiceErrors,
   ...PriceServiceErrors,
+  ...QuotesErrors,
   ...LockServiceErrors,
   ...RateLimitServiceErrors,
   ...IpFetcherErrors,

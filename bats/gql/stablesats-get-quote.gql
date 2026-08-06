@@ -1,0 +1,16 @@
+query StableSatsGetQuote($input: StableSatsGetQuoteInput!) {
+  stableSatsGetQuote(input: $input) {
+    errors {
+      message
+    }
+    quote {
+      quoteId
+      amountToSellInSats
+      amountToBuyInCents
+      amountToBuyInSats
+      amountToSellInCents
+      expiresAt
+      executed
+    }
+  }
+}
