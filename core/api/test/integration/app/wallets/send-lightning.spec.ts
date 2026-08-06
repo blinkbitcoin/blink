@@ -1459,8 +1459,10 @@ describe("initiated via lightning", () => {
       expect(serviceFee).toBeGreaterThan(0)
     })
 
-    it("on a non-probed send that settles, reimburses the unused reserve only and retains the service fee (finding B)", async () => {
-      // non-probed: actual routing fee (0) < reserve, so reimburseFee runs on settle
+    it("on a non-probed send that settles, retains the unused reserve only, disjoint from the service fee (finding B)", async () => {
+      // non-probed: actual routing fee (0) < reserve. skipFeeReimbursement defaults
+      // to true, so the unused reserve is retained to bank-owner, not reimbursed —
+      // retention must be reserve-only (total − service), never double-count the fee.
       enableServiceFeeGate()
       mockLndSuccess()
 
@@ -1490,7 +1492,17 @@ describe("initiated via lightning", () => {
       const service = await bankOwnerServiceFeeFor(noAmountLnInvoice.paymentHash)
       expect(service).toBeGreaterThan(0)
 
-      // reimbursed = unused reserve only (total − service), never the full total
+      const bankOwnerWalletId = await getBankOwnerWalletId()
+      const retained = txns
+        .filter(
+          (t) =>
+            t.walletId === bankOwnerWalletId &&
+            t.type === LedgerTransactionType.LnReserveRetained,
+        )
+        .reduce((sum, t) => sum + (Number(t.credit) || 0), 0)
+      expect(retained).toEqual(total - service)
+      expect(retained).not.toEqual(total)
+
       const reimbursement = txns
         .filter(
           (t) =>
@@ -1498,8 +1510,7 @@ describe("initiated via lightning", () => {
             t.type === LedgerTransactionType.LnFeeReimbursement,
         )
         .reduce((sum, t) => sum + (Number(t.credit) || 0), 0)
-      expect(reimbursement).toEqual(total - service)
-      expect(reimbursement).not.toEqual(total)
+      expect(reimbursement).toEqual(0)
     })
   })
 })
