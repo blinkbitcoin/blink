@@ -1,3 +1,5 @@
+import { checkDepositHold } from "./check-deposit-hold"
+
 import { getCustodialMigrationFlowConfig } from "@/config"
 
 import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
@@ -53,8 +55,15 @@ export const startMigrationFlow = async ({
     )
   }
 
+  const holdCheck = await checkDepositHold({
+    account,
+    btcWalletDescriptor: accountWallets.BTC,
+  })
+  if (holdCheck instanceof Error) return holdCheck
+
   return migrationFlowRepo.upsertByAccountId({
     accountId,
     phase: MigrationFlowPhase.InProgress,
+    holdThresholdSats: holdCheck.holdThresholdSats,
   })
 }

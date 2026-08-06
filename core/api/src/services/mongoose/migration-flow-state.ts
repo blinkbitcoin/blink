@@ -41,6 +41,7 @@ export const MigrationFlowStateRepository = (): IMigrationFlowStateRepository =>
     accountId,
     phase,
     disclosureVersion,
+    holdThresholdSats,
   }: UpsertMigrationFlowArgs): Promise<
     MigrationFlow | MigrationFlowError | RepositoryError
   > => {
@@ -58,6 +59,7 @@ export const MigrationFlowStateRepository = (): IMigrationFlowStateRepository =>
             accountId,
             phase,
             ...(disclosureVersion !== undefined ? { disclosureVersion } : {}),
+            ...(holdThresholdSats !== undefined ? { holdThresholdSats } : {}),
           },
         },
         { upsert: true, new: true, setDefaultsOnInsert: true },
@@ -208,6 +210,7 @@ const migrationFlowFromRaw = (result: MigrationFlowStateRecord): MigrationFlow =
   lnPaymentHash: (result.lnPaymentHash as PaymentHash) || undefined,
   topUpSats: (result.topUpSats as Satoshis) || undefined,
   disclosureVersion: result.disclosureVersion || undefined,
+  holdThresholdSats: (result.holdThresholdSats as Satoshis) ?? undefined,
   steps: (result.steps || []).map((step) => ({
     step: step.step,
     recordedAt: step.recordedAt,

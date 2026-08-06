@@ -575,6 +575,7 @@ const migrationFlowStateSchema = new Schema<MigrationFlowStateRecord>(
     lnPaymentHash: String,
     topUpSats: Number,
     disclosureVersion: String,
+    holdThresholdSats: Number,
     steps: {
       type: [
         {
