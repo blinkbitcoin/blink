@@ -1287,12 +1287,16 @@ describe("initiated via lightning", () => {
     }
 
     // Net sats credited to the bank-owner (service-fee revenue) for a hash.
-    // Returns 0 if no revenue leg was written (or it was reverted).
+    // Returns 0 if no revenue leg was written (or it was reverted). Scoped to the
+    // Payment journal so the LnReserveRetained retention leg is not counted.
     const bankOwnerServiceFeeFor = async (paymentHash: PaymentHash): Promise<number> => {
       const bankOwnerWalletId = await getBankOwnerWalletId()
       const txns = await LedgerService().getTransactionsByHash(paymentHash)
       if (txns instanceof Error) throw txns
-      const bankTxns = txns.filter((t) => t.walletId === bankOwnerWalletId)
+      const bankTxns = txns.filter(
+        (t) =>
+          t.walletId === bankOwnerWalletId && t.type === LedgerTransactionType.Payment,
+      )
       const credit = bankTxns.reduce((sum, t) => sum + (Number(t.credit) || 0), 0)
       const debit = bankTxns.reduce((sum, t) => sum + (Number(t.debit) || 0), 0)
       return credit - debit
