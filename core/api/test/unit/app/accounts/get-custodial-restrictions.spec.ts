@@ -122,7 +122,7 @@ describe("getCustodialRestrictions", () => {
     })
   })
 
-  it("treats an unparseable phone as unknown and fails open", async () => {
+  it("treats an unparsable phone as unknown and fails open", async () => {
     mockFindById.mockResolvedValue({ phone: "not-a-phone" })
 
     expect(await getCustodialRestrictions({ account: makeAccount() })).toEqual({
