@@ -117,6 +117,34 @@ type AccountWithContacts = Account & {
   contacts: AccountContact[]
 }
 
+// uppercase alpha-2, earned at the config/parse boundary
+type RestrictedCountry = string & { readonly brand: unique symbol }
+
+type CustodialRestrictions = {
+  dollarBalance: boolean
+  transfer: boolean
+}
+
+type ResolveRestrictionsArgs = {
+  phoneCountry?: string
+  ipCountry?: string
+  level: AccountLevel
+  dollarBalanceBlockedCountries: RestrictedCountry[]
+  transferBlockedCountries: RestrictedCountry[]
+}
+
+type SessionRegionVerdict = {
+  countryCode: RestrictedCountry | undefined
+  restricted: boolean
+  custodialCreationAllowed: boolean
+}
+
+type ResolveSessionRegionVerdictArgs = {
+  ipCountry?: string
+  sanctionsCountries: RestrictedCountry[]
+  registrationDenyCountries: RestrictedCountry[]
+}
+
 type AccountValidator = {
   validateWalletForAccount(wallet: Wallet): true | ValidationError
 }

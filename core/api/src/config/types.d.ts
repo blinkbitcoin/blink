@@ -60,6 +60,20 @@ type WindDownConfig = {
   regions: WindDownRegionConfig[]
 }
 
+type RegionRestrictionsYamlConfig = {
+  sanctionsCountries: string[]
+  registrationExtraDenyCountries: string[]
+  custodialDollarBalanceBlockedCountries: string[]
+  custodialTransferBlockedCountries: string[]
+}
+
+type RegionRestrictionsConfig = {
+  sanctionsCountries: RestrictedCountry[]
+  registrationDenyCountries: RestrictedCountry[]
+  custodialDollarBalanceBlockedCountries: RestrictedCountry[]
+  custodialTransferBlockedCountries: RestrictedCountry[]
+}
+
 type QuizzesConfig = {
   phoneMetadataValidationSettings: PhoneMetadataValidationSettings
   ipMetadataValidationSettings: IpMetadataValidationSettings

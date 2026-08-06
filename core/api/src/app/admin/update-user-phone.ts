@@ -1,6 +1,9 @@
 import { markAccountForDeletion } from "@/app/accounts"
+import { getPhoneMetadata } from "@/app/authentication/get-phone-metadata"
 
 import { AccountValidator, checkedToAccountId } from "@/domain/accounts"
+import { retainedPhoneMetadata } from "@/domain/users"
+import { InvalidPhoneForOnboardingError } from "@/domain/users/errors"
 
 import { UsersRepository } from "@/services/mongoose/users"
 import { addAttributesToCurrentSpan } from "@/services/tracing"
@@ -26,6 +29,10 @@ export const updateUserPhone = async ({
   if (accountValidator instanceof Error) return accountValidator
   const kratosUserId = account.kratosUserId
 
+  // resolved before the deletion below so a refusal leaves nothing half-done
+  const fetched = await getPhoneMetadata({ phone })
+  if (fetched instanceof InvalidPhoneForOnboardingError) return fetched
+
   const usersRepo = UsersRepository()
   const newUser = await usersRepo.findByPhone(phone)
   if (!(newUser instanceof Error)) {
@@ -47,6 +54,10 @@ export const updateUserPhone = async ({
   const user = await usersRepo.findById(kratosUserId)
   if (user instanceof Error) return user
 
+  user.phoneMetadata = retainedPhoneMetadata({
+    fetched: fetched instanceof Error ? undefined : fetched,
+    stored: user.phoneMetadata,
+  })
   user.phone = phone
   const result = await usersRepo.update(user)
   if (result instanceof Error) return result

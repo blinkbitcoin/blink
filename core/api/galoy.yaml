@@ -87,6 +87,10 @@ rateLimits:
     points: 20
     duration: 86400
     blockDuration: 604800
+  regionCheckIpResolution:
+    points: 8000
+    duration: 86400
+    blockDuration: 3600
 accounts:
   initialStatus: active
   initialWallets:
@@ -341,3 +345,8 @@ windDown:
       gateArmsAt: "2026-08-31T22:00:00Z"
       receiveDisabled: false
       gateClosed: false
+regionRestrictions:
+  sanctionsCountries: []
+  registrationExtraDenyCountries: []
+  custodialDollarBalanceBlockedCountries: []
+  custodialTransferBlockedCountries: []

@@ -22,6 +22,7 @@ export * from "./limits-checker"
 export * from "./limits-volume"
 export * from "./account-validator"
 export * from "./primitives"
+export * from "./region-restrictions"
 
 const KratosUserIdRegex = UuidRegex
 export const AccountIdRegex = UuidRegex

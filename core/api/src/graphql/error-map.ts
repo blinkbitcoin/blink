@@ -367,6 +367,9 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       message = "Too many attempts, please wait for a while and try again."
       return new TooManyRequestError({ message, logger: baseLogger })
 
+      message = "Too many attempts, please wait for a while and try again."
+      return new TooManyRequestError({ message, logger: baseLogger })
+
     case "InvalidQuizQuestionIdError":
       message = "Invalid quiz question id was passed."
       return new ValidationInternalError({ message, logger: baseLogger })
@@ -759,6 +762,9 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "AccountError":
     case "IpFetcherError":
     case "IpFetcherServiceError":
+    case "IpFetcherBudgetExceededError":
+    case "UnresolvedIpFetcherServiceError":
+    case "RegionCheckIpResolutionBudgetExceededError":
     case "CouldNotFindTransactionError":
     case "CouldNotFindTransactionMetadataError":
     case "CouldNotFindExpectedTransactionMetadataError":

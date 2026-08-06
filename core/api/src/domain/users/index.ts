@@ -17,6 +17,19 @@ import { UuidRegex } from "@/domain/shared"
 export * from "./phone-metadata-validator"
 export * from "./phone-metadata-authorizer"
 
+// a vendor answer that resolved no country must never erase the last verified one
+export const retainedPhoneMetadata = ({
+  fetched,
+  stored,
+}: {
+  fetched: PhoneMetadata | undefined
+  stored: PhoneMetadata | undefined
+}): PhoneMetadata | undefined => {
+  if (fetched === undefined) return stored
+  if (fetched.countryCode) return fetched
+  return stored?.countryCode ? stored : fetched
+}
+
 export const checkedToPhoneNumber = (value: string): PhoneNumber | ValidationError => {
   if (!value) {
     return new InvalidPhoneNumber("Empty value")

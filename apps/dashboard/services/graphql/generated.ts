@@ -591,6 +591,12 @@ export type CurrencyConversionEstimation = {
   readonly usdCentAmount: Scalars['CentAmount']['output'];
 };
 
+export type CustodialRestrictions = {
+  readonly __typename: 'CustodialRestrictions';
+  readonly dollarBalance: Scalars['Boolean']['output'];
+  readonly transfer: Scalars['Boolean']['output'];
+};
+
 export type DepositFeeTier = {
   readonly __typename: 'DepositFeeTier';
   readonly amount: Scalars['String']['output'];
@@ -1862,6 +1868,7 @@ export type Query = {
   /** Returns an estimated conversion rate for the given amount and currency */
   readonly currencyConversionEstimation: CurrencyConversionEstimation;
   readonly currencyList: ReadonlyArray<Currency>;
+  readonly custodialRestrictions: CustodialRestrictions;
   readonly globals?: Maybe<Globals>;
   /** @deprecated Deprecated in favor of lnInvoicePaymentStatusByPaymentRequest */
   readonly lnInvoicePaymentStatus: LnInvoicePaymentStatusPayload;
@@ -1877,6 +1884,7 @@ export type Query = {
   readonly payoutSpeeds: ReadonlyArray<PayoutSpeeds>;
   /** Returns 1 Sat and 1 Usd Cent price for the given currency in minor unit */
   readonly realtimePrice: RealtimePrice;
+  readonly regionCheck: RegionCheck;
   /** @deprecated will be migrated to AccountDefaultWalletId */
   readonly userDefaultWalletId: Scalars['WalletId']['output'];
   readonly usernameAvailable?: Maybe<Scalars['Boolean']['output']>;
@@ -1994,6 +2002,13 @@ export type RealtimePricePayload = {
   readonly __typename: 'RealtimePricePayload';
   readonly errors: ReadonlyArray<Error>;
   readonly realtimePrice?: Maybe<RealtimePrice>;
+};
+
+export type RegionCheck = {
+  readonly __typename: 'RegionCheck';
+  readonly countryCode?: Maybe<Scalars['String']['output']>;
+  readonly custodialCreationAllowed: Scalars['Boolean']['output'];
+  readonly restricted: Scalars['Boolean']['output'];
 };
 
 export type SatAmountPayload = {
@@ -3826,6 +3841,7 @@ export type ResolversTypes = {
   CountryCode: ResolverTypeWrapper<Scalars['CountryCode']['output']>;
   Currency: ResolverTypeWrapper<Currency>;
   CurrencyConversionEstimation: ResolverTypeWrapper<CurrencyConversionEstimation>;
+  CustodialRestrictions: ResolverTypeWrapper<CustodialRestrictions>;
   DepositFeeTier: ResolverTypeWrapper<DepositFeeTier>;
   DepositFeesInformation: ResolverTypeWrapper<DepositFeesInformation>;
   DeviceNotificationTokenCreateInput: DeviceNotificationTokenCreateInput;
@@ -3951,6 +3967,7 @@ export type ResolversTypes = {
   RealtimePrice: ResolverTypeWrapper<RealtimePrice>;
   RealtimePriceInput: RealtimePriceInput;
   RealtimePricePayload: ResolverTypeWrapper<Omit<RealtimePricePayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
+  RegionCheck: ResolverTypeWrapper<RegionCheck>;
   SafeInt: ResolverTypeWrapper<Scalars['SafeInt']['output']>;
   SatAmount: ResolverTypeWrapper<Scalars['SatAmount']['output']>;
   SatAmountPayload: ResolverTypeWrapper<Omit<SatAmountPayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
@@ -4084,6 +4101,7 @@ export type ResolversParentTypes = {
   CountryCode: Scalars['CountryCode']['output'];
   Currency: Currency;
   CurrencyConversionEstimation: CurrencyConversionEstimation;
+  CustodialRestrictions: CustodialRestrictions;
   DepositFeeTier: DepositFeeTier;
   DepositFeesInformation: DepositFeesInformation;
   DeviceNotificationTokenCreateInput: DeviceNotificationTokenCreateInput;
@@ -4197,6 +4215,7 @@ export type ResolversParentTypes = {
   RealtimePrice: RealtimePrice;
   RealtimePriceInput: RealtimePriceInput;
   RealtimePricePayload: Omit<RealtimePricePayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
+  RegionCheck: RegionCheck;
   SafeInt: Scalars['SafeInt']['output'];
   SatAmount: Scalars['SatAmount']['output'];
   SatAmountPayload: Omit<SatAmountPayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
@@ -4608,6 +4627,12 @@ export type CurrencyConversionEstimationResolvers<ContextType = any, ParentType 
   id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
   timestamp?: Resolver<ResolversTypes['Timestamp'], ParentType, ContextType>;
   usdCentAmount?: Resolver<ResolversTypes['CentAmount'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
+export type CustodialRestrictionsResolvers<ContextType = any, ParentType extends ResolversParentTypes['CustodialRestrictions'] = ResolversParentTypes['CustodialRestrictions']> = {
+  dollarBalance?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  transfer?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
@@ -5126,6 +5151,7 @@ export type QueryResolvers<ContextType = any, ParentType extends ResolversParent
   businessMapMarkers?: Resolver<ReadonlyArray<ResolversTypes['MapMarker']>, ParentType, ContextType>;
   currencyConversionEstimation?: Resolver<ResolversTypes['CurrencyConversionEstimation'], ParentType, ContextType, RequireFields<QueryCurrencyConversionEstimationArgs, 'amount' | 'currency'>>;
   currencyList?: Resolver<ReadonlyArray<ResolversTypes['Currency']>, ParentType, ContextType>;
+  custodialRestrictions?: Resolver<ResolversTypes['CustodialRestrictions'], ParentType, ContextType>;
   globals?: Resolver<Maybe<ResolversTypes['Globals']>, ParentType, ContextType>;
   lnInvoicePaymentStatus?: Resolver<ResolversTypes['LnInvoicePaymentStatusPayload'], ParentType, ContextType, RequireFields<QueryLnInvoicePaymentStatusArgs, 'input'>>;
   lnInvoicePaymentStatusByHash?: Resolver<ResolversTypes['LnInvoicePaymentStatus'], ParentType, ContextType, RequireFields<QueryLnInvoicePaymentStatusByHashArgs, 'input'>>;
@@ -5138,6 +5164,7 @@ export type QueryResolvers<ContextType = any, ParentType extends ResolversParent
   onChainUsdTxFeeAsBtcDenominated?: Resolver<ResolversTypes['OnChainUsdTxFee'], ParentType, ContextType, RequireFields<QueryOnChainUsdTxFeeAsBtcDenominatedArgs, 'address' | 'amount' | 'speed' | 'walletId'>>;
   payoutSpeeds?: Resolver<ReadonlyArray<ResolversTypes['PayoutSpeeds']>, ParentType, ContextType>;
   realtimePrice?: Resolver<ResolversTypes['RealtimePrice'], ParentType, ContextType, RequireFields<QueryRealtimePriceArgs, 'currency'>>;
+  regionCheck?: Resolver<ResolversTypes['RegionCheck'], ParentType, ContextType>;
   userDefaultWalletId?: Resolver<ResolversTypes['WalletId'], ParentType, ContextType, RequireFields<QueryUserDefaultWalletIdArgs, 'username'>>;
   usernameAvailable?: Resolver<Maybe<ResolversTypes['Boolean']>, ParentType, ContextType, RequireFields<QueryUsernameAvailableArgs, 'username'>>;
   windDown?: Resolver<Maybe<ResolversTypes['AccountWindDown']>, ParentType, ContextType>;
@@ -5170,6 +5197,13 @@ export type RealtimePriceResolvers<ContextType = any, ParentType extends Resolve
 export type RealtimePricePayloadResolvers<ContextType = any, ParentType extends ResolversParentTypes['RealtimePricePayload'] = ResolversParentTypes['RealtimePricePayload']> = {
   errors?: Resolver<ReadonlyArray<ResolversTypes['Error']>, ParentType, ContextType>;
   realtimePrice?: Resolver<Maybe<ResolversTypes['RealtimePrice']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
+export type RegionCheckResolvers<ContextType = any, ParentType extends ResolversParentTypes['RegionCheck'] = ResolversParentTypes['RegionCheck']> = {
+  countryCode?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  custodialCreationAllowed?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  restricted?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
@@ -5539,6 +5573,7 @@ export type Resolvers<ContextType = any> = {
   CountryCode?: GraphQLScalarType;
   Currency?: CurrencyResolvers<ContextType>;
   CurrencyConversionEstimation?: CurrencyConversionEstimationResolvers<ContextType>;
+  CustodialRestrictions?: CustodialRestrictionsResolvers<ContextType>;
   DepositFeeTier?: DepositFeeTierResolvers<ContextType>;
   DepositFeesInformation?: DepositFeesInformationResolvers<ContextType>;
   DisplayCurrency?: GraphQLScalarType;
@@ -5616,6 +5651,7 @@ export type Resolvers<ContextType = any> = {
   QuizClaimPayload?: QuizClaimPayloadResolvers<ContextType>;
   RealtimePrice?: RealtimePriceResolvers<ContextType>;
   RealtimePricePayload?: RealtimePricePayloadResolvers<ContextType>;
+  RegionCheck?: RegionCheckResolvers<ContextType>;
   SafeInt?: GraphQLScalarType;
   SatAmount?: GraphQLScalarType;
   SatAmountPayload?: SatAmountPayloadResolvers<ContextType>;

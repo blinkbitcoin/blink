@@ -210,6 +210,7 @@ type YamlSchema = {
     requestCodePerAppcheckJti: RateLimitInput
     addQuizPerIp: RateLimitInput
     addQuizPerPhone: RateLimitInput
+    regionCheckIpResolution: RateLimitInput
   }
   accounts: {
     initialStatus: string
@@ -265,4 +266,5 @@ type YamlSchema = {
     transactional: "prelude" | "twilio"
   }
   windDown: WindDownYamlConfig
+  regionRestrictions: RegionRestrictionsYamlConfig
 }

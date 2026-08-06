@@ -15,4 +15,7 @@ type IPInfo = {
 
 interface IIpFetcherService {
   fetchIPInfo(ip: IpAddress): Promise<IPInfo | IpFetcherServiceError>
+  fetchIPInfoWithinRegionCheckBudget(
+    ip: IpAddress,
+  ): Promise<IPInfo | IpFetcherServiceError>
 }

@@ -25,6 +25,23 @@ let validate
 const merge = (defaultConfig: unknown, customConfig: unknown) =>
   mergeWith(defaultConfig, customConfig, (a, b) => (Array.isArray(b) ? b : undefined))
 
+const withCustomYaml = (customConfig: unknown, assertions: () => void) => {
+  const customPath = path.join(os.tmpdir(), "config-spec-custom.yaml")
+  fs.writeFileSync(customPath, yaml.dump(customConfig))
+  const originalArgv = process.argv[2]
+  process.argv[2] = customPath
+  try {
+    jest.isolateModules(assertions)
+  } finally {
+    if (originalArgv === undefined) {
+      process.argv.splice(2, 1)
+    } else {
+      process.argv[2] = originalArgv
+    }
+    fs.unlinkSync(customPath)
+  }
+}
+
 const accountLimits = {
   withdrawal: {
     level: {
@@ -193,6 +210,85 @@ describe("config.ts", () => {
         }
         fs.unlinkSync(customPath)
       }
+    })
+
+    it("fails when a region restriction country is not alpha-2", () => {
+      const freshYamlConfig = JSON.parse(JSON.stringify(yamlConfig))
+      freshYamlConfig.regionRestrictions.sanctionsCountries = ["IRN"]
+
+      // @ts-ignore-next-line no-implicit-any error
+      const valid = validate(freshYamlConfig)
+      expect(valid).toBeFalsy()
+    })
+
+    it("fails when a region restriction list repeats a country", () => {
+      const freshYamlConfig = JSON.parse(JSON.stringify(yamlConfig))
+      freshYamlConfig.regionRestrictions.custodialTransferBlockedCountries = ["TR", "TR"]
+
+      // @ts-ignore-next-line no-implicit-any error
+      const valid = validate(freshYamlConfig)
+      expect(valid).toBeFalsy()
+    })
+
+    it("unions sanctions into the registration deny list without widening sanctions", () => {
+      withCustomYaml(
+        {
+          accounts: { denyIPCountries: ["cu"] },
+          regionRestrictions: {
+            sanctionsCountries: ["ir"],
+            registrationExtraDenyCountries: ["PK"],
+          },
+        },
+        () => {
+          const {
+            getRegionRestrictionsConfig,
+            getAccountsOnboardConfig,
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+          } = require("@/config/yaml")
+          const { sanctionsCountries, registrationDenyCountries } =
+            getRegionRestrictionsConfig()
+
+          expect(sanctionsCountries).toEqual(["IR"])
+          expect(registrationDenyCountries).toEqual(expect.arrayContaining(["IR", "PK"]))
+          expect(sanctionsCountries).not.toContain("PK")
+          expect(
+            getAccountsOnboardConfig().ipMetadataValidationSettings.denyCountries,
+          ).toEqual(expect.arrayContaining(["CU", "IR", "PK"]))
+        },
+      )
+    })
+
+    it("derives the onboard deny list from the config it is given", () => {
+      withCustomYaml(
+        {
+          accounts: { denyIPCountries: ["cu"] },
+          regionRestrictions: {
+            sanctionsCountries: ["ir"],
+            registrationExtraDenyCountries: ["PK"],
+          },
+        },
+        () => {
+          const {
+            getAccountsOnboardConfig,
+            yamlConfig: loadedConfig,
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+          } = require("@/config/yaml")
+
+          const otherConfig = JSON.parse(JSON.stringify(loadedConfig))
+          otherConfig.accounts.denyIPCountries = []
+          otherConfig.regionRestrictions = {
+            sanctionsCountries: ["kp"],
+            registrationExtraDenyCountries: [],
+            custodialDollarBalanceBlockedCountries: [],
+            custodialTransferBlockedCountries: [],
+          }
+
+          const { denyCountries } =
+            getAccountsOnboardConfig(otherConfig).ipMetadataValidationSettings
+
+          expect(denyCountries).toEqual(["KP"])
+        },
+      )
     })
 
     it("fails validation missing required property", () => {

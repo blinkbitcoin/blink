@@ -27,6 +27,7 @@ export * from "./get-invoices-for-account"
 export * from "./get-wallet-from-account"
 export * from "./get-notification-settings-for-account"
 export * from "./get-default-wallet-for-username-phone"
+export * from "./get-custodial-restrictions"
 
 const accounts = AccountsRepository()
 

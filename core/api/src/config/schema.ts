@@ -648,6 +648,7 @@ export const configSchema = {
         requestCodePerAppcheckJti: rateLimitConfigSchema,
         addQuizPerIp: rateLimitConfigSchema,
         addQuizPerPhone: rateLimitConfigSchema,
+        regionCheckIpResolution: rateLimitConfigSchema,
       },
       required: [
         "requestCodePerEmail",
@@ -664,6 +665,7 @@ export const configSchema = {
         "requestCodePerAppcheckJti",
         "addQuizPerIp",
         "addQuizPerPhone",
+        "regionCheckIpResolution",
       ],
       additionalProperties: false,
       default: {
@@ -736,6 +738,12 @@ export const configSchema = {
           points: 20,
           duration: 86400,
           blockDuration: 604800,
+        },
+        // daily window under the shared proxycheck plan quota; login keeps the headroom
+        regionCheckIpResolution: {
+          points: 8000,
+          duration: 86400,
+          blockDuration: 3600,
         },
       },
     },
@@ -1202,6 +1210,48 @@ export const configSchema = {
         ],
       },
     },
+    regionRestrictions: {
+      type: "object",
+      properties: {
+        sanctionsCountries: {
+          type: "array",
+          items: { type: "string", pattern: countryCodePattern },
+          uniqueItems: true,
+          default: [],
+        },
+        registrationExtraDenyCountries: {
+          type: "array",
+          items: { type: "string", pattern: countryCodePattern },
+          uniqueItems: true,
+          default: [],
+        },
+        custodialDollarBalanceBlockedCountries: {
+          type: "array",
+          items: { type: "string", pattern: countryCodePattern },
+          uniqueItems: true,
+          default: [],
+        },
+        custodialTransferBlockedCountries: {
+          type: "array",
+          items: { type: "string", pattern: countryCodePattern },
+          uniqueItems: true,
+          default: [],
+        },
+      },
+      required: [
+        "sanctionsCountries",
+        "registrationExtraDenyCountries",
+        "custodialDollarBalanceBlockedCountries",
+        "custodialTransferBlockedCountries",
+      ],
+      additionalProperties: false,
+      default: {
+        sanctionsCountries: [],
+        registrationExtraDenyCountries: [],
+        custodialDollarBalanceBlockedCountries: [],
+        custodialTransferBlockedCountries: [],
+      },
+    },
   },
   required: [
     "locale",
@@ -1228,6 +1278,7 @@ export const configSchema = {
     "telegramAuthUnsupportedCountries",
     "phoneProvider",
     "windDown",
+    "regionRestrictions",
   ],
   additionalProperties: false,
   allOf: [
