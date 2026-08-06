@@ -240,14 +240,49 @@ describe("update pending payments", () => {
 
     const { usdWalletDescriptor } = await createRandomUserAndWallets()
 
+    // service fee (bank-owner credit) is a subset of the total fee; the sender
+    // debit must include the total fee or reconstruction's inputAmount
+    // (debit − fee) cannot match the leg's centsAmount
+    const serviceFee = {
+      usd: { amount: 3n, currency: WalletCurrency.Usd } as UsdPaymentAmount,
+      btc: { amount: 9n, currency: WalletCurrency.Btc } as BtcPaymentAmount,
+    }
+    const paymentHash = crypto.randomUUID() as PaymentHash
+    const recordServiceFeeSend = async () => {
+      const {
+        metadata,
+        debitAccountAdditionalMetadata,
+        internalAccountsAdditionalMetadata,
+      } = LedgerFacadeImpl.LnSendLedgerMetadata({
+        paymentHash,
+        pubkey: crypto.randomUUID() as Pubkey,
+        feeKnownInAdvance: true,
+        paymentAmounts: {
+          btcPaymentAmount: sendAmount.btc,
+          usdPaymentAmount: sendAmount.usd,
+          btcProtocolAndBankFee: bankFee.btc,
+          usdProtocolAndBankFee: bankFee.usd,
+        },
+        ...displaySendEurAmounts,
+      })
+      const recorded = await LedgerFacadeImpl.recordSendOffChain({
+        description: "sends bitcoin via ln",
+        amountToDebitSender: {
+          btc: calc.add(sendAmount.btc, bankFee.btc),
+          usd: calc.add(sendAmount.usd, bankFee.usd),
+        },
+        senderWalletDescriptor: usdWalletDescriptor,
+        bankFee: serviceFee,
+        metadata,
+        additionalDebitMetadata: debitAccountAdditionalMetadata,
+        additionalInternalMetadata: internalAccountsAdditionalMetadata,
+      })
+      if (recorded instanceof Error) throw recorded
+      return recorded
+    }
+
     // attempt 1: settled then voided (the supported same-hash retry shape)
-    const attempt1 = await recordSendLnPayment({
-      walletDescriptor: usdWalletDescriptor,
-      paymentAmount: sendAmount,
-      bankFee,
-      displayAmounts: displaySendEurAmounts,
-    })
-    const { paymentHash } = attempt1
+    const attempt1 = await recordServiceFeeSend()
     await LedgerFacadeImpl.settlePendingLnSend(paymentHash)
     await LedgerFacadeImpl.recordLnSendRevert({
       journalId: attempt1.journalId,
@@ -255,13 +290,7 @@ describe("update pending payments", () => {
     })
 
     // attempt 2: the live pending attempt on the same hash
-    await recordSendLnPayment({
-      walletDescriptor: usdWalletDescriptor,
-      paymentAmount: sendAmount,
-      bankFee,
-      displayAmounts: displaySendEurAmounts,
-      paymentHash,
-    })
+    await recordServiceFeeSend()
 
     // missing flow state forces ledger reconstruction
     const { PaymentFlowStateRepository: PaymentFlowStateRepositoryOrig } =
@@ -272,11 +301,12 @@ describe("update pending payments", () => {
         new CouldNotFindLightningPaymentFlowError(),
     })
 
-    await updatePendingPaymentByHash({ paymentHash, logger: baseLogger })
+    const result = await updatePendingPaymentByHash({ paymentHash, logger: baseLogger })
+    expect(result).not.toBeInstanceOf(Error)
 
     expect(refundSpy).toHaveBeenCalledTimes(1)
     expect(refundSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ btcBankFee: bankFee.btc }),
+      expect.objectContaining({ btcBankFee: serviceFee.btc }),
     )
   })
 })
