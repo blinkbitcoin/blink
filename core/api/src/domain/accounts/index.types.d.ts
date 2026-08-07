@@ -117,7 +117,6 @@ type AccountWithContacts = Account & {
   contacts: AccountContact[]
 }
 
-// uppercase alpha-2, earned at the config/parse boundary
 type RestrictedCountry = string & { readonly brand: unique symbol }
 
 type CustodialRestrictions = {

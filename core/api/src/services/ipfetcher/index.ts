@@ -85,13 +85,11 @@ export const IpFetcher = (): IIpFetcherService => {
     return value instanceof Error ? undefined : value
   }
 
-  // successes only: a cached error would latch the region verdict fail-open for the TTL
   const cacheOnSuccess = async (ip: IpAddress, info: IPInfo): Promise<IPInfo> => {
     await cache.set({ key: cacheKey(ip), value: info, ttlSecs: IP_INFO_CACHE_TTL })
     return info
   }
 
-  // login/onboarding path: untouched by the region machinery — no cache, no budget
   const fetchIPInfo = async (ip: IpAddress): Promise<IPInfo | IpFetcherServiceError> =>
     fetchFromProvider(ip)
 
