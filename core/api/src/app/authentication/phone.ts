@@ -3,12 +3,8 @@ import {
   checkLoginAttemptPerLoginIdentifierLimits,
   rewardFailedLoginAttemptPerIpLimits,
 } from "./ratelimits"
-import { getPhoneMetadata } from "./get-phone-metadata"
 
 import { PhoneAlreadyExistsError } from "@/domain/authentication/errors"
-
-import { retainedPhoneMetadata } from "@/domain/users"
-import { InvalidPhoneForOnboardingError } from "@/domain/users/errors"
 
 import { isPhoneCodeValid } from "@/services/phone-provider"
 
@@ -52,15 +48,7 @@ export const verifyPhone = async ({
     return new PhoneAlreadyExistsError()
   }
 
-  const fetched = await getPhoneMetadata({ phone })
-  if (fetched instanceof InvalidPhoneForOnboardingError) return fetched
-
-  const phoneMetadata = retainedPhoneMetadata({
-    fetched: fetched instanceof Error ? undefined : fetched,
-    stored: user.phoneMetadata,
-  })
-
-  const update = await users.update({ ...user, phone, phoneMetadata })
+  const update = await users.update({ ...user, phone })
   if (update instanceof Error) return update
 
   // add phone to identity

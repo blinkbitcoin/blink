@@ -22,7 +22,7 @@ const unresolved = (signal: "phone" | "ip") => {
   return undefined
 }
 
-// phoneMetadata is the last verified country; phone removal is not a reset
+// newest verified phone first, deletedPhones newest-last; removal is not a reset
 const countryOfAccountPhone = async (account: Account): Promise<string | undefined> => {
   const user = await UsersRepository().findById(account.kratosUserId)
   if (user instanceof Error) {
@@ -30,8 +30,13 @@ const countryOfAccountPhone = async (account: Account): Promise<string | undefin
     return unresolved("phone")
   }
 
-  const parsed = user.phone ? parsePhoneNumberFromString(user.phone)?.country : undefined
-  return parsed ?? user.phoneMetadata?.countryCode ?? unresolved("phone")
+  const phones = [user.phone, ...[...(user.deletedPhones ?? [])].reverse()]
+  for (const phone of phones) {
+    const country = phone ? parsePhoneNumberFromString(phone)?.country : undefined
+    if (country) return country
+  }
+
+  return user.phoneMetadata?.countryCode ?? unresolved("phone")
 }
 
 const countryOfRequestIp = async (ip: IpAddress): Promise<string | undefined> => {

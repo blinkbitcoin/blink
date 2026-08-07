@@ -101,6 +101,40 @@ describe("getCustodialRestrictions", () => {
     })
   })
 
+  it("resolves the newest deleted phone when the live phone is gone", async () => {
+    mockFindById.mockResolvedValue({
+      deletedPhones: [SALVADORAN_PHONE, NIGERIAN_PHONE],
+    })
+
+    expect(await getCustodialRestrictions({ account: makeAccount() })).toEqual({
+      dollarBalance: true,
+      transfer: false,
+    })
+  })
+
+  it("prefers the newest deleted phone over stored metadata", async () => {
+    mockFindById.mockResolvedValue({
+      deletedPhones: [NIGERIAN_PHONE, SALVADORAN_PHONE],
+      phoneMetadata: { countryCode: "NG" },
+    })
+
+    expect(await getCustodialRestrictions({ account: makeAccount() })).toEqual({
+      dollarBalance: false,
+      transfer: false,
+    })
+  })
+
+  it("skips an unparsable deleted phone and uses the next newest", async () => {
+    mockFindById.mockResolvedValue({
+      deletedPhones: [NIGERIAN_PHONE, "not-a-phone"],
+    })
+
+    expect(await getCustodialRestrictions({ account: makeAccount() })).toEqual({
+      dollarBalance: true,
+      transfer: false,
+    })
+  })
+
   it("prefers the live phone over stored metadata", async () => {
     mockFindById.mockResolvedValue({
       phone: SALVADORAN_PHONE,
