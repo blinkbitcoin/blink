@@ -740,8 +740,6 @@ export const configSchema = {
           blockDuration: 604800,
         },
         // daily window under the shared proxycheck plan quota; login keeps the headroom
-        // blockDuration must stay 0: a positive value replaces the window TTL on
-        // exhaustion and refills this shared budget early
         regionCheckIpResolution: {
           points: 8000,
           duration: 86400,
