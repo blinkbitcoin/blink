@@ -348,5 +348,6 @@ windDown:
 regionRestrictions:
   sanctionsCountries: []
   registrationExtraDenyCountries: []
-  custodialDollarBalanceBlockedCountries: []
+  custodialDollarBalanceBlockedCountries:
+    - NL
   custodialTransferBlockedCountries: []

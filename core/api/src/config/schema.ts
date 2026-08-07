@@ -1248,7 +1248,7 @@ export const configSchema = {
       default: {
         sanctionsCountries: [],
         registrationExtraDenyCountries: [],
-        custodialDollarBalanceBlockedCountries: [],
+        custodialDollarBalanceBlockedCountries: ["NL"],
         custodialTransferBlockedCountries: [],
       },
     },

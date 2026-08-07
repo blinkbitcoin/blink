@@ -3,9 +3,9 @@
 load "../../helpers/_common.bash"
 load "../../helpers/user.bash"
 
-random_is_phone() {
-  # +354 6XXXXXX — IS is a decoy seeded only in the dev regionRestrictions config
-  printf "+3546%06d\n" $(( (RANDOM * 32768 + RANDOM) % 1000000 ))
+random_nl_phone() {
+  # +31 6 1XXXXXXX — NL is the dev default in regionRestrictions, as in windDown
+  printf "+3161%07d\n" $(( (RANDOM * 32768 + RANDOM) % 10000000 ))
 }
 
 @test "region: anon region check fails open on an unresolvable ip" {
@@ -18,7 +18,7 @@ random_is_phone() {
 
 @test "region: blocked-country phone is restricted on dollar balance only" {
   local token_name="region_blocked"
-  login_user "$token_name" "$(random_is_phone)"
+  login_user "$token_name" "$(random_nl_phone)"
 
   exec_graphql "$token_name" 'custodial-restrictions'
 
