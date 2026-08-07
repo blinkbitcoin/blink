@@ -32,6 +32,13 @@ const findFlowByHash = async (
 }
 
 const softCloseMigratedAccount = async (accountId: AccountId): Promise<void> => {
+  const account = await AccountsRepository().findById(accountId)
+  if (account instanceof Error) {
+    recordExceptionInCurrentSpan({ error: account, level: ErrorLevel.Warn })
+    return
+  }
+  if (account.status !== AccountStatus.Active) return
+
   const softClosed = await updateAccountStatus({
     accountId,
     status: AccountStatus.Migrated,
@@ -64,14 +71,7 @@ export const completeMigrationFlowForSettledPayment = wrapAsyncToRunInSpan({
       addAttributesToCurrentSpan({ "migrationFlow.accountId": flow.accountId })
 
       if (flow.phase === MigrationFlowPhase.Completed) {
-        const account = await AccountsRepository().findById(flow.accountId)
-        if (account instanceof Error) {
-          recordExceptionInCurrentSpan({ error: account, level: ErrorLevel.Warn })
-          return
-        }
-        if (account.status !== AccountStatus.Migrated) {
-          await softCloseMigratedAccount(flow.accountId)
-        }
+        await softCloseMigratedAccount(flow.accountId)
         return
       }
 

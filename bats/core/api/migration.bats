@@ -368,3 +368,31 @@ ln_address_transfer_input() {
 
   [[ "$(btc_balance_for "$token_name")" == "0" ]] || exit 1
 }
+
+@test "migration: completed migration closes the account via accountDelete" {
+  token_name='migrator_close'
+  login_user "$token_name" "$(random_nl_phone)"
+
+  funding_sats=200000
+  fund_user_lightning "$token_name" "$token_name.btc_wallet_id" "$funding_sats"
+
+  exec_graphql "$token_name" 'migration-start'
+  [[ "$(graphql_output '.data.migrationStart.errors | length')" == "0" ]] || exit 1
+
+  invoice_response="$(lnd_outside_cli addinvoice)"
+  payment_request="$(echo $invoice_response | jq -r '.payment_request')"
+  [[ "${payment_request}" != "null" ]] || exit 1
+
+  variables="$(commit_variables_for "$token_name" "$payment_request")"
+  exec_graphql "$token_name" 'migration-commit' "$variables"
+  [[ "$(graphql_output '.data.migrationCommit.errors | length')" == "0" ]] || exit 1
+  [[ "$(graphql_output '.data.migrationCommit.migration.status')" == "COMPLETED" ]] || exit 1
+
+  [[ "$(btc_balance_for "$token_name")" == "0" ]] || exit 1
+
+  exec_graphql "$token_name" 'account-delete'
+  [[ "$(graphql_output '.data.accountDelete.success')" == "true" ]] || exit 1
+
+  exec_graphql "$token_name" 'migration'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
+}

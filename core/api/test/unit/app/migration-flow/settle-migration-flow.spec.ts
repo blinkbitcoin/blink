@@ -88,7 +88,7 @@ describe("settle-migration-flow", () => {
     mockReclaimTopUp.mockResolvedValue(undefined)
     mocks.findAccountById.mockResolvedValue({
       id: accountId,
-      status: AccountStatus.Migrated,
+      status: AccountStatus.Active,
     } as Account)
   })
 
@@ -129,6 +129,10 @@ describe("settle-migration-flow", () => {
         ...transferringFlow,
         phase: MigrationFlowPhase.Completed,
       })
+      mocks.findAccountById.mockResolvedValue({
+        id: accountId,
+        status: AccountStatus.Migrated,
+      } as Account)
 
       await completeMigrationFlowForSettledPayment({ paymentHash })
 
@@ -136,7 +140,59 @@ describe("settle-migration-flow", () => {
       expect(mockUpdateAccountStatus).not.toHaveBeenCalled()
     })
 
-    it("retries the soft-close when the flow is COMPLETED but the account is not Migrated", async () => {
+    it("does not resurrect a Closed account when a COMPLETED flow re-fires", async () => {
+      mocks.findFlowByLnPaymentHash.mockResolvedValue({
+        ...transferringFlow,
+        phase: MigrationFlowPhase.Completed,
+      })
+      mocks.findAccountById.mockResolvedValue({
+        id: accountId,
+        status: AccountStatus.Closed,
+      } as Account)
+
+      await completeMigrationFlowForSettledPayment({ paymentHash })
+
+      expect(mocks.updateFlowPhase).not.toHaveBeenCalled()
+      expect(mockUpdateAccountStatus).not.toHaveBeenCalled()
+    })
+
+    it("completes the flow without a status write when the account is already Closed", async () => {
+      mocks.findAccountById.mockResolvedValue({
+        id: accountId,
+        status: AccountStatus.Closed,
+      } as Account)
+
+      await completeMigrationFlowForSettledPayment({ paymentHash })
+
+      expect(mocks.updateFlowPhase).toHaveBeenCalledTimes(1)
+      expect(mockUpdateAccountStatus).not.toHaveBeenCalled()
+    })
+
+    it("completes the flow without a status write when the account is Locked", async () => {
+      mocks.findAccountById.mockResolvedValue({
+        id: accountId,
+        status: AccountStatus.Locked,
+      } as Account)
+
+      await completeMigrationFlowForSettledPayment({ paymentHash })
+
+      expect(mocks.updateFlowPhase).toHaveBeenCalledTimes(1)
+      expect(mockUpdateAccountStatus).not.toHaveBeenCalled()
+    })
+
+    it("completes the flow without a status write when the account is already Migrated", async () => {
+      mocks.findAccountById.mockResolvedValue({
+        id: accountId,
+        status: AccountStatus.Migrated,
+      } as Account)
+
+      await completeMigrationFlowForSettledPayment({ paymentHash })
+
+      expect(mocks.updateFlowPhase).toHaveBeenCalledTimes(1)
+      expect(mockUpdateAccountStatus).not.toHaveBeenCalled()
+    })
+
+    it("retries the soft-close when the flow is COMPLETED but the account is still Active", async () => {
       mocks.findFlowByLnPaymentHash.mockResolvedValue({
         ...transferringFlow,
         phase: MigrationFlowPhase.Completed,
