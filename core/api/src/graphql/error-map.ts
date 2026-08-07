@@ -367,9 +367,6 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       message = "Too many attempts, please wait for a while and try again."
       return new TooManyRequestError({ message, logger: baseLogger })
 
-      message = "Too many attempts, please wait for a while and try again."
-      return new TooManyRequestError({ message, logger: baseLogger })
-
     case "InvalidQuizQuestionIdError":
       message = "Invalid quiz question id was passed."
       return new ValidationInternalError({ message, logger: baseLogger })
