@@ -90,7 +90,7 @@ rateLimits:
   regionCheckIpResolution:
     points: 8000
     duration: 86400
-    blockDuration: 3600
+    blockDuration: 0
 accounts:
   initialStatus: active
   initialWallets:
