@@ -11,6 +11,7 @@ type IPInfo = {
   type: string
   asn: string
   proxy: boolean
+  status: string
 }
 
 interface IIpFetcherService {

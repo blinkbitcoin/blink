@@ -99,12 +99,32 @@ describe("IpFetcher - fetchIPInfo (login path)", () => {
     )
   })
 
-  it("treats a denied answer as unresolved", async () => {
+  it("passes a denied answer through for the caller to authorize", async () => {
     // @ts-ignore-next-line no-implicit-any error
     mock.onGet(new RegExp(`${ip}`)).reply(200, { status: "denied" })
 
     const ipInfo = await IpFetcher().fetchIPInfo(ip)
-    expect(ipInfo).toBeInstanceOf(UnresolvedIpFetcherServiceError)
+    expect(ipInfo).toEqual(
+      expect.objectContaining({
+        proxy: false,
+        status: "denied",
+      }),
+    )
+    expect(ipInfo).not.toBeInstanceOf(Error)
+  })
+
+  it("passes a degraded answer with a country through untouched", async () => {
+    const data = { ...getIpInfo(ip), status: "warning" }
+    // @ts-ignore-next-line no-implicit-any error
+    mock.onGet(new RegExp(`${ip}`)).reply(200, data)
+
+    const ipInfo = await IpFetcher().fetchIPInfo(ip)
+    expect(ipInfo).toEqual(
+      expect.objectContaining({
+        isoCode: "CR",
+        status: "warning",
+      }),
+    )
   })
 
   it("never touches the cache or the budget", async () => {
@@ -179,6 +199,16 @@ describe("IpFetcher - region check caching", () => {
     expect(ipInfo).toEqual(expect.objectContaining({ isoCode: "CR" }))
     // @ts-ignore-next-line no-implicit-any error
     expect(mock.history.get).toHaveLength(1)
+  })
+
+  it("treats a degraded answer with a country as unresolved and never caches it", async () => {
+    const data = { ...getIpInfo(ip), status: "warning" }
+    // @ts-ignore-next-line no-implicit-any error
+    mock.onGet(new RegExp(`${ip}`)).reply(200, data)
+
+    const ipInfo = await IpFetcher().fetchIPInfoWithinRegionCheckBudget(ip)
+    expect(ipInfo).toBeInstanceOf(UnresolvedIpFetcherServiceError)
+    expect(mockCacheSet).not.toHaveBeenCalled()
   })
 
   it("treats an ok answer with no country as unresolved", async () => {

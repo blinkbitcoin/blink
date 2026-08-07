@@ -67,20 +67,13 @@ export const IpFetcher = (): IIpFetcherService => {
         params,
       })
 
-      const record = data[ip]
-      const isoCode = record?.isocode
-      if (data.status !== "ok" || !isoCode) {
-        const error = new UnresolvedIpFetcherServiceError(`status: ${data.status}`)
-        recordExceptionInCurrentSpan({ error, attributes: { keyIsPresent } })
-        return error
-      }
-
-      const proxy = record.proxy === "yes"
-      const type = `${record.type}`
-      const risk = Number(record.risk) || 0
+      const proxy = !!(data[ip] && data[ip].proxy && data[ip].proxy === "yes")
+      const isoCode = data[ip] && data[ip].isocode
+      const type = data[ip] ? `${data[ip].type}` : ""
+      const risk = Number(data[ip]?.risk) || 0
 
       addAttributesToCurrentSpan({ proxy, risk, type, isoCode, keyIsPresent })
-      return { ...record, isoCode, proxy, risk, type, status: data.status }
+      return { ...data[ip], isoCode, proxy, risk, type, status: data.status }
     } catch (error) {
       recordExceptionInCurrentSpan({ error, attributes: { ip, keyIsPresent } })
       return new UnknownIpFetcherServiceError(error)
@@ -93,11 +86,7 @@ export const IpFetcher = (): IIpFetcherService => {
   }
 
   // successes only: a cached error would latch the region verdict fail-open for the TTL
-  const cacheOnSuccess = async (
-    ip: IpAddress,
-    info: IPInfo | IpFetcherServiceError,
-  ): Promise<IPInfo | IpFetcherServiceError> => {
-    if (info instanceof Error) return info
+  const cacheOnSuccess = async (ip: IpAddress, info: IPInfo): Promise<IPInfo> => {
     await cache.set({ key: cacheKey(ip), value: info, ttlSecs: IP_INFO_CACHE_TTL })
     return info
   }
@@ -118,7 +107,13 @@ export const IpFetcher = (): IIpFetcherService => {
     })
     if (budgetOk instanceof Error) return new IpFetcherBudgetExceededError()
 
-    return cacheOnSuccess(ip, await fetchFromProvider(ip))
+    const info = await fetchFromProvider(ip)
+    if (info instanceof Error) return info
+    if (info.status !== "ok" || !info.isoCode) {
+      return new UnresolvedIpFetcherServiceError(`status: ${info.status}`)
+    }
+
+    return cacheOnSuccess(ip, info)
   }
 
   return {
