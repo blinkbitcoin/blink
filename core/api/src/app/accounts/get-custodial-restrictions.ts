@@ -86,13 +86,13 @@ export const getSessionRegionVerdict = async ({
 }: {
   ip?: IpAddress
 }): Promise<SessionRegionVerdict> => {
-  const { sanctionsCountries, registrationDenyCountries } = getRegionRestrictionsConfig()
+  const { restrictedCountries, registrationDenyCountries } = getRegionRestrictionsConfig()
 
   const ipCountry = ip ? await countryOfRequestIp(ip) : unresolved("ip")
 
   return resolveSessionRegionVerdict({
     ipCountry,
-    sanctionsCountries,
+    restrictedCountries,
     registrationDenyCountries,
   })
 }

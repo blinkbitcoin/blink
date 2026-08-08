@@ -61,13 +61,13 @@ type WindDownConfig = {
 }
 
 type RegionRestrictionsYamlConfig = {
-  sanctionsCountries: string[]
+  restrictedCountries: string[]
   custodialDollarBalanceBlockedCountries: string[]
   custodialTransferBlockedCountries: string[]
 }
 
 type RegionRestrictionsConfig = {
-  sanctionsCountries: RestrictedCountry[]
+  restrictedCountries: RestrictedCountry[]
   registrationDenyCountries: RestrictedCountry[]
   custodialDollarBalanceBlockedCountries: RestrictedCountry[]
   custodialTransferBlockedCountries: RestrictedCountry[]

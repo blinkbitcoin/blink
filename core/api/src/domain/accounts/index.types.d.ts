@@ -140,7 +140,7 @@ type SessionRegionVerdict = {
 
 type ResolveSessionRegionVerdictArgs = {
   ipCountry?: string
-  sanctionsCountries: RestrictedCountry[]
+  restrictedCountries: RestrictedCountry[]
   registrationDenyCountries: RestrictedCountry[]
 }
 

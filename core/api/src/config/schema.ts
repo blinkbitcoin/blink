@@ -1213,7 +1213,7 @@ export const configSchema = {
     regionRestrictions: {
       type: "object",
       properties: {
-        sanctionsCountries: {
+        restrictedCountries: {
           type: "array",
           items: { type: "string", pattern: countryCodePattern },
           uniqueItems: true,
@@ -1233,13 +1233,13 @@ export const configSchema = {
         },
       },
       required: [
-        "sanctionsCountries",
+        "restrictedCountries",
         "custodialDollarBalanceBlockedCountries",
         "custodialTransferBlockedCountries",
       ],
       additionalProperties: false,
       default: {
-        sanctionsCountries: [],
+        restrictedCountries: [],
         custodialDollarBalanceBlockedCountries: ["NL"],
         custodialTransferBlockedCountries: [],
       },

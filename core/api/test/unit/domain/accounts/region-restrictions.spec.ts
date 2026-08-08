@@ -17,7 +17,7 @@ const restrictions = (args: Partial<ResolveRestrictionsArgs> = {}) =>
 
 const verdict = (args: Partial<ResolveSessionRegionVerdictArgs> = {}) =>
   resolveSessionRegionVerdict({
-    sanctionsCountries: countries("IR"),
+    restrictedCountries: countries("IR"),
     registrationDenyCountries: countries("IR", "PK"),
     ...args,
   })
@@ -26,7 +26,7 @@ describe("toRegistrationDenyCountries", () => {
   it("is empty when both inputs are empty, so registration policy is untouched", () => {
     expect(
       toRegistrationDenyCountries({
-        sanctionsCountries: [],
+        restrictedCountries: [],
         denyPhoneCountries: [],
       }),
     ).toEqual([])
@@ -35,7 +35,7 @@ describe("toRegistrationDenyCountries", () => {
   it("contains every sanctioned country", () => {
     expect(
       toRegistrationDenyCountries({
-        sanctionsCountries: countries("IR", "KP"),
+        restrictedCountries: countries("IR", "KP"),
         denyPhoneCountries: countries("PK"),
       }),
     ).toEqual(["IR", "KP", "PK"])
@@ -44,7 +44,7 @@ describe("toRegistrationDenyCountries", () => {
   it("deduplicates a country listed on both sides", () => {
     expect(
       toRegistrationDenyCountries({
-        sanctionsCountries: countries("IR"),
+        restrictedCountries: countries("IR"),
         denyPhoneCountries: countries("IR", "PK"),
       }),
     ).toEqual(["IR", "PK"])
@@ -193,7 +193,7 @@ describe("resolveSessionRegionVerdict", () => {
 
   it("is clean for every country when the lists are empty", () => {
     expect(
-      verdict({ ipCountry: "IR", sanctionsCountries: [], registrationDenyCountries: [] }),
+      verdict({ ipCountry: "IR", restrictedCountries: [], registrationDenyCountries: [] }),
     ).toEqual({
       countryCode: "IR",
       restricted: false,

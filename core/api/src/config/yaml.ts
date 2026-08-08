@@ -321,12 +321,11 @@ const toRestrictedCountries = (key: string, countries: string[]): RestrictedCoun
   return [...new Set(normalized)] as RestrictedCountry[]
 }
 
-// advisory only — never fed to the login wall; registration-only countries come from denyPhoneCountries
 const toRegistrationDeny = (config = yamlConfig) =>
   toRegistrationDenyCountries({
-    sanctionsCountries: toRestrictedCountries(
-      "sanctionsCountries",
-      config.regionRestrictions.sanctionsCountries,
+    restrictedCountries: toRestrictedCountries(
+      "restrictedCountries",
+      config.regionRestrictions.restrictedCountries,
     ),
     denyPhoneCountries: (config.accounts.denyPhoneCountries || [])
       .map(checkedToRestrictedCountry)
@@ -334,9 +333,9 @@ const toRegistrationDeny = (config = yamlConfig) =>
   })
 
 const regionRestrictionsConfig: RegionRestrictionsConfig = {
-  sanctionsCountries: toRestrictedCountries(
-    "sanctionsCountries",
-    yamlConfig.regionRestrictions.sanctionsCountries,
+  restrictedCountries: toRestrictedCountries(
+    "restrictedCountries",
+    yamlConfig.regionRestrictions.restrictedCountries,
   ),
   registrationDenyCountries: toRegistrationDeny(yamlConfig),
   custodialDollarBalanceBlockedCountries: toRestrictedCountries(
@@ -401,13 +400,12 @@ export const getAccountsOnboardConfig = (config = yamlConfig): AccountsOnboardCo
     },
     ipMetadataValidationSettings: {
       enabled: enableIpCheck,
-      // only sanctions join the login wall; registration-only countries must never session-block
       denyCountries: [
         ...new Set([
           ...denyIPCountries.map((c) => c.toUpperCase()),
           ...toRestrictedCountries(
-            "sanctionsCountries",
-            config.regionRestrictions.sanctionsCountries,
+            "restrictedCountries",
+            config.regionRestrictions.restrictedCountries,
           ),
         ]),
       ],

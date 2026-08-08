@@ -35,7 +35,7 @@ const config = (
   overrides: Partial<RegionRestrictionsConfig> = {},
 ): RegionRestrictionsConfig =>
   ({
-    sanctionsCountries: ["IR"],
+    restrictedCountries: ["IR"],
     registrationDenyCountries: ["IR", "PK"],
     custodialDollarBalanceBlockedCountries: ["NG"],
     custodialTransferBlockedCountries: ["TR"],

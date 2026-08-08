@@ -14,14 +14,14 @@ export const checkedToRestrictedCountry = (
     : undefined
 }
 
-// sanctions ⊆ registration deny by construction; a registration-only entry never session-blocks
+// restricted ⊆ registration deny by construction; a registration-only entry never session-blocks
 export const toRegistrationDenyCountries = ({
-  sanctionsCountries,
+  restrictedCountries,
   denyPhoneCountries,
 }: {
-  sanctionsCountries: RestrictedCountry[]
+  restrictedCountries: RestrictedCountry[]
   denyPhoneCountries: RestrictedCountry[]
-}): RestrictedCountry[] => [...new Set([...sanctionsCountries, ...denyPhoneCountries])]
+}): RestrictedCountry[] => [...new Set([...restrictedCountries, ...denyPhoneCountries])]
 
 export const resolveRestrictions = ({
   phoneCountry,
@@ -42,10 +42,10 @@ export const resolveRestrictions = ({
   }
 }
 
-// sanctions read the live connection only — never the phone, and never proxy/risk/ASN
+// the restricted verdict reads the live connection only — never the phone, and never proxy/risk/ASN
 export const resolveSessionRegionVerdict = ({
   ipCountry,
-  sanctionsCountries,
+  restrictedCountries,
   registrationDenyCountries,
 }: ResolveSessionRegionVerdictArgs): SessionRegionVerdict => {
   const country = checkedToRestrictedCountry(ipCountry)
@@ -55,7 +55,7 @@ export const resolveSessionRegionVerdict = ({
 
   return {
     countryCode: country,
-    restricted: sanctionsCountries.includes(country),
+    restricted: restrictedCountries.includes(country),
     custodialCreationAllowed: !registrationDenyCountries.includes(country),
   }
 }

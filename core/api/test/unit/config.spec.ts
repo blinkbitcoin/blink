@@ -214,7 +214,7 @@ describe("config.ts", () => {
 
     it("fails when a region restriction country is not alpha-2", () => {
       const freshYamlConfig = JSON.parse(JSON.stringify(yamlConfig))
-      freshYamlConfig.regionRestrictions.sanctionsCountries = ["IRN"]
+      freshYamlConfig.regionRestrictions.restrictedCountries = ["IRN"]
 
       // @ts-ignore-next-line no-implicit-any error
       const valid = validate(freshYamlConfig)
@@ -235,7 +235,7 @@ describe("config.ts", () => {
         {
           accounts: { denyIPCountries: ["cu"], denyPhoneCountries: ["pk"] },
           regionRestrictions: {
-            sanctionsCountries: ["ir"],
+            restrictedCountries: ["ir"],
           },
         },
         () => {
@@ -244,12 +244,12 @@ describe("config.ts", () => {
             getAccountsOnboardConfig,
             // eslint-disable-next-line @typescript-eslint/no-require-imports
           } = require("@/config/yaml")
-          const { sanctionsCountries, registrationDenyCountries } =
+          const { restrictedCountries, registrationDenyCountries } =
             getRegionRestrictionsConfig()
 
-          expect(sanctionsCountries).toEqual(["IR"])
+          expect(restrictedCountries).toEqual(["IR"])
           expect(registrationDenyCountries).toEqual(expect.arrayContaining(["IR", "PK"]))
-          expect(sanctionsCountries).not.toContain("PK")
+          expect(restrictedCountries).not.toContain("PK")
 
           const { denyCountries } =
             getAccountsOnboardConfig().ipMetadataValidationSettings
@@ -264,7 +264,7 @@ describe("config.ts", () => {
         {
           accounts: { denyIPCountries: ["cu"] },
           regionRestrictions: {
-            sanctionsCountries: ["ir"],
+            restrictedCountries: ["ir"],
           },
         },
         () => {
@@ -278,7 +278,7 @@ describe("config.ts", () => {
           otherConfig.accounts.denyIPCountries = []
           otherConfig.accounts.denyPhoneCountries = ["pk"]
           otherConfig.regionRestrictions = {
-            sanctionsCountries: ["kp"],
+            restrictedCountries: ["kp"],
             custodialDollarBalanceBlockedCountries: [],
             custodialTransferBlockedCountries: [],
           }
