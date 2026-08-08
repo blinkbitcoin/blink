@@ -1219,12 +1219,6 @@ export const configSchema = {
           uniqueItems: true,
           default: [],
         },
-        registrationExtraDenyCountries: {
-          type: "array",
-          items: { type: "string", pattern: countryCodePattern },
-          uniqueItems: true,
-          default: [],
-        },
         custodialDollarBalanceBlockedCountries: {
           type: "array",
           items: { type: "string", pattern: countryCodePattern },
@@ -1240,14 +1234,12 @@ export const configSchema = {
       },
       required: [
         "sanctionsCountries",
-        "registrationExtraDenyCountries",
         "custodialDollarBalanceBlockedCountries",
         "custodialTransferBlockedCountries",
       ],
       additionalProperties: false,
       default: {
         sanctionsCountries: [],
-        registrationExtraDenyCountries: [],
         custodialDollarBalanceBlockedCountries: ["NL"],
         custodialTransferBlockedCountries: [],
       },

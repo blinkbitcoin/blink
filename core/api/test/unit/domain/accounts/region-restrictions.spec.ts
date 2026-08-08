@@ -27,7 +27,7 @@ describe("toRegistrationDenyCountries", () => {
     expect(
       toRegistrationDenyCountries({
         sanctionsCountries: [],
-        registrationExtraDenyCountries: [],
+        denyPhoneCountries: [],
       }),
     ).toEqual([])
   })
@@ -36,7 +36,7 @@ describe("toRegistrationDenyCountries", () => {
     expect(
       toRegistrationDenyCountries({
         sanctionsCountries: countries("IR", "KP"),
-        registrationExtraDenyCountries: countries("PK"),
+        denyPhoneCountries: countries("PK"),
       }),
     ).toEqual(["IR", "KP", "PK"])
   })
@@ -45,7 +45,7 @@ describe("toRegistrationDenyCountries", () => {
     expect(
       toRegistrationDenyCountries({
         sanctionsCountries: countries("IR"),
-        registrationExtraDenyCountries: countries("IR", "PK"),
+        denyPhoneCountries: countries("IR", "PK"),
       }),
     ).toEqual(["IR", "PK"])
   })

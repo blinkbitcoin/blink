@@ -347,7 +347,6 @@ windDown:
       gateClosed: false
 regionRestrictions:
   sanctionsCountries: []
-  registrationExtraDenyCountries: []
   custodialDollarBalanceBlockedCountries:
     - NL
   custodialTransferBlockedCountries: []

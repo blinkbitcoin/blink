@@ -233,10 +233,9 @@ describe("config.ts", () => {
     it("unions sanctions into the registration deny list without widening sanctions", () => {
       withCustomYaml(
         {
-          accounts: { denyIPCountries: ["cu"] },
+          accounts: { denyIPCountries: ["cu"], denyPhoneCountries: ["pk"] },
           regionRestrictions: {
             sanctionsCountries: ["ir"],
-            registrationExtraDenyCountries: ["PK"],
           },
         },
         () => {
@@ -251,9 +250,11 @@ describe("config.ts", () => {
           expect(sanctionsCountries).toEqual(["IR"])
           expect(registrationDenyCountries).toEqual(expect.arrayContaining(["IR", "PK"]))
           expect(sanctionsCountries).not.toContain("PK")
-          expect(
-            getAccountsOnboardConfig().ipMetadataValidationSettings.denyCountries,
-          ).toEqual(expect.arrayContaining(["CU", "IR", "PK"]))
+
+          const { denyCountries } =
+            getAccountsOnboardConfig().ipMetadataValidationSettings
+          expect(denyCountries).toEqual(expect.arrayContaining(["CU", "IR"]))
+          expect(denyCountries).not.toContain("PK")
         },
       )
     })
@@ -264,7 +265,6 @@ describe("config.ts", () => {
           accounts: { denyIPCountries: ["cu"] },
           regionRestrictions: {
             sanctionsCountries: ["ir"],
-            registrationExtraDenyCountries: ["PK"],
           },
         },
         () => {
@@ -276,9 +276,9 @@ describe("config.ts", () => {
 
           const otherConfig = JSON.parse(JSON.stringify(loadedConfig))
           otherConfig.accounts.denyIPCountries = []
+          otherConfig.accounts.denyPhoneCountries = ["pk"]
           otherConfig.regionRestrictions = {
             sanctionsCountries: ["kp"],
-            registrationExtraDenyCountries: [],
             custodialDollarBalanceBlockedCountries: [],
             custodialTransferBlockedCountries: [],
           }

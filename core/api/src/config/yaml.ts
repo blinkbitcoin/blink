@@ -18,7 +18,11 @@ import { toCents } from "@/domain/fiat"
 
 import { toSeconds } from "@/domain/primitives"
 
-import { AccountLevel, toRegistrationDenyCountries } from "@/domain/accounts"
+import {
+  AccountLevel,
+  checkedToRestrictedCountry,
+  toRegistrationDenyCountries,
+} from "@/domain/accounts"
 
 const merge = (defaultConfig: unknown, customConfig: unknown) =>
   mergeWith(defaultConfig, customConfig, (a, b) => (Array.isArray(b) ? b : undefined))
@@ -317,17 +321,16 @@ const toRestrictedCountries = (key: string, countries: string[]): RestrictedCoun
   return [...new Set(normalized)] as RestrictedCountry[]
 }
 
-// registration-only entries (PK) never go in sanctionsCountries
-const toRegistrationDeny = (regionRestrictions: RegionRestrictionsYamlConfig) =>
+// advisory only — never fed to the login wall; registration-only countries come from denyPhoneCountries
+const toRegistrationDeny = (config = yamlConfig) =>
   toRegistrationDenyCountries({
     sanctionsCountries: toRestrictedCountries(
       "sanctionsCountries",
-      regionRestrictions.sanctionsCountries,
+      config.regionRestrictions.sanctionsCountries,
     ),
-    registrationExtraDenyCountries: toRestrictedCountries(
-      "registrationExtraDenyCountries",
-      regionRestrictions.registrationExtraDenyCountries,
-    ),
+    denyPhoneCountries: (config.accounts.denyPhoneCountries || [])
+      .map(checkedToRestrictedCountry)
+      .filter((c): c is RestrictedCountry => c !== undefined),
   })
 
 const regionRestrictionsConfig: RegionRestrictionsConfig = {
@@ -335,7 +338,7 @@ const regionRestrictionsConfig: RegionRestrictionsConfig = {
     "sanctionsCountries",
     yamlConfig.regionRestrictions.sanctionsCountries,
   ),
-  registrationDenyCountries: toRegistrationDeny(yamlConfig.regionRestrictions),
+  registrationDenyCountries: toRegistrationDeny(yamlConfig),
   custodialDollarBalanceBlockedCountries: toRestrictedCountries(
     "custodialDollarBalanceBlockedCountries",
     yamlConfig.regionRestrictions.custodialDollarBalanceBlockedCountries,
@@ -398,10 +401,14 @@ export const getAccountsOnboardConfig = (config = yamlConfig): AccountsOnboardCo
     },
     ipMetadataValidationSettings: {
       enabled: enableIpCheck,
+      // only sanctions join the login wall; registration-only countries must never session-block
       denyCountries: [
         ...new Set([
           ...denyIPCountries.map((c) => c.toUpperCase()),
-          ...toRegistrationDeny(config.regionRestrictions),
+          ...toRestrictedCountries(
+            "sanctionsCountries",
+            config.regionRestrictions.sanctionsCountries,
+          ),
         ]),
       ],
       allowCountries: allowIPCountries.map((c) => c.toUpperCase()),

@@ -17,13 +17,11 @@ export const checkedToRestrictedCountry = (
 // sanctions ⊆ registration deny by construction; a registration-only entry never session-blocks
 export const toRegistrationDenyCountries = ({
   sanctionsCountries,
-  registrationExtraDenyCountries,
+  denyPhoneCountries,
 }: {
   sanctionsCountries: RestrictedCountry[]
-  registrationExtraDenyCountries: RestrictedCountry[]
-}): RestrictedCountry[] => [
-  ...new Set([...sanctionsCountries, ...registrationExtraDenyCountries]),
-]
+  denyPhoneCountries: RestrictedCountry[]
+}): RestrictedCountry[] => [...new Set([...sanctionsCountries, ...denyPhoneCountries])]
 
 export const resolveRestrictions = ({
   phoneCountry,
