@@ -193,7 +193,11 @@ describe("resolveSessionRegionVerdict", () => {
 
   it("is clean for every country when the lists are empty", () => {
     expect(
-      verdict({ ipCountry: "IR", restrictedCountries: [], registrationDenyCountries: [] }),
+      verdict({
+        ipCountry: "IR",
+        restrictedCountries: [],
+        registrationDenyCountries: [],
+      }),
     ).toEqual({
       countryCode: "IR",
       restricted: false,
