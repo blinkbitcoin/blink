@@ -91,9 +91,16 @@ describe("markAccountForDeletion", () => {
     username,
   } as unknown as Account
 
+  const lnAddressStep = (detail: string): MigrationFlowStep => ({
+    step: "ln-address-transfer",
+    recordedAt: new Date(),
+    detail,
+  })
+
   const completedFlow = {
     accountId,
     phase: MigrationFlowPhase.Completed,
+    steps: [lnAddressStep(`${username}: TRANSFERRED (${username}@blink.sv)`)],
   } as MigrationFlow
 
   beforeEach(() => {
@@ -139,7 +146,7 @@ describe("markAccountForDeletion", () => {
     expect(kratosMocks.deleteIdentity).toHaveBeenCalledWith(kratosUserId)
   })
 
-  it("deletes a Migrated account with no flow record and keeps the merchant", async () => {
+  it("deletes the merchant for a Migrated account with no flow record", async () => {
     mocks.findAccountById.mockResolvedValue({
       ...baseAccount,
       status: AccountStatus.Migrated,
@@ -148,7 +155,7 @@ describe("markAccountForDeletion", () => {
     const result = await markAccountForDeletion({ accountId })
 
     expect(result).toBe(true)
-    expect(mockDeleteMerchantByUsername).not.toHaveBeenCalled()
+    expect(mockDeleteMerchantByUsername).toHaveBeenCalledWith({ username })
     expect(kratosMocks.deleteIdentity).toHaveBeenCalledWith(kratosUserId)
   })
 
@@ -205,8 +212,54 @@ describe("markAccountForDeletion", () => {
     expect(kratosMocks.deleteIdentity).not.toHaveBeenCalled()
   })
 
-  it("keeps the merchant for an Active account whose flow is completed", async () => {
+  it("keeps the merchant for an Active account whose username transferred to Spark", async () => {
     mocks.findFlowByAccountId.mockResolvedValue(completedFlow)
+
+    const result = await markAccountForDeletion({ accountId })
+
+    expect(result).toBe(true)
+    expect(mockDeleteMerchantByUsername).not.toHaveBeenCalled()
+    expect(kratosMocks.deleteIdentity).toHaveBeenCalledWith(kratosUserId)
+  })
+
+  it("deletes the merchant when the username transfer recorded FAILED", async () => {
+    mocks.findAccountById.mockResolvedValue({
+      ...baseAccount,
+      status: AccountStatus.Migrated,
+    })
+    mocks.findFlowByAccountId.mockResolvedValue({
+      ...completedFlow,
+      steps: [lnAddressStep(`${username}: FAILED`)],
+    })
+
+    const result = await markAccountForDeletion({ accountId })
+
+    expect(result).toBe(true)
+    expect(mockDeleteMerchantByUsername).toHaveBeenCalledWith({ username })
+  })
+
+  it("deletes the merchant when only the phone identifier transferred", async () => {
+    mocks.findAccountById.mockResolvedValue({
+      ...baseAccount,
+      status: AccountStatus.Migrated,
+    })
+    mocks.findFlowByAccountId.mockResolvedValue({
+      ...completedFlow,
+      steps: [lnAddressStep(`${phone}: TRANSFERRED`)],
+    })
+
+    const result = await markAccountForDeletion({ accountId })
+
+    expect(result).toBe(true)
+    expect(mockDeleteMerchantByUsername).toHaveBeenCalledWith({ username })
+  })
+
+  it("keeps the merchant for an IN_PROGRESS flow with a recorded username transfer", async () => {
+    mocks.findFlowByAccountId.mockResolvedValue({
+      ...completedFlow,
+      phase: MigrationFlowPhase.InProgress,
+      steps: [lnAddressStep(`${username}: ALREADY_TRANSFERRED`)],
+    })
 
     const result = await markAccountForDeletion({ accountId })
 

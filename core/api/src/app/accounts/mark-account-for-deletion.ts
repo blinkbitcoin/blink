@@ -7,7 +7,11 @@ import { getBalanceForWallet, listWalletsByAccountId } from "@/app/wallets"
 import { AccountStatus, InvalidAccountForDeletionError } from "@/domain/accounts"
 import { AccountHasPositiveBalanceError } from "@/domain/authentication/errors"
 import { CouldNotFindError, InactiveAccountError } from "@/domain/errors"
-import { MigrationFlowPhase, MigrationStateConflictError } from "@/domain/migration-flow"
+import {
+  MigrationFlowPhase,
+  MigrationLnAddressTransferStatus,
+  MigrationStateConflictError,
+} from "@/domain/migration-flow"
 
 import { IdentityRepository } from "@/services/kratos"
 import { addEventToCurrentSpan } from "@/services/tracing"
@@ -49,9 +53,10 @@ export const markAccountForDeletion = async ({
     )
   }
 
-  const migrationCompleted =
-    account.status === AccountStatus.Migrated ||
-    (!(flow instanceof Error) && flow.phase === MigrationFlowPhase.Completed)
+  const keepMerchant =
+    account.username !== undefined &&
+    !(flow instanceof Error) &&
+    usernameTransferredToSpark({ flow, username: account.username })
 
   const wallets = await listWalletsByAccountId(account.id)
   if (wallets instanceof Error) return wallets
@@ -105,7 +110,7 @@ export const markAccountForDeletion = async ({
     updatedByPrivilegedClientId,
   })
 
-  if (account.username && !migrationCompleted) {
+  if (account.username && !keepMerchant) {
     await deleteMerchantByUsername({ username: account.username })
   }
 
@@ -117,4 +122,21 @@ export const markAccountForDeletion = async ({
   if (deletionResult instanceof Error) return deletionResult
 
   return true
+}
+
+const usernameTransferredToSpark = ({
+  flow,
+  username,
+}: {
+  flow: MigrationFlow
+  username: Username
+}): boolean => {
+  const successPrefixes = [
+    `${username}: ${MigrationLnAddressTransferStatus.Transferred}`,
+    `${username}: ${MigrationLnAddressTransferStatus.AlreadyTransferred}`,
+  ]
+  return flow.steps.some(({ step, detail }) => {
+    if (step !== "ln-address-transfer" || detail === undefined) return false
+    return successPrefixes.some((prefix) => detail.startsWith(prefix))
+  })
 }
