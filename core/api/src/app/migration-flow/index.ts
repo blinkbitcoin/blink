@@ -1,5 +1,6 @@
 export * from "./start-migration-flow"
 export * from "./commit-migration-flow"
 export * from "./resume-migration-flow"
+export * from "./retry-migration-flow"
 export * from "./transfer-ln-address"
 export * from "./get-migration-preview"

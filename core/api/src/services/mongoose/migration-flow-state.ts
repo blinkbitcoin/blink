@@ -191,6 +191,46 @@ export const MigrationFlowStateRepository = (): IMigrationFlowStateRepository =>
     }
   }
 
+  const resetForRetry = async ({
+    accountId,
+    fromPhase,
+    grantedBy,
+  }: MigrationFlowResetForRetryArgs): Promise<
+    MigrationFlow | MigrationFlowError | RepositoryError
+  > => {
+    const transition = checkedMigrationFlowPhaseTransition({
+      from: fromPhase,
+      to: MigrationFlowPhase.InProgress,
+    })
+    if (transition instanceof Error) return transition
+
+    try {
+      const result = await MigrationFlowState.findOneAndUpdate(
+        { accountId, phase: fromPhase },
+        {
+          $set: {
+            phase: MigrationFlowPhase.InProgress,
+            destinationProofVerified: false,
+            updatedAt: new Date(),
+          },
+          // a true $unset, never $set null: the sparse unique lnPaymentHash index
+          // indexes explicit nulls and the second reset would collide
+          $unset: { lnPaymentHash: "", topUpSats: "" },
+          $push: { steps: { step: "retry-granted", detail: `admin: ${grantedBy}` } },
+        },
+        { new: true },
+      )
+      if (!result) {
+        return new MigrationStateConflictError(
+          `no migration flow for account in phase: ${fromPhase}`,
+        )
+      }
+      return migrationFlowFromRaw(result)
+    } catch (err) {
+      return parseRepositoryError(err)
+    }
+  }
+
   return {
     findByAccountId,
     findByLnPaymentHash,
@@ -199,6 +239,7 @@ export const MigrationFlowStateRepository = (): IMigrationFlowStateRepository =>
     addStep,
     recordTopUp,
     clearTopUp,
+    resetForRetry,
   }
 }
 
