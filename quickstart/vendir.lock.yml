@@ -2,24 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat(migration): gate flow entry on recent deposit volume (#745)'
-      sha: 604cb1c2af74eda803eb045ac24892d8e597f50e
+      commitTitle: 'fix(api): show LNURL memo on intraledger receives (#656)...'
+      sha: 447d65d551b77a66a340f103baab7d89c38dce63
       tags:
-      - 0.22.38
+      - 0.22.38-2-g447d65d55
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat(migration): gate flow entry on recent deposit volume (#745)'
-      sha: 604cb1c2af74eda803eb045ac24892d8e597f50e
+      commitTitle: 'fix(api): show LNURL memo on intraledger receives (#656)...'
+      sha: 447d65d551b77a66a340f103baab7d89c38dce63
       tags:
-      - 0.22.38
+      - 0.22.38-2-g447d65d55
     path: schemas
   - git:
-      commitTitle: 'feat(migration): gate flow entry on recent deposit volume (#745)'
-      sha: 604cb1c2af74eda803eb045ac24892d8e597f50e
+      commitTitle: 'fix(api): show LNURL memo on intraledger receives (#656)...'
+      sha: 447d65d551b77a66a340f103baab7d89c38dce63
       tags:
-      - 0.22.38
+      - 0.22.38-2-g447d65d55
     path: gql
   path: graphql
 kind: LockConfig
