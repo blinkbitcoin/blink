@@ -71,6 +71,12 @@ describe("settle-migration-flow", () => {
     lnPaymentHash: paymentHash,
     steps: [],
   } as unknown as MigrationFlow
+  const softCloseSkipRecord = expect.objectContaining({
+    error: expect.objectContaining({
+      message: expect.stringMatching(/soft-close skipped/),
+    }),
+    level: ErrorLevel.Warn,
+  })
 
   beforeEach(() => {
     jest.clearAllMocks()
@@ -138,6 +144,7 @@ describe("settle-migration-flow", () => {
 
       expect(mocks.updateFlowPhase).not.toHaveBeenCalled()
       expect(mockUpdateAccountStatus).not.toHaveBeenCalled()
+      expect(mockRecordException).not.toHaveBeenCalledWith(softCloseSkipRecord)
     })
 
     it("does not resurrect a Closed account when a COMPLETED flow re-fires", async () => {
@@ -154,6 +161,7 @@ describe("settle-migration-flow", () => {
 
       expect(mocks.updateFlowPhase).not.toHaveBeenCalled()
       expect(mockUpdateAccountStatus).not.toHaveBeenCalled()
+      expect(mockRecordException).not.toHaveBeenCalledWith(softCloseSkipRecord)
     })
 
     it("completes the flow without a status write when the account is already Closed", async () => {
@@ -166,6 +174,7 @@ describe("settle-migration-flow", () => {
 
       expect(mocks.updateFlowPhase).toHaveBeenCalledTimes(1)
       expect(mockUpdateAccountStatus).not.toHaveBeenCalled()
+      expect(mockRecordException).not.toHaveBeenCalledWith(softCloseSkipRecord)
     })
 
     it("completes the flow without a status write when the account is Locked", async () => {
@@ -178,6 +187,13 @@ describe("settle-migration-flow", () => {
 
       expect(mocks.updateFlowPhase).toHaveBeenCalledTimes(1)
       expect(mockUpdateAccountStatus).not.toHaveBeenCalled()
+      expect(mockRecordException).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.any(MigrationStateConflictError),
+          level: ErrorLevel.Warn,
+        }),
+      )
+      expect(mockRecordException).toHaveBeenCalledWith(softCloseSkipRecord)
     })
 
     it("completes the flow without a status write when the account is already Migrated", async () => {
@@ -190,6 +206,7 @@ describe("settle-migration-flow", () => {
 
       expect(mocks.updateFlowPhase).toHaveBeenCalledTimes(1)
       expect(mockUpdateAccountStatus).not.toHaveBeenCalled()
+      expect(mockRecordException).not.toHaveBeenCalledWith(softCloseSkipRecord)
     })
 
     it("retries the soft-close when the flow is COMPLETED but the account is still Active", async () => {

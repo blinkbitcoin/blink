@@ -5,7 +5,7 @@ import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
 
 import { AccountStatus } from "@/domain/accounts"
 import { CouldNotFindError } from "@/domain/errors"
-import { MigrationFlowPhase } from "@/domain/migration-flow"
+import { MigrationFlowPhase, MigrationStateConflictError } from "@/domain/migration-flow"
 import { ErrorLevel } from "@/domain/shared"
 
 import {
@@ -37,7 +37,20 @@ const softCloseMigratedAccount = async (accountId: AccountId): Promise<void> => 
     recordExceptionInCurrentSpan({ error: account, level: ErrorLevel.Warn })
     return
   }
-  if (account.status !== AccountStatus.Active) return
+  if (account.status !== AccountStatus.Active) {
+    if (
+      account.status !== AccountStatus.Migrated &&
+      account.status !== AccountStatus.Closed
+    ) {
+      recordExceptionInCurrentSpan({
+        error: new MigrationStateConflictError(
+          `soft-close skipped for account ${accountId} in status: ${account.status}`,
+        ),
+        level: ErrorLevel.Warn,
+      })
+    }
+    return
+  }
 
   const softClosed = await updateAccountStatus({
     accountId,
