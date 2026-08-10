@@ -5,7 +5,7 @@ import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
 
 import { AccountStatus } from "@/domain/accounts"
 import { CouldNotFindError } from "@/domain/errors"
-import { MigrationFlowPhase } from "@/domain/migration-flow"
+import { MigrationFlowPhase, MigrationStateConflictError } from "@/domain/migration-flow"
 import { ErrorLevel } from "@/domain/shared"
 
 import {
@@ -32,6 +32,26 @@ const findFlowByHash = async (
 }
 
 const softCloseMigratedAccount = async (accountId: AccountId): Promise<void> => {
+  const account = await AccountsRepository().findById(accountId)
+  if (account instanceof Error) {
+    recordExceptionInCurrentSpan({ error: account, level: ErrorLevel.Warn })
+    return
+  }
+  if (account.status !== AccountStatus.Active) {
+    if (
+      account.status !== AccountStatus.Migrated &&
+      account.status !== AccountStatus.Closed
+    ) {
+      recordExceptionInCurrentSpan({
+        error: new MigrationStateConflictError(
+          `soft-close skipped for account ${accountId} in status: ${account.status}`,
+        ),
+        level: ErrorLevel.Warn,
+      })
+    }
+    return
+  }
+
   const softClosed = await updateAccountStatus({
     accountId,
     status: AccountStatus.Migrated,
@@ -64,14 +84,7 @@ export const completeMigrationFlowForSettledPayment = wrapAsyncToRunInSpan({
       addAttributesToCurrentSpan({ "migrationFlow.accountId": flow.accountId })
 
       if (flow.phase === MigrationFlowPhase.Completed) {
-        const account = await AccountsRepository().findById(flow.accountId)
-        if (account instanceof Error) {
-          recordExceptionInCurrentSpan({ error: account, level: ErrorLevel.Warn })
-          return
-        }
-        if (account.status !== AccountStatus.Migrated) {
-          await softCloseMigratedAccount(flow.accountId)
-        }
+        await softCloseMigratedAccount(flow.accountId)
         return
       }
 

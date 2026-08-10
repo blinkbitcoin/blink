@@ -47,6 +47,19 @@ const hasMutationPermissions = rule({ cache: "contextual" })((
   return isAuthenticated && ctx.domainAccount.status === AccountStatus.Active
 })
 
+const hasAccountDeletePermissions = rule({ cache: "contextual" })((
+  _parent,
+  _args,
+  ctx: GraphQLPublicContext | GraphQLPublicContextAuth,
+) => {
+  const isAuthenticated = "domainAccount" in ctx && !!ctx.domainAccount
+  return (
+    isAuthenticated &&
+    (ctx.domainAccount.status === AccountStatus.Active ||
+      ctx.domainAccount.status === AccountStatus.Migrated)
+  )
+})
+
 const setGqlContext = async (
   req: Request,
   _res: Response,
@@ -103,6 +116,7 @@ export async function startApolloServerForCoreSchema() {
   })) {
     authedMutationFields[key] = hasMutationPermissions
   }
+  authedMutationFields["accountDelete"] = hasAccountDeletePermissions
 
   const permissions = shield(
     {

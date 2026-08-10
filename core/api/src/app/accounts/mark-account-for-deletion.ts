@@ -4,16 +4,28 @@ import { deleteMerchantByUsername } from "@/app/merchants"
 
 import { getBalanceForWallet, listWalletsByAccountId } from "@/app/wallets"
 
-import {
-  AccountStatus,
-  AccountValidator,
-  InvalidAccountForDeletionError,
-} from "@/domain/accounts"
+import { AccountStatus, InvalidAccountForDeletionError } from "@/domain/accounts"
 import { AccountHasPositiveBalanceError } from "@/domain/authentication/errors"
+import { CouldNotFindError, InactiveAccountError } from "@/domain/errors"
+import {
+  MigrationFlowPhase,
+  MigrationLnAddressTransferStatus,
+  MigrationStateConflictError,
+} from "@/domain/migration-flow"
 
 import { IdentityRepository } from "@/services/kratos"
 import { addEventToCurrentSpan } from "@/services/tracing"
-import { AccountsRepository, UsersRepository } from "@/services/mongoose"
+import {
+  AccountsRepository,
+  MigrationFlowStateRepository,
+  UsersRepository,
+} from "@/services/mongoose"
+
+const ALLOWED_STATUSES: AccountStatus[] = [
+  AccountStatus.Active,
+  AccountStatus.Invited,
+  AccountStatus.Migrated,
+]
 
 export const markAccountForDeletion = async ({
   accountId,
@@ -29,8 +41,22 @@ export const markAccountForDeletion = async ({
   const accountsRepo = AccountsRepository()
   const account = await accountsRepo.findById(accountId)
   if (account instanceof Error) return account
-  const accountValidator = AccountValidator(account)
-  if (accountValidator instanceof Error) return accountValidator
+  if (!ALLOWED_STATUSES.includes(account.status)) {
+    return new InactiveAccountError(account.id)
+  }
+
+  const flow = await MigrationFlowStateRepository().findByAccountId(accountId)
+  if (flow instanceof Error && !(flow instanceof CouldNotFindError)) return flow
+  if (!(flow instanceof Error) && flow.phase === MigrationFlowPhase.Transferring) {
+    return new MigrationStateConflictError(
+      "account deletion is unavailable while a migration transfer is in flight",
+    )
+  }
+
+  const keepMerchant =
+    account.username !== undefined &&
+    !(flow instanceof Error) &&
+    usernameTransferredToSpark({ flow, username: account.username })
 
   const wallets = await listWalletsByAccountId(account.id)
   if (wallets instanceof Error) return wallets
@@ -84,7 +110,7 @@ export const markAccountForDeletion = async ({
     updatedByPrivilegedClientId,
   })
 
-  if (account.username) {
+  if (account.username && !keepMerchant) {
     await deleteMerchantByUsername({ username: account.username })
   }
 
@@ -96,4 +122,21 @@ export const markAccountForDeletion = async ({
   if (deletionResult instanceof Error) return deletionResult
 
   return true
+}
+
+const usernameTransferredToSpark = ({
+  flow,
+  username,
+}: {
+  flow: MigrationFlow
+  username: Username
+}): boolean => {
+  const successPrefixes = [
+    `${username}: ${MigrationLnAddressTransferStatus.Transferred}`,
+    `${username}: ${MigrationLnAddressTransferStatus.AlreadyTransferred}`,
+  ]
+  return flow.steps.some(({ step, detail }) => {
+    if (step !== "ln-address-transfer" || detail === undefined) return false
+    return successPrefixes.some((prefix) => detail.startsWith(prefix))
+  })
 }
