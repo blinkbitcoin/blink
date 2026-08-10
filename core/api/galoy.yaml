@@ -254,7 +254,7 @@ paymentNetworks:
           displayName: Priority
           description: Estimated broadcast ~10 minutes
           feeStrategies:
-            - tiered_send
+            - exponential_decay_fast
             - imbalance_withdrawal
             - internal_send
         medium:
@@ -262,7 +262,7 @@ paymentNetworks:
           displayName: Standard
           description: Estimated broadcast ~1 hour
           feeStrategies:
-            - tiered_send
+            - exponential_decay_medium
             - imbalance_withdrawal
             - internal_send
         slow:
@@ -270,7 +270,7 @@ paymentNetworks:
           displayName: Flexible
           description: Estimated broadcast ~24 hours
           feeStrategies:
-            - tiered_send
+            - exponential_decay_slow
             - imbalance_withdrawal
             - internal_send
       rebalance:

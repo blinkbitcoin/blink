@@ -453,19 +453,31 @@ const paymentNetworksSchema = {
             queueName: "dev-queue",
             displayName: "Priority",
             description: "Estimated broadcast ~10 minutes",
-            feeStrategies: ["tiered_send", "imbalance_withdrawal", "internal_send"],
+            feeStrategies: [
+              "exponential_decay_fast",
+              "imbalance_withdrawal",
+              "internal_send",
+            ],
           },
           medium: {
             queueName: "dev-medium-queue",
             displayName: "Standard",
             description: "Estimated broadcast ~1 hour",
-            feeStrategies: ["tiered_send", "imbalance_withdrawal", "internal_send"],
+            feeStrategies: [
+              "exponential_decay_medium",
+              "imbalance_withdrawal",
+              "internal_send",
+            ],
           },
           slow: {
             queueName: "dev-slow-queue",
             displayName: "Flexible",
             description: "Estimated broadcast ~24 hours",
-            feeStrategies: ["tiered_send", "imbalance_withdrawal", "internal_send"],
+            feeStrategies: [
+              "exponential_decay_slow",
+              "imbalance_withdrawal",
+              "internal_send",
+            ],
           },
         },
         rebalance: {
