@@ -164,6 +164,31 @@ const updatedByPrivilegedClientId = randomUUID() as PrivilegedClientId
 const randomLightningMemo = () =>
   "this is my lightning memo #" + (Math.random() * 1_000_000).toFixed()
 
+const lndInvoiceLookupFor = ({
+  invoice,
+  description,
+}: {
+  invoice: LnInvoice
+  description: string
+}) =>
+  ({
+    paymentHash: invoice.paymentHash,
+    createdAt: new Date(),
+    confirmedAt: undefined,
+    isSettled: false,
+    isHeld: false,
+    heldAt: undefined,
+    roundedDownReceived: toSats(0),
+    milliSatsReceived: 0 as MilliSatoshis,
+    secretPreImage: "secret" as SecretPreImage,
+    lnInvoice: {
+      description,
+      paymentRequest: invoice.paymentRequest,
+      expiresAt: invoice.expiresAt,
+      roundedDownAmount: invoice.amount || toSats(0),
+    },
+  }) as LnInvoiceLookup
+
 describe("initiated via lightning", () => {
   describe("fee probe", () => {
     it("fails if amount greater than limit", async () => {
@@ -1086,6 +1111,10 @@ describe("initiated via lightning", () => {
       jest.spyOn(LndImpl, "LndService").mockReturnValue({
         ...LnServiceOrig(),
         listAllPubkeys: () => [noAmountLnInvoice.destination],
+        lookupInvoice: () =>
+          Promise.resolve(
+            lndInvoiceLookupFor({ invoice: noAmountLnInvoice, description: "" }),
+          ),
         cancelInvoice: () => true,
       })
 
@@ -1136,6 +1165,7 @@ describe("initiated via lightning", () => {
       if (receive instanceof Error) throw receive
 
       // Execute pay
+      expect(noAmountLnInvoice.description).toBe("")
       await Payments.payNoAmountInvoiceByWalletIdForBtcWallet({
         uncheckedPaymentRequest: noAmountLnInvoice.paymentRequest,
         memo,
@@ -1151,12 +1181,20 @@ describe("initiated via lightning", () => {
       expect(args.metadata.type).toBe(LedgerTransactionType.LnTradeIntraAccount)
     })
 
-    it("records transaction with ln-intraledger metadata on intraledger send", async () => {
+    it("records LNURL-style intraledger receiver memo from LND invoice lookup", async () => {
       // Setup mocks
+      const lnurlComment = randomLightningMemo()
       const { LndService: LnServiceOrig } = jest.requireActual("@/services/lnd")
+      const lookupInvoice = jest.fn().mockResolvedValue(
+        lndInvoiceLookupFor({
+          invoice: noAmountLnInvoice,
+          description: lnurlComment,
+        }),
+      )
       jest.spyOn(LndImpl, "LndService").mockReturnValue({
         ...LnServiceOrig(),
         listAllPubkeys: () => [noAmountLnInvoice.destination],
+        lookupInvoice,
         cancelInvoice: () => true,
       })
 
@@ -1219,8 +1257,29 @@ describe("initiated via lightning", () => {
       // Check record function was called with right metadata
       expect(displayAmountsConverterSpy).toHaveBeenCalledTimes(2)
       expect(lnIntraledgerLedgerMetadataSpy).toHaveBeenCalledTimes(1)
+      expect(lookupInvoice).toHaveBeenCalledWith({
+        pubkey: noAmountLnInvoice.destination,
+        paymentHash: noAmountLnInvoice.paymentHash,
+      })
+      expect(lnIntraledgerLedgerMetadataSpy.mock.calls[0][0]).toEqual(
+        expect.objectContaining({
+          memoOfPayer: memo,
+          memoForRecipient: lnurlComment,
+        }),
+      )
       const args = recordIntraledgerSpy.mock.calls[0][0]
+      expect(args.description).toBe("")
       expect(args.metadata.type).toBe(LedgerTransactionType.LnIntraLedger)
+      expect(args.additionalDebitMetadata).toEqual(
+        expect.objectContaining({
+          memoPayer: memo,
+        }),
+      )
+      expect(args.additionalCreditMetadata).toEqual(
+        expect.objectContaining({
+          memoPayer: lnurlComment,
+        }),
+      )
     })
   })
 })
