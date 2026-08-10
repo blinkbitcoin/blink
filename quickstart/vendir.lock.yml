@@ -2,24 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix(api): show LNURL memo on intraledger receives (#656)...'
-      sha: 447d65d551b77a66a340f103baab7d89c38dce63
+      commitTitle: 'feat(migration): close the account and release the phone after
+        migration completes (#758)...'
+      sha: 0f1848434a9cabec6a712fb422e74c9d9f1cc371
       tags:
-      - 0.22.38-2-g447d65d55
+      - 0.22.39-1-g0f1848434
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'fix(api): show LNURL memo on intraledger receives (#656)...'
-      sha: 447d65d551b77a66a340f103baab7d89c38dce63
+      commitTitle: 'feat(migration): close the account and release the phone after
+        migration completes (#758)...'
+      sha: 0f1848434a9cabec6a712fb422e74c9d9f1cc371
       tags:
-      - 0.22.38-2-g447d65d55
+      - 0.22.39-1-g0f1848434
     path: schemas
   - git:
-      commitTitle: 'fix(api): show LNURL memo on intraledger receives (#656)...'
-      sha: 447d65d551b77a66a340f103baab7d89c38dce63
+      commitTitle: 'feat(migration): close the account and release the phone after
+        migration completes (#758)...'
+      sha: 0f1848434a9cabec6a712fb422e74c9d9f1cc371
       tags:
-      - 0.22.38-2-g447d65d55
+      - 0.22.39-1-g0f1848434
     path: gql
   path: graphql
 kind: LockConfig
