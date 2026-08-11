@@ -1,10 +1,8 @@
 import { GT } from "@/graphql/index"
 import Timestamp from "@/graphql/shared/types/scalar/timestamp"
 
-// step details are written for operators, not for this surface: several carry the
-// drained amount, the bank-owner subsidy, or the residual balance. Only these are
-// cleared — a step added later stays redacted until it is added here on purpose, and
-// anything added here must be checked against the string the app layer actually writes.
+// step details are written for bastion operators: several quote the drained amount, the
+// bank-owner subsidy or the residual balance, so an unlisted step stays redacted
 const DETAIL_VISIBLE_STEPS: string[] = [
   "commit",
   "transfer-pending",
@@ -12,8 +10,16 @@ const DETAIL_VISIBLE_STEPS: string[] = [
   "retry-granted",
 ]
 
-export const visibleStepDetail = (step: MigrationFlowStep): string | null =>
-  DETAIL_VISIBLE_STEPS.includes(step.step) ? (step.detail ?? null) : null
+const QUOTES_AN_AMOUNT = /\d[\d,_ ]*\s*sats/i
+
+export const visibleStepDetail = (step: MigrationFlowStep): string | null => {
+  if (!DETAIL_VISIBLE_STEPS.includes(step.step)) return null
+
+  const detail = step.detail ?? null
+  if (detail !== null && QUOTES_AN_AMOUNT.test(detail)) return null
+
+  return detail
+}
 
 const MigrationFlowStep = GT.Object<MigrationFlowStep>({
   name: "MigrationFlowStep",

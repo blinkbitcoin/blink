@@ -4,8 +4,6 @@ import { GT } from "@/graphql/index"
 import MigrationStatus from "@/graphql/public/types/scalar/migration-status"
 import Timestamp from "@/graphql/shared/types/scalar/timestamp"
 
-// deliberately carries no amounts: the retry decision never needs the drained balance
-// or the bank-owner top-up, so they are not exposed here
 const MigrationFlowDetails = GT.Object<MigrationFlow>({
   name: "MigrationFlowDetails",
   fields: () => ({

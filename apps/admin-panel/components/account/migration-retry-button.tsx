@@ -10,16 +10,12 @@ export type RetryGrantState = {
 
 export const initialRetryGrantState: RetryGrantState = { error: null, granted: false }
 
-const SubmitButton: React.FC<{ disabled: boolean; title?: string }> = ({
-  disabled,
-  title,
-}) => {
+const SubmitButton: React.FC = () => {
   const { pending } = useFormStatus()
 
   return (
     <button
-      disabled={disabled || pending}
-      title={title}
+      disabled={pending}
       className="text-sm bg-green-500 hover:bg-green-700 text-white font-bold p-2 border border-green-700 rounded disabled:opacity-50"
     >
       {pending ? "Granting…" : "Grant retry"}
@@ -30,16 +26,9 @@ const SubmitButton: React.FC<{ disabled: boolean; title?: string }> = ({
 type PropType = {
   accountId: string
   action: (previous: RetryGrantState, formData: FormData) => Promise<RetryGrantState>
-  disabled: boolean
-  disabledReason?: string
 }
 
-const MigrationRetryButton: React.FC<PropType> = ({
-  accountId,
-  action,
-  disabled,
-  disabledReason,
-}) => {
+const MigrationRetryButton: React.FC<PropType> = ({ accountId, action }) => {
   const [state, formAction] = useFormState(action, initialRetryGrantState)
 
   function confirmGrant(e: FormEvent) {
@@ -56,9 +45,8 @@ const MigrationRetryButton: React.FC<PropType> = ({
     <div>
       <form action={formAction} onSubmit={confirmGrant}>
         <input type="hidden" name="accountId" value={accountId} />
-        <SubmitButton disabled={disabled} title={disabledReason} />
+        <SubmitButton />
       </form>
-      {/* the guard puts its operator guidance in the message, so it is shown verbatim */}
       {state.error && (
         <p className="mt-2 text-sm text-red-600 break-words">{state.error}</p>
       )}

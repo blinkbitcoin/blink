@@ -13,8 +13,7 @@ export enum AdminAccessRight {
   LOCK_ACCOUNT = "LOCK_ACCOUNT",
   VIEW_MERCHANTS = "VIEW_MERCHANTS",
 
-  // ADMIN-only: carried by no support role, so it is granted solely through
-  // ADMIN_RIGHTS below. Widen by adding it to a role, not by relaxing the mutation.
+  // ADMIN-only: widen by adding it to a role, never by relaxing the mutation
   MIGRATION_RETRY_GRANT = "MIGRATION_RETRY_GRANT",
 }
 

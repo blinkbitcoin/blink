@@ -63,9 +63,7 @@ const Migration = async ({ accountId, scope }: PropType) => {
   })
 
   const flow = data?.migrationFlow
-  if (!flow) return null
-
-  const isFailed = flow.status === MigrationStatus.Failed
+  if (!flow || flow.status !== MigrationStatus.Failed) return null
 
   return (
     <div className="shadow p-6 min-w-0 rounded-lg shadow-xs overflow-hidden bg-white">
@@ -106,16 +104,7 @@ const Migration = async ({ accountId, scope }: PropType) => {
       </ol>
 
       <div className="mt-4">
-        <MigrationRetryButton
-          accountId={accountId}
-          action={grantRetry}
-          disabled={!isFailed}
-          disabledReason={
-            isFailed
-              ? undefined
-              : `Only a FAILED migration can be retried (${flow.status})`
-          }
-        />
+        <MigrationRetryButton accountId={accountId} action={grantRetry} />
       </div>
     </div>
   )
