@@ -100,7 +100,7 @@ services:
     - POSTGRES_PASSWORD=secret
     - POSTGRES_DB=hydra
   galoy:
-    image: us.gcr.io/galoy-org/galoy-api@sha256:8df0c3d0078c7164db0ea1c682fc94d70fa3ce3ae5265aa9052dfc4364793c1c
+    image: us.gcr.io/galoy-org/galoy-api@sha256:767cbc7e245054da7f5dca5e6d8caf269e81b8cb42ebfb8a97502bcf0316f12d
     environment:
     - HELMREVISION=dev
     - NETWORK=regtest
@@ -159,7 +159,7 @@ services:
         aliases:
         - bats-tests
   trigger:
-    image: us.gcr.io/galoy-org/galoy-api-trigger@sha256:4b27115c4e6ed256dbacf8e2c33c191be17ddb78c332c89a8d3b03e7c8738aa8
+    image: us.gcr.io/galoy-org/galoy-api-trigger@sha256:b64f228f74a716a4d8a16ea5fa220fb84f9b5f7a3d3b38091d8dc3259f3ad516
     environment:
     - HELMREVISION=dev
     - NETWORK=regtest
@@ -271,7 +271,7 @@ services:
     environment:
     - MONGO_INITDB_DATABASE=galoy
   mongodb-migrate:
-    image: us.gcr.io/galoy-org/galoy-api-migrate@sha256:5e6f57b68dd624f0186c34af013ca950cfb7978b1150b489839ff9812e8b3fb3
+    image: us.gcr.io/galoy-org/galoy-api-migrate@sha256:ee40c1ad100638a287620e3d76cb4a3a23a7409f49affdff231ddd5b3c28ee48
     depends_on:
     - mongodb
     environment:
@@ -328,13 +328,13 @@ services:
       timeout: 30s
       retries: 5
   bitcoind:
-    image: lnliz/bitcoind:v28.4
+    image: lnliz/bitcoind:v31.1
     ports:
     - 18443:18443
     volumes:
     - ${HOST_PROJECT_PATH:-.}/${GALOY_QUICKSTART_PATH:-vendor/blink-quickstart}/dev/config/bitcoind/bitcoin.conf:/data/.bitcoin/bitcoin.conf
   bitcoind-signer:
-    image: lnliz/bitcoind:v28.4
+    image: lnliz/bitcoind:v31.1
     ports: []
     volumes:
     - ${HOST_PROJECT_PATH:-.}/${GALOY_QUICKSTART_PATH:-vendor/blink-quickstart}/dev/config/bitcoind/bitcoin.conf:/data/.bitcoin/bitcoin.conf

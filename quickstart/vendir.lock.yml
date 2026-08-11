@@ -2,27 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat(migration): close the account and release the phone after
-        migration completes (#758)...'
-      sha: 0f1848434a9cabec6a712fb422e74c9d9f1cc371
+      commitTitle: 'test: bitcoind updatet to v31.1 (#762)'
+      sha: e9614e1540675ff563b7d06a8b855bf527e8c074
       tags:
-      - 0.22.39-1-g0f1848434
+      - 0.22.40-1-ge9614e154
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat(migration): close the account and release the phone after
-        migration completes (#758)...'
-      sha: 0f1848434a9cabec6a712fb422e74c9d9f1cc371
+      commitTitle: 'test: bitcoind updatet to v31.1 (#762)'
+      sha: e9614e1540675ff563b7d06a8b855bf527e8c074
       tags:
-      - 0.22.39-1-g0f1848434
+      - 0.22.40-1-ge9614e154
     path: schemas
   - git:
-      commitTitle: 'feat(migration): close the account and release the phone after
-        migration completes (#758)...'
-      sha: 0f1848434a9cabec6a712fb422e74c9d9f1cc371
+      commitTitle: 'test: bitcoind updatet to v31.1 (#762)'
+      sha: e9614e1540675ff563b7d06a8b855bf527e8c074
       tags:
-      - 0.22.39-1-g0f1848434
+      - 0.22.40-1-ge9614e154
     path: gql
   path: graphql
 kind: LockConfig
