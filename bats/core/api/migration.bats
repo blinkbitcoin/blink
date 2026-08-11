@@ -567,7 +567,7 @@ read_flow_for() {
   # the commit step keeps its hash, which carries no amount
   [[ "$(graphql_output '.data.migrationFlow.steps[] | select(.step == "commit") | .detail')" == "paymentHash: $payment_hash" ]] || exit 1
 
-  # nothing anywhere in the payload leaks the drained amount
+  # no amount appears anywhere in the payload
   [[ "$(graphql_output '.data.migrationFlow' | grep -c "$funding_sats")" == "0" ]] || exit 1
 }
 

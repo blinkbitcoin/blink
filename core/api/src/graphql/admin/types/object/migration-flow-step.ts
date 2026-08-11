@@ -1,8 +1,6 @@
 import { GT } from "@/graphql/index"
 import Timestamp from "@/graphql/shared/types/scalar/timestamp"
 
-// step details are written for bastion operators: several quote the drained amount, the
-// bank-owner subsidy or the residual balance, so an unlisted step stays redacted
 const DETAIL_VISIBLE_STEPS: string[] = [
   "commit",
   "transfer-pending",
@@ -10,7 +8,7 @@ const DETAIL_VISIBLE_STEPS: string[] = [
   "retry-granted",
 ]
 
-const QUOTES_AN_AMOUNT = /\d[\d,_ ]*\s*sats/i
+const QUOTES_AN_AMOUNT = /\d[\d,_ ]*\s*sats?\b/i
 
 export const visibleStepDetail = (step: MigrationFlowStep): string | null => {
   if (!DETAIL_VISIBLE_STEPS.includes(step.step)) return null

@@ -14,18 +14,16 @@ describe("visibleStepDetail", () => {
   })
 
   it.each([
-    [
-      "drain-computed",
-      "amount: 200000 sats, reserve: 2000 sats, expected residual: 0 sats",
-    ],
-    ["reserve-top-up", "10 sats from bank owner; Blink covered the Spark network fee"],
-    ["residual-top-up", "1 sats from bank owner; makes the drain land on zero"],
-    ["top-up-reclaimed", "10 sats returned to bank owner"],
-    ["top-up-reclaim-failed", "10 sats could not be reclaimed"],
-    ["transfer-skipped", "zero balance"],
-    ["transfer-settled", "residual balance: 9 sats"],
-  ])("redacts the amount-bearing detail of %s", (step, detail) => {
-    expect(visibleStepDetail(stepWith(step, detail))).toBeNull()
+    "drain-computed",
+    "reserve-top-up",
+    "residual-top-up",
+    "top-up-reclaimed",
+    "top-up-reclaim-failed",
+    "transfer-skipped",
+    "transfer-settled",
+  ])("redacts the detail of %s", (step) => {
+    expect(visibleStepDetail(stepWith(step, "123 sats"))).toBeNull()
+    expect(visibleStepDetail(stepWith(step, "any detail at all"))).toBeNull()
   })
 
   it.each([
@@ -41,10 +39,10 @@ describe("visibleStepDetail", () => {
   })
 
   it.each([
-    ["transfer-failed", "negative balance: -5 sats"],
-    ["commit", "paymentHash: abc123 (200000 sats)"],
-    ["retry-granted", "admin: client-id, 1234 sats stranded"],
-  ])("redacts a cleared step whose detail quotes an amount: %s", (step, detail) => {
+    ["transfer-failed", "failed: -5 sats"],
+    ["commit", "paymentHash: abc123 (1 sat)"],
+    ["retry-granted", "admin: client-id, 1_234 sats"],
+  ])("redacts a listed step whose detail quotes an amount: %s", (step, detail) => {
     expect(visibleStepDetail(stepWith(step, detail))).toBeNull()
   })
 
