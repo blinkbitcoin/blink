@@ -42,8 +42,7 @@ const checkAttemptMovedNoMoney = async ({
       )
   }
 
-  // the ledger void is blink's own conclusion; only LND can prove no HTLC is still
-  // outstanding — an in-flight payment settling after the $unset would double-credit
+  // a void is blink's conclusion, not LND's receipt; only LND proves no HTLC is in flight
   const lndService = LndService()
   if (lndService instanceof Error) return lndService
 
