@@ -1,0 +1,6 @@
+query AccountIdentifier($username: Username!) {
+  accountIdentifier(username: $username) {
+    exists
+    provider
+  }
+}

@@ -1,5 +1,10 @@
 type AccountError = import("./errors").AccountError
 
+type AccountIdentifier = {
+  exists: boolean
+  provider: LnurlServerProvider | null
+}
+
 type CurrencyRatio = number & { readonly brand: unique symbol }
 type AccountLevel =
   (typeof import("./index").AccountLevel)[keyof typeof import("./index").AccountLevel]

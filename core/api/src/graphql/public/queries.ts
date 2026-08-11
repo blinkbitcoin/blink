@@ -14,6 +14,8 @@ import OnChainTxFeeQuery from "@/graphql/public/root/query/on-chain-tx-fee-query
 import OnChainUsdTxFeeQuery from "@/graphql/public/root/query/on-chain-usd-tx-fee-query"
 import OnChainUsdTxFeeAsBtcDenominatedQuery from "@/graphql/public/root/query/on-chain-usd-tx-fee-query-as-sats"
 import UsernameAvailableQuery from "@/graphql/public/root/query/username-available"
+import AccountIdentifierQuery from "@/graphql/public/root/query/account-identifier"
+import LnAddressInvoicePaymentStatusQuery from "@/graphql/public/root/query/ln-address-invoice-payment-status"
 import BusinessMapMarkersQuery from "@/graphql/public/root/query/business-map-markers"
 import AccountDefaultWalletQuery from "@/graphql/public/root/query/account-default-wallet"
 import AccountDefaultWalletIdQuery from "@/graphql/public/root/query/account-default-wallet-id"
@@ -26,6 +28,8 @@ export const queryFields = {
   unauthed: {
     globals: GlobalsQuery,
     usernameAvailable: UsernameAvailableQuery,
+    accountIdentifier: AccountIdentifierQuery,
+    lnAddressInvoicePaymentStatus: LnAddressInvoicePaymentStatusQuery,
     userDefaultWalletId: AccountDefaultWalletIdQuery, // FIXME: migrate to AccountDefaultWalletId
     accountDefaultWallet: AccountDefaultWalletQuery,
     businessMapMarkers: BusinessMapMarkersQuery,

@@ -66,6 +66,16 @@ input AccountEnableNotificationChannelInput {
   channel: NotificationChannel!
 }
 
+type AccountIdentifier {
+  """Whether a Blink account exists for the given username."""
+  exists: Boolean!
+
+  """
+  The backing provider of the account (blink or spark). Null when the account does not exist.
+  """
+  provider: AccountProvider
+}
+
 enum AccountLevel {
   ONE
   THREE
@@ -110,6 +120,11 @@ type AccountMigrationPreview {
   feeCoveredByBlink: Boolean!
   feeSats: SatAmount!
   receiveSats: SatAmount!
+}
+
+enum AccountProvider {
+  BLINK
+  SPARK
 }
 
 input AccountUpdateDefaultWalletIdInput {
@@ -633,6 +648,44 @@ enum InvoicePaymentStatus {
 
 scalar Language
 
+type LnAddressInvoice {
+  paymentHash: PaymentHash!
+
+  """BOLT-11 payment request to be paid to the lightning address."""
+  paymentRequest: LnPaymentRequest!
+
+  """
+  LUD-21 verify url. Prefer the lnAddressInvoicePaymentStatus query with the paymentHash to check settlement.
+  """
+  verify: String!
+}
+
+input LnAddressInvoiceCreateInput {
+  """Amount in satoshis."""
+  amount: SatAmount!
+
+  """Blink lightning address to create an invoice for (user@domain)."""
+  lnAddress: String!
+}
+
+type LnAddressInvoicePayload {
+  errors: [Error!]!
+  invoice: LnAddressInvoice
+}
+
+type LnAddressInvoicePaymentStatus {
+  """Payment preimage, present once the invoice is settled."""
+  preimage: LnPaymentPreImage
+
+  """Whether the invoice has been paid."""
+  settled: Boolean!
+}
+
+input LnAddressInvoicePaymentStatusInput {
+  """Payment hash of the invoice created via lnAddressInvoiceCreate."""
+  paymentHash: PaymentHash!
+}
+
 input LnAddressPaymentSendInput {
   """Amount in satoshis."""
   amount: SatAmount!
@@ -1039,6 +1092,13 @@ type Mutation {
   """
   intraLedgerUsdPaymentSend(input: IntraLedgerUsdPaymentSendInput!): PaymentSendPayload!
 
+  """
+  Returns a lightning invoice for a Blink lightning address.
+  Works for both custodial and non-custodial (Spark) recipients.
+  Use lnAddressInvoicePaymentStatus with the returned paymentHash to check settlement.
+  """
+  lnAddressInvoiceCreate(input: LnAddressInvoiceCreateInput!): LnAddressInvoicePayload!
+
   """Sends a payment to a lightning address."""
   lnAddressPaymentSend(input: LnAddressPaymentSendInput!): PaymentSendPayload!
 
@@ -1401,6 +1461,7 @@ type PublicWallet {
 
 type Query {
   accountDefaultWallet(username: Username!, walletCurrency: WalletCurrency): PublicWallet!
+  accountIdentifier(username: Username!): AccountIdentifier!
 
   """Retrieve the list of scopes permitted for the user's token or API key"""
   authorization: Authorization!
@@ -1417,6 +1478,7 @@ type Query {
   ): CurrencyConversionEstimation!
   currencyList: [Currency!]!
   globals: Globals
+  lnAddressInvoicePaymentStatus(input: LnAddressInvoicePaymentStatusInput!): LnAddressInvoicePaymentStatus!
   lnInvoicePaymentStatus(input: LnInvoicePaymentStatusInput!): LnInvoicePaymentStatusPayload! @deprecated(reason: "Deprecated in favor of lnInvoicePaymentStatusByPaymentRequest")
   lnInvoicePaymentStatusByHash(input: LnInvoicePaymentStatusByHashInput!): LnInvoicePaymentStatus!
   lnInvoicePaymentStatusByPaymentRequest(input: LnInvoicePaymentStatusByPaymentRequestInput!): LnInvoicePaymentStatus!
