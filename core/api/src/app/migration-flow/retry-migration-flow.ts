@@ -1,6 +1,6 @@
 import { PaymentStatus } from "@/domain/bitcoin/lightning"
 import {
-  FailedLnPaymentStates,
+  LnPaymentState,
   LnPaymentStateDeterminator,
 } from "@/domain/ledger/ln-payment-state"
 import { MigrationFlowPhase, MigrationStateConflictError } from "@/domain/migration-flow"
@@ -30,10 +30,16 @@ const checkAttemptMovedNoMoney = async ({
   const paymentState = LnPaymentStateDeterminator(ledgerTxns).determine()
   if (paymentState instanceof Error) return paymentState
 
-  if (!FailedLnPaymentStates.includes(paymentState)) {
-    return new MigrationStateConflictError(
-      `prior attempt is not terminally failed (${paymentState}) — the settle path owns it`,
-    )
+  switch (paymentState) {
+    case LnPaymentState.Failed:
+    case LnPaymentState.FailedAfterRetry:
+    case LnPaymentState.FailedAfterSuccess:
+    case LnPaymentState.FailedAfterSuccessWithReimbursement:
+      break
+    default:
+      return new MigrationStateConflictError(
+        `prior attempt is not terminally failed (${paymentState}) — the settle path owns it`,
+      )
   }
 
   // the ledger void is blink's own conclusion; only LND can prove no HTLC is still

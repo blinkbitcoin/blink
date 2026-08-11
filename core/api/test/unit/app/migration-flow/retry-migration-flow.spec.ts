@@ -28,7 +28,6 @@ import { retryMigrationFlow } from "@/app/migration-flow/retry-migration-flow"
 import { PaymentStatus } from "@/domain/bitcoin/lightning"
 import { CouldNotFindMigrationFlowStateError } from "@/domain/errors"
 import { LedgerTransactionType } from "@/domain/ledger"
-import { FailedLnPaymentStates, LnPaymentState } from "@/domain/ledger/ln-payment-state"
 import { MigrationFlowPhase, MigrationStateConflictError } from "@/domain/migration-flow"
 
 const mocks = jest.requireMock("@/services/mongoose").__mocks as {
@@ -313,14 +312,5 @@ describe("retryMigrationFlow", () => {
 
     expect(result).toBeInstanceOf(Error)
     expect(mocks.resetForRetry).not.toHaveBeenCalled()
-  })
-
-  it("pins the terminally-failed verdict set to resume's four states", () => {
-    expect(FailedLnPaymentStates).toEqual([
-      LnPaymentState.Failed,
-      LnPaymentState.FailedAfterRetry,
-      LnPaymentState.FailedAfterSuccess,
-      LnPaymentState.FailedAfterSuccessWithReimbursement,
-    ])
   })
 })
