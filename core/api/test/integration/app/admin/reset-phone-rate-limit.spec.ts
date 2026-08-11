@@ -4,6 +4,7 @@ import { RedisRateLimitService, resetLimiter } from "@/services/rate-limit"
 
 describe("resetPhoneRateLimit integration", () => {
   const phone = "+14155550123" as PhoneNumber
+  const resetByPrivilegedClientId = "integration-test-client" as PrivilegedClientId
   const rateLimitConfig = RateLimitConfig.loginAttemptPerLoginIdentifier
 
   beforeEach(async () => {
@@ -29,7 +30,7 @@ describe("resetPhoneRateLimit integration", () => {
     expect(exceededResult).toBeInstanceOf(Error)
 
     // Reset the rate limit
-    const resetResult = await resetPhoneRateLimit(phone)
+    const resetResult = await resetPhoneRateLimit({ phone, resetByPrivilegedClientId })
     expect(resetResult).toBe(true)
 
     // Verify rate limit is reset

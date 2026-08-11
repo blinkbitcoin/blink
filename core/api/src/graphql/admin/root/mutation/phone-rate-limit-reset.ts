@@ -1,14 +1,8 @@
-import { createHmac } from "crypto"
-
 import { GT } from "@/graphql/index"
 import { Admin } from "@/app"
-import { KRATOS_MASTER_USER_PASSWORD } from "@/config"
 import PhoneRateLimitResetInput from "@/graphql/admin/types/object/phone-rate-limit-reset-input"
 import SuccessPayload from "@/graphql/shared/types/payload/success-payload"
 import { mapAndParseErrorForGqlResponse } from "@/graphql/error-map"
-
-const phoneHashForAudit = (phone: PhoneNumber, key: string): string =>
-  createHmac("sha256", key).update(`phone-rate-limit-reset:${phone}`).digest("hex")
 
 const PhoneRateLimitResetMutation = GT.Field<
   null,
@@ -22,7 +16,7 @@ const PhoneRateLimitResetMutation = GT.Field<
   args: {
     input: { type: GT.NonNull(PhoneRateLimitResetInput) },
   },
-  resolve: async (_, args, { logger, privilegedClientId }) => {
+  resolve: async (_, args, { privilegedClientId }) => {
     const { phone } = args.input
 
     if (phone instanceof Error) {
@@ -32,15 +26,10 @@ const PhoneRateLimitResetMutation = GT.Field<
       }
     }
 
-    const result = await Admin.resetPhoneRateLimit(phone)
-    logger.info(
-      {
-        privilegedClientId,
-        phoneHash: phoneHashForAudit(phone, KRATOS_MASTER_USER_PASSWORD),
-        success: !(result instanceof Error),
-      },
-      "Phone auth rate limit reset",
-    )
+    const result = await Admin.resetPhoneRateLimit({
+      phone,
+      resetByPrivilegedClientId: privilegedClientId,
+    })
 
     if (result instanceof Error) {
       return {
