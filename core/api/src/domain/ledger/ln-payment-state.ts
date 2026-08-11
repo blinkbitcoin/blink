@@ -16,6 +16,13 @@ export const LnPaymentState = {
     "ln_payment.failed_after_success_with_reimbursement",
 } as const
 
+export const FailedLnPaymentStates: readonly LnPaymentState[] = [
+  LnPaymentState.Failed,
+  LnPaymentState.FailedAfterRetry,
+  LnPaymentState.FailedAfterSuccess,
+  LnPaymentState.FailedAfterSuccessWithReimbursement,
+]
+
 const isDebit = (txn: LedgerTransaction<WalletCurrency>) => (txn.debit || 0) > 0
 
 const bundleErrMsg = ({

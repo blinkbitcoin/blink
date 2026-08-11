@@ -6,6 +6,13 @@ jest.mock("@/services/ledger", () => ({
   }),
 }))
 
+jest.mock("@/services/lnd", () => ({
+  __mockLookupPayment: jest.fn(),
+  LndService: () => ({
+    lookupPayment: jest.requireMock("@/services/lnd").__mockLookupPayment,
+  }),
+}))
+
 jest.mock("@/services/mongoose", () => ({
   __mocks: {
     findFlowByAccountId: jest.fn(),
@@ -18,8 +25,10 @@ jest.mock("@/services/mongoose", () => ({
 }))
 
 import { retryMigrationFlow } from "@/app/migration-flow/retry-migration-flow"
+import { PaymentStatus } from "@/domain/bitcoin/lightning"
 import { CouldNotFindMigrationFlowStateError } from "@/domain/errors"
 import { LedgerTransactionType } from "@/domain/ledger"
+import { FailedLnPaymentStates, LnPaymentState } from "@/domain/ledger/ln-payment-state"
 import { MigrationFlowPhase, MigrationStateConflictError } from "@/domain/migration-flow"
 
 const mocks = jest.requireMock("@/services/mongoose").__mocks as {
@@ -28,6 +37,8 @@ const mocks = jest.requireMock("@/services/mongoose").__mocks as {
 }
 const mockGetTransactionsByHash = jest.requireMock("@/services/ledger")
   .__mockGetTransactionsByHash as jest.Mock
+const mockLookupPayment = jest.requireMock("@/services/lnd")
+  .__mockLookupPayment as jest.Mock
 
 describe("retryMigrationFlow", () => {
   const accountId = "account-id" as AccountId
@@ -85,6 +96,7 @@ describe("retryMigrationFlow", () => {
     jest.clearAllMocks()
     mocks.resetForRetry.mockResolvedValue(resetFlow)
     mockGetTransactionsByHash.mockResolvedValue([])
+    mockLookupPayment.mockResolvedValue({ status: PaymentStatus.Failed })
   })
 
   it("resets a FAILED flow whose hash never reached the ledger", async () => {
@@ -95,6 +107,7 @@ describe("retryMigrationFlow", () => {
     const result = await retryMigrationFlow({ accountId, updatedByPrivilegedClientId })
 
     expect(mockGetTransactionsByHash).toHaveBeenCalledWith(paymentHash)
+    expect(mockLookupPayment).not.toHaveBeenCalled()
     expect(mocks.resetForRetry).toHaveBeenCalledWith({
       accountId,
       fromPhase: MigrationFlowPhase.Failed,
@@ -111,8 +124,49 @@ describe("retryMigrationFlow", () => {
 
     const result = await retryMigrationFlow({ accountId, updatedByPrivilegedClientId })
 
+    expect(mockLookupPayment).toHaveBeenCalledWith({ paymentHash })
     expect(mocks.resetForRetry).toHaveBeenCalledTimes(1)
     expect(result).toBe(resetFlow)
+  })
+
+  it("refuses a failed-verdict flow while LND still reports the payment in flight", async () => {
+    mocks.findFlowByAccountId.mockResolvedValue(
+      flowIn(MigrationFlowPhase.Failed, paymentHash),
+    )
+    mockGetTransactionsByHash.mockResolvedValue(failedBundle)
+    mockLookupPayment.mockResolvedValue({ status: PaymentStatus.Pending })
+
+    const result = await retryMigrationFlow({ accountId, updatedByPrivilegedClientId })
+
+    expect(result).toBeInstanceOf(MigrationStateConflictError)
+    expect(mocks.resetForRetry).not.toHaveBeenCalled()
+  })
+
+  it("refuses a failed-verdict flow that LND reports as settled", async () => {
+    mocks.findFlowByAccountId.mockResolvedValue(
+      flowIn(MigrationFlowPhase.Failed, paymentHash),
+    )
+    mockGetTransactionsByHash.mockResolvedValue(failedBundle)
+    mockLookupPayment.mockResolvedValue({ status: PaymentStatus.Settled })
+
+    const result = await retryMigrationFlow({ accountId, updatedByPrivilegedClientId })
+
+    expect(result).toBeInstanceOf(MigrationStateConflictError)
+    expect(mocks.resetForRetry).not.toHaveBeenCalled()
+  })
+
+  it("refuses when the LND lookup fails or the payment is on no node", async () => {
+    mocks.findFlowByAccountId.mockResolvedValue(
+      flowIn(MigrationFlowPhase.Failed, paymentHash),
+    )
+    mockGetTransactionsByHash.mockResolvedValue(failedBundle)
+    const lookupError = new Error("payment not found on any node")
+    mockLookupPayment.mockResolvedValue(lookupError)
+
+    const result = await retryMigrationFlow({ accountId, updatedByPrivilegedClientId })
+
+    expect(result).toBe(lookupError)
+    expect(mocks.resetForRetry).not.toHaveBeenCalled()
   })
 
   it("resets a FAILED flow that never bound a hash without reading the ledger", async () => {
@@ -259,5 +313,14 @@ describe("retryMigrationFlow", () => {
 
     expect(result).toBeInstanceOf(Error)
     expect(mocks.resetForRetry).not.toHaveBeenCalled()
+  })
+
+  it("pins the terminally-failed verdict set to resume's four states", () => {
+    expect(FailedLnPaymentStates).toEqual([
+      LnPaymentState.Failed,
+      LnPaymentState.FailedAfterRetry,
+      LnPaymentState.FailedAfterSuccess,
+      LnPaymentState.FailedAfterSuccessWithReimbursement,
+    ])
   })
 })

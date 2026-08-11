@@ -1,10 +1,12 @@
+import { PaymentStatus } from "@/domain/bitcoin/lightning"
 import {
-  LnPaymentState,
+  FailedLnPaymentStates,
   LnPaymentStateDeterminator,
 } from "@/domain/ledger/ln-payment-state"
 import { MigrationFlowPhase, MigrationStateConflictError } from "@/domain/migration-flow"
 
 import { LedgerService } from "@/services/ledger"
+import { LndService } from "@/services/lnd"
 import { MigrationFlowStateRepository } from "@/services/mongoose"
 
 const checkAttemptMovedNoMoney = async ({
@@ -28,17 +30,27 @@ const checkAttemptMovedNoMoney = async ({
   const paymentState = LnPaymentStateDeterminator(ledgerTxns).determine()
   if (paymentState instanceof Error) return paymentState
 
-  switch (paymentState) {
-    case LnPaymentState.Failed:
-    case LnPaymentState.FailedAfterRetry:
-    case LnPaymentState.FailedAfterSuccess:
-    case LnPaymentState.FailedAfterSuccessWithReimbursement:
-      return true
-    default:
-      return new MigrationStateConflictError(
-        `prior attempt is not terminally failed (${paymentState}) — the settle path owns it`,
-      )
+  if (!FailedLnPaymentStates.includes(paymentState)) {
+    return new MigrationStateConflictError(
+      `prior attempt is not terminally failed (${paymentState}) — the settle path owns it`,
+    )
   }
+
+  // the ledger void is blink's own conclusion; only LND can prove no HTLC is still
+  // outstanding — an in-flight payment settling after the $unset would double-credit
+  const lndService = LndService()
+  if (lndService instanceof Error) return lndService
+
+  const lnPayment = await lndService.lookupPayment({ paymentHash: lnPaymentHash })
+  if (lnPayment instanceof Error) return lnPayment
+
+  if (lnPayment.status !== PaymentStatus.Failed) {
+    return new MigrationStateConflictError(
+      `LND reports the prior attempt as ${lnPayment.status} — never reset a payment that may still settle`,
+    )
+  }
+
+  return true
 }
 
 // a mid-send transfer has a bound hash but no ledger txn yet — indistinguishable from a
