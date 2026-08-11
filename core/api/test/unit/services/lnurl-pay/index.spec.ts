@@ -69,9 +69,8 @@ describe("LnurlPayService - SSRF guards", () => {
     })
 
     it("rejects a non-http(s) protocol", async () => {
-      const result = await LnurlPayService().checkInvoiceStatusFromVerifyUrl(
-        "file:///etc/passwd",
-      )
+      const result =
+        await LnurlPayService().checkInvoiceStatusFromVerifyUrl("file:///etc/passwd")
 
       expect(result).toBeInstanceOf(UnsupportedLnAddressDomainError)
     })

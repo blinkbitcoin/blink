@@ -101,6 +101,18 @@ input AccountEnableNotificationChannelInput
   channel: NotificationChannel!
 }
 
+type AccountIdentifier
+  @join__type(graph: PUBLIC)
+{
+  """Whether a Blink account exists for the given username."""
+  exists: Boolean!
+
+  """
+  The backing provider of the account (blink or spark). Null when the account does not exist.
+  """
+  provider: AccountProvider
+}
+
 enum AccountLevel
   @join__type(graph: PUBLIC)
 {
@@ -155,6 +167,13 @@ type AccountMigrationPreview
   feeCoveredByBlink: Boolean!
   feeSats: SatAmount!
   receiveSats: SatAmount!
+}
+
+enum AccountProvider
+  @join__type(graph: PUBLIC)
+{
+  BLINK @join__enumValue(graph: PUBLIC)
+  SPARK @join__enumValue(graph: PUBLIC)
 }
 
 input AccountUpdateDefaultWalletIdInput
@@ -960,6 +979,54 @@ enum link__Purpose {
   EXECUTION
 }
 
+type LnAddressInvoice
+  @join__type(graph: PUBLIC)
+{
+  paymentHash: PaymentHash!
+
+  """BOLT-11 payment request to be paid to the lightning address."""
+  paymentRequest: LnPaymentRequest!
+
+  """
+  LUD-21 verify url. Prefer the lnAddressInvoicePaymentStatus query with the paymentHash to check settlement.
+  """
+  verify: String!
+}
+
+input LnAddressInvoiceCreateInput
+  @join__type(graph: PUBLIC)
+{
+  """Amount in satoshis."""
+  amount: SatAmount!
+
+  """Blink lightning address to create an invoice for (user@domain)."""
+  lnAddress: String!
+}
+
+type LnAddressInvoicePayload
+  @join__type(graph: PUBLIC)
+{
+  errors: [Error!]!
+  invoice: LnAddressInvoice
+}
+
+type LnAddressInvoicePaymentStatus
+  @join__type(graph: PUBLIC)
+{
+  """Payment preimage, present once the invoice is settled."""
+  preimage: LnPaymentPreImage
+
+  """Whether the invoice has been paid."""
+  settled: Boolean!
+}
+
+input LnAddressInvoicePaymentStatusInput
+  @join__type(graph: PUBLIC)
+{
+  """Payment hash of the invoice created via lnAddressInvoiceCreate."""
+  paymentHash: PaymentHash!
+}
+
 input LnAddressPaymentSendInput
   @join__type(graph: PUBLIC)
 {
@@ -1462,6 +1529,13 @@ type Mutation
   """
   intraLedgerUsdPaymentSend(input: IntraLedgerUsdPaymentSendInput!): PaymentSendPayload! @join__field(graph: PUBLIC)
 
+  """
+  Returns a lightning invoice for a Blink lightning address.
+  Works for both custodial and non-custodial (Spark) recipients.
+  Use lnAddressInvoicePaymentStatus with the returned paymentHash to check settlement.
+  """
+  lnAddressInvoiceCreate(input: LnAddressInvoiceCreateInput!): LnAddressInvoicePayload! @join__field(graph: PUBLIC)
+
   """Sends a payment to a lightning address."""
   lnAddressPaymentSend(input: LnAddressPaymentSendInput!): PaymentSendPayload! @join__field(graph: PUBLIC)
 
@@ -1923,6 +1997,7 @@ type Query
   @join__type(graph: PUBLIC)
 {
   accountDefaultWallet(username: Username!, walletCurrency: WalletCurrency): PublicWallet! @join__field(graph: PUBLIC)
+  accountIdentifier(username: Username!): AccountIdentifier! @join__field(graph: PUBLIC)
 
   """Retrieve the list of scopes permitted for the user's token or API key"""
   authorization: Authorization! @join__field(graph: PUBLIC)
@@ -1939,6 +2014,7 @@ type Query
   ): CurrencyConversionEstimation! @join__field(graph: PUBLIC)
   currencyList: [Currency!]! @join__field(graph: PUBLIC)
   globals: Globals @join__field(graph: PUBLIC)
+  lnAddressInvoicePaymentStatus(input: LnAddressInvoicePaymentStatusInput!): LnAddressInvoicePaymentStatus! @join__field(graph: PUBLIC)
   lnInvoicePaymentStatus(input: LnInvoicePaymentStatusInput!): LnInvoicePaymentStatusPayload! @join__field(graph: PUBLIC) @deprecated(reason: "Deprecated in favor of lnInvoicePaymentStatusByPaymentRequest")
   lnInvoicePaymentStatusByHash(input: LnInvoicePaymentStatusByHashInput!): LnInvoicePaymentStatus! @join__field(graph: PUBLIC)
   lnInvoicePaymentStatusByPaymentRequest(input: LnInvoicePaymentStatusByPaymentRequestInput!): LnInvoicePaymentStatus! @join__field(graph: PUBLIC)
