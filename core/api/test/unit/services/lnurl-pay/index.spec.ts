@@ -52,6 +52,30 @@ describe("LnurlPayService - SSRF guards", () => {
       expect(result).toBeInstanceOf(UnsupportedLnAddressDomainError)
     })
 
+    it("refuses a verify url on the same hostname but a different port", async () => {
+      const result = await LnurlPayService().checkInvoiceStatusFromVerifyUrl(
+        "https://wallet.blink.test:8443/verify/abcd",
+      )
+
+      expect(result).toBeInstanceOf(UnsupportedLnAddressDomainError)
+    })
+
+    it("refuses a plain-hostname verify url when the configured host is default-port", async () => {
+      const result = await LnurlPayService().checkInvoiceStatusFromVerifyUrl(
+        "http://wallet.blink.test:2049/verify/abcd",
+      )
+
+      expect(result).toBeInstanceOf(UnsupportedLnAddressDomainError)
+    })
+
+    it("rejects a non-http(s) protocol", async () => {
+      const result = await LnurlPayService().checkInvoiceStatusFromVerifyUrl(
+        "file:///etc/passwd",
+      )
+
+      expect(result).toBeInstanceOf(UnsupportedLnAddressDomainError)
+    })
+
     it("parses a settled LUD-21 verify response from the trusted host", async () => {
       mock.onGet("https://wallet.blink.test/verify/abcd").reply(200, {
         status: "OK",

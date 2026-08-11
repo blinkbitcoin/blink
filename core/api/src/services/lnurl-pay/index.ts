@@ -19,22 +19,26 @@ export const lnurlPayClient = createAxiosInstance({
   maxRedirects: 0,
 })
 
-// Restricts every outbound LNURL request to the trusted Blink LN-address domain,
-// preventing the server from being used to fetch arbitrary client-supplied URLs (SSRF).
+// Pins an outbound URL to the trusted Blink LN-address host, comparing the full
+// host (hostname AND port) and restricting the protocol to http/https, so the
+// server cannot be used to fetch arbitrary client-supplied URLs (SSRF) — including
+// other ports on the same hostname.
+const assertTrustedUrl = (url: string, trustedDomain: string): void => {
+  const { host: trustedHost } = new URL(`https://${trustedDomain}`)
+  const { host, protocol } = new URL(url)
+
+  if (protocol !== "https:" && protocol !== "http:") {
+    throw new UnsupportedLnAddressDomainError(`Unsupported protocol: ${protocol}`)
+  }
+  if (host !== trustedHost) {
+    throw new UnsupportedLnAddressDomainError(`Refusing to fetch untrusted host: ${host}`)
+  }
+}
+
 const trustedDomainFetchGet =
   (trustedDomain: string) =>
   async ({ url, params }: { url: string; params?: Record<string, unknown> }) => {
-    const { hostname: trustedHost } = new URL(`https://${trustedDomain}`)
-    const { hostname, protocol } = new URL(url)
-
-    if (protocol !== "https:" && protocol !== "http:") {
-      throw new UnsupportedLnAddressDomainError(`Unsupported protocol: ${protocol}`)
-    }
-    if (hostname !== trustedHost) {
-      throw new UnsupportedLnAddressDomainError(
-        `Refusing to fetch untrusted host: ${hostname}`,
-      )
-    }
+    assertTrustedUrl(url, trustedDomain)
 
     const { data } = await lnurlPayClient.get(url, { params })
     return data
@@ -125,15 +129,7 @@ export const LnurlPayService = (): ILnurlPayService => {
     verify: string,
   ): Promise<LnAddressInvoiceStatus | LnurlServiceError> => {
     try {
-      const { hostname } = new URL(verify)
-      const { hostname: trustedHost } = new URL(
-        `https://${LNURL_SERVER_LN_ADDRESS_DOMAIN}`,
-      )
-      if (hostname !== trustedHost) {
-        return new UnsupportedLnAddressDomainError(
-          `Refusing to fetch untrusted host: ${hostname}`,
-        )
-      }
+      assertTrustedUrl(verify, LNURL_SERVER_LN_ADDRESS_DOMAIN)
 
       const { data } = await lnurlPayClient.get(verify)
       if (data?.status === "ERROR") {
@@ -148,6 +144,7 @@ export const LnurlPayService = (): ILnurlPayService => {
 
       return { settled, preimage }
     } catch (err) {
+      if (err instanceof LnurlServiceError) return err
       if (err instanceof Error) return new ErrorFetchingLnurlInvoice(err.message)
       return new UnknownLnurlServiceError(err)
     }

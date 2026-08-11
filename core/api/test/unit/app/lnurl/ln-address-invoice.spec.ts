@@ -9,8 +9,10 @@ jest.mock("@/services/redis", () => ({
 import { createInvoiceForLnAddress } from "@/app/lnurl/create-invoice-for-ln-address"
 import { getLnAddressInvoiceStatus } from "@/app/lnurl/get-ln-address-invoice-status"
 
-import { ErrorFetchingLnurlInvoice } from "@/domain/bitcoin/lnurl/errors"
-import { LnAddressInvoiceStatusNotFoundError } from "@/domain/bitcoin/lnurl/errors"
+import {
+  ErrorFetchingLnurlInvoice,
+  LnAddressInvoiceStatusNotFoundError,
+} from "@/domain/bitcoin/lnurl/errors"
 import { CouldNotFindError, UnknownRepositoryError } from "@/domain/errors"
 import { LnurlPayService } from "@/services/lnurl-pay"
 import { LnAddressVerifyCache } from "@/services/redis"
