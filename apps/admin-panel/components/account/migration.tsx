@@ -54,15 +54,16 @@ const formatTime = (timestamp: number) => new Date(timestamp * 1000).toISOString
 const Migration = async ({ accountId, scope }: PropType) => {
   if (!hasAccess(scope, AdminAccessRight.MIGRATION_RETRY_GRANT)) return null
 
-  const { data } = await getClient().query<
-    MigrationFlowQuery,
-    MigrationFlowQueryVariables
-  >({
-    query: MigrationFlowDocument,
-    variables: { accountId },
-  })
+  // this card is additive to a page that renders without it: a migration read that
+  // fails must not take the account details down with it
+  const flow = await getClient()
+    .query<MigrationFlowQuery, MigrationFlowQueryVariables>({
+      query: MigrationFlowDocument,
+      variables: { accountId },
+    })
+    .then(({ data }) => data?.migrationFlow)
+    .catch(() => null)
 
-  const flow = data?.migrationFlow
   if (!flow || flow.status !== MigrationStatus.Failed) return null
 
   return (

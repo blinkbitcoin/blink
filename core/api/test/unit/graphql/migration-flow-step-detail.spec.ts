@@ -21,9 +21,11 @@ describe("visibleStepDetail", () => {
     "top-up-reclaim-failed",
     "transfer-skipped",
     "transfer-settled",
+    "ln-address-transfer",
   ])("redacts the detail of %s", (step) => {
     expect(visibleStepDetail(stepWith(step, "123 sats"))).toBeNull()
     expect(visibleStepDetail(stepWith(step, "any detail at all"))).toBeNull()
+    expect(visibleStepDetail(stepWith(step, "+15551234567: FAILED"))).toBeNull()
   })
 
   it.each([
@@ -39,7 +41,9 @@ describe("visibleStepDetail", () => {
   })
 
   it.each([
-    ["transfer-failed", "failed: -5 sats"],
+    ["transfer-failed", "negative balance: -5 sats"],
+    ["transfer-failed", "1000 msats"],
+    ["transfer-failed", "0.0001 BTC"],
     ["commit", "paymentHash: abc123 (1 sat)"],
     ["retry-granted", "admin: client-id, 1_234 sats"],
   ])("redacts a listed step whose detail quotes an amount: %s", (step, detail) => {
@@ -56,6 +60,6 @@ describe("visibleStepDetail", () => {
   })
 
   it("returns null when a visible step carries no detail", () => {
-    expect(visibleStepDetail(stepWith("transfer-settled"))).toBeNull()
+    expect(visibleStepDetail(stepWith("commit"))).toBeNull()
   })
 })

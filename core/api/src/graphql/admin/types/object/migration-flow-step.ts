@@ -8,7 +8,7 @@ const DETAIL_VISIBLE_STEPS: string[] = [
   "retry-granted",
 ]
 
-const QUOTES_AN_AMOUNT = /\d[\d,_ ]*\s*sats?\b/i
+const QUOTES_AN_AMOUNT = /\d[\d,_. ]*\s*(m?sats?|btc)\b/i
 
 export const visibleStepDetail = (step: MigrationFlowStep): string | null => {
   if (!DETAIL_VISIBLE_STEPS.includes(step.step)) return null

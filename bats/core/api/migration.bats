@@ -560,15 +560,14 @@ read_flow_for() {
   [[ "$(graphql_output '.data.migrationFlow.destinationProofVerified')" == "true" ]] || exit 1
   [[ "$(graphql_output '.data.migrationFlow.destinationSparkPubkey')" != "null" ]] || exit 1
 
-  # the drain-computed step is present but its amount-bearing detail is withheld
-  [[ "$(graphql_output '.data.migrationFlow.steps | map(.step) | index("drain-computed")')" != "null" ]] || exit 1
-  [[ "$(graphql_output '.data.migrationFlow.steps[] | select(.step == "drain-computed") | .detail')" == "null" ]] || exit 1
+  for withheld in drain-computed transfer-settled; do
+    [[ "$(graphql_output --arg s "$withheld" '.data.migrationFlow.steps | map(.step) | index($s)')" != "null" ]] || exit 1
+    [[ "$(graphql_output --arg s "$withheld" '.data.migrationFlow.steps[] | select(.step == $s) | .detail')" == "null" ]] || exit 1
+  done
 
-  # the commit step keeps its hash, which carries no amount
   [[ "$(graphql_output '.data.migrationFlow.steps[] | select(.step == "commit") | .detail')" == "paymentHash: $payment_hash" ]] || exit 1
 
-  # no amount appears anywhere in the payload
-  [[ "$(graphql_output '.data.migrationFlow' | grep -c "$funding_sats")" == "0" ]] || exit 1
+  [[ "$(graphql_output '.data.migrationFlow' | grep -ci "sat")" == "0" ]] || exit 1
 }
 
 @test "migration: flow read is refused for an admin without VIEW_ACCOUNTS" {
