@@ -411,6 +411,44 @@ export type MerchantPayload = {
   readonly merchant?: Maybe<Merchant>;
 };
 
+export type MigrationFlowDetails = {
+  readonly __typename: 'MigrationFlowDetails';
+  readonly accountId: Scalars['ID']['output'];
+  readonly createdAt: Scalars['Timestamp']['output'];
+  readonly destinationProofVerified: Scalars['Boolean']['output'];
+  readonly destinationSparkPubkey?: Maybe<Scalars['String']['output']>;
+  readonly lnPaymentHash?: Maybe<Scalars['String']['output']>;
+  readonly status: MigrationStatus;
+  readonly steps: ReadonlyArray<MigrationFlowStep>;
+  readonly updatedAt: Scalars['Timestamp']['output'];
+};
+
+export type MigrationFlowStep = {
+  readonly __typename: 'MigrationFlowStep';
+  readonly detail?: Maybe<Scalars['String']['output']>;
+  readonly recordedAt: Scalars['Timestamp']['output'];
+  readonly step: Scalars['String']['output'];
+};
+
+export type MigrationRetryGrantInput = {
+  readonly accountId: Scalars['AccountId']['input'];
+};
+
+export type MigrationRetryGrantPayload = {
+  readonly __typename: 'MigrationRetryGrantPayload';
+  readonly errors: ReadonlyArray<Error>;
+  readonly success: Scalars['Boolean']['output'];
+};
+
+export const MigrationStatus = {
+  Completed: 'COMPLETED',
+  Failed: 'FAILED',
+  InProgress: 'IN_PROGRESS',
+  NotStarted: 'NOT_STARTED',
+  Transferring: 'TRANSFERRING'
+} as const;
+
+export type MigrationStatus = typeof MigrationStatus[keyof typeof MigrationStatus];
 export type Mutation = {
   readonly __typename: 'Mutation';
   readonly accountForceDelete: AccountForceDeletePayload;
@@ -419,6 +457,7 @@ export type Mutation = {
   readonly marketingNotificationTrigger: SuccessPayload;
   readonly merchantMapDelete: MerchantPayload;
   readonly merchantMapValidate: MerchantPayload;
+  readonly migrationRetryGrant: MigrationRetryGrantPayload;
   readonly userUpdateEmail: AccountDetailPayload;
   readonly userUpdatePhone: AccountDetailPayload;
 };
@@ -451,6 +490,11 @@ export type MutationMerchantMapDeleteArgs = {
 
 export type MutationMerchantMapValidateArgs = {
   input: MerchantMapValidateInput;
+};
+
+
+export type MutationMigrationRetryGrantArgs = {
+  input: MigrationRetryGrantInput;
 };
 
 
@@ -573,6 +617,7 @@ export type Query = {
   readonly lightningInvoice: LightningInvoice;
   readonly lightningPayment: LightningPayment;
   readonly merchantsPendingApproval: ReadonlyArray<Merchant>;
+  readonly migrationFlow?: Maybe<MigrationFlowDetails>;
   readonly transactionById?: Maybe<Transaction>;
   readonly transactionsByHash?: Maybe<ReadonlyArray<Maybe<Transaction>>>;
   readonly transactionsByPaymentRequest?: Maybe<ReadonlyArray<Maybe<Transaction>>>;
@@ -618,6 +663,11 @@ export type QueryLightningInvoiceArgs = {
 
 export type QueryLightningPaymentArgs = {
   hash: Scalars['PaymentHash']['input'];
+};
+
+
+export type QueryMigrationFlowArgs = {
+  accountId: Scalars['ID']['input'];
 };
 
 
@@ -1033,6 +1083,20 @@ export type MarketingNotificationTriggerMutationVariables = Exact<{
 
 
 export type MarketingNotificationTriggerMutation = { readonly __typename: 'Mutation', readonly marketingNotificationTrigger: { readonly __typename: 'SuccessPayload', readonly success?: boolean | null, readonly errors: ReadonlyArray<{ readonly __typename: 'GraphQLApplicationError', readonly message: string }> } };
+
+export type MigrationFlowQueryVariables = Exact<{
+  accountId: Scalars['ID']['input'];
+}>;
+
+
+export type MigrationFlowQuery = { readonly __typename: 'Query', readonly migrationFlow?: { readonly __typename: 'MigrationFlowDetails', readonly accountId: string, readonly status: MigrationStatus, readonly lnPaymentHash?: string | null, readonly destinationSparkPubkey?: string | null, readonly destinationProofVerified: boolean, readonly createdAt: number, readonly updatedAt: number, readonly steps: ReadonlyArray<{ readonly __typename: 'MigrationFlowStep', readonly step: string, readonly recordedAt: number, readonly detail?: string | null }> } | null };
+
+export type MigrationRetryGrantMutationVariables = Exact<{
+  input: MigrationRetryGrantInput;
+}>;
+
+
+export type MigrationRetryGrantMutation = { readonly __typename: 'Mutation', readonly migrationRetryGrant: { readonly __typename: 'MigrationRetryGrantPayload', readonly success: boolean, readonly errors: ReadonlyArray<{ readonly __typename: 'GraphQLApplicationError', readonly message: string }> } };
 
 
 export const AccountDetailsByUserPhoneDocument = gql`
@@ -1955,3 +2019,90 @@ export function useMarketingNotificationTriggerMutation(baseOptions?: Apollo.Mut
 export type MarketingNotificationTriggerMutationHookResult = ReturnType<typeof useMarketingNotificationTriggerMutation>;
 export type MarketingNotificationTriggerMutationResult = Apollo.MutationResult<MarketingNotificationTriggerMutation>;
 export type MarketingNotificationTriggerMutationOptions = Apollo.BaseMutationOptions<MarketingNotificationTriggerMutation, MarketingNotificationTriggerMutationVariables>;
+export const MigrationFlowDocument = gql`
+    query migrationFlow($accountId: ID!) {
+  migrationFlow(accountId: $accountId) {
+    accountId
+    status
+    lnPaymentHash
+    destinationSparkPubkey
+    destinationProofVerified
+    createdAt
+    updatedAt
+    steps {
+      step
+      recordedAt
+      detail
+    }
+  }
+}
+    `;
+
+/**
+ * __useMigrationFlowQuery__
+ *
+ * To run a query within a React component, call `useMigrationFlowQuery` and pass it any options that fit your needs.
+ * When your component renders, `useMigrationFlowQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useMigrationFlowQuery({
+ *   variables: {
+ *      accountId: // value for 'accountId'
+ *   },
+ * });
+ */
+export function useMigrationFlowQuery(baseOptions: Apollo.QueryHookOptions<MigrationFlowQuery, MigrationFlowQueryVariables> & ({ variables: MigrationFlowQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<MigrationFlowQuery, MigrationFlowQueryVariables>(MigrationFlowDocument, options);
+      }
+export function useMigrationFlowLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<MigrationFlowQuery, MigrationFlowQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<MigrationFlowQuery, MigrationFlowQueryVariables>(MigrationFlowDocument, options);
+        }
+export function useMigrationFlowSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<MigrationFlowQuery, MigrationFlowQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<MigrationFlowQuery, MigrationFlowQueryVariables>(MigrationFlowDocument, options);
+        }
+export type MigrationFlowQueryHookResult = ReturnType<typeof useMigrationFlowQuery>;
+export type MigrationFlowLazyQueryHookResult = ReturnType<typeof useMigrationFlowLazyQuery>;
+export type MigrationFlowSuspenseQueryHookResult = ReturnType<typeof useMigrationFlowSuspenseQuery>;
+export type MigrationFlowQueryResult = Apollo.QueryResult<MigrationFlowQuery, MigrationFlowQueryVariables>;
+export const MigrationRetryGrantDocument = gql`
+    mutation migrationRetryGrant($input: MigrationRetryGrantInput!) {
+  migrationRetryGrant(input: $input) {
+    errors {
+      message
+    }
+    success
+  }
+}
+    `;
+export type MigrationRetryGrantMutationFn = Apollo.MutationFunction<MigrationRetryGrantMutation, MigrationRetryGrantMutationVariables>;
+
+/**
+ * __useMigrationRetryGrantMutation__
+ *
+ * To run a mutation, you first call `useMigrationRetryGrantMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useMigrationRetryGrantMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [migrationRetryGrantMutation, { data, loading, error }] = useMigrationRetryGrantMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useMigrationRetryGrantMutation(baseOptions?: Apollo.MutationHookOptions<MigrationRetryGrantMutation, MigrationRetryGrantMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<MigrationRetryGrantMutation, MigrationRetryGrantMutationVariables>(MigrationRetryGrantDocument, options);
+      }
+export type MigrationRetryGrantMutationHookResult = ReturnType<typeof useMigrationRetryGrantMutation>;
+export type MigrationRetryGrantMutationResult = Apollo.MutationResult<MigrationRetryGrantMutation>;
+export type MigrationRetryGrantMutationOptions = Apollo.BaseMutationOptions<MigrationRetryGrantMutation, MigrationRetryGrantMutationVariables>;

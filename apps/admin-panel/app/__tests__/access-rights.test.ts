@@ -74,7 +74,7 @@ describe("Access Rights - Multiple Roles Support", () => {
           AdminAccessRight.VIEW_MERCHANTS,
         ]),
       )
-      expect(rights).toHaveLength(10) // All rights
+      expect(rights).toHaveLength(Object.values(AdminAccessRight).length) // All rights
     })
 
     test("hasAccessRight works correctly", () => {
@@ -146,7 +146,7 @@ describe("Access Rights - Multiple Roles Support", () => {
           AdminAccessRight.VIEW_MERCHANTS,
         ]),
       )
-      expect(rights).toHaveLength(10) // All unique rights
+      expect(rights).toHaveLength(Object.values(AdminAccessRight).length) // All unique rights
     })
 
     test("getAccessRightsForRoles handles empty array", () => {

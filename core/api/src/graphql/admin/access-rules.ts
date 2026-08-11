@@ -23,6 +23,7 @@ enum AdminAccessRight {
   CHANGELEVEL_ACCOUNT = "CHANGELEVEL_ACCOUNT",
   LOCK_ACCOUNT = "LOCK_ACCOUNT",
   VIEW_MERCHANTS = "VIEW_MERCHANTS",
+  MIGRATION_RETRY_GRANT = "MIGRATION_RETRY_GRANT",
 }
 
 // Helper function to create access right rules
@@ -44,6 +45,7 @@ export const accessRules = {
   changeLevelAccount: createAccessRightRule(AdminAccessRight.CHANGELEVEL_ACCOUNT),
   lockAccount: createAccessRightRule(AdminAccessRight.LOCK_ACCOUNT),
   viewMerchants: createAccessRightRule(AdminAccessRight.VIEW_MERCHANTS),
+  migrationRetryGrant: createAccessRightRule(AdminAccessRight.MIGRATION_RETRY_GRANT),
 }
 
 /**

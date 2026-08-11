@@ -50,7 +50,7 @@ export const mutationFields = {
     },
     migrationRetryGrant: {
       field: MigrationRetryGrantMutation,
-      rule: accessRules.lockAccount,
+      rule: accessRules.migrationRetryGrant,
     },
     marketingNotificationTrigger: {
       field: TriggerMarketingNotificationMutation,

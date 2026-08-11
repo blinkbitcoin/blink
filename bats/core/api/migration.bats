@@ -11,6 +11,7 @@ setup_file() {
   login_admin
   login_viewer_user
   login_marketing_user
+  login_supportlv2_user
 
   create_user 'alice'
 
@@ -584,7 +585,7 @@ read_flow_for() {
   [[ "$(graphql_output '.data.migrationFlow.status')" == "IN_PROGRESS" ]] || exit 1
 }
 
-@test "migration: retry grant is refused for an admin without LOCK_ACCOUNT" {
+@test "migration: retry grant is refused for every role below ADMIN" {
   token_name='migrator_retry_rbac'
   login_user "$token_name" "$(random_nl_phone)"
 
@@ -592,6 +593,10 @@ read_flow_for() {
   [[ "$(graphql_output '.data.migrationStart.errors | length')" == "0" ]] || exit 1
 
   grant_retry_for "$token_name" 'viewer_user'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" ]] || exit 1
+
+  # supportlv2 holds LOCK_ACCOUNT but not MIGRATION_RETRY_GRANT: the grant stays admin-only
+  grant_retry_for "$token_name" 'supportlv2_user'
   [[ "$(graphql_output '.errors[0].message')" == "Not authorized" ]] || exit 1
 
   # a granted-looking call from an authorised admin still refuses a non-FAILED flow
