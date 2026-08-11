@@ -1,0 +1,8 @@
+mutation migrationRetryGrant($input: MigrationRetryGrantInput!) {
+  migrationRetryGrant(input: $input) {
+    errors {
+      message
+    }
+    success
+  }
+}

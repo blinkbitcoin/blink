@@ -78,6 +78,12 @@ getEmailCode() {
 
   exec_admin_graphql "" 'account-force-delete' '{"input": {"accountId": "test-id"}}'
   [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
+
+  exec_admin_graphql "" 'migration-flow' '{"accountId": "test-id"}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
+
+  exec_admin_graphql "" 'migration-retry-grant' '{"input": {"accountId": "test-id"}}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
 }
 
 @test "empty_scope: access denied with empty scope token" {

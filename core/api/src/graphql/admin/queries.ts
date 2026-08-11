@@ -13,6 +13,7 @@ import AccountDetailsByUserId from "./root/query/account-details-by-user-id"
 import MerchantsPendingApprovalQuery from "./root/query/merchants-pending-approval-listing"
 import InactiveMerchantsQuery from "./root/query/inactive-merchants-listing"
 import FilteredUserCountQuery from "./root/query/filtered-user-count"
+import MigrationFlowQuery from "./root/query/migration-flow"
 
 import { accessRules, extractFields, buildPermissionMappings } from "./access-rules"
 
@@ -44,6 +45,10 @@ export const queryFields = {
     },
     filteredUserCount: {
       field: FilteredUserCountQuery,
+      rule: accessRules.viewAccounts,
+    },
+    migrationFlow: {
+      field: MigrationFlowQuery,
       rule: accessRules.viewAccounts,
     },
     wallet: {
