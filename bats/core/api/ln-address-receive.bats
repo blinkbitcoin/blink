@@ -43,8 +43,6 @@ setup_file() {
 }
 
 @test "ln-address-receive: rejects a lightning address on a non-configured domain" {
-  local wallet_id="$(read_value $ALICE.btc_wallet_id)"
-
   variables=$(
     jq -n \
     --arg amount 200 \
@@ -53,7 +51,7 @@ setup_file() {
   exec_graphql "$ALICE" 'ln-address-invoice-create' "$variables"
 
   error_msg="$(graphql_output '.data.lnAddressInvoiceCreate.errors[0].message')"
-  [[ "$error_msg" != "null" ]] || exit 1
+  [[ "$error_msg" == *"lightning addresses are supported"* ]] || exit 1
 }
 
 @test "ln-address-receive: create invoice for a Blink lightning address and confirm settlement" {
