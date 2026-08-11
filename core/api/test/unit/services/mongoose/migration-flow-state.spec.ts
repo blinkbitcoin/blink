@@ -172,31 +172,15 @@ describe("MigrationFlowStateRepository", () => {
       })
     })
 
-    it("resets a wedged TRANSFERRING flow from its own phase", async () => {
-      mockFindOneAndUpdate.mockResolvedValue(rawFlow)
+    it.each([MigrationFlowPhase.Completed, MigrationFlowPhase.Transferring])(
+      "rejects fromPhase %s before touching the database",
+      async (fromPhase) => {
+        const result = await repo.resetForRetry({ accountId, fromPhase, grantedBy })
 
-      await repo.resetForRetry({
-        accountId,
-        fromPhase: MigrationFlowPhase.Transferring,
-        grantedBy,
-      })
-
-      expect(mockFindOneAndUpdate.mock.calls[0][0]).toEqual({
-        accountId,
-        phase: MigrationFlowPhase.Transferring,
-      })
-    })
-
-    it("rejects an illegal fromPhase before touching the database", async () => {
-      const result = await repo.resetForRetry({
-        accountId,
-        fromPhase: MigrationFlowPhase.Completed,
-        grantedBy,
-      })
-
-      expect(result).toBeInstanceOf(MigrationStateConflictError)
-      expect(mockFindOneAndUpdate).not.toHaveBeenCalled()
-    })
+        expect(result).toBeInstanceOf(MigrationStateConflictError)
+        expect(mockFindOneAndUpdate).not.toHaveBeenCalled()
+      },
+    )
 
     it("returns MigrationStateConflictError when the phase changed under the CAS", async () => {
       mockFindOneAndUpdate.mockResolvedValue(null)

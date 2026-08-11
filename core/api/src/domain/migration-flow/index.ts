@@ -16,7 +16,6 @@ const MigrationFlowPhaseTransitions: Record<
   [MigrationFlowPhase.Transferring]: [
     MigrationFlowPhase.Completed,
     MigrationFlowPhase.Failed,
-    MigrationFlowPhase.InProgress,
   ],
   [MigrationFlowPhase.Completed]: [],
   [MigrationFlowPhase.Failed]: [

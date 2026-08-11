@@ -44,20 +44,13 @@ describe("retryMigrationFlow", () => {
   const paymentHash = "payment-hash" as PaymentHash
   const updatedByPrivilegedClientId = "privileged-client-id" as PrivilegedClientId
 
-  const wedgedSince = new Date(Date.now() - 60 * 60 * 1000)
-
-  const flowIn = (
-    phase: MigrationFlowPhase,
-    lnPaymentHash?: PaymentHash,
-    updatedAt: Date = wedgedSince,
-  ) =>
+  const flowIn = (phase: MigrationFlowPhase, lnPaymentHash?: PaymentHash) =>
     ({
       accountId,
       phase,
       destinationProofVerified: true,
       lnPaymentHash,
       steps: [],
-      updatedAt,
     }) as unknown as MigrationFlow
 
   const resetFlow = flowIn(MigrationFlowPhase.InProgress)
@@ -178,56 +171,6 @@ describe("retryMigrationFlow", () => {
     expect(result).toBe(resetFlow)
   })
 
-  it("resets a wedged TRANSFERRING flow with no ledger txns", async () => {
-    mocks.findFlowByAccountId.mockResolvedValue(
-      flowIn(MigrationFlowPhase.Transferring, paymentHash),
-    )
-
-    const result = await retryMigrationFlow({ accountId, updatedByPrivilegedClientId })
-
-    expect(mocks.resetForRetry).toHaveBeenCalledWith({
-      accountId,
-      fromPhase: MigrationFlowPhase.Transferring,
-      grantedBy: updatedByPrivilegedClientId,
-    })
-    expect(result).toBe(resetFlow)
-  })
-
-  it("refuses a TRANSFERRING flow whose transfer may still be running", async () => {
-    mocks.findFlowByAccountId.mockResolvedValue(
-      flowIn(MigrationFlowPhase.Transferring, paymentHash, new Date()),
-    )
-
-    const result = await retryMigrationFlow({ accountId, updatedByPrivilegedClientId })
-
-    expect(result).toBeInstanceOf(MigrationStateConflictError)
-    expect(mockGetTransactionsByHash).not.toHaveBeenCalled()
-    expect(mocks.resetForRetry).not.toHaveBeenCalled()
-  })
-
-  it("resets a freshly FAILED flow without waiting out the wedge threshold", async () => {
-    mocks.findFlowByAccountId.mockResolvedValue(
-      flowIn(MigrationFlowPhase.Failed, paymentHash, new Date()),
-    )
-
-    const result = await retryMigrationFlow({ accountId, updatedByPrivilegedClientId })
-
-    expect(mocks.resetForRetry).toHaveBeenCalledTimes(1)
-    expect(result).toBe(resetFlow)
-  })
-
-  it("refuses a TRANSFERRING flow that has any ledger txns", async () => {
-    mocks.findFlowByAccountId.mockResolvedValue(
-      flowIn(MigrationFlowPhase.Transferring, paymentHash),
-    )
-    mockGetTransactionsByHash.mockResolvedValue([paymentTxn({ pending: true })])
-
-    const result = await retryMigrationFlow({ accountId, updatedByPrivilegedClientId })
-
-    expect(result).toBeInstanceOf(MigrationStateConflictError)
-    expect(mocks.resetForRetry).not.toHaveBeenCalled()
-  })
-
   it("refuses a FAILED flow whose ledger verdict is a success", async () => {
     mocks.findFlowByAccountId.mockResolvedValue(
       flowIn(MigrationFlowPhase.Failed, paymentHash),
@@ -255,6 +198,7 @@ describe("retryMigrationFlow", () => {
   it.each([
     MigrationFlowPhase.NotStarted,
     MigrationFlowPhase.InProgress,
+    MigrationFlowPhase.Transferring,
     MigrationFlowPhase.Completed,
   ])("refuses a flow in phase %s", async (phase) => {
     mocks.findFlowByAccountId.mockResolvedValue(flowIn(phase, paymentHash))
