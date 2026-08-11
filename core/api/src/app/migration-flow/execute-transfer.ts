@@ -135,9 +135,11 @@ export const executeMigrationTransfer = async ({
   const balanceSats = BigInt(balance)
 
   if (balanceSats < 0n) {
+    // the amount stays on the error (telemetry) and out of the step detail, which the
+    // admin API exposes: a transfer-failed detail must carry no amount
     return failMigration(
       new InvalidBtcPaymentAmountError(`balance: ${balanceSats}`),
-      `negative balance: ${balanceSats} sats`,
+      "negative balance",
     )
   }
 

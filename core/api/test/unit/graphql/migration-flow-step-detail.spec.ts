@@ -8,7 +8,6 @@ describe("visibleStepDetail", () => {
     ["commit", "paymentHash: abc123"],
     ["transfer-pending", "paymentHash: abc123"],
     ["transfer-failed", "RouteNotFoundError"],
-    ["transfer-settled", "settled"],
     ["retry-granted", "admin: client-id"],
   ])("exposes the detail of %s", (step, detail) => {
     expect(visibleStepDetail(stepWith(step, detail))).toBe(detail)
@@ -24,8 +23,24 @@ describe("visibleStepDetail", () => {
     ["top-up-reclaimed", "10 sats returned to bank owner"],
     ["top-up-reclaim-failed", "10 sats could not be reclaimed"],
     ["transfer-skipped", "zero balance"],
+    // settle-migration-flow.ts writes `residual balance: N sats` here
+    ["transfer-settled", "residual balance: 9 sats"],
   ])("redacts the amount-bearing detail of %s", (step, detail) => {
     expect(visibleStepDetail(stepWith(step, detail))).toBeNull()
+  })
+
+  it.each([
+    "balance lookup failed: UnknownLedgerError",
+    "negative balance",
+    "top-up failed: IntraledgerLimitsExceededError",
+    "drain amount failed: InvalidBtcPaymentAmountError",
+    "residual top-up failed: IntraledgerLimitsExceededError",
+    "ln payment failed: RouteNotFoundError",
+    "invoice already paid",
+    "ln payment failed",
+  ])("exposes transfer-failed detail %s, which carries no amount", (detail) => {
+    expect(visibleStepDetail(stepWith("transfer-failed", detail))).toBe(detail)
+    expect(detail).not.toMatch(/\d/)
   })
 
   it("redacts a step it has never seen, rather than exposing it", () => {

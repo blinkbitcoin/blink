@@ -2,13 +2,13 @@ import { GT } from "@/graphql/index"
 import Timestamp from "@/graphql/shared/types/scalar/timestamp"
 
 // step details are written for operators, not for this surface: several carry the
-// drained amount or the bank-owner subsidy. Only these are cleared for the admin API —
-// a step added later stays redacted until it is added here on purpose.
+// drained amount, the bank-owner subsidy, or the residual balance. Only these are
+// cleared — a step added later stays redacted until it is added here on purpose, and
+// anything added here must be checked against the string the app layer actually writes.
 const DETAIL_VISIBLE_STEPS: string[] = [
   "commit",
   "transfer-pending",
   "transfer-failed",
-  "transfer-settled",
   "retry-granted",
 ]
 
