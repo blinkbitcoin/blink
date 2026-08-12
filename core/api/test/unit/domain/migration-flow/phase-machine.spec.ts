@@ -37,6 +37,7 @@ describe("checkedMigrationFlowPhaseTransition", () => {
     [MigrationFlowPhase.Transferring, MigrationFlowPhase.Completed],
     [MigrationFlowPhase.Transferring, MigrationFlowPhase.Failed],
     [MigrationFlowPhase.Failed, MigrationFlowPhase.Completed],
+    [MigrationFlowPhase.Failed, MigrationFlowPhase.InProgress],
   ]
 
   test.each(validTransitions)("allows %s -> %s", (from, to) => {

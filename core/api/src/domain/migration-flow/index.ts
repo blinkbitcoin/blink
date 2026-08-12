@@ -18,7 +18,10 @@ const MigrationFlowPhaseTransitions: Record<
     MigrationFlowPhase.Failed,
   ],
   [MigrationFlowPhase.Completed]: [],
-  [MigrationFlowPhase.Failed]: [MigrationFlowPhase.Completed],
+  [MigrationFlowPhase.Failed]: [
+    MigrationFlowPhase.Completed,
+    MigrationFlowPhase.InProgress,
+  ],
 }
 
 export const checkedToMigrationFlowPhase = (
