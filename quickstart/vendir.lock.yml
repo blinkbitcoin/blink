@@ -2,24 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'test: bitcoind updatet to v31.1 (#762)'
-      sha: e9614e1540675ff563b7d06a8b855bf527e8c074
+      commitTitle: 'feat(migration): admin retry grant for stuck migration flows (#766)'
+      sha: 3c97efec7b1dafdec353cbaf48552628a768f8ee
       tags:
-      - 0.22.40-1-ge9614e154
+      - 0.22.41-2-g3c97efec7
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'test: bitcoind updatet to v31.1 (#762)'
-      sha: e9614e1540675ff563b7d06a8b855bf527e8c074
+      commitTitle: 'feat(migration): admin retry grant for stuck migration flows (#766)'
+      sha: 3c97efec7b1dafdec353cbaf48552628a768f8ee
       tags:
-      - 0.22.40-1-ge9614e154
+      - 0.22.41-2-g3c97efec7
     path: schemas
   - git:
-      commitTitle: 'test: bitcoind updatet to v31.1 (#762)'
-      sha: e9614e1540675ff563b7d06a8b855bf527e8c074
+      commitTitle: 'feat(migration): admin retry grant for stuck migration flows (#766)'
+      sha: 3c97efec7b1dafdec353cbaf48552628a768f8ee
       tags:
-      - 0.22.40-1-ge9614e154
+      - 0.22.41-2-g3c97efec7
     path: gql
   path: graphql
 kind: LockConfig
