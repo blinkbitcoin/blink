@@ -3,7 +3,8 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
-    nixpkgs-node.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+    # Pinned to a nixpkgs revision that packages nodejs 24.19.0 (Node 24 LTS "Krypton")
+    nixpkgs-node.url = "github:nixos/nixpkgs/06a1bc65f61c040137db4529ba74756c2d110da3";
     nixpkgs-docker.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     nixpkgs-tilt.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     # reindeer >= 2024.03.29 downloads crates from static.crates.io (CDN) instead of the
@@ -38,11 +39,15 @@
       dockerPkgs = import nixpkgs-docker {inherit system;};
       tiltPkgs = import nixpkgs-tilt {inherit system;};
       reindeerPkgs = import nixpkgs-reindeer {inherit system;};
-      # CVE: DoS via stack overflow in async_hooks - require nodejs 20.20.0+
-      expectedNodeVersion = "20.20.0";
+      # Node 24 LTS "Krypton" (24.19.0); includes the async_hooks stack overflow fix.
+      # Kept out of the pkgs overlay on purpose: the main nixpkgs' npm build
+      # plumbing (srcOnly in buildNpmPackage/importNpmLock hooks) cannot consume
+      # the newer structured-attrs nodejs derivation, so only the repo-facing
+      # toolchain (dev shell, buck2 builds, packaged bins) uses nodejs24.
+      expectedNodeVersion = "24.19.0";
+      nodejs24 = assert nodePkgs.nodejs_24.version == expectedNodeVersion; nodePkgs.nodejs_24;
       overlays = [
         (self: super: {
-          nodejs = assert nodePkgs.nodejs_20.version == expectedNodeVersion; nodePkgs.nodejs_20;
           pnpm = super.nodePackages.pnpm;
         })
         (import rust-overlay)
@@ -56,7 +61,7 @@
       buck2NativeBuildInputs = with pkgs; [
         buck2
         protobuf
-        nodejs
+        nodejs24
         pnpm
         python3
         ripgrep
@@ -69,7 +74,6 @@
       nativeBuildInputs = with pkgs;
         [
           envsubst
-          nodejs
           tiltPkgs.tilt
           typescript
           bats
@@ -158,7 +162,7 @@
             substituteInPlace "$out/bin/run" \
               --replace "#!${pkgs.coreutils}/bin/env sh" "#!${pkgs.bash}/bin/sh" \
               --replace "$(cat build/$name-$system/buck2-deps-path)" "$out/lib" \
-              --replace "exec node" "exec ${pkgs.nodejs}/bin/node"
+              --replace "exec node" "exec ${nodejs24}/bin/node"
           '';
         };
 
@@ -200,7 +204,7 @@
             substituteInPlace "$out/bin/run" \
               --replace "#!${pkgs.coreutils}/bin/env sh" "#!${pkgs.bash}/bin/sh" \
               --replace "\''${0%/*}/../lib/" "$out/lib/" \
-              --replace "exec node" "exec ${pkgs.nodejs}/bin/node"
+              --replace "exec node" "exec ${nodejs24}/bin/node"
           '';
         };
 
@@ -261,7 +265,7 @@
             npm_bin_source_file=$(cat "$out/bin/$npm_bin_name" | grep "exec" | awk '{print $2}')
             substituteInPlace "$npm_bin_source_file" \
               --replace "$(cat build/$name-$system/buck2-node-modules-path)" "$out/lib" \
-              --replace "exec node" "exec ${pkgs.nodejs}/bin/node" \
+              --replace "exec node" "exec ${nodejs24}/bin/node" \
               --replace " sed " " ${pkgs.gnused}/bin/sed " \
               --replace "dirname" "${pkgs.coreutils}/bin/dirname" \
               --replace "uname" "${pkgs.coreutils}/bin/uname"
