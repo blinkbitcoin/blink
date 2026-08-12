@@ -1,4 +1,5 @@
 load "../../helpers/_common.bash"
+load "../../helpers/admin.bash"
 load "../../helpers/cli.bash"
 load "../../helpers/ledger.bash"
 load "../../helpers/ln.bash"
@@ -6,6 +7,11 @@ load "../../helpers/user.bash"
 
 setup_file() {
   clear_cache
+
+  login_admin
+  login_viewer_user
+  login_marketing_user
+  login_supportlv2_user
 
   create_user 'alice'
 
@@ -395,4 +401,205 @@ ln_address_transfer_input() {
 
   exec_graphql "$token_name" 'migration'
   [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
+}
+
+grant_retry_for() {
+  local token_name=$1
+  local admin_token_name=${2:-'admin'}
+
+  local variables=$(
+    jq -n --arg account_id "$(read_value "$token_name.account_id")" \
+      '{input: {accountId: $account_id}}'
+  )
+  exec_admin_graphql "$(read_value "${admin_token_name}.token")" 'migration-retry-grant' "$variables"
+}
+
+read_flow_for() {
+  local token_name=$1
+  local admin_token_name=${2:-'admin'}
+
+  local variables=$(
+    jq -n --arg account_id "$(read_value "$token_name.account_id")" '{accountId: $account_id}'
+  )
+  exec_admin_graphql "$(read_value "${admin_token_name}.token")" 'migration-flow' "$variables"
+}
+
+@test "migration: admin grants retry on a flow that failed after pending, user re-drives to COMPLETED" {
+  token_name='migrator_retry_async'
+  login_user "$token_name" "$(random_nl_phone)"
+
+  funding_sats=200000
+  fund_user_lightning "$token_name" "$token_name.btc_wallet_id" "$funding_sats"
+
+  exec_graphql "$token_name" 'migration-start'
+  [[ "$(graphql_output '.data.migrationStart.errors | length')" == "0" ]] || exit 1
+
+  # attempt #1: hold invoice accepted then cancelled -> the payment reaches lnd and fails there
+  secret=$(xxd -l 32 -c 256 -p /dev/urandom)
+  payment_hash=$(echo -n $secret | xxd -r -p | sha256sum | cut -d ' ' -f1)
+  invoice_response="$(lnd_outside_cli addholdinvoice $payment_hash)"
+  payment_request="$(echo $invoice_response | jq -r '.payment_request')"
+  [[ "${payment_request}" != "null" ]] || exit 1
+
+  variables="$(commit_variables_for "$token_name" "$payment_request")"
+  exec_graphql "$token_name" 'migration-commit' "$variables"
+  [[ "$(graphql_output '.data.migrationCommit.migration.status')" == "TRANSFERRING" ]] || exit 1
+
+  lnd_outside_cli cancelinvoice "$payment_hash"
+
+  migration_failed() {
+    exec_graphql "$token_name" 'migration'
+    [[ "$(graphql_output '.data.migration.status')" == "FAILED" ]] || exit 1
+  }
+  retry 30 1 migration_failed
+
+  balance_restored() {
+    [[ "$(btc_balance_for "$token_name")" == "$funding_sats" ]] || exit 1
+  }
+  retry 15 1 balance_restored
+
+  # the user cannot self-retry: commit stays refused while the flow is FAILED
+  variables="$(commit_variables_for "$token_name" "$payment_request")"
+  exec_graphql "$token_name" 'migration-commit' "$variables"
+  [[ "$(graphql_output '.data.migrationCommit.errors | length')" != "0" ]] || exit 1
+
+  grant_retry_for "$token_name"
+  [[ "$(graphql_output '.data.migrationRetryGrant.errors | length')" == "0" ]] || exit 1
+  [[ "$(graphql_output '.data.migrationRetryGrant.success')" == "true" ]] || exit 1
+
+  exec_graphql "$token_name" 'migration'
+  [[ "$(graphql_output '.data.migration.status')" == "IN_PROGRESS" ]] || exit 1
+
+  # attempt #2: a fresh invoice drains the wallet for real
+  invoice_response="$(lnd_outside_cli addinvoice)"
+  payment_request="$(echo $invoice_response | jq -r '.payment_request')"
+  retry_payment_hash="$(echo $invoice_response | jq -r '.r_hash')"
+
+  variables="$(commit_variables_for "$token_name" "$payment_request")"
+  exec_graphql "$token_name" 'migration-commit' "$variables"
+  [[ "$(graphql_output '.data.migrationCommit.errors | length')" == "0" ]] || exit 1
+  [[ "$(graphql_output '.data.migrationCommit.migration.status')" == "COMPLETED" ]] || exit 1
+
+  exec_graphql "$token_name" 'migration'
+  [[ "$(graphql_output '.data.migration.transferPaymentHash')" == "$retry_payment_hash" ]] || exit 1
+  [[ "$(btc_balance_for "$token_name")" == "0" ]] || exit 1
+}
+
+@test "migration: admin grants retry on a flow whose drain failed synchronously" {
+  token_name='migrator_retry_sync'
+  login_user "$token_name" "$(random_nl_phone)"
+
+  funding_sats=200000
+  fund_user_lightning "$token_name" "$token_name.btc_wallet_id" "$funding_sats"
+
+  exec_graphql "$token_name" 'migration-start'
+  [[ "$(graphql_output '.data.migrationStart.errors | length')" == "0" ]] || exit 1
+
+  # attempt #1: invoice cancelled before the commit -> the drain fails in-request
+  secret=$(xxd -l 32 -c 256 -p /dev/urandom)
+  payment_hash=$(echo -n $secret | xxd -r -p | sha256sum | cut -d ' ' -f1)
+  invoice_response="$(lnd_outside_cli addholdinvoice $payment_hash)"
+  payment_request="$(echo $invoice_response | jq -r '.payment_request')"
+  [[ "${payment_request}" != "null" ]] || exit 1
+  lnd_outside_cli cancelinvoice "$payment_hash"
+
+  variables="$(commit_variables_for "$token_name" "$payment_request")"
+  exec_graphql "$token_name" 'migration-commit' "$variables"
+  [[ "$(graphql_output '.data.migrationCommit.errors | length')" != "0" ]] || exit 1
+
+  exec_graphql "$token_name" 'migration'
+  [[ "$(graphql_output '.data.migration.status')" == "FAILED" ]] || exit 1
+  [[ "$(btc_balance_for "$token_name")" == "$funding_sats" ]] || exit 1
+
+  grant_retry_for "$token_name"
+  [[ "$(graphql_output '.data.migrationRetryGrant.errors | length')" == "0" ]] || exit 1
+  [[ "$(graphql_output '.data.migrationRetryGrant.success')" == "true" ]] || exit 1
+
+  exec_graphql "$token_name" 'migration'
+  [[ "$(graphql_output '.data.migration.status')" == "IN_PROGRESS" ]] || exit 1
+
+  invoice_response="$(lnd_outside_cli addinvoice)"
+  payment_request="$(echo $invoice_response | jq -r '.payment_request')"
+
+  variables="$(commit_variables_for "$token_name" "$payment_request")"
+  exec_graphql "$token_name" 'migration-commit' "$variables"
+  [[ "$(graphql_output '.data.migrationCommit.migration.status')" == "COMPLETED" ]] || exit 1
+  [[ "$(btc_balance_for "$token_name")" == "0" ]] || exit 1
+}
+
+@test "migration: admin reads a flow without seeing any amount" {
+  token_name='migrator_flow_read'
+  login_user "$token_name" "$(random_nl_phone)"
+
+  # no flow doc yet -> the query resolves to null rather than erroring
+  read_flow_for "$token_name"
+  [[ "$(graphql_output '.data.migrationFlow')" == "null" ]] || exit 1
+
+  funding_sats=200000
+  fund_user_lightning "$token_name" "$token_name.btc_wallet_id" "$funding_sats"
+
+  exec_graphql "$token_name" 'migration-start'
+  [[ "$(graphql_output '.data.migrationStart.errors | length')" == "0" ]] || exit 1
+
+  read_flow_for "$token_name"
+  [[ "$(graphql_output '.data.migrationFlow.status')" == "IN_PROGRESS" ]] || exit 1
+  [[ "$(graphql_output '.data.migrationFlow.accountId')" == "$(read_value "$token_name.account_id")" ]] || exit 1
+  [[ "$(graphql_output '.data.migrationFlow.lnPaymentHash')" == "null" ]] || exit 1
+
+  invoice_response="$(lnd_outside_cli addinvoice)"
+  payment_request="$(echo $invoice_response | jq -r '.payment_request')"
+  payment_hash="$(echo $invoice_response | jq -r '.r_hash')"
+
+  variables="$(commit_variables_for "$token_name" "$payment_request")"
+  exec_graphql "$token_name" 'migration-commit' "$variables"
+  [[ "$(graphql_output '.data.migrationCommit.migration.status')" == "COMPLETED" ]] || exit 1
+
+  read_flow_for "$token_name"
+  [[ "$(graphql_output '.data.migrationFlow.status')" == "COMPLETED" ]] || exit 1
+  [[ "$(graphql_output '.data.migrationFlow.lnPaymentHash')" == "$payment_hash" ]] || exit 1
+  [[ "$(graphql_output '.data.migrationFlow.destinationProofVerified')" == "true" ]] || exit 1
+  [[ "$(graphql_output '.data.migrationFlow.destinationSparkPubkey')" != "null" ]] || exit 1
+
+  for withheld in drain-computed transfer-settled; do
+    [[ "$(graphql_output --arg s "$withheld" '.data.migrationFlow.steps | map(.step) | index($s)')" != "null" ]] || exit 1
+    [[ "$(graphql_output --arg s "$withheld" '.data.migrationFlow.steps[] | select(.step == $s) | .detail')" == "null" ]] || exit 1
+  done
+
+  [[ "$(graphql_output '.data.migrationFlow.steps[] | select(.step == "commit") | .detail')" == "paymentHash: $payment_hash" ]] || exit 1
+
+  [[ "$(graphql_output '.data.migrationFlow' | grep -ci "sat")" == "0" ]] || exit 1
+}
+
+@test "migration: flow read is refused for an admin without VIEW_ACCOUNTS" {
+  token_name='migrator_flow_read_rbac'
+  login_user "$token_name" "$(random_nl_phone)"
+
+  exec_graphql "$token_name" 'migration-start'
+  [[ "$(graphql_output '.data.migrationStart.errors | length')" == "0" ]] || exit 1
+
+  read_flow_for "$token_name" 'marketing_user'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" ]] || exit 1
+
+  read_flow_for "$token_name" 'viewer_user'
+  [[ "$(graphql_output '.data.migrationFlow.status')" == "IN_PROGRESS" ]] || exit 1
+}
+
+@test "migration: retry grant is refused for every role below ADMIN" {
+  token_name='migrator_retry_rbac'
+  login_user "$token_name" "$(random_nl_phone)"
+
+  exec_graphql "$token_name" 'migration-start'
+  [[ "$(graphql_output '.data.migrationStart.errors | length')" == "0" ]] || exit 1
+
+  grant_retry_for "$token_name" 'viewer_user'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" ]] || exit 1
+
+  # supportlv2 holds LOCK_ACCOUNT but not MIGRATION_RETRY_GRANT: the grant stays admin-only
+  grant_retry_for "$token_name" 'supportlv2_user'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" ]] || exit 1
+
+  # a granted-looking call from an authorised admin still refuses a non-FAILED flow
+  grant_retry_for "$token_name"
+  [[ "$(graphql_output '.data.migrationRetryGrant.errors | length')" != "0" ]] || exit 1
+  [[ "$(graphql_output '.data.migrationRetryGrant.success')" == "false" ]] || exit 1
 }

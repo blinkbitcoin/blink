@@ -10,6 +10,19 @@ import {
 } from "../access-rights"
 
 describe("Access Rights - Multiple Roles Support", () => {
+  describe("MIGRATION_RETRY_GRANT is ADMIN-only", () => {
+    test.each(["VIEWER", "MARKETING_GLOBAL", "SUPPORTLV1", "SUPPORTLV2"] as AdminRole[])(
+      "%s does not hold it",
+      (role) => {
+        expect(hasAccessRight(role, AdminAccessRight.MIGRATION_RETRY_GRANT)).toBe(false)
+      },
+    )
+
+    test("ADMIN holds it", () => {
+      expect(hasAccessRight("ADMIN", AdminAccessRight.MIGRATION_RETRY_GRANT)).toBe(true)
+    })
+  })
+
   describe("Single Role Functions (existing functionality)", () => {
     test("getAccessRightsForRole returns correct rights for VIEWER", () => {
       const rights = getAccessRightsForRole("VIEWER")
@@ -74,7 +87,7 @@ describe("Access Rights - Multiple Roles Support", () => {
           AdminAccessRight.VIEW_MERCHANTS,
         ]),
       )
-      expect(rights).toHaveLength(10) // All rights
+      expect(rights).toHaveLength(11) // All rights
     })
 
     test("hasAccessRight works correctly", () => {
@@ -146,7 +159,7 @@ describe("Access Rights - Multiple Roles Support", () => {
           AdminAccessRight.VIEW_MERCHANTS,
         ]),
       )
-      expect(rights).toHaveLength(10) // All unique rights
+      expect(rights).toHaveLength(11) // All unique rights
     })
 
     test("getAccessRightsForRoles handles empty array", () => {

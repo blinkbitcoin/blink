@@ -94,6 +94,12 @@ type MigrationFlowClearTopUpArgs = {
   step: MigrationFlowStepInput
 }
 
+type MigrationFlowResetForRetryArgs = {
+  accountId: AccountId
+  fromPhase: MigrationFlowPhase
+  grantedBy: PrivilegedClientId
+}
+
 interface IMigrationFlowStateRepository {
   findByAccountId(accountId: AccountId): Promise<MigrationFlow | RepositoryError>
   findByLnPaymentHash(
@@ -110,4 +116,7 @@ interface IMigrationFlowStateRepository {
     args: MigrationFlowRecordTopUpArgs,
   ): Promise<MigrationFlow | RepositoryError>
   clearTopUp(args: MigrationFlowClearTopUpArgs): Promise<MigrationFlow | RepositoryError>
+  resetForRetry(
+    args: MigrationFlowResetForRetryArgs,
+  ): Promise<MigrationFlow | MigrationFlowError | RepositoryError>
 }

@@ -139,6 +139,74 @@ describe("MigrationFlowStateRepository", () => {
     })
   })
 
+  describe("resetForRetry", () => {
+    const grantedBy = "privileged-client-id" as PrivilegedClientId
+
+    it("unbinds the payment hash with $unset and never writes it into $set", async () => {
+      mockFindOneAndUpdate.mockResolvedValue(rawFlow)
+
+      const result = await repo.resetForRetry({
+        accountId,
+        fromPhase: MigrationFlowPhase.Failed,
+        grantedBy,
+      })
+
+      expect(result).toMatchObject({
+        accountId,
+        phase: MigrationFlowPhase.InProgress,
+        lnPaymentHash: undefined,
+      })
+
+      const [filter, update, options] = mockFindOneAndUpdate.mock.calls[0]
+      expect(filter).toEqual({ accountId, phase: MigrationFlowPhase.Failed })
+      expect(options).toEqual({ new: true })
+      expect(update.$unset).toEqual({ lnPaymentHash: "", topUpSats: "" })
+      expect(update.$set).not.toHaveProperty("lnPaymentHash")
+      expect(update.$set).not.toHaveProperty("topUpSats")
+      expect(update.$set).toMatchObject({
+        phase: MigrationFlowPhase.InProgress,
+        destinationProofVerified: false,
+      })
+      expect(update.$push).toEqual({
+        steps: { step: "retry-granted", detail: `admin: ${grantedBy}` },
+      })
+    })
+
+    it.each([MigrationFlowPhase.Completed, MigrationFlowPhase.Transferring])(
+      "rejects fromPhase %s before touching the database",
+      async (fromPhase) => {
+        const result = await repo.resetForRetry({ accountId, fromPhase, grantedBy })
+
+        expect(result).toBeInstanceOf(MigrationStateConflictError)
+        expect(mockFindOneAndUpdate).not.toHaveBeenCalled()
+      },
+    )
+
+    it("returns MigrationStateConflictError when the phase changed under the CAS", async () => {
+      mockFindOneAndUpdate.mockResolvedValue(null)
+
+      const result = await repo.resetForRetry({
+        accountId,
+        fromPhase: MigrationFlowPhase.Failed,
+        grantedBy,
+      })
+
+      expect(result).toBeInstanceOf(MigrationStateConflictError)
+    })
+
+    it("passes other repository errors through unchanged", async () => {
+      mockFindOneAndUpdate.mockRejectedValue(new Error("some mongo failure"))
+
+      const result = await repo.resetForRetry({
+        accountId,
+        fromPhase: MigrationFlowPhase.Failed,
+        grantedBy,
+      })
+
+      expect(result).toBeInstanceOf(UnknownRepositoryError)
+    })
+  })
+
   describe("upsertByAccountId", () => {
     it("rejects an invalid initial phase before touching the database", async () => {
       const result = await repo.upsertByAccountId({

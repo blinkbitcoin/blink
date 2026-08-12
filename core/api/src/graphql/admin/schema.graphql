@@ -363,6 +363,40 @@ type MerchantPayload {
   merchant: Merchant
 }
 
+type MigrationFlowDetails {
+  accountId: ID!
+  createdAt: Timestamp!
+  destinationProofVerified: Boolean!
+  destinationSparkPubkey: String
+  lnPaymentHash: String
+  status: MigrationStatus!
+  steps: [MigrationFlowStep!]!
+  updatedAt: Timestamp!
+}
+
+type MigrationFlowStep {
+  detail: String
+  recordedAt: Timestamp!
+  step: String!
+}
+
+input MigrationRetryGrantInput {
+  accountId: AccountId!
+}
+
+type MigrationRetryGrantPayload {
+  errors: [Error!]!
+  success: Boolean!
+}
+
+enum MigrationStatus {
+  COMPLETED
+  FAILED
+  IN_PROGRESS
+  NOT_STARTED
+  TRANSFERRING
+}
+
 type Mutation {
   accountForceDelete(input: AccountForceDeleteInput!): AccountForceDeletePayload!
   accountUpdateLevel(input: AccountUpdateLevelInput!): AccountDetailPayload!
@@ -370,6 +404,7 @@ type Mutation {
   marketingNotificationTrigger(input: MarketingNotificationTriggerInput!): SuccessPayload!
   merchantMapDelete(input: MerchantMapDeleteInput!): MerchantPayload!
   merchantMapValidate(input: MerchantMapValidateInput!): MerchantPayload!
+  migrationRetryGrant(input: MigrationRetryGrantInput!): MigrationRetryGrantPayload!
   userUpdateEmail(input: UserUpdateEmailInput!): AccountDetailPayload!
   userUpdatePhone(input: UserUpdatePhoneInput!): AccountDetailPayload!
 }
@@ -492,6 +527,7 @@ type Query {
   lightningInvoice(hash: PaymentHash!): LightningInvoice!
   lightningPayment(hash: PaymentHash!): LightningPayment!
   merchantsPendingApproval: [Merchant!]!
+  migrationFlow(accountId: ID!): MigrationFlowDetails
   transactionById(id: ID!): Transaction
   transactionsByHash(hash: PaymentHash!): [Transaction]
   transactionsByPaymentRequest(paymentRequest: LnPaymentRequest!): [Transaction]
