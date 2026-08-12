@@ -171,6 +171,18 @@ describe("retryMigrationFlow", () => {
     expect(result).toBe(resetFlow)
   })
 
+  it("grants even when topUpSats survived the failure — forgive-and-clear is deliberate", async () => {
+    mocks.findFlowByAccountId.mockResolvedValue({
+      ...flowIn(MigrationFlowPhase.Failed, paymentHash),
+      topUpSats: 10,
+    } as unknown as MigrationFlow)
+
+    const result = await retryMigrationFlow({ accountId, updatedByPrivilegedClientId })
+
+    expect(mocks.resetForRetry).toHaveBeenCalledTimes(1)
+    expect(result).toBe(resetFlow)
+  })
+
   it("refuses a FAILED flow whose ledger verdict is a success", async () => {
     mocks.findFlowByAccountId.mockResolvedValue(
       flowIn(MigrationFlowPhase.Failed, paymentHash),
