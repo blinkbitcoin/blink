@@ -12,6 +12,9 @@ export enum AdminAccessRight {
   CHANGELEVEL_ACCOUNT = "CHANGELEVEL_ACCOUNT",
   LOCK_ACCOUNT = "LOCK_ACCOUNT",
   VIEW_MERCHANTS = "VIEW_MERCHANTS",
+
+  // ADMIN-only: widen by adding it to a role, never by relaxing the mutation
+  MIGRATION_RETRY_GRANT = "MIGRATION_RETRY_GRANT",
 }
 
 // Role types

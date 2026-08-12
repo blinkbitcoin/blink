@@ -1,4 +1,5 @@
 import Details from "../../../components/account/details"
+import Migration from "../../../components/account/migration"
 import AccountUpdate from "../../../components/account/update"
 import { Merchants } from "../../../components/merchants/details"
 import {
@@ -31,6 +32,7 @@ export default async function AccountDetails({ params }: { params: { uuid: strin
           <Details auditedAccount={auditedAccount} />
           <div className="grid grid-cols-1 gap-4">
             <AccountUpdate auditedAccount={auditedAccount} scope={scope} />
+            <Migration accountId={auditedAccount.id} scope={scope} />
           </div>
         </div>
         <Merchants merchants={auditedAccount.merchants} />
