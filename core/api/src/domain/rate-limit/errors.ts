@@ -23,3 +23,4 @@ export class DeviceAccountCreateRateLimiterExceededError extends RateLimiterExce
 export class UserCodeAttemptAppcheckJtiLimiterExceededError extends RateLimiterExceededError {}
 export class AddQuizAttemptIpRateLimiterExceededError extends RateLimiterExceededError {}
 export class AddQuizAttemptPhoneRateLimiterExceededError extends RateLimiterExceededError {}
+export class RegionCheckIpResolutionBudgetExceededError extends RateLimiterExceededError {}

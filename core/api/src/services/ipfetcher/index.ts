@@ -3,8 +3,16 @@ import https from "https"
 import { create as createAxiosInstance } from "axios"
 import axiosRetry, { linearDelay } from "axios-retry"
 
-import { UnknownIpFetcherServiceError } from "@/domain/ipfetcher"
+import {
+  IpFetcherBudgetExceededError,
+  UnknownIpFetcherServiceError,
+  UnresolvedIpFetcherServiceError,
+} from "@/domain/ipfetcher"
 import { PROXY_CHECK_APIKEY } from "@/config"
+import { RateLimitConfig } from "@/domain/rate-limit"
+import { toSeconds } from "@/domain/primitives"
+import { RedisCacheService } from "@/services/cache"
+import { consumeLimiter } from "@/services/rate-limit"
 import {
   addAttributesToCurrentSpan,
   recordExceptionInCurrentSpan,
@@ -18,6 +26,8 @@ type Params = {
   key?: string
 }
 
+const IP_INFO_CACHE_TTL = toSeconds(300)
+
 export const client = createAxiosInstance({
   timeout: 2000,
   httpsAgent: new https.Agent({ keepAlive: true }),
@@ -28,8 +38,14 @@ axiosRetry(client, {
   shouldResetTimeout: true,
 })
 
+const cacheKey = (ip: IpAddress): string => `ipfetcher:info:${ip}`
+
 export const IpFetcher = (): IIpFetcherService => {
-  const fetchIPInfo = async (ip: string): Promise<IPInfo | IpFetcherServiceError> => {
+  const cache = RedisCacheService()
+
+  const fetchFromProvider = async (
+    ip: string,
+  ): Promise<IPInfo | IpFetcherServiceError> => {
     const params: Params = {
       vpn: "1",
       asn: "1",
@@ -63,7 +79,43 @@ export const IpFetcher = (): IIpFetcherService => {
       return new UnknownIpFetcherServiceError(error)
     }
   }
+
+  const cached = async (ip: IpAddress): Promise<IPInfo | undefined> => {
+    const value = await cache.get<IPInfo>({ key: cacheKey(ip) })
+    return value instanceof Error ? undefined : value
+  }
+
+  const cacheOnSuccess = async (ip: IpAddress, info: IPInfo): Promise<IPInfo> => {
+    await cache.set({ key: cacheKey(ip), value: info, ttlSecs: IP_INFO_CACHE_TTL })
+    return info
+  }
+
+  const fetchIPInfo = async (ip: IpAddress): Promise<IPInfo | IpFetcherServiceError> =>
+    fetchFromProvider(ip)
+
+  const fetchIPInfoWithinRegionCheckBudget = async (
+    ip: IpAddress,
+  ): Promise<IPInfo | IpFetcherServiceError> => {
+    const hit = await cached(ip)
+    if (hit) return hit
+
+    const budgetOk = await consumeLimiter({
+      rateLimitConfig: RateLimitConfig.regionCheckIpResolution,
+      keyToConsume: "",
+    })
+    if (budgetOk instanceof Error) return new IpFetcherBudgetExceededError()
+
+    const info = await fetchFromProvider(ip)
+    if (info instanceof Error) return info
+    if (info.status !== "ok" || !info.isoCode) {
+      return new UnresolvedIpFetcherServiceError(`status: ${info.status}`)
+    }
+
+    return cacheOnSuccess(ip, info)
+  }
+
   return {
     fetchIPInfo,
+    fetchIPInfoWithinRegionCheckBudget,
   }
 }

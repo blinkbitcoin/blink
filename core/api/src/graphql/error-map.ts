@@ -759,6 +759,9 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "AccountError":
     case "IpFetcherError":
     case "IpFetcherServiceError":
+    case "IpFetcherBudgetExceededError":
+    case "UnresolvedIpFetcherServiceError":
+    case "RegionCheckIpResolutionBudgetExceededError":
     case "CouldNotFindTransactionError":
     case "CouldNotFindTransactionMetadataError":
     case "CouldNotFindExpectedTransactionMetadataError":

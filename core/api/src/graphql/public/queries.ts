@@ -4,6 +4,8 @@ import MeQuery from "@/graphql/public/root/query/me"
 import GlobalsQuery from "@/graphql/public/root/query/globals"
 import WindDownQuery from "@/graphql/public/root/query/wind-down"
 import MigrationQuery from "@/graphql/public/root/query/migration"
+import RegionCheckQuery from "@/graphql/public/root/query/region-check"
+import CustodialRestrictionsQuery from "@/graphql/public/root/query/custodial-restrictions"
 import CurrencyListQuery from "@/graphql/public/root/query/currency-list"
 import PayoutSpeedsQuery from "@/graphql/public/root/query/payout-speeds"
 import AuthorizationQuery from "@/graphql/public/root/query/authorization"
@@ -38,6 +40,7 @@ export const queryFields = {
     lnInvoicePaymentStatus: LnInvoicePaymentStatusQuery,
     lnInvoicePaymentStatusByHash: LnInvoicePaymentStatusByHashQuery,
     lnInvoicePaymentStatusByPaymentRequest: LnInvoicePaymentStatusByPaymentRequestQuery,
+    regionCheck: RegionCheckQuery,
   },
   authed: {
     atAccountLevel: {
@@ -45,6 +48,7 @@ export const queryFields = {
       me: MeQuery,
       windDown: WindDownQuery,
       migration: MigrationQuery,
+      custodialRestrictions: CustodialRestrictionsQuery,
     },
     atWalletLevel: {
       onChainTxFee: OnChainTxFeeQuery,

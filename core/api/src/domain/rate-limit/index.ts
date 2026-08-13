@@ -13,6 +13,7 @@ import {
   UserAttemptPhoneIdentifierRateLimiterExceededError,
   TelegramPassportNonceAttemptIpRateLimiterExceededError,
   TelegramPassportNonceAttemptPhoneRateLimiterExceededError,
+  RegionCheckIpResolutionBudgetExceededError,
 } from "./errors"
 
 import {
@@ -30,6 +31,7 @@ import {
   getAddQuizPerIpLimits,
   getAddQuizPerPhoneLimits,
   getRequestCodePerPhoneNumberLimits,
+  getRegionCheckIpResolutionLimits,
 } from "@/config"
 
 export const RateLimitPrefix = {
@@ -48,6 +50,7 @@ export const RateLimitPrefix = {
   requestCodeAttemptPerAppcheckJti: "request_code_attempt_appcheck_jti",
   addQuizAttemptPerIp: "add_quiz_attempt_ip",
   addQuizAttemptPerPhone: "add_quiz_attempt_phone",
+  regionCheckIpResolution: "region_check_ip_resolution",
 } as const
 
 type RateLimitPrefixKey = keyof typeof RateLimitPrefix
@@ -122,5 +125,10 @@ export const RateLimitConfig: { [key in RateLimitPrefixKey]: RateLimitConfig } =
     key: RateLimitPrefix.addQuizAttemptPerPhone,
     limits: getAddQuizPerPhoneLimits(),
     error: AddQuizAttemptPhoneRateLimiterExceededError,
+  },
+  regionCheckIpResolution: {
+    key: RateLimitPrefix.regionCheckIpResolution,
+    limits: getRegionCheckIpResolutionLimits(),
+    error: RegionCheckIpResolutionBudgetExceededError,
   },
 }

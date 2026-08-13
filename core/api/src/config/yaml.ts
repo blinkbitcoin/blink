@@ -18,7 +18,11 @@ import { toCents } from "@/domain/fiat"
 
 import { toSeconds } from "@/domain/primitives"
 
-import { AccountLevel } from "@/domain/accounts"
+import {
+  AccountLevel,
+  checkedToRestrictedCountry,
+  toRegistrationDenyCountries,
+} from "@/domain/accounts"
 
 const merge = (defaultConfig: unknown, customConfig: unknown) =>
   mergeWith(defaultConfig, customConfig, (a, b) => (Array.isArray(b) ? b : undefined))
@@ -232,6 +236,9 @@ export const getAddQuizPerIpLimits = () =>
 export const getAddQuizPerPhoneLimits = () =>
   getRateLimits(yamlConfig.rateLimits.addQuizPerPhone)
 
+export const getRegionCheckIpResolutionLimits = () =>
+  getRateLimits(yamlConfig.rateLimits.regionCheckIpResolution)
+
 export const getOnChainWalletConfig = () => ({
   dustThreshold: yamlConfig.paymentNetworks.onchain.dustThreshold,
 })
@@ -303,6 +310,47 @@ const windDownConfig: WindDownConfig = {
 
 export const getWindDownConfig = (): WindDownConfig => windDownConfig
 
+const alpha2Pattern = /^[A-Z]{2}$/
+
+const toRestrictedCountries = (key: string, countries: string[]): RestrictedCountry[] => {
+  const normalized = countries.map((country) => country.trim().toUpperCase())
+  const invalid = normalized.filter((country) => !alpha2Pattern.test(country))
+  if (invalid.length > 0) {
+    throw new ConfigError(`Invalid alpha-2 country code in ${key}`, invalid)
+  }
+  return [...new Set(normalized)] as RestrictedCountry[]
+}
+
+const toRegistrationDeny = (config = yamlConfig) =>
+  toRegistrationDenyCountries({
+    restrictedCountries: toRestrictedCountries(
+      "restrictedCountries",
+      config.regionRestrictions.restrictedCountries,
+    ),
+    denyPhoneCountries: (config.accounts.denyPhoneCountries || [])
+      .map(checkedToRestrictedCountry)
+      .filter((c): c is RestrictedCountry => c !== undefined),
+  })
+
+const regionRestrictionsConfig: RegionRestrictionsConfig = {
+  restrictedCountries: toRestrictedCountries(
+    "restrictedCountries",
+    yamlConfig.regionRestrictions.restrictedCountries,
+  ),
+  registrationDenyCountries: toRegistrationDeny(yamlConfig),
+  custodialDollarBalanceBlockedCountries: toRestrictedCountries(
+    "custodialDollarBalanceBlockedCountries",
+    yamlConfig.regionRestrictions.custodialDollarBalanceBlockedCountries,
+  ),
+  custodialTransferBlockedCountries: toRestrictedCountries(
+    "custodialTransferBlockedCountries",
+    yamlConfig.regionRestrictions.custodialTransferBlockedCountries,
+  ),
+}
+
+export const getRegionRestrictionsConfig = (): RegionRestrictionsConfig =>
+  regionRestrictionsConfig
+
 export const getQuizzesConfig = (): QuizzesConfig => {
   const denyPhoneCountries = yamlConfig.quizzes.denyPhoneCountries || []
   const allowPhoneCountries = yamlConfig.quizzes.allowPhoneCountries || []
@@ -352,7 +400,15 @@ export const getAccountsOnboardConfig = (config = yamlConfig): AccountsOnboardCo
     },
     ipMetadataValidationSettings: {
       enabled: enableIpCheck,
-      denyCountries: denyIPCountries.map((c) => c.toUpperCase()),
+      denyCountries: [
+        ...new Set([
+          ...denyIPCountries.map((c) => c.toUpperCase()),
+          ...toRestrictedCountries(
+            "restrictedCountries",
+            config.regionRestrictions.restrictedCountries,
+          ),
+        ]),
+      ],
       allowCountries: allowIPCountries.map((c) => c.toUpperCase()),
       denyASNs: denyASNs.map((c) => c.toUpperCase()),
       allowASNs: allowASNs.map((c) => c.toUpperCase()),
