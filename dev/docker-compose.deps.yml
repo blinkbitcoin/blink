@@ -181,7 +181,7 @@ services:
     environment:
       - MONGO_INITDB_DATABASE=galoy
   lnd1:
-    image: lightninglabs/lnd:v0.20.2-beta
+    image: lightninglabs/lnd:v0.21.1-beta
     ports:
       - "10009:10009"
     volumes:
@@ -201,7 +201,7 @@ services:
         cp /root/.lnd/admin.macaroon /root/.lnd/data/chain/bitcoin/regtest/admin.macaroon
         /bin/lnd
   lnd2:
-    image: lightninglabs/lnd:v0.20.2-beta
+    image: lightninglabs/lnd:v0.21.1-beta
     ports:
       - "10010:10009"
     volumes:
@@ -221,7 +221,7 @@ services:
         cp /root/.lnd/admin.macaroon /root/.lnd/data/chain/bitcoin/regtest/admin.macaroon
         /bin/lnd
   lnd-outside-1:
-    image: lightninglabs/lnd:v0.20.2-beta
+    image: lightninglabs/lnd:v0.21.1-beta
     ports:
       - "10012:10009"
     volumes:
@@ -241,7 +241,7 @@ services:
         /bin/lnd
     depends_on: [bitcoind]
   lnd-outside-2:
-    image: lightninglabs/lnd:v0.20.2-beta
+    image: lightninglabs/lnd:v0.21.1-beta
     ports:
       - "10013:10009"
     volumes:
