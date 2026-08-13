@@ -606,6 +606,15 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       message = error.message
       return new LnurlRequestInvoiceError({ message, logger: baseLogger })
 
+    case "UnsupportedLnAddressDomainError":
+      message = error.message
+      return new ValidationInternalError({ message, logger: baseLogger })
+
+    case "LnAddressInvoiceStatusNotFoundError":
+      message =
+        "No pending invoice found for this payment hash. It may have expired or never existed."
+      return new NotFoundError({ message, logger: baseLogger })
+
     case "LikelyBadCoreError":
       message = error.message
       return new LikelyBadCoreError({ message, logger: baseLogger })
