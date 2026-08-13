@@ -2,24 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat(migration): admin retry grant for stuck migration flows (#766)'
-      sha: 3c97efec7b1dafdec353cbaf48552628a768f8ee
+      commitTitle: 'feat(region): region check and custodial restriction verdict queries
+        (#756)'
+      sha: 0f5fd8d407f95775b1d161696f6880bfcc0cb5d6
       tags:
-      - 0.22.41-2-g3c97efec7
+      - 0.22.42-1-g0f5fd8d40
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat(migration): admin retry grant for stuck migration flows (#766)'
-      sha: 3c97efec7b1dafdec353cbaf48552628a768f8ee
+      commitTitle: 'feat(region): region check and custodial restriction verdict queries
+        (#756)'
+      sha: 0f5fd8d407f95775b1d161696f6880bfcc0cb5d6
       tags:
-      - 0.22.41-2-g3c97efec7
+      - 0.22.42-1-g0f5fd8d40
     path: schemas
   - git:
-      commitTitle: 'feat(migration): admin retry grant for stuck migration flows (#766)'
-      sha: 3c97efec7b1dafdec353cbaf48552628a768f8ee
+      commitTitle: 'feat(region): region check and custodial restriction verdict queries
+        (#756)'
+      sha: 0f5fd8d407f95775b1d161696f6880bfcc0cb5d6
       tags:
-      - 0.22.41-2-g3c97efec7
+      - 0.22.42-1-g0f5fd8d40
     path: gql
   path: graphql
 kind: LockConfig
