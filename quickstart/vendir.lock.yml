@@ -2,27 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat(region): region check and custodial restriction verdict queries
-        (#756)'
-      sha: 0f5fd8d407f95775b1d161696f6880bfcc0cb5d6
+      commitTitle: 'feat(api): expose per-level account limits on the globals query
+        (#750)...'
+      sha: 4b69c454609c1a9de9cbd79febcb15c88601cdf5
       tags:
-      - 0.22.42-1-g0f5fd8d40
+      - 0.22.43-1-g4b69c4546
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat(region): region check and custodial restriction verdict queries
-        (#756)'
-      sha: 0f5fd8d407f95775b1d161696f6880bfcc0cb5d6
+      commitTitle: 'feat(api): expose per-level account limits on the globals query
+        (#750)...'
+      sha: 4b69c454609c1a9de9cbd79febcb15c88601cdf5
       tags:
-      - 0.22.42-1-g0f5fd8d40
+      - 0.22.43-1-g4b69c4546
     path: schemas
   - git:
-      commitTitle: 'feat(region): region check and custodial restriction verdict queries
-        (#756)'
-      sha: 0f5fd8d407f95775b1d161696f6880bfcc0cb5d6
+      commitTitle: 'feat(api): expose per-level account limits on the globals query
+        (#750)...'
+      sha: 4b69c454609c1a9de9cbd79febcb15c88601cdf5
       tags:
-      - 0.22.42-1-g0f5fd8d40
+      - 0.22.43-1-g4b69c4546
     path: gql
   path: graphql
 kind: LockConfig
