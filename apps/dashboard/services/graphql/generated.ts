@@ -181,6 +181,20 @@ export const AccountLevel = {
 } as const;
 
 export type AccountLevel = typeof AccountLevel[keyof typeof AccountLevel];
+/** Daily transaction limits enforced for a given account level. */
+export type AccountLevelLimits = {
+  readonly __typename: 'AccountLevelLimits';
+  /** Max amount that can be converted between currencies among an account's own wallets. */
+  readonly convert: Scalars['CentAmount']['output'];
+  /** Max amount that can be sent to other internal accounts. */
+  readonly internalSend: Scalars['CentAmount']['output'];
+  /** The rolling time interval in seconds that the limits apply for. */
+  readonly interval: Scalars['Seconds']['output'];
+  readonly level: AccountLevel;
+  /** Max amount that can be withdrawn to external onchain or lightning destinations. */
+  readonly withdrawal: Scalars['CentAmount']['output'];
+};
+
 export type AccountLimit = {
   /** The rolling time interval in seconds that the limits would apply for. */
   readonly interval?: Maybe<Scalars['Seconds']['output']>;
@@ -652,6 +666,8 @@ export type FeesInformation = {
 /** Provides global settings for the application which might have an impact for the user. */
 export type Globals = {
   readonly __typename: 'Globals';
+  /** Daily transaction limits enforced for each account level, in USD cents. */
+  readonly accountLimitsByLevel: ReadonlyArray<AccountLevelLimits>;
   /** Current block height and block hash */
   readonly blockInfo?: Maybe<BlockInfo>;
   readonly buildInformation: BuildInformation;
@@ -3792,6 +3808,7 @@ export type ResolversTypes = {
   AccountEnableNotificationCategoryInput: AccountEnableNotificationCategoryInput;
   AccountEnableNotificationChannelInput: AccountEnableNotificationChannelInput;
   AccountLevel: AccountLevel;
+  AccountLevelLimits: ResolverTypeWrapper<AccountLevelLimits>;
   AccountLimit: ResolverTypeWrapper<ResolversInterfaceTypes<ResolversTypes>['AccountLimit']>;
   AccountLimits: ResolverTypeWrapper<Omit<AccountLimits, 'convert' | 'internalSend' | 'withdrawal'> & { convert: ReadonlyArray<ResolversTypes['AccountLimit']>, internalSend: ReadonlyArray<ResolversTypes['AccountLimit']>, withdrawal: ReadonlyArray<ResolversTypes['AccountLimit']> }>;
   AccountMigration: ResolverTypeWrapper<AccountMigration>;
@@ -4053,6 +4070,7 @@ export type ResolversParentTypes = {
   AccountDisableNotificationChannelInput: AccountDisableNotificationChannelInput;
   AccountEnableNotificationCategoryInput: AccountEnableNotificationCategoryInput;
   AccountEnableNotificationChannelInput: AccountEnableNotificationChannelInput;
+  AccountLevelLimits: AccountLevelLimits;
   AccountLimit: ResolversInterfaceTypes<ResolversParentTypes>['AccountLimit'];
   AccountLimits: Omit<AccountLimits, 'convert' | 'internalSend' | 'withdrawal'> & { convert: ReadonlyArray<ResolversParentTypes['AccountLimit']>, internalSend: ReadonlyArray<ResolversParentTypes['AccountLimit']>, withdrawal: ReadonlyArray<ResolversParentTypes['AccountLimit']> };
   AccountMigration: AccountMigration;
@@ -4361,6 +4379,15 @@ export type AccountResolvers<ContextType = any, ParentType extends ResolversPare
 export type AccountDeletePayloadResolvers<ContextType = any, ParentType extends ResolversParentTypes['AccountDeletePayload'] = ResolversParentTypes['AccountDeletePayload']> = {
   errors?: Resolver<ReadonlyArray<ResolversTypes['Error']>, ParentType, ContextType>;
   success?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
+export type AccountLevelLimitsResolvers<ContextType = any, ParentType extends ResolversParentTypes['AccountLevelLimits'] = ResolversParentTypes['AccountLevelLimits']> = {
+  convert?: Resolver<ResolversTypes['CentAmount'], ParentType, ContextType>;
+  internalSend?: Resolver<ResolversTypes['CentAmount'], ParentType, ContextType>;
+  interval?: Resolver<ResolversTypes['Seconds'], ParentType, ContextType>;
+  level?: Resolver<ResolversTypes['AccountLevel'], ParentType, ContextType>;
+  withdrawal?: Resolver<ResolversTypes['CentAmount'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
@@ -4693,6 +4720,7 @@ export type FeesInformationResolvers<ContextType = any, ParentType extends Resol
 };
 
 export type GlobalsResolvers<ContextType = any, ParentType extends ResolversParentTypes['Globals'] = ResolversParentTypes['Globals']> = {
+  accountLimitsByLevel?: Resolver<ReadonlyArray<ResolversTypes['AccountLevelLimits']>, ParentType, ContextType>;
   blockInfo?: Resolver<Maybe<ResolversTypes['BlockInfo']>, ParentType, ContextType>;
   buildInformation?: Resolver<ResolversTypes['BuildInformation'], ParentType, ContextType>;
   feesInformation?: Resolver<ResolversTypes['FeesInformation'], ParentType, ContextType>;
@@ -5536,6 +5564,7 @@ export interface Link__ImportScalarConfig extends GraphQLScalarTypeConfig<Resolv
 export type Resolvers<ContextType = any> = {
   Account?: AccountResolvers<ContextType>;
   AccountDeletePayload?: AccountDeletePayloadResolvers<ContextType>;
+  AccountLevelLimits?: AccountLevelLimitsResolvers<ContextType>;
   AccountLimit?: AccountLimitResolvers<ContextType>;
   AccountLimits?: AccountLimitsResolvers<ContextType>;
   AccountMigration?: AccountMigrationResolvers<ContextType>;

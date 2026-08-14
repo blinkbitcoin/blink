@@ -16,5 +16,12 @@ query Globals {
         }
       }
     }
+    accountLimitsByLevel {
+      level
+      interval
+      withdrawal
+      internalSend
+      convert
+    }
   }
 }
