@@ -175,6 +175,20 @@ export const AccountLevel = {
 } as const;
 
 export type AccountLevel = typeof AccountLevel[keyof typeof AccountLevel];
+/** Daily transaction limits enforced for a given account level. */
+export type AccountLevelLimits = {
+  readonly __typename: 'AccountLevelLimits';
+  /** Max amount that can be converted between currencies among an account's own wallets. */
+  readonly convert: Scalars['CentAmount']['output'];
+  /** Max amount that can be sent to other internal accounts. */
+  readonly internalSend: Scalars['CentAmount']['output'];
+  /** The rolling time interval in seconds that the limits apply for. */
+  readonly interval: Scalars['Seconds']['output'];
+  readonly level: AccountLevel;
+  /** Max amount that can be withdrawn to external onchain or lightning destinations. */
+  readonly withdrawal: Scalars['CentAmount']['output'];
+};
+
 export type AccountLimit = {
   /** The rolling time interval in seconds that the limits would apply for. */
   readonly interval?: Maybe<Scalars['Seconds']['output']>;
@@ -192,6 +206,21 @@ export type AccountLimits = {
   readonly internalSend: ReadonlyArray<AccountLimit>;
   /** Limits for withdrawing to external onchain or lightning destinations. */
   readonly withdrawal: ReadonlyArray<AccountLimit>;
+};
+
+export type AccountMigration = {
+  readonly __typename: 'AccountMigration';
+  readonly preview: AccountMigrationPreview;
+  readonly status: MigrationStatus;
+  readonly transferPaymentHash?: Maybe<Scalars['String']['output']>;
+};
+
+export type AccountMigrationPreview = {
+  readonly __typename: 'AccountMigrationPreview';
+  readonly balanceSats: Scalars['SatAmount']['output'];
+  readonly feeCoveredByBlink: Scalars['Boolean']['output'];
+  readonly feeSats: Scalars['SatAmount']['output'];
+  readonly receiveSats: Scalars['SatAmount']['output'];
 };
 
 export type AccountUpdateDefaultWalletIdInput = {
@@ -218,6 +247,15 @@ export type AccountUpdateNotificationSettingsPayload = {
   readonly __typename: 'AccountUpdateNotificationSettingsPayload';
   readonly account?: Maybe<ConsumerAccount>;
   readonly errors: ReadonlyArray<Error>;
+};
+
+export type AccountWindDown = {
+  readonly __typename: 'AccountWindDown';
+  readonly finalDeadline: Scalars['Timestamp']['output'];
+  readonly gateArmsAt: Scalars['Timestamp']['output'];
+  readonly receiveDisabledAt: Scalars['Timestamp']['output'];
+  readonly status: WindDownStatus;
+  readonly timezone: Scalars['String']['output'];
 };
 
 export type AuthTokenPayload = {
@@ -498,13 +536,31 @@ export type CurrencyConversionEstimation = {
   readonly usdCentAmount: Scalars['CentAmount']['output'];
 };
 
+export type CustodialRestrictions = {
+  readonly __typename: 'CustodialRestrictions';
+  readonly dollarBalance: Scalars['Boolean']['output'];
+  readonly transfer: Scalars['Boolean']['output'];
+};
+
+export type DepositFeeTier = {
+  readonly __typename: 'DepositFeeTier';
+  readonly amount: Scalars['String']['output'];
+  /** highest amount this tier applies to, null when unbounded */
+  readonly maxAmount?: Maybe<Scalars['String']['output']>;
+};
+
 export type DepositFeesInformation = {
   readonly __typename: 'DepositFeesInformation';
   readonly minBankFee: Scalars['String']['output'];
   /** below this amount minBankFee will be charged */
   readonly minBankFeeThreshold: Scalars['String']['output'];
-  /** ratio to charge as basis points above minBankFeeThreshold amount */
+  /**
+   * ratio to charge as basis points above minBankFeeThreshold amount
+   * @deprecated fees are a flat amount per tier, use tiers
+   */
   readonly ratio: Scalars['String']['output'];
+  /** amount charged per tier, in ascending order of maxAmount */
+  readonly tiers: ReadonlyArray<DepositFeeTier>;
 };
 
 export type DeviceNotificationTokenCreateInput = {
@@ -541,6 +597,8 @@ export type FeesInformation = {
 /** Provides global settings for the application which might have an impact for the user. */
 export type Globals = {
   readonly __typename: 'Globals';
+  /** Daily transaction limits enforced for each account level, in USD cents. */
+  readonly accountLimitsByLevel: ReadonlyArray<AccountLevelLimits>;
   /** Current block height and block hash */
   readonly blockInfo?: Maybe<BlockInfo>;
   readonly buildInformation: BuildInformation;
@@ -709,6 +767,7 @@ export type LnInvoiceCreateOnBehalfOfRecipientInput = {
   readonly memo?: InputMaybe<Scalars['Memo']['input']>;
   /** Wallet ID for a BTC wallet which belongs to any account. */
   readonly recipientWalletId: Scalars['WalletId']['input'];
+  readonly webhookUrl?: InputMaybe<Scalars['EndpointUrl']['input']>;
 };
 
 export type LnInvoiceFeeProbeInput = {
@@ -788,6 +847,7 @@ export type LnNoAmountInvoiceCreateOnBehalfOfRecipientInput = {
   readonly memo?: InputMaybe<Scalars['Memo']['input']>;
   /** ID for either a USD or BTC wallet which belongs to the account of any user. */
   readonly recipientWalletId: Scalars['WalletId']['input'];
+  readonly webhookUrl?: InputMaybe<Scalars['EndpointUrl']['input']>;
 };
 
 export type LnNoAmountInvoiceFeeProbeInput = {
@@ -851,6 +911,7 @@ export type LnUsdInvoiceBtcDenominatedCreateOnBehalfOfRecipientInput = {
   readonly memo?: InputMaybe<Scalars['Memo']['input']>;
   /** Wallet ID for a USD wallet which belongs to the account of any user. */
   readonly recipientWalletId: Scalars['WalletId']['input'];
+  readonly webhookUrl?: InputMaybe<Scalars['EndpointUrl']['input']>;
 };
 
 export type LnUsdInvoiceCreateInput = {
@@ -876,6 +937,7 @@ export type LnUsdInvoiceCreateOnBehalfOfRecipientInput = {
   readonly memo?: InputMaybe<Scalars['Memo']['input']>;
   /** Wallet ID for a USD wallet which belongs to the account of any user. */
   readonly recipientWalletId: Scalars['WalletId']['input'];
+  readonly webhookUrl?: InputMaybe<Scalars['EndpointUrl']['input']>;
 };
 
 export type LnUsdInvoiceFeeProbeInput = {
@@ -930,6 +992,57 @@ export type MerchantPayload = {
   readonly merchant?: Maybe<Merchant>;
 };
 
+export type MigrationCommitInput = {
+  readonly backupAttested: Scalars['Boolean']['input'];
+  readonly disclosureVersion: Scalars['String']['input'];
+  readonly proofSignature: Scalars['String']['input'];
+  readonly proofTimestamp: Scalars['SafeInt']['input'];
+  readonly sparkInvoice: Scalars['LnPaymentRequest']['input'];
+  readonly sparkPubkey: Scalars['String']['input'];
+};
+
+export type MigrationLnAddressTransferInput = {
+  readonly proofSignature: Scalars['String']['input'];
+  readonly proofTimestamp: Scalars['SafeInt']['input'];
+  readonly sparkPubkey: Scalars['String']['input'];
+};
+
+export type MigrationLnAddressTransferPayload = {
+  readonly __typename: 'MigrationLnAddressTransferPayload';
+  readonly errors: ReadonlyArray<Error>;
+  readonly results: ReadonlyArray<MigrationLnAddressTransferResult>;
+};
+
+export type MigrationLnAddressTransferResult = {
+  readonly __typename: 'MigrationLnAddressTransferResult';
+  readonly identifier: Scalars['String']['output'];
+  readonly lightningAddress?: Maybe<Scalars['String']['output']>;
+  readonly status: MigrationLnAddressTransferStatus;
+};
+
+export const MigrationLnAddressTransferStatus = {
+  AlreadyTransferred: 'ALREADY_TRANSFERRED',
+  Failed: 'FAILED',
+  SkippedNotRegistered: 'SKIPPED_NOT_REGISTERED',
+  Transferred: 'TRANSFERRED'
+} as const;
+
+export type MigrationLnAddressTransferStatus = typeof MigrationLnAddressTransferStatus[keyof typeof MigrationLnAddressTransferStatus];
+export type MigrationPayload = {
+  readonly __typename: 'MigrationPayload';
+  readonly errors: ReadonlyArray<Error>;
+  readonly migration?: Maybe<AccountMigration>;
+};
+
+export const MigrationStatus = {
+  Completed: 'COMPLETED',
+  Failed: 'FAILED',
+  InProgress: 'IN_PROGRESS',
+  NotStarted: 'NOT_STARTED',
+  Transferring: 'TRANSFERRING'
+} as const;
+
+export type MigrationStatus = typeof MigrationStatus[keyof typeof MigrationStatus];
 export type MobileVersions = {
   readonly __typename: 'MobileVersions';
   readonly currentSupported: Scalars['Int']['output'];
@@ -1039,6 +1152,9 @@ export type Mutation = {
   /** Sends a payment to a lightning address. */
   readonly lnurlPaymentSend: PaymentSendPayload;
   readonly merchantMapSuggest: MerchantPayload;
+  readonly migrationCommit: MigrationPayload;
+  readonly migrationLnAddressTransfer: MigrationLnAddressTransferPayload;
+  readonly migrationStart: MigrationPayload;
   readonly onChainAddressCreate: OnChainAddressPayload;
   readonly onChainAddressCurrent: OnChainAddressPayload;
   readonly onChainPaymentSend: PaymentSendPayload;
@@ -1226,6 +1342,16 @@ export type MutationLnurlPaymentSendArgs = {
 
 export type MutationMerchantMapSuggestArgs = {
   input: MerchantMapSuggestInput;
+};
+
+
+export type MutationMigrationCommitArgs = {
+  input: MigrationCommitInput;
+};
+
+
+export type MutationMigrationLnAddressTransferArgs = {
+  input: MigrationLnAddressTransferInput;
 };
 
 
@@ -1582,12 +1708,14 @@ export type Query = {
   /** Returns an estimated conversion rate for the given amount and currency */
   readonly currencyConversionEstimation: CurrencyConversionEstimation;
   readonly currencyList: ReadonlyArray<Currency>;
+  readonly custodialRestrictions: CustodialRestrictions;
   readonly globals?: Maybe<Globals>;
   /** @deprecated Deprecated in favor of lnInvoicePaymentStatusByPaymentRequest */
   readonly lnInvoicePaymentStatus: LnInvoicePaymentStatusPayload;
   readonly lnInvoicePaymentStatusByHash: LnInvoicePaymentStatus;
   readonly lnInvoicePaymentStatusByPaymentRequest: LnInvoicePaymentStatus;
   readonly me?: Maybe<User>;
+  readonly migration?: Maybe<AccountMigration>;
   readonly mobileVersions?: Maybe<ReadonlyArray<Maybe<MobileVersions>>>;
   readonly onChainTxFee: OnChainTxFee;
   readonly onChainUsdTxFee: OnChainUsdTxFee;
@@ -1596,9 +1724,11 @@ export type Query = {
   readonly payoutSpeeds: ReadonlyArray<PayoutSpeeds>;
   /** Returns 1 Sat and 1 Usd Cent price for the given currency in minor unit */
   readonly realtimePrice: RealtimePrice;
+  readonly regionCheck: RegionCheck;
   /** @deprecated will be migrated to AccountDefaultWalletId */
   readonly userDefaultWalletId: Scalars['WalletId']['output'];
   readonly usernameAvailable?: Maybe<Scalars['Boolean']['output']>;
+  readonly windDown?: Maybe<AccountWindDown>;
 };
 
 
@@ -1712,6 +1842,13 @@ export type RealtimePricePayload = {
   readonly __typename: 'RealtimePricePayload';
   readonly errors: ReadonlyArray<Error>;
   readonly realtimePrice?: Maybe<RealtimePrice>;
+};
+
+export type RegionCheck = {
+  readonly __typename: 'RegionCheck';
+  readonly countryCode?: Maybe<Scalars['String']['output']>;
+  readonly custodialCreationAllowed: Scalars['Boolean']['output'];
+  readonly restricted: Scalars['Boolean']['output'];
 };
 
 export type SatAmountPayload = {
@@ -2276,6 +2413,13 @@ export const WalletCurrency = {
 } as const;
 
 export type WalletCurrency = typeof WalletCurrency[keyof typeof WalletCurrency];
+export const WindDownStatus = {
+  GatedClosed: 'GATED_CLOSED',
+  PreCutoff: 'PRE_CUTOFF',
+  ReceiveDisabled: 'RECEIVE_DISABLED'
+} as const;
+
+export type WindDownStatus = typeof WindDownStatus[keyof typeof WindDownStatus];
 export type CountryCodesQueryVariables = Exact<{ [key: string]: never; }>;
 
 
