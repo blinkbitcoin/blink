@@ -167,9 +167,13 @@ type LightningPaymentFlowBuilder<S extends WalletCurrency> = {
 }
 
 type LPFBWithInvoice<S extends WalletCurrency> = {
-  withSenderWallet(
-    senderWallet: WalletDescriptor<S>,
-  ): LPFBWithSenderWallet<S> | LPFBWithError
+  withSenderWalletAndAccount({
+    wallet,
+    account,
+  }: {
+    wallet: WalletDescriptor<S>
+    account: Account
+  }): LPFBWithSenderWallet<S> | LPFBWithError
 }
 
 type LPFBWithRecipientArgs<R extends WalletCurrency> = {
@@ -214,7 +218,7 @@ type LPFBWithConversion<S extends WalletCurrency, R extends WalletCurrency> = {
 }
 
 type LPFBWithError = {
-  withSenderWallet(): LPFBWithError
+  withSenderWalletAndAccount(): LPFBWithError
   withoutRecipientWallet(): LPFBWithError
   withRecipientWallet(): LPFBWithError
   withConversion(): LPFBWithError
@@ -253,6 +257,7 @@ type LPFBWithSenderWalletState<S extends WalletCurrency> = RequireField<
   senderWalletId: WalletId
   senderWalletCurrency: S
   senderAccountId: AccountId
+  senderAccountRole: string | undefined
   usdPaymentAmount?: UsdPaymentAmount
 }
 

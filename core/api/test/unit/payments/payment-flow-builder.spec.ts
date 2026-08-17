@@ -66,6 +66,9 @@ describe("LightningPaymentFlowBuilder", () => {
     accountId: "senderAccountId" as AccountId,
   }
 
+  const senderAccount = { role: "user" } as Account
+  const bankownerSenderAccount = { role: "bankowner" } as Account
+
   const senderAsRecipientCommonArgs = {
     userId: "senderUserId" as UserId,
     recipientWalletDescriptors: {
@@ -242,15 +245,24 @@ describe("LightningPaymentFlowBuilder", () => {
 
       describe("with btc wallet", () => {
         const withBtcWalletBuilder = withAmountBuilder
-          .withSenderWallet(senderBtcWalletDescriptor)
+          .withSenderWalletAndAccount({
+            wallet: senderBtcWalletDescriptor,
+            account: senderAccount,
+          })
           .withoutRecipientWallet()
 
         const withSkippedPubkeyBtcWalletBuilder = withSkippedPubkeyAmountBuilder
-          .withSenderWallet(senderBtcWalletDescriptor)
+          .withSenderWalletAndAccount({
+            wallet: senderBtcWalletDescriptor,
+            account: senderAccount,
+          })
           .withoutRecipientWallet()
 
         const withSkippedChanIdBtcWalletBuilder = withSkippedChanIdAmountBuilder
-          .withSenderWallet(senderBtcWalletDescriptor)
+          .withSenderWalletAndAccount({
+            wallet: senderBtcWalletDescriptor,
+            account: senderAccount,
+          })
           .withoutRecipientWallet()
 
         // @ts-ignore-next-line no-implicit-any error
@@ -364,7 +376,10 @@ describe("LightningPaymentFlowBuilder", () => {
 
       describe("with usd wallet", () => {
         const withUsdWalletBuilder = withAmountBuilder
-          .withSenderWallet(senderUsdWalletDescriptor)
+          .withSenderWalletAndAccount({
+            wallet: senderUsdWalletDescriptor,
+            account: senderAccount,
+          })
           .withoutRecipientWallet()
 
         // @ts-ignore-next-line no-implicit-any error
@@ -471,7 +486,10 @@ describe("LightningPaymentFlowBuilder", () => {
 
       describe("with btc wallet", () => {
         const withBtcWalletBuilder = withAmountBuilder
-          .withSenderWallet(senderBtcWalletDescriptor)
+          .withSenderWalletAndAccount({
+            wallet: senderBtcWalletDescriptor,
+            account: senderAccount,
+          })
           .withoutRecipientWallet()
 
         // @ts-ignore-next-line no-implicit-any error
@@ -535,7 +553,10 @@ describe("LightningPaymentFlowBuilder", () => {
 
       describe("with usd wallet", () => {
         const withUsdWalletBuilder = withAmountBuilder
-          .withSenderWallet(senderUsdWalletDescriptor)
+          .withSenderWalletAndAccount({
+            wallet: senderUsdWalletDescriptor,
+            account: senderAccount,
+          })
           .withoutRecipientWallet()
 
         // @ts-ignore-next-line no-implicit-any error
@@ -613,9 +634,10 @@ describe("LightningPaymentFlowBuilder", () => {
         )
       }
       describe("with btc wallet", () => {
-        const withBtcWalletBuilder = withAmountBuilder.withSenderWallet(
-          senderBtcWalletDescriptor,
-        )
+        const withBtcWalletBuilder = withAmountBuilder.withSenderWalletAndAccount({
+          wallet: senderBtcWalletDescriptor,
+          account: senderAccount,
+        })
 
         // @ts-ignore-next-line no-implicit-any error
         const checkSenderWallet = (payment) => {
@@ -724,9 +746,10 @@ describe("LightningPaymentFlowBuilder", () => {
         })
       })
       describe("with usd wallet", () => {
-        const withUsdWalletBuilder = withAmountBuilder.withSenderWallet(
-          senderUsdWalletDescriptor,
-        )
+        const withUsdWalletBuilder = withAmountBuilder.withSenderWalletAndAccount({
+          wallet: senderUsdWalletDescriptor,
+          account: senderAccount,
+        })
 
         // @ts-ignore-next-line no-implicit-any error
         const checkSenderWallet = (payment) => {
@@ -859,11 +882,15 @@ describe("LightningPaymentFlowBuilder", () => {
       }
 
       describe("with btc wallet", () => {
-        const withBtcWalletBuilder = withAmountBuilder.withSenderWallet(
-          senderBtcWalletDescriptor,
-        )
+        const withBtcWalletBuilder = withAmountBuilder.withSenderWalletAndAccount({
+          wallet: senderBtcWalletDescriptor,
+          account: senderAccount,
+        })
         const lessThan1CentWithBtcWalletBuilder =
-          lessThan1CentWithAmountBuilder.withSenderWallet(senderBtcWalletDescriptor)
+          lessThan1CentWithAmountBuilder.withSenderWalletAndAccount({
+            wallet: senderBtcWalletDescriptor,
+            account: senderAccount,
+          })
 
         // @ts-ignore-next-line no-implicit-any error
         const checkSenderWallet = (payment) => {
@@ -1063,9 +1090,10 @@ describe("LightningPaymentFlowBuilder", () => {
       })
 
       describe("with usd wallet", () => {
-        const withUsdWalletBuilder = withAmountBuilder.withSenderWallet(
-          senderUsdWalletDescriptor,
-        )
+        const withUsdWalletBuilder = withAmountBuilder.withSenderWalletAndAccount({
+          wallet: senderUsdWalletDescriptor,
+          account: senderAccount,
+        })
 
         // @ts-ignore-next-line no-implicit-any error
         const checkSenderWallet = (payment) => {
@@ -1224,11 +1252,15 @@ describe("LightningPaymentFlowBuilder", () => {
       }
 
       describe("with btc wallet", () => {
-        const withBtcWalletBuilder = withAmountBuilder.withSenderWallet(
-          senderBtcWalletDescriptor,
-        )
+        const withBtcWalletBuilder = withAmountBuilder.withSenderWalletAndAccount({
+          wallet: senderBtcWalletDescriptor,
+          account: senderAccount,
+        })
         const lessThan1CentWithBtcWalletBuilder =
-          lessThan1CentWithAmountBuilder.withSenderWallet(senderBtcWalletDescriptor)
+          lessThan1CentWithAmountBuilder.withSenderWalletAndAccount({
+            wallet: senderBtcWalletDescriptor,
+            account: senderAccount,
+          })
 
         // @ts-ignore-next-line no-implicit-any error
         const checkSenderWallet = (payment) => {
@@ -1429,9 +1461,10 @@ describe("LightningPaymentFlowBuilder", () => {
       })
 
       describe("with usd wallet", () => {
-        const withUsdWalletBuilder = withAmountBuilder.withSenderWallet(
-          senderUsdWalletDescriptor,
-        )
+        const withUsdWalletBuilder = withAmountBuilder.withSenderWalletAndAccount({
+          wallet: senderUsdWalletDescriptor,
+          account: senderAccount,
+        })
 
         // @ts-ignore-next-line no-implicit-any error
         const checkSenderWallet = (payment) => {
@@ -1558,7 +1591,10 @@ describe("LightningPaymentFlowBuilder", () => {
           skipProbe,
         })
           .withInvoice(invoiceWithNoAmount)
-          .withSenderWallet(senderBtcWalletDescriptor)
+          .withSenderWalletAndAccount({
+            wallet: senderBtcWalletDescriptor,
+            account: senderAccount,
+          })
           .withoutRecipientWallet()
           .withConversion({
             mid,
@@ -1577,7 +1613,10 @@ describe("LightningPaymentFlowBuilder", () => {
           skipProbe,
         })
           .withNoAmountInvoice({ invoice: invoiceWithNoAmount, uncheckedAmount: 0.4 })
-          .withSenderWallet(senderBtcWalletDescriptor)
+          .withSenderWalletAndAccount({
+            wallet: senderBtcWalletDescriptor,
+            account: senderAccount,
+          })
           .withoutRecipientWallet()
           .withConversion({
             mid,
@@ -1596,7 +1635,10 @@ describe("LightningPaymentFlowBuilder", () => {
           skipProbe,
         })
           .withNoAmountInvoice({ invoice: invoiceWithNoAmount, uncheckedAmount: 0 })
-          .withSenderWallet(senderBtcWalletDescriptor)
+          .withSenderWalletAndAccount({
+            wallet: senderBtcWalletDescriptor,
+            account: senderAccount,
+          })
           .withoutRecipientWallet()
           .withConversion({
             mid,
@@ -1615,7 +1657,10 @@ describe("LightningPaymentFlowBuilder", () => {
           skipProbe,
         })
           .withInvoice(invoiceWithAmount)
-          .withSenderWallet(senderBtcWalletDescriptor)
+          .withSenderWalletAndAccount({
+            wallet: senderBtcWalletDescriptor,
+            account: senderAccount,
+          })
           .withoutRecipientWallet()
           .withConversion({
             mid,
@@ -1635,7 +1680,10 @@ describe("LightningPaymentFlowBuilder", () => {
           skipProbe,
         })
           .withInvoice(invoiceWithAmount)
-          .withSenderWallet(senderBtcWalletDescriptor)
+          .withSenderWalletAndAccount({
+            wallet: senderBtcWalletDescriptor,
+            account: senderAccount,
+          })
           .withRecipientWallet(senderUsdAsRecipientArgs)
           .withConversion({
             mid,
@@ -1655,7 +1703,10 @@ describe("LightningPaymentFlowBuilder", () => {
           skipProbe,
         })
           .withNoAmountInvoice({ invoice: invoiceWithNoAmount, uncheckedAmount: 1000 })
-          .withSenderWallet(senderBtcWalletDescriptor)
+          .withSenderWalletAndAccount({
+            wallet: senderBtcWalletDescriptor,
+            account: senderAccount,
+          })
           .withRecipientWallet({
             ...senderUsdAsRecipientArgs,
             usdPaymentAmount: { amount: 1000n, currency: WalletCurrency.Usd },
@@ -1678,7 +1729,10 @@ describe("LightningPaymentFlowBuilder", () => {
           skipProbe,
         })
           .withInvoice(invoiceWithAmount)
-          .withSenderWallet(senderBtcWalletDescriptor)
+          .withSenderWalletAndAccount({
+            wallet: senderBtcWalletDescriptor,
+            account: senderAccount,
+          })
           .withRecipientWallet(senderBtcAsRecipientArgs)
           .withConversion({
             mid,
@@ -1703,19 +1757,30 @@ describe("LightningPaymentFlowBuilder", () => {
       currency: WalletCurrency.Btc,
     } as BtcPaymentAmount
 
-    const enableGate = () => {
+    const serviceFeeStrategy = {
+      name: "lightning_service_fee",
+      strategy: "percentageAboveThreshold",
+      params: { basisPoints: Number(serviceFeeBasisPoints), thresholdInCents },
+    }
+    const internalSendStrategy = {
+      name: "internal_send",
+      strategy: "exemptAccount",
+      params: {
+        roles: ["bankowner", "dealer"],
+        accountIds: [],
+        exemptValidatedMerchants: false,
+      },
+    }
+
+    const enableGate = ({ exemptInternal = false } = {}) => {
       const actual = jest.requireActual("@/config").getLightningNetworkConfig()
       jest.spyOn(ConfigImpl, "getLightningNetworkConfig").mockReturnValue({
         ...actual,
         send: {
           ...actual.send,
-          feeStrategies: [
-            {
-              name: "lightning_service_fee",
-              strategy: "percentageAboveThreshold",
-              params: { basisPoints: Number(serviceFeeBasisPoints), thresholdInCents },
-            },
-          ],
+          feeStrategies: exemptInternal
+            ? [serviceFeeStrategy, internalSendStrategy]
+            : [serviceFeeStrategy],
         },
       })
     }
@@ -1724,13 +1789,13 @@ describe("LightningPaymentFlowBuilder", () => {
       jest.restoreAllMocks()
     })
 
-    const builderForBtcWallet = () =>
+    const builderForBtcWallet = (account: Account = senderAccount) =>
       LightningPaymentFlowBuilder({ localNodeIds: [], skipProbe })
         .withNoAmountInvoice({
           invoice: invoiceWithNoAmount,
           uncheckedAmount: aboveThresholdSats,
         })
-        .withSenderWallet(senderBtcWalletDescriptor)
+        .withSenderWalletAndAccount({ wallet: senderBtcWalletDescriptor, account })
         .withoutRecipientWallet()
         .withConversion({ mid, hedgeBuyUsd, hedgeSellUsd })
 
@@ -1793,7 +1858,10 @@ describe("LightningPaymentFlowBuilder", () => {
           invoice: invoiceWithNoAmount,
           uncheckedAmount: aboveThresholdSats,
         })
-        .withSenderWallet(senderBtcWalletDescriptor)
+        .withSenderWalletAndAccount({
+          wallet: senderBtcWalletDescriptor,
+          account: senderAccount,
+        })
         .withoutRecipientWallet()
         .withConversion({ mid, hedgeBuyUsd, hedgeSellUsd })
         .withoutRoute()
@@ -1803,6 +1871,46 @@ describe("LightningPaymentFlowBuilder", () => {
       expect(payment.btcBankFee.amount).toStrictEqual(0n)
       expect(payment.usdBankFee.amount).toStrictEqual(0n)
       expect(payment.btcProtocolAndBankFee).toStrictEqual(reserve)
+    })
+
+    describe("internal_send after the service fee", () => {
+      it("exempts a bankowner sender on withoutRoute", async () => {
+        enableGate({ exemptInternal: true })
+
+        const payment = await builderForBtcWallet(bankownerSenderAccount).withoutRoute()
+        if (payment instanceof Error) throw payment
+
+        const reserve = LnFees().maxProtocolAndBankFee(btcPaymentAmount)
+        expect(payment.btcBankFee.amount).toStrictEqual(0n)
+        expect(payment.usdBankFee.amount).toStrictEqual(0n)
+        expect(payment.btcProtocolAndBankFee).toStrictEqual(reserve)
+      })
+
+      it("exempts a bankowner sender on withRoute", async () => {
+        enableGate({ exemptInternal: true })
+
+        const payment = await builderForBtcWallet(bankownerSenderAccount).withRoute({
+          pubkey,
+          rawRoute,
+        })
+        if (payment instanceof Error) throw payment
+
+        const routingFee = LnFees().feeFromRawRoute(rawRoute)
+        if (routingFee instanceof Error) throw routingFee
+        expect(payment.btcBankFee.amount).toStrictEqual(0n)
+        expect(payment.usdBankFee.amount).toStrictEqual(0n)
+        expect(payment.btcProtocolAndBankFee).toStrictEqual(routingFee)
+      })
+
+      it("still charges a user-role sender", async () => {
+        enableGate({ exemptInternal: true })
+
+        const payment = await builderForBtcWallet().withoutRoute()
+        if (payment instanceof Error) throw payment
+
+        const service = calc.mulBasisPoints(btcPaymentAmount, serviceFeeBasisPoints)
+        expect(payment.btcBankFee).toStrictEqual(service)
+      })
     })
   })
 })

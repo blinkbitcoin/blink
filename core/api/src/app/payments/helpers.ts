@@ -16,6 +16,7 @@ export const constructPaymentFlowBuilder = async <
   R extends WalletCurrency,
 >({
   senderWallet,
+  senderAccount,
   invoice,
   uncheckedAmount,
   skipBankFee,
@@ -23,6 +24,7 @@ export const constructPaymentFlowBuilder = async <
   hedgeSellUsd,
 }: {
   senderWallet: WalletDescriptor<S>
+  senderAccount: Account
   invoice: LnInvoice
   uncheckedAmount?: number
   skipBankFee?: boolean
@@ -43,7 +45,10 @@ export const constructPaymentFlowBuilder = async <
       }) as LPFBWithInvoice<S>)
     : (paymentBuilder.withInvoice(invoice) as LPFBWithInvoice<S>)
 
-  const builderWithSenderWallet = builderWithInvoice.withSenderWallet(senderWallet)
+  const builderWithSenderWallet = builderWithInvoice.withSenderWalletAndAccount({
+    wallet: senderWallet,
+    account: senderAccount,
+  })
 
   let builderAfterRecipientStep: LPFBWithRecipientWallet<S, R> | LPFBWithError
   if (builderWithSenderWallet.isIntraLedger()) {

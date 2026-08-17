@@ -307,6 +307,7 @@ const validateInvoicePaymentInputs = async ({
 }): Promise<
   | {
       senderWallet: Wallet
+      senderAccount: Account
       decodedInvoice: LnInvoice
       inputPaymentAmount: BtcPaymentAmount
     }
@@ -344,6 +345,7 @@ const validateInvoicePaymentInputs = async ({
 
   return {
     senderWallet,
+    senderAccount,
     decodedInvoice,
     inputPaymentAmount: lnInvoiceAmount,
   }
@@ -362,6 +364,7 @@ const validateNoAmountInvoicePaymentInputs = async <S extends WalletCurrency>({
 }): Promise<
   | {
       senderWallet: Wallet
+      senderAccount: Account
       decodedInvoice: LnInvoice
       inputPaymentAmount: PaymentAmount<S>
       uncheckedAmount: number
@@ -403,6 +406,7 @@ const validateNoAmountInvoicePaymentInputs = async <S extends WalletCurrency>({
 
   return {
     senderWallet,
+    senderAccount,
     decodedInvoice,
     inputPaymentAmount: inputPaymentAmount as PaymentAmount<S>,
     uncheckedAmount: amount,
@@ -411,12 +415,14 @@ const validateNoAmountInvoicePaymentInputs = async <S extends WalletCurrency>({
 
 const getPaymentFlow = async <S extends WalletCurrency, R extends WalletCurrency>({
   senderWallet,
+  senderAccount,
   decodedInvoice,
   inputPaymentAmount,
   uncheckedAmount,
   skipBankFee,
 }: {
   senderWallet: WalletDescriptor<S>
+  senderAccount: Account
   decodedInvoice: LnInvoice
   inputPaymentAmount: PaymentAmount<S>
   uncheckedAmount?: number | undefined
@@ -437,6 +443,7 @@ const getPaymentFlow = async <S extends WalletCurrency, R extends WalletCurrency
     const builderWithConversion = await constructPaymentFlowBuilder<S, R>({
       uncheckedAmount,
       senderWallet,
+      senderAccount,
       invoice: decodedInvoice,
       skipBankFee,
       hedgeBuyUsd: {

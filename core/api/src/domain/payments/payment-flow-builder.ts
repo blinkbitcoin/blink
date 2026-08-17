@@ -151,12 +151,19 @@ export const LightningPaymentFlowBuilder = <S extends WalletCurrency>(
 const LPFBWithInvoice = <S extends WalletCurrency>(
   state: LPFBWithInvoiceState,
 ): LPFBWithInvoice<S> | LPFBWithError => {
-  const withSenderWallet = (senderWallet: WalletDescriptor<S>) => {
+  const withSenderWalletAndAccount = ({
+    wallet,
+    account,
+  }: {
+    wallet: WalletDescriptor<S>
+    account: Account
+  }) => {
     const {
       id: senderWalletId,
       accountId: senderAccountId,
-    }: { id: WalletId; accountId: AccountId } = senderWallet
-    const senderWalletCurrency = senderWallet.currency as S
+    }: { id: WalletId; accountId: AccountId } = wallet
+    const senderWalletCurrency = wallet.currency as S
+    const { role: senderAccountRole } = account
 
     if (state.uncheckedAmount !== undefined) {
       if (senderWalletCurrency === WalletCurrency.Btc) {
@@ -169,6 +176,7 @@ const LPFBWithInvoice = <S extends WalletCurrency>(
           senderWalletId,
           senderWalletCurrency,
           senderAccountId,
+          senderAccountRole,
           btcPaymentAmount: paymentAmount,
           inputAmount: paymentAmount.amount,
           btcProtocolAndBankFee:
@@ -184,6 +192,7 @@ const LPFBWithInvoice = <S extends WalletCurrency>(
           senderWalletId,
           senderWalletCurrency,
           senderAccountId,
+          senderAccountRole,
           usdPaymentAmount: paymentAmount,
           inputAmount: paymentAmount.amount,
           usdProtocolAndBankFee:
@@ -200,6 +209,7 @@ const LPFBWithInvoice = <S extends WalletCurrency>(
         senderWalletId,
         senderWalletCurrency,
         senderAccountId,
+        senderAccountRole,
         btcPaymentAmount,
         btcProtocolAndBankFee:
           state.btcProtocolAndBankFee || LnFees().maxProtocolAndBankFee(btcPaymentAmount),
@@ -207,11 +217,11 @@ const LPFBWithInvoice = <S extends WalletCurrency>(
       })
     }
 
-    throw new Error("withSenderWallet impossible")
+    throw new Error("withSenderWalletAndAccount impossible")
   }
 
   return {
-    withSenderWallet,
+    withSenderWalletAndAccount,
   }
 }
 
@@ -601,6 +611,7 @@ const LPFBWithConversion = <S extends WalletCurrency, R extends WalletCurrency>(
     const feeAmounts = await WithdrawalFeeCalculator().lightningFee({
       paymentAmount: state.btcPaymentAmount,
       accountId: state.senderAccountId,
+      accountRole: state.senderAccountRole,
       wallet: {
         id: state.senderWalletId,
         currency: state.senderWalletCurrency,
@@ -728,7 +739,7 @@ const LPFBWithError = (
     | DealerPriceServiceError
     | InvalidLightningPaymentFlowBuilderStateError,
 ): LPFBWithError => {
-  const withSenderWallet = () => {
+  const withSenderWalletAndAccount = () => {
     return LPFBWithError(error)
   }
   const withoutRecipientWallet = () => {
@@ -764,7 +775,7 @@ const LPFBWithError = (
   }
 
   return {
-    withSenderWallet,
+    withSenderWalletAndAccount,
     withoutRecipientWallet,
     withRecipientWallet,
     withConversion,
