@@ -2,27 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat(api): expose per-level account limits on the globals query
-        (#750)...'
-      sha: 4b69c454609c1a9de9cbd79febcb15c88601cdf5
+      commitTitle: 'feat: add fee strategy for Lightning service fee on external sends
+        (#652)'
+      sha: 3a217e6f402831ac89917f0a45d9aaaec519aa4b
       tags:
-      - 0.22.43-1-g4b69c4546
+      - 0.22.50-1-g3a217e6f4
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat(api): expose per-level account limits on the globals query
-        (#750)...'
-      sha: 4b69c454609c1a9de9cbd79febcb15c88601cdf5
+      commitTitle: 'feat: add fee strategy for Lightning service fee on external sends
+        (#652)'
+      sha: 3a217e6f402831ac89917f0a45d9aaaec519aa4b
       tags:
-      - 0.22.43-1-g4b69c4546
+      - 0.22.50-1-g3a217e6f4
     path: schemas
   - git:
-      commitTitle: 'feat(api): expose per-level account limits on the globals query
-        (#750)...'
-      sha: 4b69c454609c1a9de9cbd79febcb15c88601cdf5
+      commitTitle: 'feat: add fee strategy for Lightning service fee on external sends
+        (#652)'
+      sha: 3a217e6f402831ac89917f0a45d9aaaec519aa4b
       tags:
-      - 0.22.43-1-g4b69c4546
+      - 0.22.50-1-g3a217e6f4
     path: gql
   path: graphql
 kind: LockConfig
