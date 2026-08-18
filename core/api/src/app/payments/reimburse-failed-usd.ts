@@ -93,10 +93,11 @@ export const reimburseFailedUsdPayment = async <
     accountId: recipientBtcWallet.accountId,
   }
 
-  const result = await LedgerFacade.recordReceiveOffChain({
+  const result = await LedgerFacade.recordLnFailedUsdSendRefund({
     description: FAILED_USD_MEMO,
     recipientWalletDescriptor: btcWalletDescriptor,
     amountToCreditReceiver: paymentFlow.totalAmountsForPayment(),
+    btcBankFee: paymentFlow.btcBankFee,
     metadata,
     txMetadata,
     additionalCreditMetadata: creditAccountAdditionalMetadata,

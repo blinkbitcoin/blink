@@ -45,6 +45,11 @@ type ImbalanceFeeStrategyParams = {
   minFee: number
 }
 
+type PercentageAboveThresholdFeeStrategyParams = {
+  basisPoints: number
+  thresholdInCents: number
+}
+
 type ExponentialDecayFeeStrategyParams = {
   decayStartAmount: number
   baseAmount: number
@@ -67,6 +72,11 @@ type FeeStrategy =
   | { name: string; strategy: "tieredFlat"; params: TieredFlatFeeStrategyParams }
   | { name: string; strategy: "exemptAccount"; params: ExemptAccountFeeStrategyParams }
   | { name: string; strategy: "imbalance"; params: ImbalanceFeeStrategyParams }
+  | {
+      name: string
+      strategy: "percentageAboveThreshold"
+      params: PercentageAboveThresholdFeeStrategyParams
+    }
   | {
       name: string
       strategy: "exponentialDecay"

@@ -2,6 +2,7 @@ import { MainBook, Transaction } from "../books"
 
 import { EntryBuilder, toLedgerAccountDescriptor } from "../domain"
 import { NoTransactionToSettleError } from "../domain/errors"
+import { FeeRefundEntryBuilder } from "../domain/fee-refund-entry-builder"
 import { TransactionsMetadataRepository } from "../services"
 import { persistAndReturnEntry } from "../helpers"
 
@@ -9,6 +10,7 @@ import { translateToLedgerJournal } from ".."
 
 import { staticAccountIds } from "./static-account-ids"
 
+import { InvalidLedgerTransactionStateError } from "@/domain/errors"
 import { UnknownLedgerError } from "@/domain/ledger"
 import { ZERO_CENTS, ZERO_SATS } from "@/domain/shared"
 
@@ -68,6 +70,47 @@ export const recordLnSendRevert = async ({
   } catch (err) {
     return new UnknownLedgerError(err)
   }
+}
+
+export const recordLnFailedUsdSendRefund = async ({
+  description,
+  recipientWalletDescriptor,
+  amountToCreditReceiver,
+  btcBankFee,
+  metadata,
+  txMetadata,
+  additionalCreditMetadata,
+  additionalInternalMetadata,
+}: RecordLnFailedUsdSendRefundArgs): Promise<
+  LedgerJournal | LedgerServiceError | InvalidLedgerTransactionStateError
+> => {
+  const accountIds = await staticAccountIds()
+  if (accountIds instanceof Error) return accountIds
+
+  const totalBtc = amountToCreditReceiver.btc
+
+  if (btcBankFee.amount > totalBtc.amount) {
+    return new InvalidLedgerTransactionStateError(
+      `service fee (${btcBankFee.amount}) exceeds refund total (${totalBtc.amount})`,
+    )
+  }
+
+  const entry = FeeRefundEntryBuilder({
+    entry: MainBook.entry(description),
+    metadata,
+    additionalCreditMetadata,
+    additionalInternalMetadata,
+    staticAccountIds: accountIds,
+    amountToRefund: totalBtc,
+    btcBankFee,
+  })
+    .creditRecipient({
+      accountDescriptor: toLedgerAccountDescriptor(recipientWalletDescriptor),
+    })
+    .debitOffChain()
+    .debitBankOwner()
+
+  return persistAndReturnEntry({ entry, ...txMetadata })
 }
 
 export const updateMetadataByHash = async (

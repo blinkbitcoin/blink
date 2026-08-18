@@ -59,7 +59,6 @@ describe("ImbalanceFeeStrategy", () => {
     return {
       netInVolumeAmountInboundNetworkFn: mockNetInVolumeAmountInboundNetworkFn,
       netInVolumeAmountOutboundNetworkFn: mockNetInVolumeAmountOutboundNetworkFn,
-      priceRatio,
     }
   }
 
@@ -107,6 +106,7 @@ describe("ImbalanceFeeStrategy", () => {
         networkFee: {} as NetworkFee,
         previousFee: {} as FeeDetails,
         paymentAmount,
+        priceRatio,
         wallet,
         imbalanceFns: createImbalanceFns(0n, 0n),
       })
@@ -123,6 +123,7 @@ describe("ImbalanceFeeStrategy", () => {
         networkFee: {} as NetworkFee,
         previousFee: {} as FeeDetails,
         paymentAmount,
+        priceRatio,
         wallet,
         imbalanceFns: createImbalanceFns(900_000n, 0n),
       })
@@ -141,6 +142,7 @@ describe("ImbalanceFeeStrategy", () => {
         networkFee: {} as NetworkFee,
         previousFee: {} as FeeDetails,
         paymentAmount,
+        priceRatio,
         wallet,
         imbalanceFns: createImbalanceFns(2_000_000n, 0n),
       })
@@ -159,6 +161,7 @@ describe("ImbalanceFeeStrategy", () => {
         networkFee: {} as NetworkFee,
         previousFee: {} as FeeDetails,
         paymentAmount,
+        priceRatio,
         wallet,
         imbalanceFns: createImbalanceFns(10_000_000n, 0n),
       })
@@ -177,6 +180,7 @@ describe("ImbalanceFeeStrategy", () => {
         networkFee: {} as NetworkFee,
         previousFee: {} as FeeDetails,
         paymentAmount,
+        priceRatio,
         wallet,
         imbalanceFns: createImbalanceFns(0n, 1_000_000n),
       })
@@ -195,6 +199,7 @@ describe("ImbalanceFeeStrategy", () => {
         networkFee: {} as NetworkFee,
         previousFee: {} as FeeDetails,
         paymentAmount,
+        priceRatio,
         wallet,
         imbalanceFns: createImbalanceFns(500_000n, 500_000n),
       })
@@ -213,6 +218,7 @@ describe("ImbalanceFeeStrategy", () => {
         networkFee: {} as NetworkFee,
         previousFee: {} as FeeDetails,
         paymentAmount,
+        priceRatio,
         wallet,
         imbalanceFns: createImbalanceFns(1_100_000n, 0n),
       })

@@ -6,7 +6,6 @@ type NetworkFee = {
 type ImbalanceFns = {
   netInVolumeAmountInboundNetworkFn: NewGetVolumeAmountSinceFn
   netInVolumeAmountOutboundNetworkFn: NewGetVolumeAmountSinceFn
-  priceRatio: WalletPriceRatio
 }
 
 type FeeCalculationArgs = {
@@ -16,6 +15,7 @@ type FeeCalculationArgs = {
   wallet: WalletDescriptor<"BTC"> | WalletDescriptor<"USD">
   networkFee: NetworkFee
   previousFee: FeeDetails
+  priceRatio?: WalletPriceRatio
   imbalanceFns?: ImbalanceFns
   isValidatedMerchant?: boolean
 }

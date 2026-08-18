@@ -119,6 +119,7 @@ type PayNoAmountInvoiceByWalletIdArgs = PaymentSendArgs & {
 
 type PayNoAmountInvoiceByWalletIdInternalArgs = PayNoAmountInvoiceByWalletIdArgs & {
   skipChecks: boolean
+  skipBankFee: boolean
 }
 
 type IntraLedgerPaymentSendUsernameArgs = PaymentSendArgs & {
