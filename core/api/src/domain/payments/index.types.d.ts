@@ -78,6 +78,8 @@ type PaymentFlowState<
 > = XorPaymentHashProperty & {
   descriptionFromInvoice: string
   skipProbeForDestination: boolean
+  btcBankFee: BtcPaymentAmount
+  usdBankFee: UsdPaymentAmount
 } & PaymentFlowCommonState<S, R>
 
 type OnChainPaymentFlowState<S extends WalletCurrency, R extends WalletCurrency> = {
@@ -165,9 +167,13 @@ type LightningPaymentFlowBuilder<S extends WalletCurrency> = {
 }
 
 type LPFBWithInvoice<S extends WalletCurrency> = {
-  withSenderWallet(
-    senderWallet: WalletDescriptor<S>,
-  ): LPFBWithSenderWallet<S> | LPFBWithError
+  withSenderWalletAndAccount({
+    wallet,
+    account,
+  }: {
+    wallet: WalletDescriptor<S>
+    account: Account
+  }): LPFBWithSenderWallet<S> | LPFBWithError
 }
 
 type LPFBWithRecipientArgs<R extends WalletCurrency> = {
@@ -212,7 +218,7 @@ type LPFBWithConversion<S extends WalletCurrency, R extends WalletCurrency> = {
 }
 
 type LPFBWithError = {
-  withSenderWallet(): LPFBWithError
+  withSenderWalletAndAccount(): LPFBWithError
   withoutRecipientWallet(): LPFBWithError
   withRecipientWallet(): LPFBWithError
   withConversion(): LPFBWithError
@@ -228,6 +234,7 @@ type LPFBWithError = {
 type LightningPaymentFlowBuilderConfig = {
   localNodeIds: Pubkey[]
   skipProbe: SkipFeeProbeConfig
+  skipBankFee?: boolean
 }
 
 type LPFBWithInvoiceState = LightningPaymentFlowBuilderConfig &
@@ -250,6 +257,7 @@ type LPFBWithSenderWalletState<S extends WalletCurrency> = RequireField<
   senderWalletId: WalletId
   senderWalletCurrency: S
   senderAccountId: AccountId
+  senderAccountRole: string | undefined
   usdPaymentAmount?: UsdPaymentAmount
 }
 
@@ -283,6 +291,8 @@ type LPFBWithRouteState<
 > = LPFBWithConversionState<S, R> & {
   outgoingNodePubkey: Pubkey | undefined
   checkedRoute: RawRoute | undefined
+  btcBankFee: BtcPaymentAmount
+  usdBankFee: UsdPaymentAmount
 }
 
 type OnChainPaymentFlowBuilder<S extends WalletCurrency> = {

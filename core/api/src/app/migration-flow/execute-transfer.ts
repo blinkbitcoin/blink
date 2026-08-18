@@ -231,6 +231,7 @@ export const executeMigrationTransfer = async ({
     senderWalletId: btcWalletId,
     senderAccount: account,
     skipChecks: true,
+    skipBankFee: true,
   })
   if (paymentResult instanceof Error) {
     return failMigration(

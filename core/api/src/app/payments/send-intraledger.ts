@@ -83,7 +83,10 @@ const intraledgerPaymentSendWalletId = async ({
     description: memo || "",
   })
 
-  const builderWithSenderWallet = builderWithInvoice.withSenderWallet(senderWallet)
+  const builderWithSenderWallet = builderWithInvoice.withSenderWalletAndAccount({
+    wallet: senderWallet,
+    account: senderAccount,
+  })
 
   const wallets =
     await WalletsRepository().findAccountWalletsByAccountId(recipientAccountId)

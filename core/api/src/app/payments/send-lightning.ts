@@ -33,8 +33,10 @@ import {
   toDisplayBaseAmount,
 } from "@/domain/payments"
 import {
+  AmountCalculator,
   WalletCurrency,
   ErrorLevel,
+  ZERO_SATS,
   checkedToBtcPaymentAmount,
   checkedToUsdPaymentAmount,
 } from "@/domain/shared"
@@ -79,6 +81,7 @@ import { ResourceExpiredLockServiceError } from "@/domain/lock"
 
 const dealer = DealerPriceService()
 const paymentFlowRepo = PaymentFlowStateRepository(defaultTimeToExpiryInSeconds)
+const calc = AmountCalculator()
 
 const getValidatedIntraledgerRecipientAccount = async <
   S extends WalletCurrency,
@@ -207,6 +210,7 @@ export const payNoAmountInvoiceByWalletId = async ({
   senderAccount,
   apiKeyId,
   skipChecks = false,
+  skipBankFee = false,
 }: PayNoAmountInvoiceByWalletIdInternalArgs): Promise<
   PaymentSendResult | ApplicationError
 > => {
@@ -231,7 +235,10 @@ export const payNoAmountInvoiceByWalletId = async ({
   if (validatedNoAmountPaymentInputs instanceof Error) {
     return validatedNoAmountPaymentInputs
   }
-  const paymentFlow = await getPaymentFlow(validatedNoAmountPaymentInputs)
+  const paymentFlow = await getPaymentFlow({
+    ...validatedNoAmountPaymentInputs,
+    skipBankFee,
+  })
   if (paymentFlow instanceof Error) return paymentFlow
 
   // Get display currency price... add to payment flow builder?
@@ -279,7 +286,7 @@ export const payNoAmountInvoiceByWalletIdForBtcWallet = async (
   const validated = await validateIsBtcWallet(args.senderWalletId)
   return validated instanceof Error
     ? validated
-    : payNoAmountInvoiceByWalletId({ ...args, skipChecks: false })
+    : payNoAmountInvoiceByWalletId({ ...args, skipChecks: false, skipBankFee: false })
 }
 
 export const payNoAmountInvoiceByWalletIdForUsdWallet = async (
@@ -288,7 +295,7 @@ export const payNoAmountInvoiceByWalletIdForUsdWallet = async (
   const validated = await validateIsUsdWallet(args.senderWalletId)
   return validated instanceof Error
     ? validated
-    : payNoAmountInvoiceByWalletId({ ...args, skipChecks: false })
+    : payNoAmountInvoiceByWalletId({ ...args, skipChecks: false, skipBankFee: false })
 }
 
 const validateInvoicePaymentInputs = async ({
@@ -300,6 +307,7 @@ const validateInvoicePaymentInputs = async ({
 }): Promise<
   | {
       senderWallet: Wallet
+      senderAccount: Account
       decodedInvoice: LnInvoice
       inputPaymentAmount: BtcPaymentAmount
     }
@@ -337,6 +345,7 @@ const validateInvoicePaymentInputs = async ({
 
   return {
     senderWallet,
+    senderAccount,
     decodedInvoice,
     inputPaymentAmount: lnInvoiceAmount,
   }
@@ -355,6 +364,7 @@ const validateNoAmountInvoicePaymentInputs = async <S extends WalletCurrency>({
 }): Promise<
   | {
       senderWallet: Wallet
+      senderAccount: Account
       decodedInvoice: LnInvoice
       inputPaymentAmount: PaymentAmount<S>
       uncheckedAmount: number
@@ -396,6 +406,7 @@ const validateNoAmountInvoicePaymentInputs = async <S extends WalletCurrency>({
 
   return {
     senderWallet,
+    senderAccount,
     decodedInvoice,
     inputPaymentAmount: inputPaymentAmount as PaymentAmount<S>,
     uncheckedAmount: amount,
@@ -404,14 +415,18 @@ const validateNoAmountInvoicePaymentInputs = async <S extends WalletCurrency>({
 
 const getPaymentFlow = async <S extends WalletCurrency, R extends WalletCurrency>({
   senderWallet,
+  senderAccount,
   decodedInvoice,
   inputPaymentAmount,
   uncheckedAmount,
+  skipBankFee,
 }: {
   senderWallet: WalletDescriptor<S>
+  senderAccount: Account
   decodedInvoice: LnInvoice
   inputPaymentAmount: PaymentAmount<S>
   uncheckedAmount?: number | undefined
+  skipBankFee?: boolean
 }): Promise<PaymentFlow<S, R> | ApplicationError> => {
   let paymentFlow = await paymentFlowRepo.findLightningPaymentFlow<S, R>({
     walletId: senderWallet.id,
@@ -428,7 +443,9 @@ const getPaymentFlow = async <S extends WalletCurrency, R extends WalletCurrency
     const builderWithConversion = await constructPaymentFlowBuilder<S, R>({
       uncheckedAmount,
       senderWallet,
+      senderAccount,
       invoice: decodedInvoice,
+      skipBankFee,
       hedgeBuyUsd: {
         usdFromBtc: dealer.getCentsFromSatsForImmediateBuy,
         btcFromUsd: dealer.getSatsFromCentsForImmediateBuy,
@@ -1029,6 +1046,10 @@ const lockedPaymentViaLnSteps = async ({
           paymentFlow.usdPaymentAmount.amount + paymentFlow.usdProtocolAndBankFee.amount,
       },
     },
+    bankFee: {
+      btc: paymentFlow.btcBankFee,
+      usd: paymentFlow.usdBankFee,
+    },
     senderWalletDescriptor,
     metadata,
     additionalDebitMetadata: debitAccountAdditionalMetadata,
@@ -1046,8 +1067,12 @@ const lockedPaymentViaLnSteps = async ({
       pubkey: outgoingNodePubkey,
     })
   } else {
+    // btcProtocolAndBankFee is the TOTAL (routing reserve + service fee)
     const maxFeeCheckArgs = {
-      maxFeeAmount: paymentFlow.btcProtocolAndBankFee,
+      maxFeeAmount: calc.max(
+        calc.sub(paymentFlow.btcProtocolAndBankFee, paymentFlow.btcBankFee),
+        ZERO_SATS,
+      ),
       btcPaymentAmount: paymentFlow.btcPaymentAmount,
       usdPaymentAmount: paymentFlow.usdPaymentAmount,
       priceRatio: walletPriceRatio,

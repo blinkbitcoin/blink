@@ -11,7 +11,11 @@ import {
 } from "@/domain/payments"
 import { LndService } from "@/services/lnd"
 
-import { WalletsRepository, PaymentFlowStateRepository } from "@/services/mongoose"
+import {
+  AccountsRepository,
+  WalletsRepository,
+  PaymentFlowStateRepository,
+} from "@/services/mongoose"
 import { DealerPriceService } from "@/services/dealer-price"
 import { addAttributesToCurrentSpan } from "@/services/tracing"
 
@@ -134,9 +138,13 @@ const estimateLightningFee = async ({
   const senderWallet = await WalletsRepository().findById(senderWalletId)
   if (senderWallet instanceof Error) return PartialResult.err(senderWallet)
 
+  const senderAccount = await AccountsRepository().findById(senderWallet.accountId)
+  if (senderAccount instanceof Error) return PartialResult.err(senderAccount)
+
   const dealer = DealerPriceService()
   const builder = await constructPaymentFlowBuilder({
     senderWallet,
+    senderAccount,
     invoice,
     uncheckedAmount,
     hedgeBuyUsd: {

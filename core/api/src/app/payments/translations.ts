@@ -1,10 +1,12 @@
+import { toSats } from "@/domain/bitcoin"
 import { LedgerTransactionType } from "@/domain/ledger"
 import {
   MissingPropsInTransactionForPaymentFlowError,
   NonLnPaymentTransactionForPaymentFlowError,
   PaymentFlow,
+  WalletPriceRatio,
 } from "@/domain/payments"
-import { paymentAmountFromNumber, WalletCurrency } from "@/domain/shared"
+import { paymentAmountFromNumber, WalletCurrency, ZERO_CENTS } from "@/domain/shared"
 import { PaymentInitiationMethod, SettlementMethod } from "@/domain/wallets"
 
 export const PaymentFlowFromLedgerTransaction = <
@@ -13,9 +15,11 @@ export const PaymentFlowFromLedgerTransaction = <
 >({
   ledgerTxn,
   senderAccountId,
+  bankFee = toSats(0),
 }: {
   ledgerTxn: LedgerTransaction<S>
   senderAccountId: AccountId
+  bankFee?: Satoshis
 }): PaymentFlow<S, R> | ValidationError => {
   if (ledgerTxn.type !== LedgerTransactionType.Payment) {
     return new NonLnPaymentTransactionForPaymentFlowError()
@@ -70,6 +74,22 @@ export const PaymentFlowFromLedgerTransaction = <
   })
   if (usdProtocolAndBankFee instanceof Error) return usdProtocolAndBankFee
 
+  const btcBankFee = paymentAmountFromNumber({
+    amount: bankFee,
+    currency: WalletCurrency.Btc,
+  })
+  if (btcBankFee instanceof Error) return btcBankFee
+
+  let usdBankFee = ZERO_CENTS
+  if (btcBankFee.amount > 0n) {
+    const priceRatio = WalletPriceRatio({
+      usd: usdPaymentAmount,
+      btc: btcPaymentAmount,
+    })
+    if (priceRatio instanceof Error) return priceRatio
+    usdBankFee = priceRatio.convertFromBtcToCeil(btcBankFee)
+  }
+
   return PaymentFlow({
     senderWalletId,
     senderWalletCurrency,
@@ -92,5 +112,8 @@ export const PaymentFlowFromLedgerTransaction = <
 
     btcProtocolAndBankFee,
     usdProtocolAndBankFee,
+
+    btcBankFee,
+    usdBankFee,
   })
 }

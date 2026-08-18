@@ -108,7 +108,6 @@ describe("WithdrawalFeeCalculator", () => {
         return {
           netInVolumeAmountInboundNetworkFn: mockNetInVolumeAmountInboundNetworkFn,
           netInVolumeAmountOutboundNetworkFn: mockNetInVolumeAmountOutboundNetworkFn,
-          priceRatio,
         }
       }
 
@@ -155,6 +154,7 @@ describe("WithdrawalFeeCalculator", () => {
           wallet,
           networkFee: { amount: networkFee, feeRate: 1 },
           speed: "fast",
+          priceRatio,
           imbalanceFns: createImbalanceFns(0n, 0n),
         })
         expect(fee).not.toBeInstanceOf(Error)
@@ -175,6 +175,7 @@ describe("WithdrawalFeeCalculator", () => {
           wallet,
           networkFee: { amount: networkFee, feeRate: 1 },
           speed: "fast",
+          priceRatio,
           imbalanceFns: createImbalanceFns(0n, 2_000_000n),
         })
 
@@ -196,6 +197,7 @@ describe("WithdrawalFeeCalculator", () => {
           wallet,
           networkFee: { amount: networkFee, feeRate: 1 },
           speed: "fast",
+          priceRatio,
           imbalanceFns: createImbalanceFns(500_000n, 0n),
         })
 
@@ -217,6 +219,7 @@ describe("WithdrawalFeeCalculator", () => {
           wallet,
           networkFee: { amount: networkFee, feeRate: 1 },
           speed: "fast",
+          priceRatio,
           imbalanceFns: createImbalanceFns(0n, 2_000_000n),
         })
 
@@ -243,6 +246,7 @@ describe("WithdrawalFeeCalculator", () => {
           wallet,
           networkFee: { amount: networkFee, feeRate: 1 },
           speed: "fast",
+          priceRatio,
           imbalanceFns: createImbalanceFns(500_000n, 0n),
         })
 
@@ -266,6 +270,7 @@ describe("WithdrawalFeeCalculator", () => {
           wallet,
           networkFee: { amount: networkFee, feeRate: 1 },
           speed: "fast",
+          priceRatio,
           imbalanceFns: createImbalanceFns(2_000_000n, 0n),
         })
 
@@ -288,6 +293,7 @@ describe("WithdrawalFeeCalculator", () => {
           wallet,
           networkFee: { amount: networkFee, feeRate: 1 },
           speed: "fast",
+          priceRatio,
           imbalanceFns: createImbalanceFns(2_000_000n, 0n),
         })
 
@@ -321,6 +327,78 @@ describe("WithdrawalFeeCalculator", () => {
       expect(fee).not.toBeInstanceOf(Error)
       if (fee instanceof Error) throw fee
       expect(fee.totalFee.amount).toBe(3000n)
+    })
+
+    describe("percentageAboveThreshold (service fee) strategy", () => {
+      // 1 cent per sat: convertFromBtcToFloor(N sats) === N cents
+      const priceRatio = WalletPriceRatio({
+        usd: { amount: 100_000_000n, currency: WalletCurrency.Usd },
+        btc: { amount: 100_000_000n, currency: WalletCurrency.Btc },
+      })
+      if (priceRatio instanceof Error) throw priceRatio
+
+      beforeEach(() => {
+        const { getLightningNetworkConfig } = jest.requireActual("@/config")
+        mockGetLightningNetworkConfig.mockReturnValue({
+          ...getLightningNetworkConfig(),
+          send: {
+            feeStrategies: [
+              {
+                name: "lightning_service_fee",
+                strategy: "percentageAboveThreshold",
+                params: { basisPoints: 30, thresholdInCents: 10_000 },
+              },
+            ],
+          },
+        })
+      })
+
+      it("resolves the registered strategy and threads the priceRatio (charges above $100)", async () => {
+        // 100_000 sats === $1000.00 at 1 cent/sat -> above the $100 gate
+        const fee = await WithdrawalFeeCalculator().lightningFee({
+          paymentAmount: btcPaymentAmount,
+          accountId,
+          wallet,
+          networkFee: { amount: networkFee, feeRate: 1 },
+          priceRatio,
+        })
+
+        expect(fee).not.toBeInstanceOf(Error)
+        if (fee instanceof Error) throw fee
+        // 0.3% of 100_000 sats = 300 sats, carried as bankFee
+        expect(fee.bankFee.amount).toBe(300n)
+      })
+
+      it("charges no service fee at or below $100", async () => {
+        const amount = paymentAmountFromNumber({
+          amount: 10_000, // exactly $100.00 at 1 cent/sat
+          currency: WalletCurrency.Btc,
+        })
+        if (amount instanceof Error) throw amount
+
+        const fee = await WithdrawalFeeCalculator().lightningFee({
+          paymentAmount: amount,
+          accountId,
+          wallet,
+          networkFee: { amount: networkFee, feeRate: 1 },
+          priceRatio,
+        })
+
+        expect(fee).not.toBeInstanceOf(Error)
+        if (fee instanceof Error) throw fee
+        expect(fee.bankFee.amount).toBe(0n)
+      })
+
+      it("fails closed with a ValidationError when no priceRatio is threaded", async () => {
+        const fee = await WithdrawalFeeCalculator().lightningFee({
+          paymentAmount: btcPaymentAmount,
+          accountId,
+          wallet,
+          networkFee: { amount: networkFee, feeRate: 1 },
+        })
+
+        expect(fee).toBeInstanceOf(Error)
+      })
     })
   })
 

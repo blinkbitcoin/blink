@@ -92,6 +92,57 @@ describe("PaymentFlowFromLedgerTransaction", () => {
     expect(paymentFlow).toEqual(expect.objectContaining(expectedPaymentFlowState))
   })
 
+  it("reconstructs the service-fee breakdown from the bankFee param (Model 2, leg-recovery)", () => {
+    const bankFee = toSats(40)
+    const ledgerTxn = {
+      ...ledgerTxnBase,
+      currency: WalletCurrency.Btc,
+    } as LedgerTransaction<WalletCurrency>
+    const paymentFlow = PaymentFlowFromLedgerTransaction({
+      ledgerTxn,
+      senderAccountId,
+      bankFee,
+    })
+    expect(paymentFlow).not.toBeInstanceOf(Error)
+    if (paymentFlow instanceof Error) throw paymentFlow
+
+    // btcProtocolAndBankFee = satsFee = accounting TOTAL (routing reserve + service)
+    expect(paymentFlow.btcProtocolAndBankFee).toEqual({
+      amount: BigInt(satsFee),
+      currency: WalletCurrency.Btc,
+    })
+    // btcBankFee = service-fee breakdown recovered from the bank-owner leg (NOT zero)
+    expect(paymentFlow.btcBankFee).toEqual({
+      amount: BigInt(bankFee),
+      currency: WalletCurrency.Btc,
+    })
+    // usd breakdown rebuilt via the price ratio (20000 sats / 1000 cents → 2 cents)
+    expect(paymentFlow.usdBankFee.amount).toEqual(2n)
+    // routing reserve recoverable as total − service
+    expect(
+      paymentFlow.btcProtocolAndBankFee.amount - paymentFlow.btcBankFee.amount,
+    ).toEqual(BigInt(satsFee - bankFee))
+  })
+
+  it("defaults the service-fee breakdown to zero when bankFee is absent (legacy/zero-fee)", () => {
+    const ledgerTxn = {
+      ...ledgerTxnBase,
+      currency: WalletCurrency.Btc,
+    } as LedgerTransaction<WalletCurrency>
+    const paymentFlow = PaymentFlowFromLedgerTransaction({ ledgerTxn, senderAccountId })
+    expect(paymentFlow).not.toBeInstanceOf(Error)
+    if (paymentFlow instanceof Error) throw paymentFlow
+
+    expect(paymentFlow.btcBankFee).toEqual({
+      amount: 0n,
+      currency: WalletCurrency.Btc,
+    })
+    expect(paymentFlow.usdBankFee).toEqual({
+      amount: 0n,
+      currency: WalletCurrency.Usd,
+    })
+  })
+
   it("handles zero fee btc transaction", () => {
     const ledgerTxn = {
       ...ledgerTxnBase,

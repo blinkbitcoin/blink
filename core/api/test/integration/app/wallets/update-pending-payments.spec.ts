@@ -3,7 +3,8 @@ import { updatePendingPaymentByHash } from "@/app/payments"
 import { LedgerTransactionType } from "@/domain/ledger"
 import { FAILED_USD_MEMO } from "@/domain/ledger/ln-payment-state"
 import { PaymentStatus } from "@/domain/bitcoin/lightning"
-import { AmountCalculator, WalletCurrency } from "@/domain/shared"
+import { CouldNotFindLightningPaymentFlowError } from "@/domain/errors"
+import { AmountCalculator, WalletCurrency, ZERO_CENTS, ZERO_SATS } from "@/domain/shared"
 import * as DisplayAmountsConverterImpl from "@/domain/fiat"
 
 import { baseLogger } from "@/services/logger"
@@ -14,6 +15,7 @@ import * as MongooseImpl from "@/services/mongoose"
 import {
   createMandatoryUsers,
   createRandomUserAndBtcWallet,
+  createRandomUserAndWallets,
   recordSendLnPayment,
 } from "test/helpers"
 
@@ -73,7 +75,7 @@ describe("update pending payments", () => {
       LedgerFacadeImpl,
       "LnFailedPaymentReceiveLedgerMetadata",
     )
-    const recordOffChainReceiveSpy = jest.spyOn(LedgerFacadeImpl, "recordReceiveOffChain")
+    const recordRefundSpy = jest.spyOn(LedgerFacadeImpl, "recordLnFailedUsdSendRefund")
 
     // Setup users and wallets
     const newWalletDescriptor = await createRandomUserAndBtcWallet()
@@ -96,6 +98,8 @@ describe("update pending payments", () => {
       usdPaymentAmount: sendAmount.usd,
       btcProtocolAndBankFee: bankFee.btc,
       usdProtocolAndBankFee: bankFee.usd,
+      btcBankFee: ZERO_SATS,
+      usdBankFee: ZERO_CENTS,
       totalAmountsForPayment: () => ({
         btc: calc.add(sendAmount.btc, bankFee.btc),
         usd: calc.add(sendAmount.usd, bankFee.usd),
@@ -115,8 +119,194 @@ describe("update pending payments", () => {
     // Check record function was called with right metadata
     expect(displayAmountsConverterSpy).toHaveBeenCalledTimes(0)
     expect(lnFailedPaymentReceiveLedgerMetadataSpy).toHaveBeenCalledTimes(1)
-    const args = recordOffChainReceiveSpy.mock.calls[0][0]
+    const args = recordRefundSpy.mock.calls[0][0]
     expect(args.metadata.type).toBe(LedgerTransactionType.Payment)
     expect(args.description).toBe(FAILED_USD_MEMO)
+  })
+
+  const runUsdFailureUpdate = async ({
+    btcBankFee,
+    usdBankFee,
+  }: {
+    btcBankFee: BtcPaymentAmount
+    usdBankFee: UsdPaymentAmount
+  }) => {
+    const { LndService: LnServiceOrig } = jest.requireActual("@/services/lnd")
+    jest.spyOn(LndImpl, "LndService").mockReturnValue({
+      ...LnServiceOrig(),
+      lookupPayment: () => ({ status: PaymentStatus.Failed }),
+    })
+
+    const { LnPaymentsRepository: LnPaymentsRepositoryOrig } =
+      jest.requireActual("@/services/mongoose")
+    jest.spyOn(MongooseImpl, "LnPaymentsRepository").mockReturnValue({
+      ...LnPaymentsRepositoryOrig(),
+      findByPaymentHash: () => ({ paymentRequest: samplePaymentRequest }),
+    })
+
+    const refundSpy = jest.spyOn(LedgerFacadeImpl, "recordLnFailedUsdSendRefund")
+
+    const newWalletDescriptor = await createRandomUserAndBtcWallet()
+
+    const { paymentHash } = await recordSendLnPayment({
+      walletDescriptor: newWalletDescriptor,
+      paymentAmount: sendAmount,
+      bankFee,
+      displayAmounts: displaySendEurAmounts,
+    })
+
+    const mockedPaymentFlow = {
+      senderWalletCurrency: WalletCurrency.Usd,
+      paymentHashForFlow: () => paymentHash,
+      senderWalletDescriptor: () => newWalletDescriptor,
+
+      btcPaymentAmount: sendAmount.btc,
+      usdPaymentAmount: sendAmount.usd,
+      btcProtocolAndBankFee: bankFee.btc,
+      usdProtocolAndBankFee: bankFee.usd,
+      btcBankFee,
+      usdBankFee,
+      totalAmountsForPayment: () => ({
+        btc: calc.add(sendAmount.btc, bankFee.btc),
+        usd: calc.add(sendAmount.usd, bankFee.usd),
+      }),
+    }
+
+    const { PaymentFlowStateRepository: PaymentFlowStateRepositoryOrig } =
+      jest.requireActual("@/services/mongoose")
+    jest.spyOn(MongooseImpl, "PaymentFlowStateRepository").mockReturnValue({
+      ...PaymentFlowStateRepositoryOrig(),
+      markLightningPaymentFlowNotPending: () => mockedPaymentFlow,
+    })
+
+    await updatePendingPaymentByHash({ paymentHash, logger: baseLogger })
+
+    return { refundSpy, paymentHash }
+  }
+
+  it("refunds the total and claws the service fee back from bank-owner on an async USD failure carrying a service fee", async () => {
+    const btcBankFee = { amount: 30n, currency: WalletCurrency.Btc } as BtcPaymentAmount
+    const usdBankFee = { amount: 10n, currency: WalletCurrency.Usd } as UsdPaymentAmount
+
+    const { refundSpy } = await runUsdFailureUpdate({ btcBankFee, usdBankFee })
+
+    expect(refundSpy).toHaveBeenCalledTimes(1)
+    expect(refundSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: FAILED_USD_MEMO,
+        btcBankFee,
+        amountToCreditReceiver: {
+          btc: calc.add(sendAmount.btc, bankFee.btc),
+          usd: calc.add(sendAmount.usd, bankFee.usd),
+        },
+      }),
+    )
+  })
+
+  it("refunds the total with no bank-owner clawback on an async USD failure carrying no service fee", async () => {
+    const { refundSpy } = await runUsdFailureUpdate({
+      btcBankFee: ZERO_SATS,
+      usdBankFee: ZERO_CENTS,
+    })
+
+    expect(refundSpy).toHaveBeenCalledTimes(1)
+    expect(refundSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: FAILED_USD_MEMO,
+        btcBankFee: ZERO_SATS,
+        amountToCreditReceiver: {
+          btc: calc.add(sendAmount.btc, bankFee.btc),
+          usd: calc.add(sendAmount.usd, bankFee.usd),
+        },
+      }),
+    )
+  })
+
+  it("recovers the service fee from the live journal, not a voided prior attempt, when reconstructing the flow", async () => {
+    const { LndService: LnServiceOrig } = jest.requireActual("@/services/lnd")
+    jest.spyOn(LndImpl, "LndService").mockReturnValue({
+      ...LnServiceOrig(),
+      lookupPayment: () => ({ status: PaymentStatus.Failed }),
+    })
+
+    const { LnPaymentsRepository: LnPaymentsRepositoryOrig } =
+      jest.requireActual("@/services/mongoose")
+    jest.spyOn(MongooseImpl, "LnPaymentsRepository").mockReturnValue({
+      ...LnPaymentsRepositoryOrig(),
+      findByPaymentHash: () => ({ paymentRequest: samplePaymentRequest }),
+    })
+
+    const refundSpy = jest.spyOn(LedgerFacadeImpl, "recordLnFailedUsdSendRefund")
+
+    const { usdWalletDescriptor } = await createRandomUserAndWallets()
+
+    // service fee (bank-owner credit) is a subset of the total fee; the sender
+    // debit must include the total fee or reconstruction's inputAmount
+    // (debit − fee) cannot match the leg's centsAmount
+    const serviceFee = {
+      usd: { amount: 3n, currency: WalletCurrency.Usd } as UsdPaymentAmount,
+      btc: { amount: 9n, currency: WalletCurrency.Btc } as BtcPaymentAmount,
+    }
+    const paymentHash = crypto.randomUUID() as PaymentHash
+    const recordServiceFeeSend = async () => {
+      const {
+        metadata,
+        debitAccountAdditionalMetadata,
+        internalAccountsAdditionalMetadata,
+      } = LedgerFacadeImpl.LnSendLedgerMetadata({
+        paymentHash,
+        pubkey: crypto.randomUUID() as Pubkey,
+        feeKnownInAdvance: true,
+        paymentAmounts: {
+          btcPaymentAmount: sendAmount.btc,
+          usdPaymentAmount: sendAmount.usd,
+          btcProtocolAndBankFee: bankFee.btc,
+          usdProtocolAndBankFee: bankFee.usd,
+        },
+        ...displaySendEurAmounts,
+      })
+      const recorded = await LedgerFacadeImpl.recordSendOffChain({
+        description: "sends bitcoin via ln",
+        amountToDebitSender: {
+          btc: calc.add(sendAmount.btc, bankFee.btc),
+          usd: calc.add(sendAmount.usd, bankFee.usd),
+        },
+        senderWalletDescriptor: usdWalletDescriptor,
+        bankFee: serviceFee,
+        metadata,
+        additionalDebitMetadata: debitAccountAdditionalMetadata,
+        additionalInternalMetadata: internalAccountsAdditionalMetadata,
+      })
+      if (recorded instanceof Error) throw recorded
+      return recorded
+    }
+
+    // attempt 1: settled then voided (the supported same-hash retry shape)
+    const attempt1 = await recordServiceFeeSend()
+    await LedgerFacadeImpl.settlePendingLnSend(paymentHash)
+    await LedgerFacadeImpl.recordLnSendRevert({
+      journalId: attempt1.journalId,
+      paymentHash,
+    })
+
+    // attempt 2: the live pending attempt on the same hash
+    await recordServiceFeeSend()
+
+    // missing flow state forces ledger reconstruction
+    const { PaymentFlowStateRepository: PaymentFlowStateRepositoryOrig } =
+      jest.requireActual("@/services/mongoose")
+    jest.spyOn(MongooseImpl, "PaymentFlowStateRepository").mockReturnValue({
+      ...PaymentFlowStateRepositoryOrig(),
+      markLightningPaymentFlowNotPending: () =>
+        new CouldNotFindLightningPaymentFlowError(),
+    })
+
+    const result = await updatePendingPaymentByHash({ paymentHash, logger: baseLogger })
+    expect(result).not.toBeInstanceOf(Error)
+
+    expect(refundSpy).toHaveBeenCalledTimes(1)
+    expect(refundSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ btcBankFee: serviceFee.btc }),
+    )
   })
 })

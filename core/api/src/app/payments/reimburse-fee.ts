@@ -6,6 +6,7 @@ import {
   toDisplayBaseAmount,
 } from "@/domain/payments"
 import {
+  AmountCalculator,
   paymentAmountFromNumber,
   WalletCurrency,
   ZERO_CENTS,
@@ -17,6 +18,8 @@ import { getSkipFeeReimbursement } from "@/config"
 import * as LedgerFacade from "@/services/ledger/facade"
 import { baseLogger } from "@/services/logger"
 import { recordExceptionInCurrentSpan } from "@/services/tracing"
+
+const calc = AmountCalculator()
 
 export const reimburseFee = async <S extends WalletCurrency, R extends WalletCurrency>({
   paymentFlow,
@@ -39,9 +42,16 @@ export const reimburseFee = async <S extends WalletCurrency, R extends WalletCur
   })
   if (actualFeeAmount instanceof Error) return actualFeeAmount
 
+  // reserve = total − bank fee
   const maxFeeAmounts = {
-    btc: paymentFlow.btcProtocolAndBankFee,
-    usd: paymentFlow.usdProtocolAndBankFee,
+    btc: calc.max(
+      calc.sub(paymentFlow.btcProtocolAndBankFee, paymentFlow.btcBankFee),
+      ZERO_SATS,
+    ),
+    usd: calc.max(
+      calc.sub(paymentFlow.usdProtocolAndBankFee, paymentFlow.usdBankFee),
+      ZERO_CENTS,
+    ),
   }
 
   const priceRatio = WalletPriceRatio(paymentFlow.paymentAmounts())

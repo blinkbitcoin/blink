@@ -292,10 +292,10 @@ describe("OnChainPaymentFlowBuilder", () => {
                   accountId: payment.senderAccountId,
                   accountRole: "user",
                   wallet: senderBtcWalletDescriptor,
+                  priceRatio,
                   imbalanceFns: {
                     netInVolumeAmountInboundNetworkFn: netInVolumeAmountLightningFn,
                     netInVolumeAmountOutboundNetworkFn: netInVolumeAmountOnChainFn,
-                    priceRatio,
                   },
                 })
                 if (withdrawalFees instanceof Error) return withdrawalFees
@@ -807,10 +807,10 @@ describe("OnChainPaymentFlowBuilder", () => {
                         currency: payment.senderWalletCurrency,
                         accountId: payment.senderAccountId,
                       },
+                      priceRatio,
                       imbalanceFns: {
                         netInVolumeAmountInboundNetworkFn: netInVolumeAmountLightningFn,
                         netInVolumeAmountOutboundNetworkFn: netInVolumeAmountOnChainFn,
-                        priceRatio,
                       },
                     })
                     if (withdrawalFees instanceof Error) return withdrawalFees
