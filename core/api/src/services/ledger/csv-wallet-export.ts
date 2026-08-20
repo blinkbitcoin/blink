@@ -1,5 +1,6 @@
 import { createObjectCsvStringifier, createObjectCsvWriter } from "csv-writer"
 
+import { centsToDollars } from "@/domain/fiat"
 import { LedgerService } from "@/services/ledger"
 import { baseLogger } from "@/services/logger"
 
@@ -32,6 +33,16 @@ const headers_field = [
 
 const header = headers_field.map((item) => ({ id: item, title: item }))
 
+// The legacy fee/feeUsd/usd ledger fields are only written by admin entries;
+// user transactions carry satsFee/centsFee/centsAmount instead. The fiat values
+// are cents-denominated, so they are converted to dollars to match the columns.
+const toCsvRecord = (tx: LedgerTransaction<WalletCurrency>) => ({
+  ...tx,
+  fee: tx.satsFee ?? tx.fee,
+  feeUsd: tx.centsFee === undefined ? tx.feeUsd : centsToDollars(tx.centsFee),
+  usd: tx.centsAmount === undefined ? tx.usd : centsToDollars(tx.centsAmount),
+})
+
 export class CsvWalletsExport {
   entries: LedgerTransaction<WalletCurrency>[] = []
 
@@ -41,7 +52,7 @@ export class CsvWalletsExport {
     })
 
     const header_stringify = csvWriter.getHeaderString()
-    const records = csvWriter.stringifyRecords(this.entries)
+    const records = csvWriter.stringifyRecords(this.entries.map(toCsvRecord))
 
     const str = header_stringify + records
 
@@ -60,7 +71,7 @@ export class CsvWalletsExport {
       header,
     })
 
-    await csvWriter.writeRecords(this.entries)
+    await csvWriter.writeRecords(this.entries.map(toCsvRecord))
     baseLogger.info("saving complete")
   }
 
