@@ -19,7 +19,8 @@
  *            wallet of the same currency through the standard intraledger path (limits, wallet
  *            locks, notifications and memo sharing all apply). Run once per currency.
  * close      marks the sender account for deletion (status Closed, username released, Kratos
- *            identity deleted). Refuses if any sender wallet still has a balance.
+ *            identity deleted). Refuses if any sender wallet still has a balance. updatedBy
+ *            defaults to "admin"; step names are rejected as likely mistyped commands.
  */
 
 import { Accounts, Payments } from "@/app"
@@ -39,7 +40,7 @@ import { WalletCurrency, paymentAmountFromNumber } from "@/domain/shared"
 import { setupMongoConnection } from "@/services/mongodb"
 import { AccountsRepository } from "@/services/mongoose"
 
-const steps = ["inspect", "set-level", "transfer", "close"] as const
+export const steps = ["inspect", "set-level", "transfer", "close"] as const
 type Step = (typeof steps)[number]
 
 const usage = `usage:
@@ -66,7 +67,7 @@ const walletFor = async (account: Account, currency: WalletCurrency) => {
   )
 }
 
-const parseCurrency = (raw: string | undefined) => {
+export const parseCurrency = (raw: string | undefined) => {
   if (raw === WalletCurrency.Btc || raw === WalletCurrency.Usd) return raw
   return new Error(`Invalid currency: ${raw}. Expected BTC or USD`)
 }
@@ -93,7 +94,7 @@ const describeAccount = async (label: string, account: Account) => {
   return balances
 }
 
-const inspect = async (args: string[]) => {
+export const inspect = async (args: string[]) => {
   const sender = await findAccount(args[0], "sender")
   if (sender instanceof Error) return sender
   const recipient = await findAccount(args[1], "recipient")
@@ -160,7 +161,7 @@ const inspect = async (args: string[]) => {
   return true
 }
 
-const setLevel = async (args: string[]) => {
+export const setLevel = async (args: string[]) => {
   const sender = await findAccount(args[0], "sender")
   if (sender instanceof Error) return sender
 
@@ -174,7 +175,7 @@ const setLevel = async (args: string[]) => {
   return true
 }
 
-const transfer = async (args: string[]) => {
+export const transfer = async (args: string[]) => {
   const sender = await findAccount(args[0], "sender")
   if (sender instanceof Error) return sender
   const recipient = await findAccount(args[1], "recipient")
@@ -232,11 +233,22 @@ const transfer = async (args: string[]) => {
   return true
 }
 
-const close = async (args: string[]) => {
+export const parseUpdatedBy = (raw: string | undefined): PrivilegedClientId | Error => {
+  if (!raw) return "admin" as PrivilegedClientId
+  if (steps.includes(raw as Step)) {
+    return new Error(
+      `updatedBy "${raw}" is a step name - likely a mistyped command. Pass an operator/case reference or omit it for "admin"`,
+    )
+  }
+  return raw as PrivilegedClientId
+}
+
+export const close = async (args: string[]) => {
+  const updatedBy = parseUpdatedBy(args[1])
+  if (updatedBy instanceof Error) return updatedBy
+
   const sender = await findAccount(args[0], "sender")
   if (sender instanceof Error) return sender
-
-  const updatedBy = (args[1] || "admin") as PrivilegedClientId
 
   const balances = await describeAccount("closing", sender)
   if (balances instanceof Error) return balances
