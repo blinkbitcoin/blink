@@ -50,8 +50,7 @@ const usdWalletTx = {
   centsAmount: 1000,
 } as unknown as LedgerTransaction<WalletCurrency>
 
-// 2022/23 backfills derived fee-exclusive centsAmount from the fee-inclusive
-// legacy usd and kept both; legacy stays authoritative for those rows
+// backfills kept both families: legacy usd is fee-inclusive, centsAmount is not
 const backfilledTx = {
   id: "backfilled-tx",
   walletId,
@@ -64,8 +63,7 @@ const backfilledTx = {
   centsAmount: 985,
 } as unknown as LedgerTransaction<WalletCurrency>
 
-// 2023-03 backfill wrote NaN cents fields for 2022 onchain_on_us rows whose
-// legacy feeUsd was never recorded; legacy usd is still present and correct
+// the 2023-03 backfill wrote NaN cents fields where legacy feeUsd was absent
 const nanBackfillTx = {
   id: "nan-backfill-tx",
   walletId,

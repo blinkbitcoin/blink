@@ -35,15 +35,12 @@ const headers_field = [
 
 const header = headers_field.map((item) => ({ id: item, title: item }))
 
-// 2022-era backfill migrations left NaN in satsFee/centsFee/centsAmount where
-// the legacy source fields were absent, so presence alone is not enough
+// 2022-era backfill migrations left NaN in the sats/cents fields
 const isRecorded = (amount: number | undefined): amount is number =>
   Number.isFinite(amount)
 
-// The fee column is denominated in the row's wallet currency, like credit and
-// debit. For the dollar columns legacy values win when present: backfilled
-// centsAmount is fee-exclusive while legacy usd was fee-inclusive, so deriving
-// would silently rewrite historical cells in re-exported CSVs.
+// Legacy usd/feeUsd win when present: the 2022/23 backfills derived
+// fee-exclusive cents fields from fee-inclusive legacy values
 const toCsvRecord = (tx: LedgerTransaction<WalletCurrency>) => {
   const walletFee = tx.currency === WalletCurrency.Usd ? tx.centsFee : tx.satsFee
 
@@ -76,10 +73,8 @@ export class CsvWalletsExport {
 
     const str = header_stringify + records
 
-    // create buffer from string
     const binaryData = Buffer.from(str, "utf8")
 
-    // decode buffer as base64
     const base64Data = binaryData.toString("base64")
 
     return base64Data
