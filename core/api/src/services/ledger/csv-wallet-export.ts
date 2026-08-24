@@ -1,8 +1,9 @@
 import { createObjectCsvStringifier, createObjectCsvWriter } from "csv-writer"
 
-import { centsToDollars } from "@/domain/fiat"
 import { LedgerService } from "@/services/ledger"
 import { baseLogger } from "@/services/logger"
+
+const centsToDollars = (cents: UsdCents): number => Number(cents) / 100
 
 const headers_field = [
   "id",

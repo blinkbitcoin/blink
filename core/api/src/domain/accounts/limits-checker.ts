@@ -3,7 +3,6 @@ import {
   TradeIntraAccountLimitsExceededError,
   WithdrawalLimitsExceededError,
 } from "@/domain/errors"
-import { centsToDollars } from "@/domain/fiat"
 import { addAttributesToCurrentSpan } from "@/services/tracing"
 
 export const AccountTxVolumeLimitChecker = (
@@ -21,7 +20,7 @@ export const AccountTxVolumeLimitChecker = (
       "txLimit.amountToCheckInUsd": `${amount.amount}`,
     })
 
-    const limitAsUsd = `$${centsToDollars(accountLimits.intraLedgerLimit).toFixed(2)}`
+    const limitAsUsd = `$${(accountLimits.intraLedgerLimit / 100).toFixed(2)}`
     const limitErrMsg = `Cannot transfer more than ${limitAsUsd} in 24 hours`
 
     return volumeRemaining.amount >= amount.amount
@@ -41,7 +40,7 @@ export const AccountTxVolumeLimitChecker = (
       "txLimit.amountToCheckInUsd": `${amount.amount}`,
     })
 
-    const limitAsUsd = `$${centsToDollars(accountLimits.withdrawalLimit).toFixed(2)}`
+    const limitAsUsd = `$${(accountLimits.withdrawalLimit / 100).toFixed(2)}`
     const limitErrMsg = `Cannot transfer more than ${limitAsUsd} in 24 hours`
 
     return volumeRemaining.amount >= amount.amount
@@ -61,7 +60,7 @@ export const AccountTxVolumeLimitChecker = (
       "txLimit.amountToCheckInUsd": `${amount.amount}`,
     })
 
-    const limitAsUsd = `$${centsToDollars(accountLimits.tradeIntraAccountLimit).toFixed(2)}`
+    const limitAsUsd = `$${(accountLimits.tradeIntraAccountLimit / 100).toFixed(2)}`
     const limitErrMsg = `Cannot transfer more than ${limitAsUsd} in 24 hours`
 
     return volumeRemaining.amount >= amount.amount

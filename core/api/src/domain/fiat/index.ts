@@ -13,10 +13,6 @@ export const toCents = (amount: number | bigint): UsdCents => {
   return Number(amount) as UsdCents
 }
 
-export const centsToDollars = (amount: number): number => {
-  return parseFloat((amount / 100).toFixed(2))
-}
-
 export const checkedToDisplayCurrency = (
   currency?: string,
 ): DisplayCurrency | ValidationError => {
