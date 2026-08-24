@@ -43,7 +43,7 @@ const client = createAxiosInstance()
 const mock = new MockAdapter(client)
 
 const baseArgs = {
-  externalId: "0123456789abcdef:2fd89242-816f-4958-a42d-56b363e766a0",
+  externalId: "0123456789abcdef:123e4567-e89b-12d3-a456-426614174000",
   lat: 4.6097,
   lon: -74.0817,
   category: "food",
