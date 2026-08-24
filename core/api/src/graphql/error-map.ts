@@ -636,6 +636,10 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       message = `Invalid nonce ${error.message}`
       return new NotFoundError({ message, logger: baseLogger })
 
+    case "InsufficientAccountLevelError":
+      message = "This action requires a higher account verification level"
+      return new AuthorizationError({ message, logger: baseLogger })
+
     case "WaitingDataTelegramPassportError":
       message =
         "Authorization data from Telegram is still pending. Please wait a few seconds and try again."
@@ -878,6 +882,8 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "ExtendSessionKratosError":
     case "MultipleCurrenciesForSingleCurrencyOperationError":
     case "MattermostError":
+    case "BtcMapError":
+    case "BtcMapSubmitPlaceError":
     case "CouldNotFindAccountIpError":
     case "InvalidFlowId":
     case "CallbackError":

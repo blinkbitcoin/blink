@@ -251,6 +251,24 @@ type BlockInfo {
   blockHeight: Int
 }
 
+type BtcMapPlace {
+  externalId: String!
+  id: ID!
+  origin: String!
+}
+
+type BtcMapPlacePayload {
+  errors: [Error!]!
+  place: BtcMapPlace
+}
+
+input BtcMapPlaceSubmitInput {
+  category: String!
+  latitude: Float!
+  longitude: Float!
+  name: String!
+}
+
 type BuildInformation {
   commitHash: String
   helmRevision: Int
@@ -1047,6 +1065,7 @@ type Mutation {
   accountEnableNotificationChannel(input: AccountEnableNotificationChannelInput!): AccountUpdateNotificationSettingsPayload!
   accountUpdateDefaultWalletId(input: AccountUpdateDefaultWalletIdInput!): AccountUpdateDefaultWalletIdPayload!
   accountUpdateDisplayCurrency(input: AccountUpdateDisplayCurrencyInput!): AccountUpdateDisplayCurrencyPayload!
+  btcMapPlaceSubmit(input: BtcMapPlaceSubmitInput!): BtcMapPlacePayload!
   callbackEndpointAdd(input: CallbackEndpointAddInput!): CallbackEndpointAddPayload!
   callbackEndpointDelete(input: CallbackEndpointDeleteInput!): SuccessPayload!
   captchaCreateChallenge: CaptchaCreateChallengePayload!

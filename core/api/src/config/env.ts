@@ -140,6 +140,9 @@ export const env = createEnv({
 
     MATTERMOST_WEBHOOK_URL: z.string().min(1).optional(),
 
+    BTCMAP_API_URL: z.string().min(1).optional(),
+    BTCMAP_API_TOKEN: z.string().min(1).optional(),
+
     PROXY_CHECK_APIKEY: z.string().min(1).optional(),
 
     SVIX_SECRET: z.string().optional(),
@@ -258,6 +261,9 @@ export const env = createEnv({
     AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
 
     MATTERMOST_WEBHOOK_URL: process.env.MATTERMOST_WEBHOOK_URL,
+
+    BTCMAP_API_URL: process.env.BTCMAP_API_URL,
+    BTCMAP_API_TOKEN: process.env.BTCMAP_API_TOKEN,
 
     PROXY_CHECK_APIKEY: process.env.PROXY_CHECK_APIKEY,
 
