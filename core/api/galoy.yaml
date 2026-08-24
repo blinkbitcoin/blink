@@ -91,6 +91,10 @@ rateLimits:
     points: 8000
     duration: 86400
     blockDuration: 0
+  btcMapPlaceSubmitPerAccount:
+    points: 20
+    duration: 86400
+    blockDuration: 86400
 accounts:
   initialStatus: active
   initialWallets:

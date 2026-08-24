@@ -32,12 +32,6 @@ const BtcMapPlaceSubmitMutation = GT.Field<null, GraphQLPublicContextAuth>({
   resolve: async (_, args, { domainAccount }) => {
     const { latitude, longitude, category, name } = args.input
 
-    for (const input of [latitude, longitude, category, name]) {
-      if (input instanceof Error) {
-        return { errors: [{ message: input.message }] }
-      }
-    }
-
     const place = await BtcMap.submitPlace({
       account: domainAccount,
       latitude,

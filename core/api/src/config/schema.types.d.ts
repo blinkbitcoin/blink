@@ -221,6 +221,7 @@ type YamlSchema = {
     addQuizPerIp: RateLimitInput
     addQuizPerPhone: RateLimitInput
     regionCheckIpResolution: RateLimitInput
+    btcMapPlaceSubmitPerAccount: RateLimitInput
   }
   accounts: {
     initialStatus: string

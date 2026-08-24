@@ -2,16 +2,27 @@ jest.mock("@/services/btcmap", () => ({
   submitPlace: jest.fn(),
 }))
 
+jest.mock("@/services/rate-limit", () => ({
+  consumeLimiter: jest.fn(),
+}))
+
 import { submitPlace } from "@/app/btcmap"
 import { AccountLevel } from "@/domain/accounts"
 import {
   BtcMapSubmitPlaceError,
-  InsufficientAccountLevelError,
+  InvalidBtcMapCategoryError,
 } from "@/domain/btcmap/errors"
-import { InvalidCoordinatesError } from "@/domain/errors"
+import {
+  InsufficientAccountLevelError,
+  InvalidBusinessTitleLengthError,
+  InvalidCoordinatesError,
+} from "@/domain/errors"
+import { BtcMapPlaceSubmitPerAccountRateLimiterExceededError } from "@/domain/rate-limit/errors"
 import * as BtcMapService from "@/services/btcmap"
+import { consumeLimiter } from "@/services/rate-limit"
 
 const mockSubmitPlace = BtcMapService.submitPlace as jest.Mock
+const mockConsumeLimiter = consumeLimiter as jest.Mock
 
 const accountId = "account-id" as AccountId
 const makeAccount = (level: AccountLevel): Account =>
@@ -27,6 +38,7 @@ const baseArgs = {
 describe("BtcMap submitPlace", () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockConsumeLimiter.mockResolvedValue(true)
   })
 
   it("rejects accounts below level 2", async () => {
@@ -38,11 +50,63 @@ describe("BtcMap submitPlace", () => {
 
       expect(result).toBeInstanceOf(InsufficientAccountLevelError)
     }
+    expect(mockConsumeLimiter).not.toHaveBeenCalled()
     expect(mockSubmitPlace).not.toHaveBeenCalled()
   })
 
-  it("submits a place for level 2 accounts", async () => {
-    const serviceResult = { id: 1, origin: "blink", external_id: "ext-id" }
+  it("rejects an invalid name", async () => {
+    const result = await submitPlace({
+      account: makeAccount(AccountLevel.Two),
+      ...baseArgs,
+      name: "ab",
+    })
+
+    expect(result).toBeInstanceOf(InvalidBusinessTitleLengthError)
+    expect(mockSubmitPlace).not.toHaveBeenCalled()
+  })
+
+  it("rejects an invalid category", async () => {
+    for (const category of ["", "  ", "Food", "fast food", "x".repeat(51)]) {
+      const result = await submitPlace({
+        account: makeAccount(AccountLevel.Two),
+        ...baseArgs,
+        category,
+      })
+
+      expect(result).toBeInstanceOf(InvalidBtcMapCategoryError)
+    }
+    expect(mockSubmitPlace).not.toHaveBeenCalled()
+  })
+
+  it("rejects invalid coordinates", async () => {
+    const result = await submitPlace({
+      account: makeAccount(AccountLevel.Two),
+      ...baseArgs,
+      latitude: 91,
+    })
+
+    expect(result).toBeInstanceOf(InvalidCoordinatesError)
+    expect(mockSubmitPlace).not.toHaveBeenCalled()
+  })
+
+  it("rejects when the per-account rate limit is exceeded", async () => {
+    mockConsumeLimiter.mockResolvedValue(
+      new BtcMapPlaceSubmitPerAccountRateLimiterExceededError(),
+    )
+
+    const result = await submitPlace({
+      account: makeAccount(AccountLevel.Two),
+      ...baseArgs,
+    })
+
+    expect(result).toBeInstanceOf(BtcMapPlaceSubmitPerAccountRateLimiterExceededError)
+    expect(mockConsumeLimiter).toHaveBeenCalledTimes(1)
+    expect(mockConsumeLimiter.mock.calls[0][0].keyToConsume).toEqual(accountId)
+    expect(mockSubmitPlace).not.toHaveBeenCalled()
+  })
+
+  it("submits a place for level 2 accounts with an opaque external id", async () => {
+    const serviceResult = { id: 1, origin: "blink", external_id: "upstream-ext-id" }
     mockSubmitPlace.mockResolvedValue(serviceResult)
 
     const result = await submitPlace({
@@ -56,24 +120,17 @@ describe("BtcMap submitPlace", () => {
     expect(serviceArgs.lon).toEqual(baseArgs.longitude)
     expect(serviceArgs.category).toEqual(baseArgs.category)
     expect(serviceArgs.name).toEqual(baseArgs.name)
-    expect(serviceArgs.externalId).toMatch(new RegExp(`^${accountId}:`))
 
+    // hmac-prefixed opaque id, no raw account id leaked
+    expect(serviceArgs.externalId).toMatch(/^[0-9a-f]{16}:[0-9a-f-]{36}$/)
+    expect(serviceArgs.externalId).not.toContain(accountId)
+
+    // returns the locally generated externalId, not the upstream echo
     expect(result).toEqual({
       id: serviceResult.id,
       origin: serviceResult.origin,
-      externalId: serviceResult.external_id,
+      externalId: serviceArgs.externalId,
     })
-  })
-
-  it("rejects invalid coordinates", async () => {
-    const result = await submitPlace({
-      account: makeAccount(AccountLevel.Two),
-      ...baseArgs,
-      latitude: 91,
-    })
-
-    expect(result).toBeInstanceOf(InvalidCoordinatesError)
-    expect(mockSubmitPlace).not.toHaveBeenCalled()
   })
 
   it("surfaces service errors", async () => {

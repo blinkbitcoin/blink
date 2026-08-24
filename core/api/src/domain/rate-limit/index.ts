@@ -14,6 +14,7 @@ import {
   TelegramPassportNonceAttemptIpRateLimiterExceededError,
   TelegramPassportNonceAttemptPhoneRateLimiterExceededError,
   RegionCheckIpResolutionBudgetExceededError,
+  BtcMapPlaceSubmitPerAccountRateLimiterExceededError,
 } from "./errors"
 
 import {
@@ -32,6 +33,7 @@ import {
   getAddQuizPerPhoneLimits,
   getRequestCodePerPhoneNumberLimits,
   getRegionCheckIpResolutionLimits,
+  getBtcMapPlaceSubmitPerAccountLimits,
 } from "@/config"
 
 export const RateLimitPrefix = {
@@ -51,6 +53,7 @@ export const RateLimitPrefix = {
   addQuizAttemptPerIp: "add_quiz_attempt_ip",
   addQuizAttemptPerPhone: "add_quiz_attempt_phone",
   regionCheckIpResolution: "region_check_ip_resolution",
+  btcMapPlaceSubmitPerAccount: "btcmap_place_submit_account",
 } as const
 
 type RateLimitPrefixKey = keyof typeof RateLimitPrefix
@@ -130,5 +133,10 @@ export const RateLimitConfig: { [key in RateLimitPrefixKey]: RateLimitConfig } =
     key: RateLimitPrefix.regionCheckIpResolution,
     limits: getRegionCheckIpResolutionLimits(),
     error: RegionCheckIpResolutionBudgetExceededError,
+  },
+  btcMapPlaceSubmitPerAccount: {
+    key: RateLimitPrefix.btcMapPlaceSubmitPerAccount,
+    limits: getBtcMapPlaceSubmitPerAccountLimits(),
+    error: BtcMapPlaceSubmitPerAccountRateLimiterExceededError,
   },
 }

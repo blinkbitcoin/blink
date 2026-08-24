@@ -367,6 +367,10 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       message = "Too many attempts, please wait for a while and try again."
       return new TooManyRequestError({ message, logger: baseLogger })
 
+    case "BtcMapPlaceSubmitPerAccountRateLimiterExceededError":
+      message = "Too many place submissions, please wait for a while and try again."
+      return new TooManyRequestError({ message, logger: baseLogger })
+
     case "InvalidQuizQuestionIdError":
       message = "Invalid quiz question id was passed."
       return new ValidationInternalError({ message, logger: baseLogger })
@@ -515,6 +519,11 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
 
     case "InvalidBusinessTitleLengthError":
       return new InvalidBusinessTitleLengthError({ logger: baseLogger })
+
+    case "InvalidBtcMapCategoryError":
+      message =
+        "Invalid category. Use up to 50 lowercase alphanumeric characters, '-' or '_'."
+      return new ValidationInternalError({ message, logger: baseLogger })
 
     case "CannotConnectToDbError":
     case "DbConnectionClosedError":

@@ -665,6 +665,7 @@ export const configSchema = {
         addQuizPerIp: rateLimitConfigSchema,
         addQuizPerPhone: rateLimitConfigSchema,
         regionCheckIpResolution: rateLimitConfigSchema,
+        btcMapPlaceSubmitPerAccount: rateLimitConfigSchema,
       },
       required: [
         "requestCodePerEmail",
@@ -682,6 +683,7 @@ export const configSchema = {
         "addQuizPerIp",
         "addQuizPerPhone",
         "regionCheckIpResolution",
+        "btcMapPlaceSubmitPerAccount",
       ],
       additionalProperties: false,
       default: {
@@ -760,6 +762,11 @@ export const configSchema = {
           points: 8000,
           duration: 86400,
           blockDuration: 0,
+        },
+        btcMapPlaceSubmitPerAccount: {
+          points: 20,
+          duration: 86400,
+          blockDuration: 86400,
         },
       },
     },
