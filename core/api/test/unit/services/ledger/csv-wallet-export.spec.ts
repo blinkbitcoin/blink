@@ -50,6 +50,20 @@ const usdWalletTx = {
   centsAmount: 1000,
 } as unknown as LedgerTransaction<WalletCurrency>
 
+// 2022/23 backfills derived fee-exclusive centsAmount from the fee-inclusive
+// legacy usd and kept both; legacy stays authoritative for those rows
+const backfilledTx = {
+  id: "backfilled-tx",
+  walletId,
+  currency: "BTC",
+  fee: 30,
+  usd: 10,
+  feeUsd: 0.153,
+  satsFee: 30,
+  centsFee: 15,
+  centsAmount: 985,
+} as unknown as LedgerTransaction<WalletCurrency>
+
 // 2023-03 backfill wrote NaN cents fields for 2022 onchain_on_us rows whose
 // legacy feeUsd was never recorded; legacy usd is still present and correct
 const nanBackfillTx = {
@@ -113,6 +127,14 @@ describe("CsvWalletsExport", () => {
     expect(row.fee).toBe("13")
     expect(row.feeUsd).toBe("0.13")
     expect(row.usd).toBe("10")
+  })
+
+  it("prefers legacy dollar values on backfilled rows over cents-derived ones", async () => {
+    const [row] = await exportCsvRows([backfilledTx])
+
+    expect(row.fee).toBe("30")
+    expect(row.usd).toBe("10")
+    expect(row.feeUsd).toBe("0.153")
   })
 
   it("falls back to legacy fields on rows backfilled with NaN", async () => {

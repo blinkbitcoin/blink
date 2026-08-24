@@ -40,17 +40,26 @@ const header = headers_field.map((item) => ({ id: item, title: item }))
 const isRecorded = (amount: number | undefined): amount is number =>
   Number.isFinite(amount)
 
-// The legacy fee/feeUsd/usd ledger fields are only written by admin entries;
-// user transactions carry satsFee/centsFee/centsAmount instead. Like credit
-// and debit, the fee column is denominated in the row's wallet currency.
+// The fee column is denominated in the row's wallet currency, like credit and
+// debit. For the dollar columns legacy values win when present: backfilled
+// centsAmount is fee-exclusive while legacy usd was fee-inclusive, so deriving
+// would silently rewrite historical cells in re-exported CSVs.
 const toCsvRecord = (tx: LedgerTransaction<WalletCurrency>) => {
   const walletFee = tx.currency === WalletCurrency.Usd ? tx.centsFee : tx.satsFee
 
   return {
     ...tx,
     fee: isRecorded(walletFee) ? walletFee : tx.fee,
-    feeUsd: isRecorded(tx.centsFee) ? centsToDollars(tx.centsFee) : tx.feeUsd,
-    usd: isRecorded(tx.centsAmount) ? centsToDollars(tx.centsAmount) : tx.usd,
+    feeUsd: isRecorded(tx.feeUsd)
+      ? tx.feeUsd
+      : isRecorded(tx.centsFee)
+        ? centsToDollars(tx.centsFee)
+        : undefined,
+    usd: isRecorded(tx.usd)
+      ? tx.usd
+      : isRecorded(tx.centsAmount)
+        ? centsToDollars(tx.centsAmount)
+        : undefined,
   }
 }
 
