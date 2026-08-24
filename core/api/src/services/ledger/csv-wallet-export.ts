@@ -1,5 +1,6 @@
 import { createObjectCsvStringifier, createObjectCsvWriter } from "csv-writer"
 
+import { WalletCurrency } from "@/domain/shared"
 import { LedgerService } from "@/services/ledger"
 import { baseLogger } from "@/services/logger"
 
@@ -34,15 +35,24 @@ const headers_field = [
 
 const header = headers_field.map((item) => ({ id: item, title: item }))
 
+// 2022-era backfill migrations left NaN in satsFee/centsFee/centsAmount where
+// the legacy source fields were absent, so presence alone is not enough
+const isRecorded = (amount: number | undefined): amount is number =>
+  Number.isFinite(amount)
+
 // The legacy fee/feeUsd/usd ledger fields are only written by admin entries;
-// user transactions carry satsFee/centsFee/centsAmount instead. The fiat values
-// are cents-denominated, so they are converted to dollars to match the columns.
-const toCsvRecord = (tx: LedgerTransaction<WalletCurrency>) => ({
-  ...tx,
-  fee: tx.satsFee ?? tx.fee,
-  feeUsd: tx.centsFee === undefined ? tx.feeUsd : centsToDollars(tx.centsFee),
-  usd: tx.centsAmount === undefined ? tx.usd : centsToDollars(tx.centsAmount),
-})
+// user transactions carry satsFee/centsFee/centsAmount instead. Like credit
+// and debit, the fee column is denominated in the row's wallet currency.
+const toCsvRecord = (tx: LedgerTransaction<WalletCurrency>) => {
+  const walletFee = tx.currency === WalletCurrency.Usd ? tx.centsFee : tx.satsFee
+
+  return {
+    ...tx,
+    fee: isRecorded(walletFee) ? walletFee : tx.fee,
+    feeUsd: isRecorded(tx.centsFee) ? centsToDollars(tx.centsFee) : tx.feeUsd,
+    usd: isRecorded(tx.centsAmount) ? centsToDollars(tx.centsAmount) : tx.usd,
+  }
+}
 
 export class CsvWalletsExport {
   entries: LedgerTransaction<WalletCurrency>[] = []

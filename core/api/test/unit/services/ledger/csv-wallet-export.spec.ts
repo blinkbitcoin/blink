@@ -41,6 +41,27 @@ const legacyAdminTx = {
   feeUsd: 0.02,
 } as unknown as LedgerTransaction<WalletCurrency>
 
+const usdWalletTx = {
+  id: "usd-wallet-tx",
+  walletId,
+  currency: "USD",
+  satsFee: 250,
+  centsFee: 13,
+  centsAmount: 1000,
+} as unknown as LedgerTransaction<WalletCurrency>
+
+// 2023-03 backfill wrote NaN cents fields for 2022 onchain_on_us rows whose
+// legacy feeUsd was never recorded; legacy usd is still present and correct
+const nanBackfillTx = {
+  id: "nan-backfill-tx",
+  walletId,
+  currency: "BTC",
+  satsFee: 0,
+  centsFee: NaN,
+  centsAmount: NaN,
+  usd: 4.55,
+} as unknown as LedgerTransaction<WalletCurrency>
+
 const exportCsvRows = async (
   txs: LedgerTransaction<WalletCurrency>[],
 ): Promise<Record<string, string>[]> => {
@@ -84,5 +105,21 @@ describe("CsvWalletsExport", () => {
     expect(row.fee).toBe("100")
     expect(row.feeUsd).toBe("0.02")
     expect(row.usd).toBe("0.5")
+  })
+
+  it("exports the fee in the row's wallet currency for usd wallets", async () => {
+    const [row] = await exportCsvRows([usdWalletTx])
+
+    expect(row.fee).toBe("13")
+    expect(row.feeUsd).toBe("0.13")
+    expect(row.usd).toBe("10")
+  })
+
+  it("falls back to legacy fields on rows backfilled with NaN", async () => {
+    const [row] = await exportCsvRows([nanBackfillTx])
+
+    expect(row.fee).toBe("0")
+    expect(row.feeUsd).toBe("")
+    expect(row.usd).toBe("4.55")
   })
 })
