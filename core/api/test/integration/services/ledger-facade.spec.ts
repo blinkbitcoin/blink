@@ -124,6 +124,38 @@ describe("Facade", () => {
         const txn = txns[0]
 
         expect(txn.type).toBe(LedgerTransactionType.Invoice)
+        expect(txn.currency).toBe(WalletCurrency.Btc)
+        expect(txn.satsAmount).toBe(Number(receiveAmount.btc.amount))
+        expect(txn.satsFee).toBe(Number(bankFee.btc.amount))
+        expect(txn.centsAmount).toBe(Number(receiveAmount.usd.amount))
+        expect(txn.centsFee).toBe(Number(bankFee.usd.amount))
+        expect(txn.fee).toBeUndefined()
+        expect(txn.usd).toBeUndefined()
+        expect(txn.feeUsd).toBeUndefined()
+      })
+
+      it("recordReceiveLnPayment to usd wallet", async () => {
+        const usdWalletDescriptor = UsdWalletDescriptor(crypto.randomUUID() as WalletId)
+
+        const res = await recordReceiveLnPayment({
+          walletDescriptor: usdWalletDescriptor,
+          paymentAmount: receiveAmount,
+          bankFee,
+          displayAmounts: displayReceiveUsdAmounts,
+        })
+        if (res instanceof Error) throw res
+
+        const txns = await LedgerService().getTransactionsByWalletId(
+          usdWalletDescriptor.id,
+        )
+        if (txns instanceof Error) throw txns
+        if (!(txns && txns.length)) throw new Error()
+        const txn = txns[0]
+
+        expect(txn.currency).toBe(WalletCurrency.Usd)
+        expect(txn.satsFee).toBe(Number(bankFee.btc.amount))
+        expect(txn.centsFee).toBe(Number(bankFee.usd.amount))
+        expect(txn.centsAmount).toBe(Number(receiveAmount.usd.amount))
       })
 
       it("recordReceiveOnChainPayment", async () => {

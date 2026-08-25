@@ -20,6 +20,7 @@ const walletId = "walletId" as WalletId
 const userTx = {
   id: "user-tx",
   walletId,
+  currency: "BTC",
   satsFee: 250,
   centsFee: 13,
   centsAmount: 1000,
@@ -28,6 +29,7 @@ const userTx = {
 const zeroFeeTx = {
   id: "zero-fee-tx",
   walletId,
+  currency: "BTC",
   satsFee: 0,
   centsFee: 0,
   centsAmount: 500,
