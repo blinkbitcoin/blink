@@ -2,27 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat: add fee strategy for Lightning service fee on external sends
-        (#652)'
-      sha: 3a217e6f402831ac89917f0a45d9aaaec519aa4b
+      commitTitle: 'test: lnd update to v0.20.3-beta (#793)'
+      sha: 4737ca1a6ffaa9b35fc6b16b1e3d92ba4cd59f98
       tags:
-      - 0.22.50-1-g3a217e6f4
+      - 0.22.51-1-g4737ca1a6
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat: add fee strategy for Lightning service fee on external sends
-        (#652)'
-      sha: 3a217e6f402831ac89917f0a45d9aaaec519aa4b
+      commitTitle: 'test: lnd update to v0.20.3-beta (#793)'
+      sha: 4737ca1a6ffaa9b35fc6b16b1e3d92ba4cd59f98
       tags:
-      - 0.22.50-1-g3a217e6f4
+      - 0.22.51-1-g4737ca1a6
     path: schemas
   - git:
-      commitTitle: 'feat: add fee strategy for Lightning service fee on external sends
-        (#652)'
-      sha: 3a217e6f402831ac89917f0a45d9aaaec519aa4b
+      commitTitle: 'test: lnd update to v0.20.3-beta (#793)'
+      sha: 4737ca1a6ffaa9b35fc6b16b1e3d92ba4cd59f98
       tags:
-      - 0.22.50-1-g3a217e6f4
+      - 0.22.51-1-g4737ca1a6
     path: gql
   path: graphql
 kind: LockConfig
