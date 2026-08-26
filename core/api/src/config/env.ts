@@ -142,7 +142,6 @@ export const env = createEnv({
 
     BTCMAP_API_URL: z.string().min(1).optional(),
     BTCMAP_API_TOKEN: z.string().min(1).optional(),
-    BTCMAP_HMAC_SECRET: z.string().min(1).optional(),
 
     PROXY_CHECK_APIKEY: z.string().min(1).optional(),
 
@@ -265,7 +264,6 @@ export const env = createEnv({
 
     BTCMAP_API_URL: process.env.BTCMAP_API_URL,
     BTCMAP_API_TOKEN: process.env.BTCMAP_API_TOKEN,
-    BTCMAP_HMAC_SECRET: process.env.BTCMAP_HMAC_SECRET,
 
     PROXY_CHECK_APIKEY: process.env.PROXY_CHECK_APIKEY,
 
