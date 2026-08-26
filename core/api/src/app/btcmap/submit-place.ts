@@ -1,6 +1,3 @@
-import { createHmac } from "crypto"
-
-import { BTCMAP_HMAC_SECRET } from "@/config"
 import { AccountLevel, checkedCoordinates } from "@/domain/accounts"
 import {
   BtcMapPlaceSubmissionStatus,
@@ -8,10 +5,7 @@ import {
   checkedBtcMapPlaceName,
   checkedBtcMapSubmissionId,
 } from "@/domain/btcmap"
-import {
-  BtcMapNotConfiguredError,
-  CouldNotFindBtcMapPlaceSubmissionError,
-} from "@/domain/btcmap/errors"
+import { CouldNotFindBtcMapPlaceSubmissionError } from "@/domain/btcmap/errors"
 import {
   DuplicateKeyForPersistError,
   InsufficientAccountLevelError,
@@ -64,24 +58,15 @@ export const submitPlace = async ({
   const btcMapService = BtcMapService()
   if (btcMapService instanceof Error) return btcMapService
 
-  if (!BTCMAP_HMAC_SECRET) {
-    return new BtcMapNotConfiguredError("BTCMAP_HMAC_SECRET is not set")
-  }
-
-  // dedicated secret (not the btcmap api token) so token rotation does not
-  // change every account's external_id prefix. The suffix is the client-supplied
-  // operation identity: a retried mutation reuses the same submissionId, so
+  // the external_id IS the client-supplied submissionId, blink-scoped rather
+  // than account-scoped: a retried mutation reuses the same submissionId so
   // btcmap's (origin, external_id) idempotency turns the retry into an update
-  // of the original submission instead of creating a duplicate place.
-  const accountHash = createHmac("sha256", BTCMAP_HMAC_SECRET)
-    .update(account.id)
-    .digest("hex")
-    .slice(0, 16)
-  const externalId = `${accountHash}:${submissionIdChecked}`
+  // of the original submission, and any Blink user who knows the submissionId
+  // can edit the place by resubmitting with changed fields
+  const externalId: string = submissionIdChecked
 
   const submissions = BtcMapPlaceSubmissionsRepository()
-  const existing = await submissions.findByAccountIdAndSubmissionId({
-    accountId: account.id,
+  const existing = await submissions.findBySubmissionId({
     submissionId: submissionIdChecked,
   })
   if (
@@ -170,7 +155,6 @@ export const submitPlace = async ({
   }
 
   const marked = await submissions.markSubmitted({
-    accountId: account.id,
     submissionId: submissionIdChecked,
     btcMapPlaceId: result.id,
     lat: coordinates.latitude,

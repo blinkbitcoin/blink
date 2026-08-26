@@ -10,7 +10,7 @@ const submissions = BtcMapPlaceSubmissionsRepository()
 const makePendingArgs = () => ({
   accountId: randomUUID() as AccountId,
   submissionId: randomUUID() as BtcMapSubmissionId,
-  externalId: `${randomUUID()}:${randomUUID()}`,
+  externalId: randomUUID(),
   lat: 4.6097,
   lon: -74.0817,
   category: "food" as BtcMapCategory,
@@ -18,7 +18,7 @@ const makePendingArgs = () => ({
 })
 
 describe("BtcMapPlaceSubmissionsRepository", () => {
-  it("inserts a pending submission and finds it by (accountId, submissionId)", async () => {
+  it("inserts a pending submission and finds it by submissionId", async () => {
     const args = makePendingArgs()
 
     const inserted = await submissions.insertPending(args)
@@ -32,8 +32,7 @@ describe("BtcMapPlaceSubmissionsRepository", () => {
     expect(inserted.createdAt).toBeInstanceOf(Date)
     expect(inserted.updatedAt).toBeInstanceOf(Date)
 
-    const found = await submissions.findByAccountIdAndSubmissionId({
-      accountId: args.accountId,
+    const found = await submissions.findBySubmissionId({
       submissionId: args.submissionId,
     })
     expect(found).toMatchObject({
@@ -42,34 +41,28 @@ describe("BtcMapPlaceSubmissionsRepository", () => {
     })
   })
 
-  it("returns CouldNotFindBtcMapPlaceSubmissionError for an unknown pair", async () => {
-    const result = await submissions.findByAccountIdAndSubmissionId({
-      accountId: randomUUID() as AccountId,
+  it("returns CouldNotFindBtcMapPlaceSubmissionError for an unknown submissionId", async () => {
+    const result = await submissions.findBySubmissionId({
       submissionId: randomUUID() as BtcMapSubmissionId,
     })
 
     expect(result).toBeInstanceOf(CouldNotFindBtcMapPlaceSubmissionError)
   })
 
-  it("rejects a duplicate (accountId, submissionId) pair", async () => {
+  it("rejects a duplicate submissionId, even from a different account", async () => {
+    // submissions are blink-scoped: the submissionId is unique across accounts
     const args = makePendingArgs()
     const first = await submissions.insertPending(args)
     if (first instanceof Error) throw first
 
     const duplicate = await submissions.insertPending(args)
     expect(duplicate).toBeInstanceOf(DuplicateKeyForPersistError)
-  })
-
-  it("allows the same submissionId for a different account", async () => {
-    const args = makePendingArgs()
-    const first = await submissions.insertPending(args)
-    if (first instanceof Error) throw first
 
     const otherAccount = await submissions.insertPending({
       ...args,
       accountId: randomUUID() as AccountId,
     })
-    expect(otherAccount).not.toBeInstanceOf(Error)
+    expect(otherAccount).toBeInstanceOf(DuplicateKeyForPersistError)
   })
 
   it("lets exactly one of two concurrent identical inserts win", async () => {
@@ -85,13 +78,12 @@ describe("BtcMapPlaceSubmissionsRepository", () => {
     expect(errors[0]).toBeInstanceOf(DuplicateKeyForPersistError)
   })
 
-  it("marks a submission submitted with the upstream id and latest fields", async () => {
+  it("marks a submission submitted with the upstream id and latest fields, keeping the creator", async () => {
     const args = makePendingArgs()
     const inserted = await submissions.insertPending(args)
     if (inserted instanceof Error) throw inserted
 
     const marked = await submissions.markSubmitted({
-      accountId: args.accountId,
       submissionId: args.submissionId,
       btcMapPlaceId: 42,
       lat: 1.2345,
@@ -102,6 +94,7 @@ describe("BtcMapPlaceSubmissionsRepository", () => {
     if (marked instanceof Error) throw marked
 
     expect(marked).toMatchObject({
+      accountId: args.accountId,
       status: BtcMapPlaceSubmissionStatus.Submitted,
       btcMapPlaceId: 42,
       lat: 1.2345,
@@ -113,8 +106,7 @@ describe("BtcMapPlaceSubmissionsRepository", () => {
       inserted.updatedAt.getTime(),
     )
 
-    const found = await submissions.findByAccountIdAndSubmissionId({
-      accountId: args.accountId,
+    const found = await submissions.findBySubmissionId({
       submissionId: args.submissionId,
     })
     expect(found).toMatchObject({
@@ -123,9 +115,8 @@ describe("BtcMapPlaceSubmissionsRepository", () => {
     })
   })
 
-  it("returns CouldNotFindBtcMapPlaceSubmissionError when marking an unknown pair", async () => {
+  it("returns CouldNotFindBtcMapPlaceSubmissionError when marking an unknown submissionId", async () => {
     const result = await submissions.markSubmitted({
-      accountId: randomUUID() as AccountId,
       submissionId: randomUUID() as BtcMapSubmissionId,
       btcMapPlaceId: 42,
       lat: 1,

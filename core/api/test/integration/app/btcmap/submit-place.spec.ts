@@ -1,10 +1,5 @@
 import { randomUUID } from "crypto"
 
-jest.mock("@/config", () => ({
-  ...jest.requireActual("@/config"),
-  BTCMAP_HMAC_SECRET: "integration-test-hmac-secret",
-}))
-
 jest.mock("@/services/btcmap", () => ({
   BTCMAP_ORIGIN: "blink",
   BtcMapService: jest.fn(),
@@ -33,9 +28,8 @@ const makeArgs = () => ({
   name: "Arepas Place",
 })
 
-const findRecord = async (accountId: AccountId, submissionId: string) => {
-  const record = await submissions.findByAccountIdAndSubmissionId({
-    accountId,
+const findRecord = async (submissionId: string) => {
+  const record = await submissions.findBySubmissionId({
     submissionId: submissionId as BtcMapSubmissionId,
   })
   if (record instanceof Error) throw record
@@ -58,18 +52,21 @@ describe("BtcMap submitPlace (integration)", () => {
     if (result instanceof Error) throw result
     expect(result.id).toEqual(42)
     expect(mockSubmitPlace).toHaveBeenCalledTimes(1)
-    const externalId = mockSubmitPlace.mock.calls[0][0].externalId
 
-    const record = await findRecord(account.id, args.submissionId)
+    // the external id is the bare submissionId (blink-scoped)
+    expect(mockSubmitPlace.mock.calls[0][0].externalId).toEqual(args.submissionId)
+
+    const record = await findRecord(args.submissionId)
     expect(record).toMatchObject({
-      externalId,
+      accountId: account.id,
+      externalId: args.submissionId,
       status: BtcMapPlaceSubmissionStatus.Submitted,
       btcMapPlaceId: 42,
     })
 
     // identical retry: replayed from the record, no second upstream call
     const replay = await submitPlace({ account, ...args })
-    expect(replay).toEqual({ id: 42, origin: "blink", externalId })
+    expect(replay).toEqual({ id: 42, origin: "blink", externalId: args.submissionId })
     expect(mockSubmitPlace).toHaveBeenCalledTimes(1)
 
     // same submissionId with a changed name: patches upstream with the
@@ -77,11 +74,35 @@ describe("BtcMap submitPlace (integration)", () => {
     const edit = await submitPlace({ account, ...args, name: "Arepas Place Fixed" })
     expect(edit).not.toBeInstanceOf(Error)
     expect(mockSubmitPlace).toHaveBeenCalledTimes(2)
-    expect(mockSubmitPlace.mock.calls[1][0].externalId).toEqual(externalId)
+    expect(mockSubmitPlace.mock.calls[1][0].externalId).toEqual(args.submissionId)
     expect(mockSubmitPlace.mock.calls[1][0].name).toEqual("Arepas Place Fixed")
 
-    const edited = await findRecord(account.id, args.submissionId)
+    const edited = await findRecord(args.submissionId)
     expect(edited.name).toEqual("Arepas Place Fixed")
+    expect(edited.accountId).toEqual(account.id)
+  })
+
+  it("lets a different account edit the place via the shared submissionId", async () => {
+    const args = makeArgs()
+    mockSubmitPlace.mockResolvedValue({ id: 9, origin: "blink", external_id: "echo" })
+
+    const created = await submitPlace({ account: makeAccount(), ...args })
+    expect(created).not.toBeInstanceOf(Error)
+
+    // a different account resubmits with changed fields: same place, same
+    // external_id, record fields updated, creator preserved
+    const edited = await submitPlace({
+      account: makeAccount(),
+      ...args,
+      name: "Edited By Someone Else",
+    })
+    expect(edited).not.toBeInstanceOf(Error)
+    expect(mockSubmitPlace).toHaveBeenCalledTimes(2)
+    expect(mockSubmitPlace.mock.calls[1][0].externalId).toEqual(args.submissionId)
+
+    const record = await findRecord(args.submissionId)
+    expect(record.name).toEqual("Edited By Someone Else")
+    expect(record.btcMapPlaceId).toEqual(9)
   })
 
   it("keeps the record pending on an ambiguous failure and reuses the external id on retry", async () => {
@@ -92,7 +113,7 @@ describe("BtcMap submitPlace (integration)", () => {
     const firstResult = await submitPlace({ account, ...args })
     expect(firstResult).toBeInstanceOf(BtcMapUnavailableError)
 
-    const pendingRecord = await findRecord(account.id, args.submissionId)
+    const pendingRecord = await findRecord(args.submissionId)
     expect(pendingRecord.status).toEqual(BtcMapPlaceSubmissionStatus.Pending)
 
     mockSubmitPlace.mockResolvedValueOnce({ id: 7, origin: "blink", external_id: "e" })
@@ -104,7 +125,7 @@ describe("BtcMap submitPlace (integration)", () => {
       mockSubmitPlace.mock.calls[0][0].externalId,
     )
 
-    const record = await findRecord(account.id, args.submissionId)
+    const record = await findRecord(args.submissionId)
     expect(record).toMatchObject({
       status: BtcMapPlaceSubmissionStatus.Submitted,
       btcMapPlaceId: 7,

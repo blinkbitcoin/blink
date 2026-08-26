@@ -9,7 +9,7 @@ const BtcMapPlaceSubmitInput = GT.Input({
     submissionId: {
       type: GT.NonNull(GT.ID),
       description:
-        "Client-generated UUID identifying this submission. Reuse the same value when retrying after a failed or ambiguous request so the retry does not create a duplicate place. Resubmitting with the same submissionId and different place fields updates the original submission instead.",
+        "Client-generated UUID identifying this submission. Reuse the same value when retrying after a failed or ambiguous request so the retry does not create a duplicate place. Submissions are shared across Blink users: resubmitting the same submissionId with different place fields updates the original submission instead of creating a new one.",
     },
     latitude: {
       type: GT.NonNull(GT.Float),
