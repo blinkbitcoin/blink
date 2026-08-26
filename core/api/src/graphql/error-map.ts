@@ -46,6 +46,8 @@ import {
   ReceiveDisabledError,
   MigrationOnHoldError,
 } from "@/graphql/error"
+
+import { BtcMapError } from "@/domain/btcmap/errors"
 import { baseLogger } from "@/services/logger"
 
 const assertUnreachable = (x: never): never => {
@@ -53,6 +55,22 @@ const assertUnreachable = (x: never): never => {
 }
 
 export const mapError = (error: ApplicationError): CustomGraphQLError => {
+  // family-level mapping: the switch below dispatches on the error NAME as a
+  // string, so a "BtcMapServiceError" case would never catch a subclass. Map
+  // the whole BtcMapError family polymorphically instead — any current or
+  // future subtype gets the fixed, non-leaking client response automatically,
+  // and an unregistered subtype can no longer fall through to
+  // assertUnreachable and throw. The enumerated BtcMap* cases in the switch
+  // are unreachable at runtime but stay so the compiler still requires every
+  // ApplicationErrorKey to be listed.
+  if (error instanceof BtcMapError) {
+    return new UnknownClientError({
+      message:
+        "Could not submit the place to the map, please try again later or contact support if it persists.",
+      logger: baseLogger,
+    })
+  }
+
   const errorName = error.name as ApplicationErrorKey
   let message = ""
   switch (errorName) {
@@ -533,7 +551,10 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       message = "submissionId must be a valid UUID."
       return new ValidationInternalError({ message, logger: baseLogger })
 
-    // fixed message: btcmap error details are internal and must not reach clients
+    // fixed message: btcmap error details are internal and must not reach clients.
+    // unreachable at runtime — the instanceof BtcMapError pre-check above maps
+    // the whole family; these names stay for compile-time exhaustiveness over
+    // ApplicationErrorKey
     case "BtcMapError":
     case "BtcMapServiceError":
     case "BtcMapNotConfiguredError":

@@ -3,6 +3,7 @@ import { mapAndParseErrorForGqlResponse } from "@/graphql/error-map"
 import {
   BtcMapError,
   BtcMapNotConfiguredError,
+  BtcMapServiceError,
   BtcMapSubmitPlaceRejectedError,
   BtcMapUnauthorizedError,
   BtcMapUnavailableError,
@@ -14,6 +15,10 @@ import {
 } from "@/domain/btcmap/errors"
 import { InsufficientAccountLevelError } from "@/domain/errors"
 import { BtcMapPlaceSubmitPerAccountRateLimiterExceededError } from "@/domain/rate-limit/errors"
+
+// deliberately NOT registered in ApplicationErrors: simulates a future subtype
+// reaching the GraphQL boundary before the name switch knows about it
+class UnregisteredBtcMapServiceError extends BtcMapServiceError {}
 
 describe("mapAndParseErrorForGqlResponse - btcmap errors", () => {
   it("maps every error the feature can emit to a client-facing code without throwing", () => {
@@ -47,5 +52,20 @@ describe("mapAndParseErrorForGqlResponse - btcmap errors", () => {
 
     expect(mapped.message).not.toContain(upstreamDetail)
     expect(mapped.message).not.toContain("10.0.0.1")
+  })
+
+  it("maps a subtype the name switch does not know about, without throwing or leaking", () => {
+    // with string dispatch on error.name this fell through to assertUnreachable
+    // and threw; the instanceof pre-check must map the whole family
+    const upstreamDetail = "unregistered subtype internals 10.0.0.1"
+    const error = new UnregisteredBtcMapServiceError(upstreamDetail)
+
+    const mapped = mapAndParseErrorForGqlResponse(error as unknown as ApplicationError)
+
+    expect(mapped.code).toBe("UNKNOWN_CLIENT_ERROR")
+    expect(mapped.message).toBe(
+      "Could not submit the place to the map, please try again later or contact support if it persists.",
+    )
+    expect(mapped.message).not.toContain(upstreamDetail)
   })
 })
