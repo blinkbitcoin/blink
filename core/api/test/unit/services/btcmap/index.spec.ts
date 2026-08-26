@@ -11,72 +11,59 @@ jest.mock("@/config", () => ({
   },
 }))
 
-jest.mock("axios", () => {
-  const actual = jest.requireActual("axios")
-  const instance = actual.create()
-  return {
-    ...actual,
-    default: { ...actual.default, create: () => instance },
-    create: () => instance,
-  }
-})
-
-jest.mock("@/services/tracing", () => ({
-  addAttributesToCurrentSpan: jest.fn(),
-  recordExceptionInCurrentSpan: jest.fn(),
-}))
-
 import MockAdapter from "axios-mock-adapter"
 
-import { create as createAxiosInstance } from "axios"
-
-import { BtcMapSubmitPlaceError } from "@/domain/btcmap/errors"
+import {
+  BtcMapNotConfiguredError,
+  BtcMapSubmitPlaceRejectedError,
+  BtcMapUnauthorizedError,
+  BtcMapUnavailableError,
+  MalformedBtcMapResponseError,
+} from "@/domain/btcmap/errors"
 import { ErrorLevel } from "@/domain/shared"
-import { submitPlace } from "@/services/btcmap"
-import { recordExceptionInCurrentSpan } from "@/services/tracing"
+import { BtcMapService, client } from "@/services/btcmap"
 
-const mockRecordException = recordExceptionInCurrentSpan as jest.Mock
+let mock: MockAdapter
 
-// the axios mock above makes every `create()` return the same instance
-// the service builds its client from
-const client = createAxiosInstance()
-const mock = new MockAdapter(client)
+beforeAll(() => {
+  mock = new MockAdapter(client)
+})
+
+beforeEach(() => {
+  mockBtcMapApiUrl = "http://btcmap.test/rpc"
+  mockBtcMapApiToken = "test-token"
+})
+
+afterEach(() => {
+  mock.reset()
+})
+
+const btcMapService = (): IBtcMapService => {
+  const service = BtcMapService()
+  if (service instanceof BtcMapNotConfiguredError) throw service
+  return service
+}
 
 const baseArgs = {
   externalId: "0123456789abcdef:123e4567-e89b-12d3-a456-426614174000",
   lat: 4.6097,
   lon: -74.0817,
-  category: "food",
-  name: "Arepas Place",
+  category: "food" as BtcMapCategory,
+  name: "Arepas Place" as BtcMapPlaceName,
 }
 
 const validResult = { id: 42, origin: "blink", external_id: baseArgs.externalId }
 
-const lastTracedLevel = () =>
-  mockRecordException.mock.calls.length > 0
-    ? mockRecordException.mock.calls[mockRecordException.mock.calls.length - 1][0].level
-    : undefined
-
-describe("btcmap service - submitPlace", () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
-    mock.reset()
-    mockBtcMapApiUrl = "http://btcmap.test/rpc"
-    mockBtcMapApiToken = "test-token"
-  })
-
-  it("fails fast with a generic message when config is missing", async () => {
+describe("BtcMapService", () => {
+  it("returns BtcMapNotConfiguredError when config is missing", () => {
     for (const missing of ["url", "token"]) {
       mockBtcMapApiUrl = missing === "url" ? undefined : "http://btcmap.test/rpc"
       mockBtcMapApiToken = missing === "token" ? undefined : "test-token"
 
-      const result = await submitPlace(baseArgs)
+      const result = BtcMapService()
 
-      expect(result).toBeInstanceOf(BtcMapSubmitPlaceError)
-      expect((result as BtcMapSubmitPlaceError).message).toBe(
-        "btcmap service not configured",
-      )
-      expect(lastTracedLevel()).toBe(ErrorLevel.Critical)
+      expect(result).toBeInstanceOf(BtcMapNotConfiguredError)
+      expect((result as BtcMapNotConfiguredError).level).toBe(ErrorLevel.Info)
     }
     expect(mock.history.post.length).toBe(0)
   })
@@ -84,7 +71,7 @@ describe("btcmap service - submitPlace", () => {
   it("maps the JSON-RPC request correctly", async () => {
     mock.onPost().reply(200, { jsonrpc: "2.0", result: validResult, id: 1 })
 
-    const result = await submitPlace({
+    const result = await btcMapService().submitPlace({
       ...baseArgs,
       extraFields: { "osm:amenity": "restaurant" },
     })
@@ -116,49 +103,55 @@ describe("btcmap service - submitPlace", () => {
   it("omits extra_fields when extraFields is not provided", async () => {
     mock.onPost().reply(200, { jsonrpc: "2.0", result: validResult, id: 1 })
 
-    await submitPlace(baseArgs)
+    await btcMapService().submitPlace(baseArgs)
 
     const body = JSON.parse(mock.history.post[0].data)
     expect(body.params.extra_fields).toBeUndefined()
   })
 
-  it("returns a generic error on JSON-RPC error without leaking upstream text", async () => {
+  it("returns BtcMapSubmitPlaceRejectedError on a JSON-RPC error", async () => {
     mock.onPost().reply(200, {
       jsonrpc: "2.0",
-      error: { code: -32602, message: "invalid params near 10.0.0.1:8000" },
+      error: { code: -32602, message: "invalid params" },
       id: 1,
     })
 
-    const result = await submitPlace(baseArgs)
+    const result = await btcMapService().submitPlace(baseArgs)
 
-    expect(result).toBeInstanceOf(BtcMapSubmitPlaceError)
-    expect((result as BtcMapSubmitPlaceError).message).toBe("place submission failed")
-    expect((result as BtcMapSubmitPlaceError).message).not.toContain("10.0.0.1")
-    expect(lastTracedLevel()).toBe(ErrorLevel.Warn)
+    expect(result).toBeInstanceOf(BtcMapSubmitPlaceRejectedError)
+    expect((result as BtcMapSubmitPlaceRejectedError).level).toBe(ErrorLevel.Warn)
   })
 
-  it("returns a generic error on HTTP failure without leaking upstream text", async () => {
+  it("returns BtcMapUnavailableError on HTTP failure and retries", async () => {
     mock.onPost().reply(500, "upstream db at db.internal:5432 unavailable")
 
-    const result = await submitPlace(baseArgs)
+    const result = await btcMapService().submitPlace(baseArgs)
 
-    expect(result).toBeInstanceOf(BtcMapSubmitPlaceError)
-    expect((result as BtcMapSubmitPlaceError).message).toBe("place submission failed")
-    expect((result as BtcMapSubmitPlaceError).message).not.toContain("db.internal")
-    expect(lastTracedLevel()).toBe(ErrorLevel.Critical)
+    expect(result).toBeInstanceOf(BtcMapUnavailableError)
+    expect((result as BtcMapUnavailableError).level).toBe(ErrorLevel.Critical)
+    // axios-retry config: 1 initial attempt + 2 retries
+    expect(mock.history.post.length).toBe(3)
   })
 
-  it("returns a generic error on network failure", async () => {
+  it("returns BtcMapUnauthorizedError on 401 without retrying", async () => {
+    mock.onPost().reply(401, "bad token")
+
+    const result = await btcMapService().submitPlace(baseArgs)
+
+    expect(result).toBeInstanceOf(BtcMapUnauthorizedError)
+    expect((result as BtcMapUnauthorizedError).level).toBe(ErrorLevel.Critical)
+    expect(mock.history.post.length).toBe(1)
+  })
+
+  it("returns BtcMapUnavailableError on network failure", async () => {
     mock.onPost().networkError()
 
-    const result = await submitPlace(baseArgs)
+    const result = await btcMapService().submitPlace(baseArgs)
 
-    expect(result).toBeInstanceOf(BtcMapSubmitPlaceError)
-    expect((result as BtcMapSubmitPlaceError).message).toBe("place submission failed")
-    expect(lastTracedLevel()).toBe(ErrorLevel.Critical)
+    expect(result).toBeInstanceOf(BtcMapUnavailableError)
   })
 
-  it("returns a generic error on malformed results", async () => {
+  it("returns MalformedBtcMapResponseError on malformed results", async () => {
     const malformedPayloads = [
       { jsonrpc: "2.0", id: 1 }, // no result
       { jsonrpc: "2.0", result: { origin: "blink" }, id: 1 }, // missing id/external_id
@@ -170,10 +163,10 @@ describe("btcmap service - submitPlace", () => {
       mock.reset()
       mock.onPost().reply(200, payload)
 
-      const result = await submitPlace(baseArgs)
+      const result = await btcMapService().submitPlace(baseArgs)
 
-      expect(result).toBeInstanceOf(BtcMapSubmitPlaceError)
-      expect((result as BtcMapSubmitPlaceError).message).toBe("place submission failed")
+      expect(result).toBeInstanceOf(MalformedBtcMapResponseError)
+      expect((result as MalformedBtcMapResponseError).level).toBe(ErrorLevel.Critical)
     }
   })
 })

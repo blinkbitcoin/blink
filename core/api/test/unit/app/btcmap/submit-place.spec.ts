@@ -1,28 +1,39 @@
+let mockBtcMapHmacSecret: string | undefined = "test-hmac-secret"
+
+jest.mock("@/config", () => ({
+  ...jest.requireActual("@/config"),
+  get BTCMAP_HMAC_SECRET() {
+    return mockBtcMapHmacSecret
+  },
+}))
+
 jest.mock("@/services/btcmap", () => ({
-  submitPlace: jest.fn(),
+  BtcMapService: jest.fn(),
 }))
 
 jest.mock("@/services/rate-limit", () => ({
   consumeLimiter: jest.fn(),
+  rewardLimiter: jest.fn(),
 }))
 
 import { submitPlace } from "@/app/btcmap"
 import { AccountLevel } from "@/domain/accounts"
 import {
-  BtcMapSubmitPlaceError,
+  BtcMapNotConfiguredError,
+  BtcMapUnavailableError,
   InvalidBtcMapCategoryError,
+  InvalidBtcMapPlaceNameError,
 } from "@/domain/btcmap/errors"
-import {
-  InsufficientAccountLevelError,
-  InvalidBusinessTitleLengthError,
-  InvalidCoordinatesError,
-} from "@/domain/errors"
+import { InsufficientAccountLevelError, InvalidCoordinatesError } from "@/domain/errors"
 import { BtcMapPlaceSubmitPerAccountRateLimiterExceededError } from "@/domain/rate-limit/errors"
-import * as BtcMapService from "@/services/btcmap"
-import { consumeLimiter } from "@/services/rate-limit"
+import { BtcMapService } from "@/services/btcmap"
+import { consumeLimiter, rewardLimiter } from "@/services/rate-limit"
 
-const mockSubmitPlace = BtcMapService.submitPlace as jest.Mock
+const mockBtcMapService = BtcMapService as jest.Mock
 const mockConsumeLimiter = consumeLimiter as jest.Mock
+const mockRewardLimiter = rewardLimiter as jest.Mock
+
+const mockSubmitPlace = jest.fn()
 
 const accountId = "account-id" as AccountId
 const makeAccount = (level: AccountLevel): Account =>
@@ -38,7 +49,10 @@ const baseArgs = {
 describe("BtcMap submitPlace", () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockBtcMapHmacSecret = "test-hmac-secret"
+    mockBtcMapService.mockReturnValue({ submitPlace: mockSubmitPlace })
     mockConsumeLimiter.mockResolvedValue(true)
+    mockRewardLimiter.mockResolvedValue(true)
   })
 
   it("rejects accounts below level 2", async () => {
@@ -55,14 +69,29 @@ describe("BtcMap submitPlace", () => {
   })
 
   it("rejects an invalid name", async () => {
+    for (const name of ["ab", "   ", "x".repeat(101)]) {
+      const result = await submitPlace({
+        account: makeAccount(AccountLevel.Two),
+        ...baseArgs,
+        name,
+      })
+
+      expect(result).toBeInstanceOf(InvalidBtcMapPlaceNameError)
+    }
+    expect(mockSubmitPlace).not.toHaveBeenCalled()
+  })
+
+  it("trims the name before submitting", async () => {
+    mockSubmitPlace.mockResolvedValue({ id: 1, origin: "blink", external_id: "ext" })
+
     const result = await submitPlace({
       account: makeAccount(AccountLevel.Two),
       ...baseArgs,
-      name: "ab",
+      name: "  Arepas Place  ",
     })
 
-    expect(result).toBeInstanceOf(InvalidBusinessTitleLengthError)
-    expect(mockSubmitPlace).not.toHaveBeenCalled()
+    expect(result).not.toBeInstanceOf(Error)
+    expect(mockSubmitPlace.mock.calls[0][0].name).toBe("Arepas Place")
   })
 
   it("rejects an invalid category", async () => {
@@ -87,6 +116,30 @@ describe("BtcMap submitPlace", () => {
 
     expect(result).toBeInstanceOf(InvalidCoordinatesError)
     expect(mockSubmitPlace).not.toHaveBeenCalled()
+  })
+
+  it("does not consume the rate limit when the service is not configured", async () => {
+    mockBtcMapService.mockReturnValue(new BtcMapNotConfiguredError())
+
+    const result = await submitPlace({
+      account: makeAccount(AccountLevel.Two),
+      ...baseArgs,
+    })
+
+    expect(result).toBeInstanceOf(BtcMapNotConfiguredError)
+    expect(mockConsumeLimiter).not.toHaveBeenCalled()
+  })
+
+  it("does not consume the rate limit when the hmac secret is not set", async () => {
+    mockBtcMapHmacSecret = undefined
+
+    const result = await submitPlace({
+      account: makeAccount(AccountLevel.Two),
+      ...baseArgs,
+    })
+
+    expect(result).toBeInstanceOf(BtcMapNotConfiguredError)
+    expect(mockConsumeLimiter).not.toHaveBeenCalled()
   })
 
   it("rejects when the per-account rate limit is exceeded", async () => {
@@ -131,16 +184,31 @@ describe("BtcMap submitPlace", () => {
       origin: serviceResult.origin,
       externalId: serviceArgs.externalId,
     })
+    expect(mockRewardLimiter).not.toHaveBeenCalled()
   })
 
-  it("surfaces service errors", async () => {
-    mockSubmitPlace.mockResolvedValue(new BtcMapSubmitPlaceError())
+  it("refunds the rate limit when the submission fails upstream", async () => {
+    mockSubmitPlace.mockResolvedValue(new BtcMapUnavailableError())
 
     const result = await submitPlace({
       account: makeAccount(AccountLevel.Two),
       ...baseArgs,
     })
 
-    expect(result).toBeInstanceOf(BtcMapSubmitPlaceError)
+    expect(result).toBeInstanceOf(BtcMapUnavailableError)
+    expect(mockRewardLimiter).toHaveBeenCalledTimes(1)
+    expect(mockRewardLimiter.mock.calls[0][0].keyToConsume).toEqual(accountId)
+  })
+
+  it("still surfaces the service error when the refund fails", async () => {
+    mockSubmitPlace.mockResolvedValue(new BtcMapUnavailableError())
+    mockRewardLimiter.mockResolvedValue(new Error("redis down"))
+
+    const result = await submitPlace({
+      account: makeAccount(AccountLevel.Two),
+      ...baseArgs,
+    })
+
+    expect(result).toBeInstanceOf(BtcMapUnavailableError)
   })
 })
