@@ -1072,7 +1072,7 @@ type Mutation {
   accountUpdateDisplayCurrency(input: AccountUpdateDisplayCurrencyInput!): AccountUpdateDisplayCurrencyPayload!
 
   """
-  Submit a place to BTC Map. The place is sent to BTC Map for review and only appears on the map once approved.
+  Submit a place to BTC Map. Submissions from trusted sources appear on BTC Map right away; BTC Map editors process them later for eventual inclusion in OpenStreetMap.
   """
   btcMapPlaceSubmit(input: BtcMapPlaceSubmitInput!): BtcMapPlacePayload!
   callbackEndpointAdd(input: CallbackEndpointAddInput!): CallbackEndpointAddPayload!

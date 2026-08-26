@@ -31,7 +31,7 @@ const BtcMapPlaceSubmitMutation = GT.Field<null, GraphQLPublicContextAuth>({
     complexity: 120,
   },
   description:
-    "Submit a place to BTC Map. The place is sent to BTC Map for review and only appears on the map once approved.",
+    "Submit a place to BTC Map. Submissions from trusted sources appear on BTC Map right away; BTC Map editors process them later for eventual inclusion in OpenStreetMap.",
   type: GT.NonNull(BtcMapPlacePayload),
   args: {
     input: { type: GT.NonNull(BtcMapPlaceSubmitInput) },
