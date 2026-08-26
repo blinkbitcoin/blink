@@ -73,3 +73,17 @@ export const resetLimiter = async ({
   })
   return limiter.reset(keyToConsume)
 }
+
+export const rewardLimiter = async ({
+  rateLimitConfig,
+  keyToConsume,
+}: {
+  rateLimitConfig: RateLimitConfig
+  keyToConsume: IpAddress | LoginIdentifier | AccountId
+}) => {
+  const limiter = RedisRateLimitService({
+    keyPrefix: rateLimitConfig.key,
+    limitOptions: rateLimitConfig.limits,
+  })
+  return limiter.reward(keyToConsume)
+}
