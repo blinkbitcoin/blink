@@ -716,6 +716,7 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "RateLimitError":
     case "RateLimitServiceError":
     case "CouldNotFindUserError":
+    case "CouldNotFindBtcMapPlaceSubmissionError":
     case "LedgerError":
     case "LedgerServiceError":
     case "LedgerFacadeError":

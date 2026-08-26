@@ -117,6 +117,20 @@ interface MerchantRecord {
   deletedByPrivilegedClientId?: string
 }
 
+interface BtcMapPlaceSubmissionRecord {
+  accountId: string
+  submissionId: string
+  externalId: string
+  lat: number
+  lon: number
+  category: string
+  name: string
+  status: string
+  btcMapPlaceId?: number
+  createdAt: Date
+  updatedAt: Date
+}
+
 interface QuizCompletedRecord {
   accountId: string
   quizId: string

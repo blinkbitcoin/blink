@@ -6,6 +6,11 @@ import {
 
 import { UuidRegex } from "@/domain/shared"
 
+export const BtcMapPlaceSubmissionStatus = {
+  Pending: "pending",
+  Submitted: "submitted",
+} as const
+
 export const checkedBtcMapCategory = (
   category: string,
 ): BtcMapCategory | InvalidBtcMapCategoryError => {

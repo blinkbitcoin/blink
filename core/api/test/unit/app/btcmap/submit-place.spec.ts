@@ -9,6 +9,7 @@ jest.mock("@/config", () => ({
 
 jest.mock("@/services/btcmap", () => ({
   BtcMapService: jest.fn(),
+  BTCMAP_ORIGIN: "blink",
 }))
 
 jest.mock("@/services/rate-limit", () => ({
@@ -16,25 +17,41 @@ jest.mock("@/services/rate-limit", () => ({
   rewardLimiter: jest.fn(),
 }))
 
+jest.mock("@/services/mongoose", () => ({
+  BtcMapPlaceSubmissionsRepository: jest.fn(),
+}))
+
 import { submitPlace } from "@/app/btcmap"
 import { AccountLevel } from "@/domain/accounts"
+import { BtcMapPlaceSubmissionStatus } from "@/domain/btcmap"
 import {
   BtcMapNotConfiguredError,
   BtcMapUnavailableError,
+  CouldNotFindBtcMapPlaceSubmissionError,
   InvalidBtcMapCategoryError,
   InvalidBtcMapPlaceNameError,
   InvalidBtcMapSubmissionIdError,
 } from "@/domain/btcmap/errors"
-import { InsufficientAccountLevelError, InvalidCoordinatesError } from "@/domain/errors"
+import {
+  DuplicateKeyForPersistError,
+  InsufficientAccountLevelError,
+  InvalidCoordinatesError,
+  UnknownRepositoryError,
+} from "@/domain/errors"
 import { BtcMapPlaceSubmitPerAccountRateLimiterExceededError } from "@/domain/rate-limit/errors"
 import { BtcMapService } from "@/services/btcmap"
+import { BtcMapPlaceSubmissionsRepository } from "@/services/mongoose"
 import { consumeLimiter, rewardLimiter } from "@/services/rate-limit"
 
 const mockBtcMapService = BtcMapService as jest.Mock
 const mockConsumeLimiter = consumeLimiter as jest.Mock
 const mockRewardLimiter = rewardLimiter as jest.Mock
+const mockSubmissionsRepository = BtcMapPlaceSubmissionsRepository as jest.Mock
 
 const mockSubmitPlace = jest.fn()
+const mockFindSubmission = jest.fn()
+const mockInsertPending = jest.fn()
+const mockMarkSubmitted = jest.fn()
 
 const accountId = "account-id" as AccountId
 const makeAccount = (level: AccountLevel): Account =>
@@ -48,6 +65,22 @@ const baseArgs = {
   name: "Arepas Place",
 }
 
+const makeSubmission = (
+  overrides: Partial<BtcMapPlaceSubmission> = {},
+): BtcMapPlaceSubmission => ({
+  accountId,
+  submissionId: baseArgs.submissionId as BtcMapSubmissionId,
+  externalId: "0123456789abcdef:f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  lat: baseArgs.latitude,
+  lon: baseArgs.longitude,
+  category: baseArgs.category as BtcMapCategory,
+  name: baseArgs.name as BtcMapPlaceName,
+  status: BtcMapPlaceSubmissionStatus.Pending,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  ...overrides,
+})
+
 describe("BtcMap submitPlace", () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -55,6 +88,16 @@ describe("BtcMap submitPlace", () => {
     mockBtcMapService.mockReturnValue({ submitPlace: mockSubmitPlace })
     mockConsumeLimiter.mockResolvedValue(true)
     mockRewardLimiter.mockResolvedValue(true)
+    mockSubmissionsRepository.mockReturnValue({
+      findByAccountIdAndSubmissionId: mockFindSubmission,
+      insertPending: mockInsertPending,
+      markSubmitted: mockMarkSubmitted,
+    })
+    mockFindSubmission.mockResolvedValue(new CouldNotFindBtcMapPlaceSubmissionError())
+    mockInsertPending.mockResolvedValue(makeSubmission())
+    mockMarkSubmitted.mockResolvedValue(
+      makeSubmission({ status: BtcMapPlaceSubmissionStatus.Submitted, btcMapPlaceId: 1 }),
+    )
   })
 
   it("rejects accounts below level 2", async () => {
@@ -144,6 +187,7 @@ describe("BtcMap submitPlace", () => {
 
     expect(result).toBeInstanceOf(BtcMapNotConfiguredError)
     expect(mockConsumeLimiter).not.toHaveBeenCalled()
+    expect(mockFindSubmission).not.toHaveBeenCalled()
   })
 
   it("does not consume the rate limit when the hmac secret is not set", async () => {
@@ -156,6 +200,7 @@ describe("BtcMap submitPlace", () => {
 
     expect(result).toBeInstanceOf(BtcMapNotConfiguredError)
     expect(mockConsumeLimiter).not.toHaveBeenCalled()
+    expect(mockFindSubmission).not.toHaveBeenCalled()
   })
 
   it("rejects when the per-account rate limit is exceeded", async () => {
@@ -171,6 +216,7 @@ describe("BtcMap submitPlace", () => {
     expect(result).toBeInstanceOf(BtcMapPlaceSubmitPerAccountRateLimiterExceededError)
     expect(mockConsumeLimiter).toHaveBeenCalledTimes(1)
     expect(mockConsumeLimiter.mock.calls[0][0].keyToConsume).toEqual(accountId)
+    expect(mockInsertPending).not.toHaveBeenCalled()
     expect(mockSubmitPlace).not.toHaveBeenCalled()
   })
 
@@ -196,6 +242,24 @@ describe("BtcMap submitPlace", () => {
     expect(serviceArgs.externalId.endsWith(`:${baseArgs.submissionId}`)).toBe(true)
     expect(serviceArgs.externalId).not.toContain(accountId)
 
+    // persists the operation before the upstream call and marks it with the
+    // upstream id after success
+    expect(mockInsertPending).toHaveBeenCalledTimes(1)
+    expect(mockInsertPending.mock.calls[0][0]).toMatchObject({
+      accountId,
+      submissionId: baseArgs.submissionId,
+      externalId: serviceArgs.externalId,
+    })
+    expect(mockMarkSubmitted).toHaveBeenCalledTimes(1)
+    expect(mockMarkSubmitted.mock.calls[0][0]).toMatchObject({
+      accountId,
+      submissionId: baseArgs.submissionId,
+      btcMapPlaceId: serviceResult.id,
+    })
+    const insertOrder = mockInsertPending.mock.invocationCallOrder[0]
+    const upstreamOrder = mockSubmitPlace.mock.invocationCallOrder[0]
+    expect(insertOrder).toBeLessThan(upstreamOrder)
+
     // returns the locally generated externalId, not the upstream echo
     expect(result).toEqual({
       id: serviceResult.id,
@@ -203,6 +267,29 @@ describe("BtcMap submitPlace", () => {
       externalId: serviceArgs.externalId,
     })
     expect(mockRewardLimiter).not.toHaveBeenCalled()
+  })
+
+  it("returns the recorded result on replay without re-calling upstream", async () => {
+    mockFindSubmission.mockResolvedValue(
+      makeSubmission({
+        status: BtcMapPlaceSubmissionStatus.Submitted,
+        btcMapPlaceId: 42,
+      }),
+    )
+
+    const result = await submitPlace({
+      account: makeAccount(AccountLevel.Two),
+      ...baseArgs,
+    })
+
+    expect(result).not.toBeInstanceOf(Error)
+    if (result instanceof Error) return
+    expect(result.id).toEqual(42)
+    expect(result.origin).toEqual("blink")
+    expect(result.externalId.endsWith(`:${baseArgs.submissionId}`)).toBe(true)
+    expect(mockConsumeLimiter).not.toHaveBeenCalled()
+    expect(mockInsertPending).not.toHaveBeenCalled()
+    expect(mockSubmitPlace).not.toHaveBeenCalled()
   })
 
   it("reuses the same external id when a client retries an ambiguous failure", async () => {
@@ -217,6 +304,8 @@ describe("BtcMap submitPlace", () => {
     })
     expect(firstResult).toBeInstanceOf(BtcMapUnavailableError)
 
+    // the persisted pending record is found on retry
+    mockFindSubmission.mockResolvedValue(makeSubmission())
     mockSubmitPlace.mockResolvedValueOnce({
       id: 1,
       origin: "blink",
@@ -231,6 +320,7 @@ describe("BtcMap submitPlace", () => {
     expect(mockSubmitPlace.mock.calls[1][0].externalId).toEqual(
       mockSubmitPlace.mock.calls[0][0].externalId,
     )
+    expect(mockInsertPending).toHaveBeenCalledTimes(1)
     expect(retryResult).not.toBeInstanceOf(Error)
   })
 
@@ -249,6 +339,45 @@ describe("BtcMap submitPlace", () => {
     expect(firstExternalId).not.toEqual(secondExternalId)
     expect(firstExternalId.endsWith(`:${baseArgs.submissionId}`)).toBe(true)
     expect(secondExternalId.endsWith(`:${baseArgs.submissionId}`)).toBe(true)
+  })
+
+  it("fails before the upstream call and refunds when the pending record cannot be persisted", async () => {
+    mockInsertPending.mockResolvedValue(new UnknownRepositoryError("mongo down"))
+
+    const result = await submitPlace({
+      account: makeAccount(AccountLevel.Two),
+      ...baseArgs,
+    })
+
+    expect(result).toBeInstanceOf(UnknownRepositoryError)
+    expect(mockSubmitPlace).not.toHaveBeenCalled()
+    expect(mockRewardLimiter).toHaveBeenCalledTimes(1)
+  })
+
+  it("proceeds when a concurrent identical request won the insert race", async () => {
+    mockInsertPending.mockResolvedValue(new DuplicateKeyForPersistError())
+    mockSubmitPlace.mockResolvedValue({ id: 1, origin: "blink", external_id: "ext" })
+
+    const result = await submitPlace({
+      account: makeAccount(AccountLevel.Two),
+      ...baseArgs,
+    })
+
+    expect(result).not.toBeInstanceOf(Error)
+    expect(mockSubmitPlace).toHaveBeenCalledTimes(1)
+    expect(mockMarkSubmitted).toHaveBeenCalledTimes(1)
+  })
+
+  it("still returns success when marking the submission submitted fails", async () => {
+    mockSubmitPlace.mockResolvedValue({ id: 1, origin: "blink", external_id: "ext" })
+    mockMarkSubmitted.mockResolvedValue(new UnknownRepositoryError("mongo down"))
+
+    const result = await submitPlace({
+      account: makeAccount(AccountLevel.Two),
+      ...baseArgs,
+    })
+
+    expect(result).not.toBeInstanceOf(Error)
   })
 
   it("refunds the rate limit when the submission fails upstream", async () => {

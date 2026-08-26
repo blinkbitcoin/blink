@@ -393,6 +393,64 @@ MerchantSchema.index({ validated: 1, deleted: 1 })
 
 export const Merchant = mongoose.model<MerchantRecord>("Merchant", MerchantSchema)
 
+const BtcMapPlaceSubmissionSchema = new Schema<BtcMapPlaceSubmissionRecord>({
+  accountId: {
+    type: String,
+    required: true,
+    index: true,
+  },
+  submissionId: {
+    type: String,
+    required: true,
+  },
+  externalId: {
+    type: String,
+    required: true,
+  },
+  lat: {
+    type: Number,
+    required: true,
+  },
+  lon: {
+    type: Number,
+    required: true,
+  },
+  category: {
+    type: String,
+    required: true,
+  },
+  name: {
+    type: String,
+    required: true,
+  },
+  status: {
+    type: String,
+    enum: ["pending", "submitted"],
+    required: true,
+  },
+  btcMapPlaceId: {
+    type: Number,
+    required: false,
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now,
+  },
+})
+
+// one submission record per (account, client-supplied operation id): retries
+// find and reuse it, and concurrent identical requests can't both insert
+BtcMapPlaceSubmissionSchema.index({ accountId: 1, submissionId: 1 }, { unique: true })
+
+export const BtcMapPlaceSubmission = mongoose.model<BtcMapPlaceSubmissionRecord>(
+  "BtcMapPlaceSubmission",
+  BtcMapPlaceSubmissionSchema,
+)
+
 const AccountIpsSchema = new Schema<AccountIpsRecord>({
   ip: {
     type: String,

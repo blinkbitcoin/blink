@@ -1,3 +1,4 @@
+import { CouldNotFindError } from "@/domain/errors"
 import { DomainError, ErrorLevel, ValidationError } from "@/domain/shared"
 
 export class BtcMapError extends DomainError {}
@@ -31,3 +32,5 @@ export class InvalidBtcMapCategoryError extends ValidationError {}
 export class InvalidBtcMapPlaceNameError extends ValidationError {}
 
 export class InvalidBtcMapSubmissionIdError extends ValidationError {}
+
+export class CouldNotFindBtcMapPlaceSubmissionError extends CouldNotFindError {}

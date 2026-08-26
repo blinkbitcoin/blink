@@ -43,6 +43,9 @@ const isValidResult = (result: unknown): result is BtcMapSubmitPlaceResult => {
   )
 }
 
+// Blink is the data source, not the end user
+export const BTCMAP_ORIGIN = "blink"
+
 export const BtcMapService = (): IBtcMapService | BtcMapNotConfiguredError => {
   if (!BTCMAP_API_URL || !BTCMAP_API_TOKEN) {
     baseLogger.warn("BtcMapService not configured")
@@ -72,7 +75,7 @@ export const BtcMapService = (): IBtcMapService | BtcMapNotConfiguredError => {
           jsonrpc: "2.0",
           method: "submit_place",
           params: {
-            origin: "blink",
+            origin: BTCMAP_ORIGIN,
             external_id: externalId,
             lat,
             lon,

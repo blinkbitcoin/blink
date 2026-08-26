@@ -3,15 +3,23 @@ import { createHmac } from "crypto"
 import { BTCMAP_HMAC_SECRET } from "@/config"
 import { AccountLevel, checkedCoordinates } from "@/domain/accounts"
 import {
+  BtcMapPlaceSubmissionStatus,
   checkedBtcMapCategory,
   checkedBtcMapPlaceName,
   checkedBtcMapSubmissionId,
 } from "@/domain/btcmap"
-import { BtcMapNotConfiguredError } from "@/domain/btcmap/errors"
-import { InsufficientAccountLevelError } from "@/domain/errors"
+import {
+  BtcMapNotConfiguredError,
+  CouldNotFindBtcMapPlaceSubmissionError,
+} from "@/domain/btcmap/errors"
+import {
+  DuplicateKeyForPersistError,
+  InsufficientAccountLevelError,
+} from "@/domain/errors"
 import { RateLimitConfig } from "@/domain/rate-limit"
 import { baseLogger } from "@/services/logger"
-import { BtcMapService } from "@/services/btcmap"
+import { BTCMAP_ORIGIN, BtcMapService } from "@/services/btcmap"
+import { BtcMapPlaceSubmissionsRepository } from "@/services/mongoose"
 import { consumeLimiter, rewardLimiter } from "@/services/rate-limit"
 
 type BtcMapSubmittedPlace = {
@@ -60,13 +68,6 @@ export const submitPlace = async ({
     return new BtcMapNotConfiguredError("BTCMAP_HMAC_SECRET is not set")
   }
 
-  const rateLimitConfig = RateLimitConfig.btcMapPlaceSubmitPerAccount
-  const limitOk = await consumeLimiter({
-    rateLimitConfig,
-    keyToConsume: account.id,
-  })
-  if (limitOk instanceof Error) return limitOk
-
   // dedicated secret (not the btcmap api token) so token rotation does not
   // change every account's external_id prefix. The suffix is the client-supplied
   // operation identity: a retried mutation reuses the same submissionId, so
@@ -78,14 +79,36 @@ export const submitPlace = async ({
     .slice(0, 16)
   const externalId = `${accountHash}:${submissionIdChecked}`
 
-  const result = await btcMapService.submitPlace({
-    externalId,
-    lat: coordinates.latitude,
-    lon: coordinates.longitude,
-    category: categoryChecked,
-    name: nameChecked,
+  const submissions = BtcMapPlaceSubmissionsRepository()
+  const existing = await submissions.findByAccountIdAndSubmissionId({
+    accountId: account.id,
+    submissionId: submissionIdChecked,
   })
-  if (result instanceof Error) {
+  if (
+    existing instanceof Error &&
+    !(existing instanceof CouldNotFindBtcMapPlaceSubmissionError)
+  ) {
+    return existing
+  }
+
+  // replay of an operation we already know btcmap committed: return the
+  // recorded result without consuming rate limit or re-calling upstream
+  if (
+    !(existing instanceof Error) &&
+    existing.status === BtcMapPlaceSubmissionStatus.Submitted &&
+    existing.btcMapPlaceId !== undefined
+  ) {
+    return { id: existing.btcMapPlaceId, origin: BTCMAP_ORIGIN, externalId }
+  }
+
+  const rateLimitConfig = RateLimitConfig.btcMapPlaceSubmitPerAccount
+  const limitOk = await consumeLimiter({
+    rateLimitConfig,
+    keyToConsume: account.id,
+  })
+  if (limitOk instanceof Error) return limitOk
+
+  const refundRateLimit = async () => {
     // the failure is ours or upstream's, not the user's — refund the point
     const rewarded = await rewardLimiter({
       rateLimitConfig,
@@ -97,7 +120,64 @@ export const submitPlace = async ({
         "Failed to refund btcmap place submission rate limit",
       )
     }
+  }
+
+  // persist the pending operation before the upstream call, so an ambiguous
+  // failure (upstream committed, response lost) leaves a trace the retry can
+  // find — and so the upstream id is known later for get/revoke calls
+  if (existing instanceof CouldNotFindBtcMapPlaceSubmissionError) {
+    const persisted = await submissions.insertPending({
+      accountId: account.id,
+      submissionId: submissionIdChecked,
+      externalId,
+      lat: coordinates.latitude,
+      lon: coordinates.longitude,
+      category: categoryChecked,
+      name: nameChecked,
+    })
+    if (persisted instanceof Error) {
+      if (!(persisted instanceof DuplicateKeyForPersistError)) {
+        await refundRateLimit()
+        return persisted
+      }
+      // a concurrent identical request won the insert race; the externalId is
+      // deterministic, so proceed — its record gets marked on success
+      baseLogger.info(
+        { accountId: account.id, submissionId: submissionIdChecked },
+        "Concurrent btcmap place submission insert; proceeding with shared record",
+      )
+    }
+  }
+
+  const result = await btcMapService.submitPlace({
+    externalId,
+    lat: coordinates.latitude,
+    lon: coordinates.longitude,
+    category: categoryChecked,
+    name: nameChecked,
+  })
+  if (result instanceof Error) {
+    // keep the record pending so a retry re-attempts the upstream call
+    await refundRateLimit()
     return result
+  }
+
+  const marked = await submissions.markSubmitted({
+    accountId: account.id,
+    submissionId: submissionIdChecked,
+    btcMapPlaceId: result.id,
+    lat: coordinates.latitude,
+    lon: coordinates.longitude,
+    category: categoryChecked,
+    name: nameChecked,
+  })
+  if (marked instanceof Error) {
+    // the place is committed upstream — don't fail the user's operation over a
+    // bookkeeping error; the record stays pending and a retry will patch it
+    baseLogger.error(
+      { error: marked, accountId: account.id, submissionId: submissionIdChecked },
+      "Failed to mark btcmap place submission as submitted",
+    )
   }
 
   return {
