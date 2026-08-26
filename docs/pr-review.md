@@ -381,8 +381,6 @@ this [pnpm-lock] should not be updated" (#158); "please dont modify old migratio
 - Integration test suite is being wound down in favor of unit + bats (#643); do not grow it.
 - The Buck `eslint()` target is temporarily disabled (ESLint 9 compatibility); lint runs
   via the `eslint-check` pnpm task.
-- `Generate GraphQL Docs` on main has been chronically red and tolerated; do not treat it
-  as a signal on your PR.
 
 ## Reviewer quick checklist
 
