@@ -2,27 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix(dev): wait for lnd wallet chain sync before opening channels
-        and poll bitcoind over RPC for block/tx notifications instead of ZMQ. (#790)...'
-      sha: 4583971fb2ce3d7b86cdd4b9aec96cfd32d1bb3e
+      commitTitle: 'ci: remove failing Generate GraphQL Docs action and deps (#795)...'
+      sha: becc5154d89709006f9eb079d544f53b9edc2909
       tags:
-      - 0.22.52-1-g4583971fb
+      - 0.22.52-3-gbecc5154d
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'fix(dev): wait for lnd wallet chain sync before opening channels
-        and poll bitcoind over RPC for block/tx notifications instead of ZMQ. (#790)...'
-      sha: 4583971fb2ce3d7b86cdd4b9aec96cfd32d1bb3e
+      commitTitle: 'ci: remove failing Generate GraphQL Docs action and deps (#795)...'
+      sha: becc5154d89709006f9eb079d544f53b9edc2909
       tags:
-      - 0.22.52-1-g4583971fb
+      - 0.22.52-3-gbecc5154d
     path: schemas
   - git:
-      commitTitle: 'fix(dev): wait for lnd wallet chain sync before opening channels
-        and poll bitcoind over RPC for block/tx notifications instead of ZMQ. (#790)...'
-      sha: 4583971fb2ce3d7b86cdd4b9aec96cfd32d1bb3e
+      commitTitle: 'ci: remove failing Generate GraphQL Docs action and deps (#795)...'
+      sha: becc5154d89709006f9eb079d544f53b9edc2909
       tags:
-      - 0.22.52-1-g4583971fb
+      - 0.22.52-3-gbecc5154d
     path: gql
   path: graphql
 kind: LockConfig
