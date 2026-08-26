@@ -529,6 +529,10 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       message = "Name should be between 3 and 100 characters."
       return new ValidationInternalError({ message, logger: baseLogger })
 
+    case "InvalidBtcMapSubmissionIdError":
+      message = "submissionId must be a valid UUID."
+      return new ValidationInternalError({ message, logger: baseLogger })
+
     // fixed message: btcmap error details are internal and must not reach clients
     case "BtcMapError":
     case "BtcMapServiceError":

@@ -29,3 +29,5 @@ export class UnknownBtcMapServiceError extends BtcMapServiceError {
 export class InvalidBtcMapCategoryError extends ValidationError {}
 
 export class InvalidBtcMapPlaceNameError extends ValidationError {}
+
+export class InvalidBtcMapSubmissionIdError extends ValidationError {}

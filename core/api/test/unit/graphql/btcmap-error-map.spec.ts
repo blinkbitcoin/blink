@@ -8,6 +8,7 @@ import {
   BtcMapUnavailableError,
   InvalidBtcMapCategoryError,
   InvalidBtcMapPlaceNameError,
+  InvalidBtcMapSubmissionIdError,
   MalformedBtcMapResponseError,
   UnknownBtcMapServiceError,
 } from "@/domain/btcmap/errors"
@@ -28,6 +29,7 @@ describe("mapAndParseErrorForGqlResponse - btcmap errors", () => {
       [new BtcMapPlaceSubmitPerAccountRateLimiterExceededError(), "TOO_MANY_REQUEST"],
       [new InvalidBtcMapCategoryError(), "INVALID_INPUT"],
       [new InvalidBtcMapPlaceNameError(), "INVALID_INPUT"],
+      [new InvalidBtcMapSubmissionIdError(), "INVALID_INPUT"],
     ]
 
     for (const [error, expectedCode] of cases) {

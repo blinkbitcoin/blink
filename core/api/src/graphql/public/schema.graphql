@@ -267,6 +267,11 @@ input BtcMapPlaceSubmitInput {
   latitude: Float!
   longitude: Float!
   name: String!
+
+  """
+  Client-generated UUID identifying this submission. Reuse the same value when retrying after a failed or ambiguous request so the retry does not create a duplicate place.
+  """
+  submissionId: ID!
 }
 
 type BuildInformation {

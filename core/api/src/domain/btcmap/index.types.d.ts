@@ -2,6 +2,8 @@ type BtcMapCategory = string & { readonly brand: unique symbol }
 
 type BtcMapPlaceName = string & { readonly brand: unique symbol }
 
+type BtcMapSubmissionId = string & { readonly brand: unique symbol }
+
 type BtcMapServiceError = import("./errors").BtcMapServiceError
 
 type BtcMapSubmitPlaceArgs = {

@@ -39,11 +39,12 @@ submit_place() {
 
   local variables=$(
     jq -n \
+    --arg submissionId "$(cat /proc/sys/kernel/random/uuid)" \
     --arg latitude "$latitude" \
     --arg longitude "$longitude" \
     --arg category "$category" \
     --arg name "$name" \
-    '{input: {latitude: ($latitude | tonumber), longitude: ($longitude | tonumber), category: $category, name: $name}}'
+    '{input: {submissionId: $submissionId, latitude: ($latitude | tonumber), longitude: ($longitude | tonumber), category: $category, name: $name}}'
   )
   exec_graphql 'btcmap' 'btc-map-place-submit' "$variables"
 }
@@ -76,6 +77,16 @@ submit_place() {
   submit_place "91" "-74.0817" "food" "Arepas Place"
   error_msg="$(graphql_output '.data.btcMapPlaceSubmit.errors[0].message')"
   [[ "$error_msg" =~ "Latitude must be between -90 and 90" ]] || exit 1
+}
+
+@test "btcmap: validates submissionId for level two accounts" {
+  local variables=$(
+    jq -n \
+    '{input: {submissionId: "not-a-uuid", latitude: 4.6097, longitude: -74.0817, category: "food", name: "Arepas Place"}}'
+  )
+  exec_graphql 'btcmap' 'btc-map-place-submit' "$variables"
+  error_msg="$(graphql_output '.data.btcMapPlaceSubmit.errors[0].message')"
+  [[ "$error_msg" =~ "submissionId must be a valid UUID" ]] || exit 1
 }
 
 @test "btcmap: returns a fixed error and leaks no internals when not configured" {

@@ -6,6 +6,11 @@ import BtcMapPlacePayload from "@/graphql/public/types/payload/btc-map-place"
 const BtcMapPlaceSubmitInput = GT.Input({
   name: "BtcMapPlaceSubmitInput",
   fields: () => ({
+    submissionId: {
+      type: GT.NonNull(GT.ID),
+      description:
+        "Client-generated UUID identifying this submission. Reuse the same value when retrying after a failed or ambiguous request so the retry does not create a duplicate place.",
+    },
     latitude: {
       type: GT.NonNull(GT.Float),
     },
@@ -32,10 +37,11 @@ const BtcMapPlaceSubmitMutation = GT.Field<null, GraphQLPublicContextAuth>({
     input: { type: GT.NonNull(BtcMapPlaceSubmitInput) },
   },
   resolve: async (_, args, { domainAccount }) => {
-    const { latitude, longitude, category, name } = args.input
+    const { submissionId, latitude, longitude, category, name } = args.input
 
     const place = await BtcMap.submitPlace({
       account: domainAccount,
+      submissionId,
       latitude,
       longitude,
       category,

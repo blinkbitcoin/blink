@@ -23,6 +23,7 @@ import {
   BtcMapUnavailableError,
   InvalidBtcMapCategoryError,
   InvalidBtcMapPlaceNameError,
+  InvalidBtcMapSubmissionIdError,
 } from "@/domain/btcmap/errors"
 import { InsufficientAccountLevelError, InvalidCoordinatesError } from "@/domain/errors"
 import { BtcMapPlaceSubmitPerAccountRateLimiterExceededError } from "@/domain/rate-limit/errors"
@@ -40,6 +41,7 @@ const makeAccount = (level: AccountLevel): Account =>
   ({ id: accountId, level }) as Account
 
 const baseArgs = {
+  submissionId: "f47ac10b-58cc-4372-a567-0e02b2c3d479",
   latitude: 4.6097,
   longitude: -74.0817,
   category: "food",
@@ -63,6 +65,20 @@ describe("BtcMap submitPlace", () => {
       })
 
       expect(result).toBeInstanceOf(InsufficientAccountLevelError)
+    }
+    expect(mockConsumeLimiter).not.toHaveBeenCalled()
+    expect(mockSubmitPlace).not.toHaveBeenCalled()
+  })
+
+  it("rejects an invalid submissionId", async () => {
+    for (const submissionId of ["", "not-a-uuid", "f47ac10b58cc4372a5670e02b2c3d479"]) {
+      const result = await submitPlace({
+        account: makeAccount(AccountLevel.Two),
+        ...baseArgs,
+        submissionId,
+      })
+
+      expect(result).toBeInstanceOf(InvalidBtcMapSubmissionIdError)
     }
     expect(mockConsumeLimiter).not.toHaveBeenCalled()
     expect(mockSubmitPlace).not.toHaveBeenCalled()
@@ -174,8 +190,10 @@ describe("BtcMap submitPlace", () => {
     expect(serviceArgs.category).toEqual(baseArgs.category)
     expect(serviceArgs.name).toEqual(baseArgs.name)
 
-    // hmac-prefixed opaque id, no raw account id leaked
+    // hmac-prefixed opaque id derived from the client-supplied submissionId,
+    // no raw account id leaked
     expect(serviceArgs.externalId).toMatch(/^[0-9a-f]{16}:[0-9a-f-]{36}$/)
+    expect(serviceArgs.externalId.endsWith(`:${baseArgs.submissionId}`)).toBe(true)
     expect(serviceArgs.externalId).not.toContain(accountId)
 
     // returns the locally generated externalId, not the upstream echo
@@ -185,6 +203,52 @@ describe("BtcMap submitPlace", () => {
       externalId: serviceArgs.externalId,
     })
     expect(mockRewardLimiter).not.toHaveBeenCalled()
+  })
+
+  it("reuses the same external id when a client retries an ambiguous failure", async () => {
+    // upstream may have committed the first submission even though no usable
+    // response came back — btcmap dedupes on (origin, external_id), so the
+    // retried mutation must carry the same external id
+    mockSubmitPlace.mockResolvedValueOnce(new BtcMapUnavailableError())
+
+    const firstResult = await submitPlace({
+      account: makeAccount(AccountLevel.Two),
+      ...baseArgs,
+    })
+    expect(firstResult).toBeInstanceOf(BtcMapUnavailableError)
+
+    mockSubmitPlace.mockResolvedValueOnce({
+      id: 1,
+      origin: "blink",
+      external_id: mockSubmitPlace.mock.calls[0][0].externalId,
+    })
+    const retryResult = await submitPlace({
+      account: makeAccount(AccountLevel.Two),
+      ...baseArgs,
+    })
+
+    expect(mockSubmitPlace).toHaveBeenCalledTimes(2)
+    expect(mockSubmitPlace.mock.calls[1][0].externalId).toEqual(
+      mockSubmitPlace.mock.calls[0][0].externalId,
+    )
+    expect(retryResult).not.toBeInstanceOf(Error)
+  })
+
+  it("scopes the external id per account for the same submissionId", async () => {
+    mockSubmitPlace.mockResolvedValue({ id: 1, origin: "blink", external_id: "ext" })
+
+    await submitPlace({ account: makeAccount(AccountLevel.Two), ...baseArgs })
+    await submitPlace({
+      account: { id: "other-account-id", level: AccountLevel.Two } as Account,
+      ...baseArgs,
+    })
+
+    const [firstExternalId, secondExternalId] = mockSubmitPlace.mock.calls.map(
+      (call) => call[0].externalId,
+    )
+    expect(firstExternalId).not.toEqual(secondExternalId)
+    expect(firstExternalId.endsWith(`:${baseArgs.submissionId}`)).toBe(true)
+    expect(secondExternalId.endsWith(`:${baseArgs.submissionId}`)).toBe(true)
   })
 
   it("refunds the rate limit when the submission fails upstream", async () => {

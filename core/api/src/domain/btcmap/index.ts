@@ -1,4 +1,10 @@
-import { InvalidBtcMapCategoryError, InvalidBtcMapPlaceNameError } from "./errors"
+import {
+  InvalidBtcMapCategoryError,
+  InvalidBtcMapPlaceNameError,
+  InvalidBtcMapSubmissionIdError,
+} from "./errors"
+
+import { UuidRegex } from "@/domain/shared"
 
 export const checkedBtcMapCategory = (
   category: string,
@@ -22,4 +28,15 @@ export const checkedBtcMapPlaceName = (
     return new InvalidBtcMapPlaceNameError()
   }
   return trimmed as BtcMapPlaceName
+}
+
+// client-generated per logical submission, reused on retry so btcmap's
+// (origin, external_id) idempotency can dedupe ambiguous failures
+export const checkedBtcMapSubmissionId = (
+  submissionId: string,
+): BtcMapSubmissionId | InvalidBtcMapSubmissionIdError => {
+  if (!submissionId.match(UuidRegex)) {
+    return new InvalidBtcMapSubmissionIdError()
+  }
+  return submissionId as BtcMapSubmissionId
 }

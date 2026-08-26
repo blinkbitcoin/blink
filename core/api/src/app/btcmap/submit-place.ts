@@ -1,8 +1,12 @@
-import { createHmac, randomUUID } from "crypto"
+import { createHmac } from "crypto"
 
 import { BTCMAP_HMAC_SECRET } from "@/config"
 import { AccountLevel, checkedCoordinates } from "@/domain/accounts"
-import { checkedBtcMapCategory, checkedBtcMapPlaceName } from "@/domain/btcmap"
+import {
+  checkedBtcMapCategory,
+  checkedBtcMapPlaceName,
+  checkedBtcMapSubmissionId,
+} from "@/domain/btcmap"
 import { BtcMapNotConfiguredError } from "@/domain/btcmap/errors"
 import { InsufficientAccountLevelError } from "@/domain/errors"
 import { RateLimitConfig } from "@/domain/rate-limit"
@@ -18,12 +22,14 @@ type BtcMapSubmittedPlace = {
 
 export const submitPlace = async ({
   account,
+  submissionId,
   latitude,
   longitude,
   category,
   name,
 }: {
   account: Account
+  submissionId: string
   latitude: number
   longitude: number
   category: string
@@ -32,6 +38,9 @@ export const submitPlace = async ({
   if (account.level < AccountLevel.Two) {
     return new InsufficientAccountLevelError()
   }
+
+  const submissionIdChecked = checkedBtcMapSubmissionId(submissionId)
+  if (submissionIdChecked instanceof Error) return submissionIdChecked
 
   const nameChecked = checkedBtcMapPlaceName(name)
   if (nameChecked instanceof Error) return nameChecked
@@ -59,12 +68,15 @@ export const submitPlace = async ({
   if (limitOk instanceof Error) return limitOk
 
   // dedicated secret (not the btcmap api token) so token rotation does not
-  // change every account's external_id prefix
+  // change every account's external_id prefix. The suffix is the client-supplied
+  // operation identity: a retried mutation reuses the same submissionId, so
+  // btcmap's (origin, external_id) idempotency turns the retry into an update
+  // of the original submission instead of creating a duplicate place.
   const accountHash = createHmac("sha256", BTCMAP_HMAC_SECRET)
     .update(account.id)
     .digest("hex")
     .slice(0, 16)
-  const externalId = `${accountHash}:${randomUUID()}`
+  const externalId = `${accountHash}:${submissionIdChecked}`
 
   const result = await btcMapService.submitPlace({
     externalId,
