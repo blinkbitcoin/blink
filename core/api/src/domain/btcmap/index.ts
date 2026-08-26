@@ -1,6 +1,8 @@
-import { InvalidBtcMapCategoryError } from "./errors"
+import { InvalidBtcMapCategoryError, InvalidBtcMapPlaceNameError } from "./errors"
 
-export const checkedBtcMapCategory = (category: string) => {
+export const checkedBtcMapCategory = (
+  category: string,
+): BtcMapCategory | InvalidBtcMapCategoryError => {
   const trimmed = category.trim()
   if (
     trimmed.length === 0 ||
@@ -9,5 +11,15 @@ export const checkedBtcMapCategory = (category: string) => {
   ) {
     return new InvalidBtcMapCategoryError()
   }
-  return trimmed
+  return trimmed as BtcMapCategory
+}
+
+export const checkedBtcMapPlaceName = (
+  name: string,
+): BtcMapPlaceName | InvalidBtcMapPlaceNameError => {
+  const trimmed = name.trim()
+  if (trimmed.length < 3 || trimmed.length > 100) {
+    return new InvalidBtcMapPlaceNameError()
+  }
+  return trimmed as BtcMapPlaceName
 }

@@ -4,15 +4,23 @@ import https from "https"
 import { create as createAxiosInstance } from "axios"
 import axiosRetry, { linearDelay } from "axios-retry"
 
+import { handleBtcMapErrors } from "./errors"
+
 import { BTCMAP_API_TOKEN, BTCMAP_API_URL } from "@/config"
-import { BtcMapSubmitPlaceError } from "@/domain/btcmap/errors"
+import {
+  BtcMapNotConfiguredError,
+  BtcMapSubmitPlaceRejectedError,
+  MalformedBtcMapResponseError,
+} from "@/domain/btcmap/errors"
 import { ErrorLevel } from "@/domain/shared"
+import { baseLogger } from "@/services/logger"
 import {
   addAttributesToCurrentSpan,
   recordExceptionInCurrentSpan,
+  wrapAsyncFunctionsToRunInSpan,
 } from "@/services/tracing"
 
-const client = createAxiosInstance({
+export const client = createAxiosInstance({
   timeout: 5000,
   httpAgent: new http.Agent({ keepAlive: true }),
   httpsAgent: new https.Agent({ keepAlive: true }),
@@ -25,13 +33,7 @@ axiosRetry(client, {
     !error.response || error.code === "ECONNABORTED" || error.response.status >= 500,
 })
 
-type SubmitPlaceResult = {
-  id: number
-  origin: string
-  external_id: string
-}
-
-const isValidResult = (result: unknown): result is SubmitPlaceResult => {
+const isValidResult = (result: unknown): result is BtcMapSubmitPlaceResult => {
   if (!result || typeof result !== "object") return false
   const { id, origin, external_id } = result as Record<string, unknown>
   return (
@@ -41,79 +43,80 @@ const isValidResult = (result: unknown): result is SubmitPlaceResult => {
   )
 }
 
-export const submitPlace = async ({
-  externalId,
-  lat,
-  lon,
-  category,
-  name,
-  extraFields,
-}: {
-  externalId: string
-  lat: number
-  lon: number
-  category: string
-  name: string
-  extraFields?: Record<string, unknown>
-}): Promise<SubmitPlaceResult | BtcMapSubmitPlaceError> => {
+export const BtcMapService = (): IBtcMapService | BtcMapNotConfiguredError => {
   if (!BTCMAP_API_URL || !BTCMAP_API_TOKEN) {
-    recordExceptionInCurrentSpan({
-      error: "missing BTCMAP_API_URL or BTCMAP_API_TOKEN",
-      level: ErrorLevel.Critical,
-    })
-    return new BtcMapSubmitPlaceError("btcmap service not configured")
+    baseLogger.warn("BtcMapService not configured")
+    return new BtcMapNotConfiguredError("BTCMAP_API_URL or BTCMAP_API_TOKEN is not set")
   }
 
-  try {
-    const { data } = await client.request({
-      method: "POST",
-      url: BTCMAP_API_URL,
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${BTCMAP_API_TOKEN}`,
-      },
-      data: {
-        jsonrpc: "2.0",
-        method: "submit_place",
-        params: {
-          origin: "blink",
-          external_id: externalId,
-          lat,
-          lon,
-          category,
-          name,
-          ...(extraFields ? { extra_fields: extraFields } : {}),
+  const url = BTCMAP_API_URL
+  const token = BTCMAP_API_TOKEN
+
+  const submitPlace = async ({
+    externalId,
+    lat,
+    lon,
+    category,
+    name,
+    extraFields,
+  }: BtcMapSubmitPlaceArgs): Promise<BtcMapSubmitPlaceResult | BtcMapServiceError> => {
+    try {
+      const { data } = await client.request({
+        method: "POST",
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
         },
-        id: 1,
-      },
-    })
+        data: {
+          jsonrpc: "2.0",
+          method: "submit_place",
+          params: {
+            origin: "blink",
+            external_id: externalId,
+            lat,
+            lon,
+            category,
+            name,
+            ...(extraFields ? { extra_fields: extraFields } : {}),
+          },
+          id: 1,
+        },
+      })
 
-    if (data.error) {
+      if (data.error) {
+        recordExceptionInCurrentSpan({
+          error: new Error(`submit_place rejected: ${JSON.stringify(data.error)}`),
+          attributes: { externalId },
+          level: ErrorLevel.Warn,
+        })
+        return new BtcMapSubmitPlaceRejectedError()
+      }
+
+      if (!isValidResult(data.result)) {
+        recordExceptionInCurrentSpan({
+          error: new Error("malformed submit_place result"),
+          attributes: { externalId, result: JSON.stringify(data.result) },
+          level: ErrorLevel.Critical,
+        })
+        return new MalformedBtcMapResponseError()
+      }
+
+      addAttributesToCurrentSpan({ btcMapPlaceId: data.result.id, externalId })
+      return data.result
+    } catch (err) {
+      const error = handleBtcMapErrors(err)
       recordExceptionInCurrentSpan({
-        error: data.error,
+        error,
         attributes: { externalId },
-        level: ErrorLevel.Warn,
+        level: error.level,
       })
-      return new BtcMapSubmitPlaceError("place submission failed")
+      return error
     }
-
-    if (!isValidResult(data.result)) {
-      recordExceptionInCurrentSpan({
-        error: "malformed submit_place result",
-        attributes: { externalId, result: JSON.stringify(data.result) },
-        level: ErrorLevel.Critical,
-      })
-      return new BtcMapSubmitPlaceError("place submission failed")
-    }
-
-    addAttributesToCurrentSpan({ btcMapPlaceId: data.result.id, externalId })
-    return data.result
-  } catch (error) {
-    recordExceptionInCurrentSpan({
-      error,
-      attributes: { externalId },
-      level: ErrorLevel.Critical,
-    })
-    return new BtcMapSubmitPlaceError("place submission failed")
   }
+
+  return wrapAsyncFunctionsToRunInSpan({
+    namespace: "services.btcmap",
+    fns: { submitPlace },
+  })
 }

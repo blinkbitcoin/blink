@@ -149,7 +149,7 @@ export class InvalidDeviceTokenError extends ValidationError {}
 
 export class InvalidLanguageError extends ValidationError {}
 export class InvalidAccountLevelError extends ValidationError {}
-export class InsufficientAccountLevelError extends ValidationError {}
+export class InsufficientAccountLevelError extends AuthorizationError {}
 export class InvalidAccountLimitTypeError extends ValidationError {}
 
 export class LimitsExceededError extends ValidationError {}

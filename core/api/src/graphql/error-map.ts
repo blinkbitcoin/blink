@@ -525,6 +525,23 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
         "Invalid category. Use up to 50 lowercase alphanumeric characters, '-' or '_'."
       return new ValidationInternalError({ message, logger: baseLogger })
 
+    case "InvalidBtcMapPlaceNameError":
+      message = "Name should be between 3 and 100 characters."
+      return new ValidationInternalError({ message, logger: baseLogger })
+
+    // fixed message: btcmap error details are internal and must not reach clients
+    case "BtcMapError":
+    case "BtcMapServiceError":
+    case "BtcMapNotConfiguredError":
+    case "BtcMapUnauthorizedError":
+    case "BtcMapUnavailableError":
+    case "BtcMapSubmitPlaceRejectedError":
+    case "MalformedBtcMapResponseError":
+    case "UnknownBtcMapServiceError":
+      message =
+        "Could not submit the place to the map, please try again later or contact support if it persists."
+      return new UnknownClientError({ message, logger: baseLogger })
+
     case "CannotConnectToDbError":
     case "DbConnectionClosedError":
       message =
@@ -891,8 +908,6 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "ExtendSessionKratosError":
     case "MultipleCurrenciesForSingleCurrencyOperationError":
     case "MattermostError":
-    case "BtcMapError":
-    case "BtcMapSubmitPlaceError":
     case "CouldNotFindAccountIpError":
     case "InvalidFlowId":
     case "CallbackError":
