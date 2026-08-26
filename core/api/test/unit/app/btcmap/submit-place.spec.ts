@@ -292,6 +292,37 @@ describe("BtcMap submitPlace", () => {
     expect(mockSubmitPlace).not.toHaveBeenCalled()
   })
 
+  it("resubmits with the same external id when the fields changed (edit by resubmit)", async () => {
+    // btcmap's only update mechanism is patch-by-resubmit with the same
+    // external_id, so a same-submissionId request with changed fields must
+    // reach upstream rather than being short-circuited as a replay
+    mockFindSubmission.mockResolvedValue(
+      makeSubmission({
+        status: BtcMapPlaceSubmissionStatus.Submitted,
+        btcMapPlaceId: 42,
+      }),
+    )
+    mockSubmitPlace.mockResolvedValue({ id: 42, origin: "blink", external_id: "ext" })
+
+    const result = await submitPlace({
+      account: makeAccount(AccountLevel.Two),
+      ...baseArgs,
+      name: "Arepas Place Fixed",
+    })
+
+    expect(result).not.toBeInstanceOf(Error)
+    expect(mockConsumeLimiter).toHaveBeenCalledTimes(1)
+    expect(mockInsertPending).not.toHaveBeenCalled()
+    expect(mockSubmitPlace).toHaveBeenCalledTimes(1)
+    const serviceArgs = mockSubmitPlace.mock.calls[0][0]
+    expect(serviceArgs.externalId.endsWith(`:${baseArgs.submissionId}`)).toBe(true)
+    expect(serviceArgs.name).toEqual("Arepas Place Fixed")
+    expect(mockMarkSubmitted.mock.calls[0][0]).toMatchObject({
+      btcMapPlaceId: 42,
+      name: "Arepas Place Fixed",
+    })
+  })
+
   it("reuses the same external id when a client retries an ambiguous failure", async () => {
     // upstream may have committed the first submission even though no usable
     // response came back — btcmap dedupes on (origin, external_id), so the

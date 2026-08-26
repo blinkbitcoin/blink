@@ -91,12 +91,19 @@ export const submitPlace = async ({
     return existing
   }
 
-  // replay of an operation we already know btcmap committed: return the
-  // recorded result without consuming rate limit or re-calling upstream
+  // replay of an operation we already know btcmap committed with an unchanged
+  // payload: return the recorded result without consuming rate limit or
+  // re-calling upstream. The same submissionId with CHANGED fields is not a
+  // replay but an edit — btcmap's only update mechanism is patch-by-resubmit
+  // with the same external_id — so it must fall through and call upstream.
   if (
     !(existing instanceof Error) &&
     existing.status === BtcMapPlaceSubmissionStatus.Submitted &&
-    existing.btcMapPlaceId !== undefined
+    existing.btcMapPlaceId !== undefined &&
+    existing.lat === coordinates.latitude &&
+    existing.lon === coordinates.longitude &&
+    existing.category === categoryChecked &&
+    existing.name === nameChecked
   ) {
     return { id: existing.btcMapPlaceId, origin: BTCMAP_ORIGIN, externalId }
   }

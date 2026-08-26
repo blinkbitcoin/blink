@@ -5,6 +5,7 @@ import mongoose from "mongoose"
 import { getDefaultAccountsConfig, Levels } from "@/config"
 import { AccountIdRegex, AccountStatus, UsernameRegex } from "@/domain/accounts"
 import { MigrationFlowPhase } from "@/domain/migration-flow"
+import { BtcMapPlaceSubmissionStatus } from "@/domain/btcmap"
 import { WindDownCohortRule } from "@/domain/wind-down"
 import { WalletIdRegex, WalletType } from "@/domain/wallets"
 import { WalletCurrency } from "@/domain/shared"
@@ -397,7 +398,6 @@ const BtcMapPlaceSubmissionSchema = new Schema<BtcMapPlaceSubmissionRecord>({
   accountId: {
     type: String,
     required: true,
-    index: true,
   },
   submissionId: {
     type: String,
@@ -425,7 +425,7 @@ const BtcMapPlaceSubmissionSchema = new Schema<BtcMapPlaceSubmissionRecord>({
   },
   status: {
     type: String,
-    enum: ["pending", "submitted"],
+    enum: Object.values(BtcMapPlaceSubmissionStatus),
     required: true,
   },
   btcMapPlaceId: {
