@@ -1065,6 +1065,10 @@ type Mutation {
   accountEnableNotificationChannel(input: AccountEnableNotificationChannelInput!): AccountUpdateNotificationSettingsPayload!
   accountUpdateDefaultWalletId(input: AccountUpdateDefaultWalletIdInput!): AccountUpdateDefaultWalletIdPayload!
   accountUpdateDisplayCurrency(input: AccountUpdateDisplayCurrencyInput!): AccountUpdateDisplayCurrencyPayload!
+
+  """
+  Submit a place to BTC Map. The place is sent to BTC Map for review and only appears on the map once approved.
+  """
   btcMapPlaceSubmit(input: BtcMapPlaceSubmitInput!): BtcMapPlacePayload!
   callbackEndpointAdd(input: CallbackEndpointAddInput!): CallbackEndpointAddPayload!
   callbackEndpointDelete(input: CallbackEndpointDeleteInput!): SuccessPayload!
