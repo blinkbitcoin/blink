@@ -321,6 +321,12 @@ interface ILedgerService {
     vout: OnChainTxVout
   }): Promise<IsOnChainReceiptTxRecordedForWalletResult | LedgerServiceError>
 
+  getOnChainReceiptForWallet(args: {
+    walletId: WalletId
+    txHash: OnChainTxHash
+    vout: OnChainTxVout
+  }): Promise<LedgerTransaction<WalletCurrency> | undefined | LedgerServiceError>
+
   isOnChainTxHashRecorded(txHash: OnChainTxHash): Promise<boolean | LedgerServiceError>
 
   isToHotWalletTxRecorded(txHash: OnChainTxHash): Promise<boolean | LedgerServiceError>

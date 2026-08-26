@@ -4,7 +4,10 @@ import mongoose from "mongoose"
 
 import { getDefaultAccountsConfig, Levels } from "@/config"
 import { AccountIdRegex, AccountStatus, UsernameRegex } from "@/domain/accounts"
-import { MigrationFlowPhase } from "@/domain/migration-flow"
+import {
+  MigrationFlowPhase,
+  PostMigrationDepositReleaseStatus,
+} from "@/domain/migration-flow"
 import { BtcMapPlaceSubmissionStatus } from "@/domain/btcmap"
 import { WindDownCohortRule } from "@/domain/wind-down"
 import { WalletIdRegex, WalletType } from "@/domain/wallets"
@@ -667,6 +670,46 @@ export const MigrationFlowState = mongoose.model<MigrationFlowStateRecord>(
   "MigrationFlowState",
   migrationFlowStateSchema,
 )
+
+const postMigrationDepositReleaseSchema = new Schema<PostMigrationDepositReleaseRecord>(
+  {
+    accountId: { type: String, ref: "Account", required: true },
+    walletId: { type: String, ref: "Wallet", required: true },
+    txHash: { type: String, required: true },
+    vout: { type: Number, required: true },
+    address: { type: String, required: true },
+    receiptJournalId: { type: String, required: true },
+    receiptAmountSats: { type: Number, required: true },
+    payoutAmountSats: { type: Number, required: true },
+    plannedTopUpSats: { type: Number, required: true },
+    topUpSats: { type: Number, required: true, default: 0 },
+    lightningAddress: { type: String, required: true },
+    caseReference: { type: String, required: true },
+    status: {
+      type: String,
+      required: true,
+      enum: Object.values(PostMigrationDepositReleaseStatus),
+    },
+    paymentHash: String,
+    paymentRequest: String,
+    failureReason: String,
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now, required: true },
+  },
+  { id: false },
+)
+
+postMigrationDepositReleaseSchema.index({ txHash: 1, vout: 1 }, { unique: true })
+postMigrationDepositReleaseSchema.index(
+  { paymentHash: 1 },
+  { unique: true, sparse: true },
+)
+
+export const PostMigrationDepositRelease =
+  mongoose.model<PostMigrationDepositReleaseRecord>(
+    "PostMigrationDepositRelease",
+    postMigrationDepositReleaseSchema,
+  )
 
 const windDownCohortAssessmentSchema = new Schema<WindDownCohortAssessmentRecord>(
   {

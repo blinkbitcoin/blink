@@ -12,7 +12,7 @@ import {
 } from "./spending-limits"
 import { reimburseFee } from "./reimburse-fee"
 
-import { AccountValidator } from "@/domain/accounts"
+import { AccountValidator, PostMigrationAccountValidator } from "@/domain/accounts"
 import {
   decodeInvoice,
   defaultTimeToExpiryInSeconds,
@@ -134,13 +134,16 @@ const addIntraledgerContactIfNeeded = async ({
   }
 }
 
-export const payInvoiceByWalletId = async ({
+const payInvoiceByWalletIdInternal = async ({
   uncheckedPaymentRequest,
   memo,
   senderWalletId: uncheckedSenderWalletId,
   senderAccount,
   apiKeyId,
-}: PayInvoiceByWalletIdArgs): Promise<PaymentSendResult | ApplicationError> => {
+  postMigrationDepositRelease = false,
+}: PayInvoiceByWalletIdArgs & {
+  postMigrationDepositRelease?: boolean
+}): Promise<PaymentSendResult | ApplicationError> => {
   addAttributesToCurrentSpan({
     "payment.initiation_method": PaymentInitiationMethod.Lightning,
   })
@@ -148,6 +151,7 @@ export const payInvoiceByWalletId = async ({
   const validatedPaymentInputs = await validateInvoicePaymentInputs({
     uncheckedPaymentRequest,
     uncheckedSenderWalletId,
+    postMigrationDepositRelease,
   })
   if (validatedPaymentInputs instanceof AlreadyPaidError) {
     const decodedInvoice = decodeInvoice(uncheckedPaymentRequest)
@@ -160,7 +164,19 @@ export const payInvoiceByWalletId = async ({
   if (validatedPaymentInputs instanceof Error) {
     return validatedPaymentInputs
   }
-  const paymentFlow = await getPaymentFlow(validatedPaymentInputs)
+  if (
+    postMigrationDepositRelease &&
+    validatedPaymentInputs.senderAccount.id !== senderAccount.id
+  ) {
+    return new InvalidLightningPaymentFlowBuilderStateError(
+      "Sender account does not own sender wallet",
+    )
+  }
+
+  const paymentFlow = await getPaymentFlow({
+    ...validatedPaymentInputs,
+    skipBankFee: postMigrationDepositRelease,
+  })
   if (paymentFlow instanceof Error) return paymentFlow
 
   // Get display currency price... add to payment flow builder?
@@ -177,8 +193,14 @@ export const payInvoiceByWalletId = async ({
       senderAccount,
       memo,
       apiKeyId,
-      skipChecks: false,
+      skipChecks: postMigrationDepositRelease,
     })
+  }
+
+  if (postMigrationDepositRelease) {
+    return new InvalidLightningPaymentFlowBuilderStateError(
+      "Post-migration deposit releases must settle over Lightning",
+    )
   }
 
   const recipientAccount = await getValidatedIntraledgerRecipientAccount({
@@ -200,6 +222,19 @@ export const payInvoiceByWalletId = async ({
   await addIntraledgerContactIfNeeded({ senderAccount, recipientAccount })
 
   return paymentSendResult
+}
+
+export const payInvoiceByWalletId = async (
+  args: PayInvoiceByWalletIdArgs,
+): Promise<PaymentSendResult | ApplicationError> => payInvoiceByWalletIdInternal(args)
+
+export const payInvoiceByWalletIdForPostMigrationDepositRelease = async (
+  args: PayInvoiceByWalletIdArgs,
+): Promise<PaymentSendResult | ApplicationError> => {
+  const validated = await validateIsBtcWallet(args.senderWalletId)
+  return validated instanceof Error
+    ? validated
+    : payInvoiceByWalletIdInternal({ ...args, postMigrationDepositRelease: true })
 }
 
 export const payNoAmountInvoiceByWalletId = async ({
@@ -301,9 +336,11 @@ export const payNoAmountInvoiceByWalletIdForUsdWallet = async (
 const validateInvoicePaymentInputs = async ({
   uncheckedPaymentRequest,
   uncheckedSenderWalletId,
+  postMigrationDepositRelease,
 }: {
   uncheckedPaymentRequest: string
   uncheckedSenderWalletId: string
+  postMigrationDepositRelease: boolean
 }): Promise<
   | {
       senderWallet: Wallet
@@ -338,7 +375,9 @@ const validateInvoicePaymentInputs = async ({
   const senderAccount = await AccountsRepository().findById(senderWallet.accountId)
   if (senderAccount instanceof Error) return senderAccount
 
-  const accountValidator = AccountValidator(senderAccount)
+  const accountValidator = postMigrationDepositRelease
+    ? PostMigrationAccountValidator(senderAccount)
+    : AccountValidator(senderAccount)
   if (accountValidator instanceof Error) return accountValidator
   const validateWallet = accountValidator.validateWalletForAccount(senderWallet)
   if (validateWallet instanceof Error) return validateWallet

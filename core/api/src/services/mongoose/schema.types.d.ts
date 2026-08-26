@@ -237,6 +237,27 @@ interface MigrationFlowStateRecord {
   updatedAt: Date
 }
 
+interface PostMigrationDepositReleaseRecord {
+  accountId: string
+  walletId: string
+  txHash: string
+  vout: number
+  address: string
+  receiptJournalId: string
+  receiptAmountSats: number
+  payoutAmountSats: number
+  plannedTopUpSats: number
+  topUpSats: number
+  lightningAddress: string
+  caseReference: string
+  status: string
+  paymentHash?: string
+  paymentRequest?: string
+  failureReason?: string
+  createdAt: Date
+  updatedAt: Date
+}
+
 type WindDownCohortAssessmentSignalsRecord = {
   phoneCountry?: string
   newestDeletedPhoneCountry?: string
