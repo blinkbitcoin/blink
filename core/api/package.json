@@ -35,7 +35,7 @@
     "codegen:api-keys": "cd ./src/services/api-keys/proto && buf generate"
   },
   "engines": {
-    "node": "20"
+    "node": "24"
   },
   "dependencies": {
     "@apollo/server": "^4.12.2",
