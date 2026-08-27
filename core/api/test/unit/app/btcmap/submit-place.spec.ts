@@ -42,7 +42,10 @@ import {
   InvalidCoordinatesError,
   UnknownRepositoryError,
 } from "@/domain/errors"
-import { ResourceAttemptsRedlockServiceError } from "@/domain/lock"
+import {
+  ResourceAttemptsRedlockServiceError,
+  ResourceExpiredLockServiceError,
+} from "@/domain/lock"
 import { BtcMapPlaceSubmitPerAccountRateLimiterExceededError } from "@/domain/rate-limit/errors"
 import { BtcMapService } from "@/services/btcmap"
 import { LockService } from "@/services/lock"
@@ -516,6 +519,48 @@ describe("BtcMap submitPlace", () => {
     expect(mockSubmitPlace.mock.calls[0][0].externalId).toEqual(
       makeSubmission().externalId,
     )
+  })
+
+  it("refunds and returns the error when the winner cannot be refetched after a duplicate insert", async () => {
+    mockInsertPending.mockResolvedValue(new DuplicateKeyForPersistError())
+    mockFindSubmission
+      .mockResolvedValueOnce(new CouldNotFindBtcMapPlaceSubmissionError())
+      .mockResolvedValueOnce(new UnknownRepositoryError("mongo down"))
+
+    const result = await submitPlace({
+      account: makeAccount(AccountLevel.Two),
+      ...baseArgs,
+    })
+
+    expect(result).toBeInstanceOf(UnknownRepositoryError)
+    expect(mockRewardLimiter).toHaveBeenCalledTimes(1)
+    expect(mockSubmitPlace).not.toHaveBeenCalled()
+    expect(mockMarkSubmitted).not.toHaveBeenCalled()
+  })
+
+  it("refunds and skips the upstream call when the lock aborts before submission", async () => {
+    // the lock is lost after quota and persistence but before the upstream
+    // call: the entry guard passes, the pre-submission guard trips
+    let abortedReads = 0
+    mockLockBtcMapPlaceSubmission.mockImplementation((_, asyncFn) =>
+      asyncFn({
+        get aborted() {
+          return ++abortedReads > 1
+        },
+      }),
+    )
+
+    const result = await submitPlace({
+      account: makeAccount(AccountLevel.Two),
+      ...baseArgs,
+    })
+
+    expect(result).toBeInstanceOf(ResourceExpiredLockServiceError)
+    expect(mockConsumeLimiter).toHaveBeenCalledTimes(1)
+    expect(mockInsertPending).toHaveBeenCalledTimes(1)
+    expect(mockRewardLimiter).toHaveBeenCalledTimes(1)
+    expect(mockSubmitPlace).not.toHaveBeenCalled()
+    expect(mockMarkSubmitted).not.toHaveBeenCalled()
   })
 
   it("fails before the upstream call and refunds when the pending record cannot be persisted", async () => {
