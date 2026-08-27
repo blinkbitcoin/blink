@@ -43,5 +43,8 @@ export const checkedBtcMapSubmissionId = (
   if (!submissionId.match(UuidRegex)) {
     return new InvalidBtcMapSubmissionIdError()
   }
-  return submissionId as BtcMapSubmissionId
+  // UuidRegex is case-insensitive, but the mongo operation key, the redis
+  // lock resource and the hmac suffix are case-sensitive — canonicalize so
+  // casing variants of the same UUID can't split into separate operations
+  return submissionId.toLowerCase() as BtcMapSubmissionId
 }

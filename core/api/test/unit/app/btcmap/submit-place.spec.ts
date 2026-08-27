@@ -402,6 +402,40 @@ describe("BtcMap submitPlace", () => {
     expect(secondExternalId.endsWith(`:${baseArgs.submissionId}`)).toBe(true)
   })
 
+  it("canonicalizes submissionId casing for the operation, lock and external id", async () => {
+    mockSubmitPlace.mockResolvedValue({ id: 1, origin: "blink", external_id: "ext" })
+
+    const upper = await submitPlace({
+      account: makeAccount(AccountLevel.Two),
+      ...baseArgs,
+      submissionId: baseArgs.submissionId.toUpperCase(),
+    })
+    const lower = await submitPlace({
+      account: makeAccount(AccountLevel.Two),
+      ...baseArgs,
+    })
+
+    expect(upper).not.toBeInstanceOf(Error)
+    expect(lower).not.toBeInstanceOf(Error)
+
+    // both casings resolve to the same operation key, lock resource and
+    // upstream identity
+    expect(mockLockBtcMapPlaceSubmission.mock.calls[0][0]).toMatchObject({
+      submissionId: baseArgs.submissionId,
+    })
+    expect(mockFindSubmission.mock.calls[0][0]).toMatchObject({
+      submissionId: baseArgs.submissionId,
+    })
+    expect(mockInsertPending.mock.calls[0][0]).toMatchObject({
+      submissionId: baseArgs.submissionId,
+    })
+    const [upperExternalId, lowerExternalId] = mockSubmitPlace.mock.calls.map(
+      (call) => call[0].externalId,
+    )
+    expect(upperExternalId).toEqual(lowerExternalId)
+    expect(upperExternalId.endsWith(`:${baseArgs.submissionId}`)).toBe(true)
+  })
+
   it("replays with the persisted external id after an hmac secret change", async () => {
     // the record was committed under a secret that has since rotated
     mockBtcMapHmacSecret = "rotated-secret"
