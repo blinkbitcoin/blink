@@ -5,7 +5,8 @@ import { BtcMapPlaceSubmissionStatus } from "@/domain/btcmap"
 import { CouldNotFindBtcMapPlaceSubmissionError } from "@/domain/btcmap/errors"
 
 interface IBtcMapPlaceSubmissionsRepository {
-  findBySubmissionId(args: {
+  findByAccountIdAndSubmissionId(args: {
+    accountId: AccountId
     submissionId: BtcMapSubmissionId
   }): Promise<BtcMapPlaceSubmission | RepositoryError>
   insertPending(args: {
@@ -18,6 +19,7 @@ interface IBtcMapPlaceSubmissionsRepository {
     name: BtcMapPlaceName
   }): Promise<BtcMapPlaceSubmission | RepositoryError>
   markSubmitted(args: {
+    accountId: AccountId
     submissionId: BtcMapSubmissionId
     btcMapPlaceId: number
     lat: number
@@ -28,17 +30,17 @@ interface IBtcMapPlaceSubmissionsRepository {
 }
 
 export const BtcMapPlaceSubmissionsRepository = (): IBtcMapPlaceSubmissionsRepository => {
-  const findBySubmissionId = async ({
+  const findByAccountIdAndSubmissionId = async ({
+    accountId,
     submissionId,
   }: {
+    accountId: AccountId
     submissionId: BtcMapSubmissionId
   }): Promise<BtcMapPlaceSubmission | RepositoryError> => {
     try {
-      // blink-scoped: submissions are shared across accounts, so the lookup
-      // key is the submissionId alone
-      const result = await BtcMapPlaceSubmission.findOne({ submissionId })
+      const result = await BtcMapPlaceSubmission.findOne({ accountId, submissionId })
       if (!result) {
-        return new CouldNotFindBtcMapPlaceSubmissionError(submissionId)
+        return new CouldNotFindBtcMapPlaceSubmissionError(`${accountId}:${submissionId}`)
       }
       return translateToBtcMapPlaceSubmission(result)
     } catch (err) {
@@ -81,9 +83,9 @@ export const BtcMapPlaceSubmissionsRepository = (): IBtcMapPlaceSubmissionsRepos
   }
 
   // btcmap's resubmit-patches semantics mean the latest fields win upstream,
-  // so the record is updated to match what was actually submitted. The
-  // original creator (accountId) is deliberately preserved on edits.
+  // so the record is updated to match what was actually submitted
   const markSubmitted = async ({
+    accountId,
     submissionId,
     btcMapPlaceId,
     lat,
@@ -91,6 +93,7 @@ export const BtcMapPlaceSubmissionsRepository = (): IBtcMapPlaceSubmissionsRepos
     category,
     name,
   }: {
+    accountId: AccountId
     submissionId: BtcMapSubmissionId
     btcMapPlaceId: number
     lat: number
@@ -100,7 +103,7 @@ export const BtcMapPlaceSubmissionsRepository = (): IBtcMapPlaceSubmissionsRepos
   }): Promise<BtcMapPlaceSubmission | RepositoryError> => {
     try {
       const result = await BtcMapPlaceSubmission.findOneAndUpdate(
-        { submissionId },
+        { accountId, submissionId },
         {
           status: BtcMapPlaceSubmissionStatus.Submitted,
           btcMapPlaceId,
@@ -113,7 +116,7 @@ export const BtcMapPlaceSubmissionsRepository = (): IBtcMapPlaceSubmissionsRepos
         { new: true },
       )
       if (!result) {
-        return new CouldNotFindBtcMapPlaceSubmissionError(submissionId)
+        return new CouldNotFindBtcMapPlaceSubmissionError(`${accountId}:${submissionId}`)
       }
       return translateToBtcMapPlaceSubmission(result)
     } catch (err) {
@@ -138,7 +141,7 @@ export const BtcMapPlaceSubmissionsRepository = (): IBtcMapPlaceSubmissionsRepos
   })
 
   return {
-    findBySubmissionId,
+    findByAccountIdAndSubmissionId,
     insertPending,
     markSubmitted,
   }

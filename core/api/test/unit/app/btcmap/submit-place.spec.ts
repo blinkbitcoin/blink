@@ -1,3 +1,12 @@
+let mockBtcMapHmacSecret: string | undefined = "test-hmac-secret"
+
+jest.mock("@/config", () => ({
+  ...jest.requireActual("@/config"),
+  get BTCMAP_HMAC_SECRET() {
+    return mockBtcMapHmacSecret
+  },
+}))
+
 jest.mock("@/services/btcmap", () => ({
   BtcMapService: jest.fn(),
   BTCMAP_ORIGIN: "blink",
@@ -10,6 +19,10 @@ jest.mock("@/services/rate-limit", () => ({
 
 jest.mock("@/services/mongoose", () => ({
   BtcMapPlaceSubmissionsRepository: jest.fn(),
+}))
+
+jest.mock("@/services/lock", () => ({
+  LockService: jest.fn(),
 }))
 
 import { submitPlace } from "@/app/btcmap"
@@ -29,8 +42,10 @@ import {
   InvalidCoordinatesError,
   UnknownRepositoryError,
 } from "@/domain/errors"
+import { ResourceAttemptsRedlockServiceError } from "@/domain/lock"
 import { BtcMapPlaceSubmitPerAccountRateLimiterExceededError } from "@/domain/rate-limit/errors"
 import { BtcMapService } from "@/services/btcmap"
+import { LockService } from "@/services/lock"
 import { BtcMapPlaceSubmissionsRepository } from "@/services/mongoose"
 import { consumeLimiter, rewardLimiter } from "@/services/rate-limit"
 
@@ -38,11 +53,13 @@ const mockBtcMapService = BtcMapService as jest.Mock
 const mockConsumeLimiter = consumeLimiter as jest.Mock
 const mockRewardLimiter = rewardLimiter as jest.Mock
 const mockSubmissionsRepository = BtcMapPlaceSubmissionsRepository as jest.Mock
+const mockLockService = LockService as jest.Mock
 
 const mockSubmitPlace = jest.fn()
 const mockFindSubmission = jest.fn()
 const mockInsertPending = jest.fn()
 const mockMarkSubmitted = jest.fn()
+const mockLockBtcMapPlaceSubmission = jest.fn()
 
 const accountId = "account-id" as AccountId
 const makeAccount = (level: AccountLevel): Account =>
@@ -61,7 +78,7 @@ const makeSubmission = (
 ): BtcMapPlaceSubmission => ({
   accountId,
   submissionId: baseArgs.submissionId as BtcMapSubmissionId,
-  externalId: baseArgs.submissionId,
+  externalId: "0123456789abcdef:f47ac10b-58cc-4372-a567-0e02b2c3d479",
   lat: baseArgs.latitude,
   lon: baseArgs.longitude,
   category: baseArgs.category as BtcMapCategory,
@@ -75,14 +92,21 @@ const makeSubmission = (
 describe("BtcMap submitPlace", () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockBtcMapHmacSecret = "test-hmac-secret"
     mockBtcMapService.mockReturnValue({ submitPlace: mockSubmitPlace })
     mockConsumeLimiter.mockResolvedValue(true)
     mockRewardLimiter.mockResolvedValue(true)
     mockSubmissionsRepository.mockReturnValue({
-      findBySubmissionId: mockFindSubmission,
+      findByAccountIdAndSubmissionId: mockFindSubmission,
       insertPending: mockInsertPending,
       markSubmitted: mockMarkSubmitted,
     })
+    mockLockService.mockReturnValue({
+      lockBtcMapPlaceSubmission: mockLockBtcMapPlaceSubmission,
+    })
+    mockLockBtcMapPlaceSubmission.mockImplementation((_, asyncFn) =>
+      asyncFn({ aborted: false }),
+    )
     mockFindSubmission.mockResolvedValue(new CouldNotFindBtcMapPlaceSubmissionError())
     mockInsertPending.mockResolvedValue(makeSubmission())
     mockMarkSubmitted.mockResolvedValue(
@@ -180,6 +204,33 @@ describe("BtcMap submitPlace", () => {
     expect(mockFindSubmission).not.toHaveBeenCalled()
   })
 
+  it("does not consume the rate limit when the hmac secret is not set", async () => {
+    mockBtcMapHmacSecret = undefined
+
+    const result = await submitPlace({
+      account: makeAccount(AccountLevel.Two),
+      ...baseArgs,
+    })
+
+    expect(result).toBeInstanceOf(BtcMapNotConfiguredError)
+    expect(mockConsumeLimiter).not.toHaveBeenCalled()
+    expect(mockFindSubmission).not.toHaveBeenCalled()
+  })
+
+  it("returns the repository error without consuming quota when the record lookup fails", async () => {
+    mockFindSubmission.mockResolvedValue(new UnknownRepositoryError("mongo down"))
+
+    const result = await submitPlace({
+      account: makeAccount(AccountLevel.Two),
+      ...baseArgs,
+    })
+
+    expect(result).toBeInstanceOf(UnknownRepositoryError)
+    expect(mockConsumeLimiter).not.toHaveBeenCalled()
+    expect(mockInsertPending).not.toHaveBeenCalled()
+    expect(mockSubmitPlace).not.toHaveBeenCalled()
+  })
+
   it("rejects when the per-account rate limit is exceeded", async () => {
     mockConsumeLimiter.mockResolvedValue(
       new BtcMapPlaceSubmitPerAccountRateLimiterExceededError(),
@@ -197,7 +248,7 @@ describe("BtcMap submitPlace", () => {
     expect(mockSubmitPlace).not.toHaveBeenCalled()
   })
 
-  it("submits a place for level 2 accounts with the submissionId as external id", async () => {
+  it("submits a place for level 2 accounts with an opaque external id", async () => {
     const serviceResult = { id: 1, origin: "blink", external_id: "upstream-ext-id" }
     mockSubmitPlace.mockResolvedValue(serviceResult)
 
@@ -213,8 +264,11 @@ describe("BtcMap submitPlace", () => {
     expect(serviceArgs.category).toEqual(baseArgs.category)
     expect(serviceArgs.name).toEqual(baseArgs.name)
 
-    // the external id IS the client-supplied submissionId (blink-scoped)
-    expect(serviceArgs.externalId).toEqual(baseArgs.submissionId)
+    // hmac-prefixed opaque id derived from the client-supplied submissionId,
+    // no raw account id leaked
+    expect(serviceArgs.externalId).toMatch(/^[0-9a-f]{16}:[0-9a-f-]{36}$/)
+    expect(serviceArgs.externalId.endsWith(`:${baseArgs.submissionId}`)).toBe(true)
+    expect(serviceArgs.externalId).not.toContain(accountId)
 
     // persists the operation before the upstream call and marks it with the
     // upstream id after success
@@ -226,6 +280,7 @@ describe("BtcMap submitPlace", () => {
     })
     expect(mockMarkSubmitted).toHaveBeenCalledTimes(1)
     expect(mockMarkSubmitted.mock.calls[0][0]).toMatchObject({
+      accountId,
       submissionId: baseArgs.submissionId,
       btcMapPlaceId: serviceResult.id,
     })
@@ -259,7 +314,7 @@ describe("BtcMap submitPlace", () => {
     if (result instanceof Error) return
     expect(result.id).toEqual(42)
     expect(result.origin).toEqual("blink")
-    expect(result.externalId).toEqual(baseArgs.submissionId)
+    expect(result.externalId.endsWith(`:${baseArgs.submissionId}`)).toBe(true)
     expect(mockConsumeLimiter).not.toHaveBeenCalled()
     expect(mockInsertPending).not.toHaveBeenCalled()
     expect(mockSubmitPlace).not.toHaveBeenCalled()
@@ -288,7 +343,7 @@ describe("BtcMap submitPlace", () => {
     expect(mockInsertPending).not.toHaveBeenCalled()
     expect(mockSubmitPlace).toHaveBeenCalledTimes(1)
     const serviceArgs = mockSubmitPlace.mock.calls[0][0]
-    expect(serviceArgs.externalId).toEqual(baseArgs.submissionId)
+    expect(serviceArgs.externalId.endsWith(`:${baseArgs.submissionId}`)).toBe(true)
     expect(serviceArgs.name).toEqual("Arepas Place Fixed")
     expect(mockMarkSubmitted.mock.calls[0][0]).toMatchObject({
       btcMapPlaceId: 42,
@@ -328,37 +383,21 @@ describe("BtcMap submitPlace", () => {
     expect(retryResult).not.toBeInstanceOf(Error)
   })
 
-  it("lets a different account edit the place via the shared submissionId", async () => {
-    // submissions are blink-scoped: the second account finds the shared record
-    // and patches the same upstream place with the same external_id
+  it("scopes the external id per account for the same submissionId", async () => {
     mockSubmitPlace.mockResolvedValue({ id: 1, origin: "blink", external_id: "ext" })
-    await submitPlace({ account: makeAccount(AccountLevel.Two), ...baseArgs })
 
-    mockFindSubmission.mockResolvedValue(
-      makeSubmission({
-        status: BtcMapPlaceSubmissionStatus.Submitted,
-        btcMapPlaceId: 1,
-      }),
-    )
-    const editResult = await submitPlace({
+    await submitPlace({ account: makeAccount(AccountLevel.Two), ...baseArgs })
+    await submitPlace({
       account: { id: "other-account-id", level: AccountLevel.Two } as Account,
       ...baseArgs,
-      name: "Edited By Someone Else",
     })
 
-    expect(editResult).not.toBeInstanceOf(Error)
-    expect(mockSubmitPlace).toHaveBeenCalledTimes(2)
-    expect(mockSubmitPlace.mock.calls[1][0].externalId).toEqual(baseArgs.submissionId)
-    expect(mockSubmitPlace.mock.calls[1][0].name).toEqual("Edited By Someone Else")
-    // the record is found by submissionId alone, regardless of account
-    expect(mockFindSubmission.mock.calls[1][0]).toEqual({
-      submissionId: baseArgs.submissionId,
-    })
-    expect(mockInsertPending).toHaveBeenCalledTimes(1)
-    expect(mockMarkSubmitted.mock.calls[1][0]).toMatchObject({
-      submissionId: baseArgs.submissionId,
-      name: "Edited By Someone Else",
-    })
+    const [firstExternalId, secondExternalId] = mockSubmitPlace.mock.calls.map(
+      (call) => call[0].externalId,
+    )
+    expect(firstExternalId).not.toEqual(secondExternalId)
+    expect(firstExternalId.endsWith(`:${baseArgs.submissionId}`)).toBe(true)
+    expect(secondExternalId.endsWith(`:${baseArgs.submissionId}`)).toBe(true)
   })
 
   it("fails before the upstream call and refunds when the pending record cannot be persisted", async () => {
@@ -376,6 +415,11 @@ describe("BtcMap submitPlace", () => {
 
   it("proceeds when a concurrent identical request won the insert race", async () => {
     mockInsertPending.mockResolvedValue(new DuplicateKeyForPersistError())
+    // the refetch after the duplicate insert finds the winner's record still
+    // pending, so this request submits upstream and marks the shared record
+    mockFindSubmission
+      .mockResolvedValueOnce(new CouldNotFindBtcMapPlaceSubmissionError())
+      .mockResolvedValueOnce(makeSubmission())
     mockSubmitPlace.mockResolvedValue({ id: 1, origin: "blink", external_id: "ext" })
 
     const result = await submitPlace({
@@ -386,6 +430,75 @@ describe("BtcMap submitPlace", () => {
     expect(result).not.toBeInstanceOf(Error)
     expect(mockSubmitPlace).toHaveBeenCalledTimes(1)
     expect(mockMarkSubmitted).toHaveBeenCalledTimes(1)
+  })
+
+  it("replays the winning record when a duplicate insert committed an identical payload", async () => {
+    mockInsertPending.mockResolvedValue(new DuplicateKeyForPersistError())
+    mockFindSubmission
+      .mockResolvedValueOnce(new CouldNotFindBtcMapPlaceSubmissionError())
+      .mockResolvedValueOnce(
+        makeSubmission({
+          status: BtcMapPlaceSubmissionStatus.Submitted,
+          btcMapPlaceId: 42,
+        }),
+      )
+
+    const result = await submitPlace({
+      account: makeAccount(AccountLevel.Two),
+      ...baseArgs,
+    })
+
+    // the identical operation already committed upstream: replay its result
+    // without re-calling upstream, and refund the point never spent
+    expect(result).toMatchObject({ id: 42, origin: "blink" })
+    expect(mockSubmitPlace).not.toHaveBeenCalled()
+    expect(mockMarkSubmitted).not.toHaveBeenCalled()
+    expect(mockRewardLimiter).toHaveBeenCalledTimes(1)
+  })
+
+  it("submits as an edit when a duplicate insert holds a different payload", async () => {
+    mockInsertPending.mockResolvedValue(new DuplicateKeyForPersistError())
+    // the winning record carries a DIFFERENT payload — this request is an
+    // edit, not a replay, and must reach upstream with its own fields
+    mockFindSubmission
+      .mockResolvedValueOnce(new CouldNotFindBtcMapPlaceSubmissionError())
+      .mockResolvedValueOnce(
+        makeSubmission({
+          status: BtcMapPlaceSubmissionStatus.Submitted,
+          btcMapPlaceId: 42,
+          name: "Someone Elses Place" as BtcMapPlaceName,
+        }),
+      )
+    mockSubmitPlace.mockResolvedValue({ id: 42, origin: "blink", external_id: "ext" })
+
+    const result = await submitPlace({
+      account: makeAccount(AccountLevel.Two),
+      ...baseArgs,
+    })
+
+    expect(result).not.toBeInstanceOf(Error)
+    expect(mockSubmitPlace).toHaveBeenCalledTimes(1)
+    expect(mockSubmitPlace.mock.calls[0][0].name).toEqual(baseArgs.name)
+    expect(mockMarkSubmitted.mock.calls[0][0]).toMatchObject({
+      btcMapPlaceId: 42,
+      name: baseArgs.name,
+    })
+  })
+
+  it("returns the lock error without consuming the rate limit when the lock cannot be acquired", async () => {
+    mockLockBtcMapPlaceSubmission.mockResolvedValue(
+      new ResourceAttemptsRedlockServiceError(),
+    )
+
+    const result = await submitPlace({
+      account: makeAccount(AccountLevel.Two),
+      ...baseArgs,
+    })
+
+    expect(result).toBeInstanceOf(ResourceAttemptsRedlockServiceError)
+    expect(mockConsumeLimiter).not.toHaveBeenCalled()
+    expect(mockFindSubmission).not.toHaveBeenCalled()
+    expect(mockSubmitPlace).not.toHaveBeenCalled()
   })
 
   it("still returns success when marking the submission submitted fails", async () => {

@@ -442,10 +442,9 @@ const BtcMapPlaceSubmissionSchema = new Schema<BtcMapPlaceSubmissionRecord>({
   },
 })
 
-// one submission record per client-supplied operation id, blink-scoped:
-// shared across accounts so any Blink user can edit the place by resubmitting
-// the same submissionId; concurrent identical requests can't both insert
-BtcMapPlaceSubmissionSchema.index({ submissionId: 1 }, { unique: true })
+// one submission record per (account, client-supplied operation id): retries
+// find and reuse it, and concurrent identical requests can't both insert
+BtcMapPlaceSubmissionSchema.index({ accountId: 1, submissionId: 1 }, { unique: true })
 
 export const BtcMapPlaceSubmission = mongoose.model<BtcMapPlaceSubmissionRecord>(
   "BtcMapPlaceSubmission",

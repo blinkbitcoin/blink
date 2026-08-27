@@ -4,8 +4,8 @@ module.exports = {
   async up(db) {
     await db
       .collection("btcmapplacesubmissions")
-      .createIndex({ submissionId: 1 }, { unique: true })
+      .createIndex({ accountId: 1, submissionId: 1 }, { unique: true })
 
-    console.log("Created unique index on btcmapplacesubmissions (submissionId)")
+    console.log("Created unique index on btcmapplacesubmissions (accountId, submissionId)")
   },
 }

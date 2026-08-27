@@ -77,6 +77,13 @@ const getOnChainTxHashAndVoutLockResource = ({
 }) => `locks:onchaintxhash:${txHash}:${vout}`
 const getIdempotencyKeyLockResource = (path: IdempotencyKey) =>
   `locks:idempotencykey:${path}`
+const getBtcMapPlaceSubmissionLockResource = ({
+  accountId,
+  submissionId,
+}: {
+  accountId: AccountId
+  submissionId: BtcMapSubmissionId
+}) => `locks:btcmapplacesubmission:${accountId}:${submissionId}`
 
 // unlock after asyncFn is done
 export const redlock = async <Signal extends RedlockAbortSignal, Ret>({
@@ -170,6 +177,18 @@ export const LockService = (): ILockService => {
     }
   }
 
+  const lockBtcMapPlaceSubmission = async <Res>(
+    {
+      accountId,
+      submissionId,
+    }: { accountId: AccountId; submissionId: BtcMapSubmissionId },
+    asyncFn: (signal: BtcMapSubmissionAbortSignal) => Promise<Res>,
+  ): Promise<Res | LockServiceError> => {
+    const path = getBtcMapPlaceSubmissionLockResource({ accountId, submissionId })
+
+    return redlock({ path, asyncFn })
+  }
+
   return wrapAsyncFunctionsToRunInSpan({
     namespace: "services.lock",
     fns: {
@@ -178,6 +197,7 @@ export const LockService = (): ILockService => {
       lockOnChainTxHash,
       lockOnChainTxHashAndVout,
       lockIdempotencyKey,
+      lockBtcMapPlaceSubmission,
     },
   })
 }
