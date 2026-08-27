@@ -19,7 +19,6 @@
     "test:unit": "jest --config ./test/unit/jest.config.js --bail --verbose $TEST",
     "test:watch-unit": "LOGLEVEL=warn jest --config ./test/unit/jest.config.js --bail --verbose --watch $TEST",
     "test:integration": "jest --config ./test/integration/jest.config.js --bail --runInBand --verbose $TEST",
-    "build-docs": "npx spectaql spectaql-config.yml -1",
     "fix-yaml": "prettier --write '**/*.(yaml|yml)'",
     "gen-test-jwt": "tsx dev/bin/gen-test-jwt.ts",
     "dev:api": "tsx src/servers/graphql-main-server.ts",
@@ -36,7 +35,7 @@
     "codegen:api-keys": "cd ./src/services/api-keys/proto && buf generate"
   },
   "engines": {
-    "node": "20"
+    "node": "24"
   },
   "dependencies": {
     "@apollo/server": "^4.12.2",
@@ -191,7 +190,6 @@
     "pino-pretty": "^11.3.0",
     "prettier": "^3.6.2",
     "protoc-gen-js": "^3.21.4",
-    "spectaql": "^2.3.1",
     "tree-kill": "^1.2.2",
     "tsconfig-paths": "^4.2.0",
     "tsx": "^4.20.3",
