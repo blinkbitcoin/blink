@@ -363,12 +363,14 @@ describe("BtcMap submitPlace", () => {
     })
     expect(firstResult).toBeInstanceOf(BtcMapUnavailableError)
 
-    // the persisted pending record is found on retry
-    mockFindSubmission.mockResolvedValue(makeSubmission())
+    // the persisted pending record is found on retry, carrying the external
+    // id the first attempt derived and inserted
+    const firstExternalId = mockSubmitPlace.mock.calls[0][0].externalId
+    mockFindSubmission.mockResolvedValue(makeSubmission({ externalId: firstExternalId }))
     mockSubmitPlace.mockResolvedValueOnce({
       id: 1,
       origin: "blink",
-      external_id: mockSubmitPlace.mock.calls[0][0].externalId,
+      external_id: firstExternalId,
     })
     const retryResult = await submitPlace({
       account: makeAccount(AccountLevel.Two),
@@ -398,6 +400,88 @@ describe("BtcMap submitPlace", () => {
     expect(firstExternalId).not.toEqual(secondExternalId)
     expect(firstExternalId.endsWith(`:${baseArgs.submissionId}`)).toBe(true)
     expect(secondExternalId.endsWith(`:${baseArgs.submissionId}`)).toBe(true)
+  })
+
+  it("replays with the persisted external id after an hmac secret change", async () => {
+    // the record was committed under a secret that has since rotated
+    mockBtcMapHmacSecret = "rotated-secret"
+    mockFindSubmission.mockResolvedValue(
+      makeSubmission({
+        status: BtcMapPlaceSubmissionStatus.Submitted,
+        btcMapPlaceId: 42,
+      }),
+    )
+
+    const result = await submitPlace({
+      account: makeAccount(AccountLevel.Two),
+      ...baseArgs,
+    })
+
+    expect(result).toMatchObject({
+      id: 42,
+      externalId: makeSubmission().externalId,
+    })
+    expect(mockConsumeLimiter).not.toHaveBeenCalled()
+    expect(mockSubmitPlace).not.toHaveBeenCalled()
+  })
+
+  it("resubmits a pending retry under the persisted external id after an hmac secret change", async () => {
+    mockBtcMapHmacSecret = "rotated-secret"
+    mockFindSubmission.mockResolvedValue(makeSubmission()) // pending
+    mockSubmitPlace.mockResolvedValue({ id: 42, origin: "blink", external_id: "ext" })
+
+    const result = await submitPlace({
+      account: makeAccount(AccountLevel.Two),
+      ...baseArgs,
+    })
+
+    expect(result).toMatchObject({ id: 42, externalId: makeSubmission().externalId })
+    expect(mockSubmitPlace).toHaveBeenCalledTimes(1)
+    expect(mockSubmitPlace.mock.calls[0][0].externalId).toEqual(
+      makeSubmission().externalId,
+    )
+  })
+
+  it("edits a committed submission under the persisted external id after an hmac secret change", async () => {
+    mockBtcMapHmacSecret = "rotated-secret"
+    mockFindSubmission.mockResolvedValue(
+      makeSubmission({
+        status: BtcMapPlaceSubmissionStatus.Submitted,
+        btcMapPlaceId: 42,
+      }),
+    )
+    mockSubmitPlace.mockResolvedValue({ id: 42, origin: "blink", external_id: "ext" })
+
+    const result = await submitPlace({
+      account: makeAccount(AccountLevel.Two),
+      ...baseArgs,
+      name: "Arepas Place Fixed",
+    })
+
+    expect(result).toMatchObject({ id: 42, externalId: makeSubmission().externalId })
+    expect(mockSubmitPlace.mock.calls[0][0].externalId).toEqual(
+      makeSubmission().externalId,
+    )
+    expect(mockSubmitPlace.mock.calls[0][0].name).toEqual("Arepas Place Fixed")
+  })
+
+  it("adopts the winner's persisted external id after a duplicate insert race", async () => {
+    mockBtcMapHmacSecret = "rotated-secret"
+    mockInsertPending.mockResolvedValue(new DuplicateKeyForPersistError())
+    mockFindSubmission
+      .mockResolvedValueOnce(new CouldNotFindBtcMapPlaceSubmissionError())
+      .mockResolvedValueOnce(makeSubmission()) // winner's record, still pending
+    mockSubmitPlace.mockResolvedValue({ id: 42, origin: "blink", external_id: "ext" })
+
+    const result = await submitPlace({
+      account: makeAccount(AccountLevel.Two),
+      ...baseArgs,
+    })
+
+    expect(result).toMatchObject({ id: 42, externalId: makeSubmission().externalId })
+    expect(mockSubmitPlace.mock.calls[0][0].externalId).toEqual(
+      makeSubmission().externalId,
+    )
   })
 
   it("fails before the upstream call and refunds when the pending record cannot be persisted", async () => {
