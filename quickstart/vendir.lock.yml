@@ -2,24 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'ci: remove failing Generate GraphQL Docs action and deps (#795)...'
-      sha: becc5154d89709006f9eb079d544f53b9edc2909
+      commitTitle: 'chore(node): bump Node.js from 20 to v24.19.0 (LTS "Krypton")
+        (#770)...'
+      sha: f546d5c94cd176cf2c22f32baaae2785928d17ce
       tags:
-      - 0.22.52-3-gbecc5154d
+      - 0.22.53-2-gf546d5c94
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'ci: remove failing Generate GraphQL Docs action and deps (#795)...'
-      sha: becc5154d89709006f9eb079d544f53b9edc2909
+      commitTitle: 'chore(node): bump Node.js from 20 to v24.19.0 (LTS "Krypton")
+        (#770)...'
+      sha: f546d5c94cd176cf2c22f32baaae2785928d17ce
       tags:
-      - 0.22.52-3-gbecc5154d
+      - 0.22.53-2-gf546d5c94
     path: schemas
   - git:
-      commitTitle: 'ci: remove failing Generate GraphQL Docs action and deps (#795)...'
-      sha: becc5154d89709006f9eb079d544f53b9edc2909
+      commitTitle: 'chore(node): bump Node.js from 20 to v24.19.0 (LTS "Krypton")
+        (#770)...'
+      sha: f546d5c94cd176cf2c22f32baaae2785928d17ce
       tags:
-      - 0.22.52-3-gbecc5154d
+      - 0.22.53-2-gf546d5c94
     path: gql
   path: graphql
 kind: LockConfig
