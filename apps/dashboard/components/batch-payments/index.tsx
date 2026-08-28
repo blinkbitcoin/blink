@@ -229,7 +229,12 @@ export default function BatchPayments() {
           >
             {modalDetails.heading}
           </Typography>
-          <p data-testid="batch-payments-modal-message">{modalDetails.message}</p>
+          <p
+            data-testid="batch-payments-modal-message"
+            style={{ whiteSpace: "pre-line" }}
+          >
+            {modalDetails.message}
+          </p>
         </Sheet>
       </Modal>
 
