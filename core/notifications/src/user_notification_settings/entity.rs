@@ -67,11 +67,25 @@ impl EsEntity for UserNotificationSettings {
 impl UserNotificationSettings {
     pub(super) fn new(galoy_user_id: GaloyUserId) -> Self {
         let id = UserNotificationSettingsId::new();
-        Self::try_from(EntityEvents::init(
-            id,
-            [UserNotificationSettingsEvent::Initialized { id, galoy_user_id }],
-        ))
-        .expect("Could not create default")
+        let mut events = vec![UserNotificationSettingsEvent::Initialized { id, galoy_user_id }];
+        events.extend(
+            Self::default_disabled_push_categories()
+                .into_iter()
+                .map(|category| UserNotificationSettingsEvent::CategoryDisabled {
+                    channel: UserNotificationChannel::Push,
+                    category,
+                }),
+        );
+        Self::try_from(EntityEvents::init(id, events)).expect("Could not create default")
+    }
+
+    fn default_disabled_push_categories() -> [UserNotificationCategory; 4] {
+        [
+            UserNotificationCategory::Circles,
+            UserNotificationCategory::AdminNotification,
+            UserNotificationCategory::Marketing,
+            UserNotificationCategory::Price,
+        ]
     }
 
     pub fn created_at(&self) -> Option<chrono::DateTime<chrono::Utc>> {
@@ -281,13 +295,19 @@ mod tests {
 
     fn initial_events() -> EntityEvents<UserNotificationSettingsEvent> {
         let id = UserNotificationSettingsId::new();
-        EntityEvents::init(
+        let mut events = vec![UserNotificationSettingsEvent::Initialized {
             id,
-            [UserNotificationSettingsEvent::Initialized {
-                id,
-                galoy_user_id: GaloyUserId::from("galoy_id".to_string()),
-            }],
-        )
+            galoy_user_id: GaloyUserId::from("galoy_id".to_string()),
+        }];
+        events.extend(
+            UserNotificationSettings::default_disabled_push_categories()
+                .into_iter()
+                .map(|category| UserNotificationSettingsEvent::CategoryDisabled {
+                    channel: UserNotificationChannel::Push,
+                    category,
+                }),
+        );
+        EntityEvents::init(id, events)
     }
 
     #[test]
@@ -315,12 +335,17 @@ mod tests {
     }
 
     #[test]
-    fn no_categories_initially_disabled() {
+    fn default_categories_are_disabled() {
         let events = initial_events();
         let settings = UserNotificationSettings::try_from(events).expect("Could not hydrate");
         assert_eq!(
             settings.disabled_categories_for(UserNotificationChannel::Push),
-            HashSet::new(),
+            HashSet::from([
+                UserNotificationCategory::Circles,
+                UserNotificationCategory::AdminNotification,
+                UserNotificationCategory::Marketing,
+                UserNotificationCategory::Price,
+            ]),
         );
     }
 
@@ -330,11 +355,17 @@ mod tests {
         let mut settings = UserNotificationSettings::try_from(events).expect("Could not hydrate");
         settings.disable_category(
             UserNotificationChannel::Push,
-            UserNotificationCategory::Circles,
+            UserNotificationCategory::Payments,
         );
         assert_eq!(
             settings.disabled_categories_for(UserNotificationChannel::Push),
-            HashSet::from([UserNotificationCategory::Circles])
+            HashSet::from([
+                UserNotificationCategory::Circles,
+                UserNotificationCategory::AdminNotification,
+                UserNotificationCategory::Marketing,
+                UserNotificationCategory::Price,
+                UserNotificationCategory::Payments,
+            ])
         );
     }
 
@@ -344,11 +375,11 @@ mod tests {
         let mut settings = UserNotificationSettings::try_from(events).expect("Could not hydrate");
         settings.disable_category(
             UserNotificationChannel::Push,
-            UserNotificationCategory::Circles,
+            UserNotificationCategory::Payments,
         );
         settings.disable_category(
             UserNotificationChannel::Push,
-            UserNotificationCategory::Payments,
+            UserNotificationCategory::Price,
         );
         settings.enable_category(
             UserNotificationChannel::Push,
@@ -356,7 +387,12 @@ mod tests {
         );
         assert_eq!(
             settings.disabled_categories_for(UserNotificationChannel::Push),
-            HashSet::from([UserNotificationCategory::Payments])
+            HashSet::from([
+                UserNotificationCategory::AdminNotification,
+                UserNotificationCategory::Marketing,
+                UserNotificationCategory::Price,
+                UserNotificationCategory::Payments,
+            ])
         );
     }
 
@@ -366,7 +402,7 @@ mod tests {
         let settings = UserNotificationSettings::try_from(events).expect("Could not hydrate");
         assert!(settings.should_send_notification(
             UserNotificationChannel::Push,
-            UserNotificationCategory::Circles
+            UserNotificationCategory::Payments
         ));
     }
 
