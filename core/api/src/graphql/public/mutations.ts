@@ -12,6 +12,8 @@ import AccountDisableNotificationChannelMutation from "./root/mutation/account-d
 
 import LnAddressPaymentSendMutation from "./root/mutation/ln-address-payment-send"
 
+import LnAddressInvoiceCreateMutation from "./root/mutation/ln-address-invoice-create"
+
 import LnurlPaymentSendMutation from "./root/mutation/lnurl-payment-send"
 
 import { GT } from "@/graphql/index"
@@ -159,6 +161,7 @@ export const mutationFields = {
         lnUsdInvoiceCreate: LnUsdInvoiceCreateMutation,
         lnNoAmountInvoiceCreate: LnNoAmountInvoiceCreateMutation,
         lnInvoiceCancel: LnInvoiceCancelMutation,
+        lnAddressInvoiceCreate: LnAddressInvoiceCreateMutation,
         onChainAddressCreate: OnChainAddressCreateMutation,
         onChainAddressCurrent: OnChainAddressCurrentMutation,
       },
