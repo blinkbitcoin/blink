@@ -405,6 +405,7 @@ type Mutation {
   merchantMapDelete(input: MerchantMapDeleteInput!): MerchantPayload!
   merchantMapValidate(input: MerchantMapValidateInput!): MerchantPayload!
   migrationRetryGrant(input: MigrationRetryGrantInput!): MigrationRetryGrantPayload!
+  phoneRateLimitReset(input: PhoneRateLimitResetInput!): SuccessPayload!
   userUpdateEmail(input: UserUpdateEmailInput!): AccountDetailPayload!
   userUpdatePhone(input: UserUpdatePhoneInput!): AccountDetailPayload!
 }
@@ -498,6 +499,10 @@ scalar PaymentHash
 
 """Phone number which includes country code"""
 scalar Phone
+
+input PhoneRateLimitResetInput {
+  phone: Phone!
+}
 
 interface PriceInterface {
   base: SafeInt!
