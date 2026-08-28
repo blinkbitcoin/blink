@@ -43,7 +43,12 @@ import { checkAllLndHealth } from "./health"
 
 import { KnownLndErrorDetails } from "./errors"
 
-import { NETWORK, SECS_PER_5_MINS, getHistoricalLndPubkeys } from "@/config"
+import {
+  LND_MAX_PAYMENT_PATHS,
+  NETWORK,
+  SECS_PER_5_MINS,
+  getHistoricalLndPubkeys,
+} from "@/config"
 
 import {
   BadPaymentDataError,
@@ -92,6 +97,14 @@ import { wrapAsyncFunctionsToRunInSpan } from "@/services/tracing"
 import { timeoutWithCancel } from "@/utils"
 
 const TIMEOUT_PAYMENT = NETWORK !== "regtest" ? 45000 : 3000
+
+// The lightning lib's max_paths option maps to lnd's max_parts: the maximum
+// number of shards a payment may be split into (MPP). When unset, lnd uses a
+// single part, so a payment must fit in one route. Each in-flight part
+// consumes an HTLC slot on its channel, so a higher value trades success rate
+// on large payouts for slot pressure under concurrent load. Configurable via
+// LND_MAX_PAYMENT_PATHS (default 4); set to 1 to disable MPP at runtime.
+const MAX_PAYMENT_PATHS = LND_MAX_PAYMENT_PATHS
 
 export const LndService = (): ILightningService | LightningServiceError => {
   const activeNode = getActiveLnd()
@@ -852,6 +865,7 @@ export const LndService = (): ILightningService | LightningServiceError => {
       mtokens: milliSatsAmount.toString(),
       payment: decodedInvoice.paymentSecret as string,
       max_fee: maxFee,
+      max_paths: MAX_PAYMENT_PATHS,
       cltv_delta: decodedInvoice.cltvDelta || undefined,
       features: decodedInvoice.features
         ? decodedInvoice.features.map((f) => ({
