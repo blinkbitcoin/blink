@@ -2,27 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'chore(node): bump Node.js from 20 to v24.19.0 (LTS "Krypton")
-        (#770)...'
-      sha: f546d5c94cd176cf2c22f32baaae2785928d17ce
+      commitTitle: 'fix(api): populate fee columns in csv transaction export (#716)...'
+      sha: f002d27f6075cc4737a6615e668a071707a761e5
       tags:
-      - 0.22.53-2-gf546d5c94
+      - 0.22.54-1-gf002d27f6
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'chore(node): bump Node.js from 20 to v24.19.0 (LTS "Krypton")
-        (#770)...'
-      sha: f546d5c94cd176cf2c22f32baaae2785928d17ce
+      commitTitle: 'fix(api): populate fee columns in csv transaction export (#716)...'
+      sha: f002d27f6075cc4737a6615e668a071707a761e5
       tags:
-      - 0.22.53-2-gf546d5c94
+      - 0.22.54-1-gf002d27f6
     path: schemas
   - git:
-      commitTitle: 'chore(node): bump Node.js from 20 to v24.19.0 (LTS "Krypton")
-        (#770)...'
-      sha: f546d5c94cd176cf2c22f32baaae2785928d17ce
+      commitTitle: 'fix(api): populate fee columns in csv transaction export (#716)...'
+      sha: f002d27f6075cc4737a6615e668a071707a761e5
       tags:
-      - 0.22.53-2-gf546d5c94
+      - 0.22.54-1-gf002d27f6
     path: gql
   path: graphql
 kind: LockConfig
