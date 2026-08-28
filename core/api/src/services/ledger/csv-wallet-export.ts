@@ -1,7 +1,10 @@
 import { createObjectCsvStringifier, createObjectCsvWriter } from "csv-writer"
 
+import { WalletCurrency } from "@/domain/shared"
 import { LedgerService } from "@/services/ledger"
 import { baseLogger } from "@/services/logger"
+
+const centsToDollars = (cents: UsdCents): number => Number(cents) / 100
 
 const headers_field = [
   "id",
@@ -32,6 +35,31 @@ const headers_field = [
 
 const header = headers_field.map((item) => ({ id: item, title: item }))
 
+// 2022-era backfill migrations left NaN in the sats/cents fields
+const isRecorded = (amount: number | undefined): amount is number =>
+  Number.isFinite(amount)
+
+// Legacy usd/feeUsd win when present: the 2022/23 backfills derived
+// fee-exclusive cents fields from fee-inclusive legacy values
+const toCsvRecord = (tx: LedgerTransaction<WalletCurrency>) => {
+  const walletFee = tx.currency === WalletCurrency.Usd ? tx.centsFee : tx.satsFee
+
+  return {
+    ...tx,
+    fee: isRecorded(walletFee) ? walletFee : tx.fee,
+    feeUsd: isRecorded(tx.feeUsd)
+      ? tx.feeUsd
+      : isRecorded(tx.centsFee)
+        ? centsToDollars(tx.centsFee)
+        : undefined,
+    usd: isRecorded(tx.usd)
+      ? tx.usd
+      : isRecorded(tx.centsAmount)
+        ? centsToDollars(tx.centsAmount)
+        : undefined,
+  }
+}
+
 export class CsvWalletsExport {
   entries: LedgerTransaction<WalletCurrency>[] = []
 
@@ -41,14 +69,12 @@ export class CsvWalletsExport {
     })
 
     const header_stringify = csvWriter.getHeaderString()
-    const records = csvWriter.stringifyRecords(this.entries)
+    const records = csvWriter.stringifyRecords(this.entries.map(toCsvRecord))
 
     const str = header_stringify + records
 
-    // create buffer from string
     const binaryData = Buffer.from(str, "utf8")
 
-    // decode buffer as base64
     const base64Data = binaryData.toString("base64")
 
     return base64Data
@@ -60,7 +86,7 @@ export class CsvWalletsExport {
       header,
     })
 
-    await csvWriter.writeRecords(this.entries)
+    await csvWriter.writeRecords(this.entries.map(toCsvRecord))
     baseLogger.info("saving complete")
   }
 
