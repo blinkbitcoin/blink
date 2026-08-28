@@ -3,9 +3,14 @@ import { NextRequestWithAuth, withAuth } from "next-auth/middleware"
 
 export const config = {
   matcher: [
-    "/:username",
-    "/:username/print",
-    "/:username/transaction",
+    // A single-segment matcher ("/:username") did not reliably stamp the
+    // x-pathname/x-search request headers onto the bare route in production,
+    // so migrated-user redirects dropped the query string (amount/memo/display)
+    // — while /print, matched explicitly, kept it. Match all app paths except
+    // Next internals, api, and static assets so every username route (bare,
+    // /print, /transaction) is stamped uniformly. /checkout keeps its own
+    // matcher below.
+    "/((?!api|_next/static|_next/image|favicon.ico).*)",
     "/checkout/:hash*",
   ],
 }
