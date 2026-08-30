@@ -2,7 +2,7 @@ import { evaluateWindDownCohortMatch } from "./is-account-in-wind-down-cohort"
 
 import { getWindDownConfig } from "@/config"
 
-import { deriveWindDownState, regionForCountry } from "@/domain/wind-down"
+import { deriveWindDownState, resolveWindDownRegion } from "@/domain/wind-down"
 
 export const getAccountWindDown = async ({
   account,
@@ -16,7 +16,11 @@ export const getAccountWindDown = async ({
   if (match instanceof Error) return match
   if (!match.matched) return null
 
-  const region = regionForCountry(match.matchedCountry, config.regions)
+  const region = resolveWindDownRegion({
+    matchedCountry: match.matchedCountry,
+    level: account.level,
+    regions: config.regions,
+  })
   return deriveWindDownState({
     enabled: config.enabled,
     matched: match.matched,

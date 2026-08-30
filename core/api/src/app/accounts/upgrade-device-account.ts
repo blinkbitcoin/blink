@@ -1,5 +1,14 @@
 import { AccountLevel } from "@/domain/accounts"
-import { AccountsRepository, UsersRepository } from "@/services/mongoose"
+import { ErrorLevel } from "@/domain/shared"
+import {
+  AccountsRepository,
+  UsersRepository,
+  WindDownCohortAssessmentsRepository,
+} from "@/services/mongoose"
+import {
+  addAttributesToCurrentSpan,
+  recordExceptionInCurrentSpan,
+} from "@/services/tracing"
 
 export const upgradeAccountFromDeviceToPhone = async ({
   userId,
@@ -27,6 +36,17 @@ export const upgradeAccountFromDeviceToPhone = async ({
   accountDevice.level = AccountLevel.One
   const accountUpdated = await AccountsRepository().update(accountDevice)
   if (accountUpdated instanceof Error) return accountUpdated
+
+  // the phone is now a cohort signal: drop the phoneless verdict so the next evaluation re-assesses
+  const reset = await WindDownCohortAssessmentsRepository().deleteByAccountId(
+    accountUpdated.id,
+  )
+  if (reset instanceof Error) {
+    recordExceptionInCurrentSpan({ error: reset, level: ErrorLevel.Warn })
+  }
+  addAttributesToCurrentSpan({
+    "windDown.cohortAssessmentReset": reset instanceof Error ? "failed" : "ok",
+  })
 
   return accountUpdated
 }
