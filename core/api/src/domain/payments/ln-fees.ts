@@ -1,4 +1,5 @@
-import { FEECAP_BASIS_POINTS, FEECAP_MIN } from "@/domain/bitcoin"
+import { FEECAP_MIN } from "@/domain/bitcoin"
+import { getLightningFeeCapBasisPoints } from "@/config"
 import { MaxFeeTooLargeForRoutelessPaymentError } from "@/domain/bitcoin/lightning"
 import {
   WalletCurrency,
@@ -12,7 +13,7 @@ import {
 const calc = AmountCalculator()
 
 export const LnFees = () => {
-  const feeCapBasisPoints = FEECAP_BASIS_POINTS
+  const feeCapBasisPoints = getLightningFeeCapBasisPoints()
 
   const maxProtocolAndBankFee = <T extends WalletCurrency>(
     amount: PaymentAmount<T>,

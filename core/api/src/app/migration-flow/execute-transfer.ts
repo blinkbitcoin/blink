@@ -5,9 +5,9 @@ import { intraledgerPaymentSendWalletIdForBtcWallet } from "@/app/payments/send-
 import { payNoAmountInvoiceByWalletId } from "@/app/payments/send-lightning"
 import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
 
-import { getCustodialMigrationFlowConfig } from "@/config"
+import { getCustodialMigrationFlowConfig, getLightningFeeCapBasisPoints } from "@/config"
 
-import { FEECAP_BASIS_POINTS, FEECAP_MIN, toSats } from "@/domain/bitcoin"
+import { FEECAP_MIN, toSats } from "@/domain/bitcoin"
 import { PaymentSendStatus } from "@/domain/bitcoin/lightning"
 import { MigrationFlowPhase, MigrationStateConflictError } from "@/domain/migration-flow"
 import { LnFees } from "@/domain/payments"
@@ -38,7 +38,7 @@ export const migrationDrainAmount = (
   }
 
   const flatSeed = balance - FEECAP_MIN.amount
-  const pctSeed = (10_000n * balance) / (10_000n + FEECAP_BASIS_POINTS)
+  const pctSeed = (10_000n * balance) / (10_000n + getLightningFeeCapBasisPoints())
   let amount = flatSeed < pctSeed ? flatSeed : pctSeed
   while (totalDebitForAmount(amount + 1n) <= balance) {
     amount += 1n

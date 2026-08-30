@@ -2,6 +2,7 @@ import { FEECAP_MIN } from "@/domain/bitcoin"
 import { AmountCalculator, ONE_CENT, ONE_SAT, WalletCurrency } from "@/domain/shared"
 import { LnFees, WalletPriceRatio } from "@/domain/payments"
 import { MaxFeeTooLargeForRoutelessPaymentError } from "@/domain/bitcoin/lightning"
+import * as Config from "@/config"
 
 const calc = AmountCalculator()
 
@@ -63,11 +64,28 @@ describe("LnFees", () => {
         amount: 1000n,
         currency: WalletCurrency.Usd,
       }
-      // With 0.5% fee cap, 1000 cents would result in 5 cents fee
+      // With 0.5% fee cap, 1000 cents results in a 5-cent fee
       expect(LnFees().maxProtocolAndBankFee(usdAmount)).toEqual({
         amount: 5n,
         currency: WalletCurrency.Usd,
       })
+    })
+
+    it("uses the configured fee cap", () => {
+      const feeCapSpy = jest
+        .spyOn(Config, "getLightningFeeCapBasisPoints")
+        .mockReturnValue(100n)
+
+      const btcAmount = {
+        amount: 10_000n,
+        currency: WalletCurrency.Btc,
+      }
+      expect(LnFees().maxProtocolAndBankFee(btcAmount)).toEqual({
+        amount: 100n,
+        currency: WalletCurrency.Btc,
+      })
+
+      feeCapSpy.mockRestore()
     })
   })
 

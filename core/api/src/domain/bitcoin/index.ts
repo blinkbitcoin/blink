@@ -55,8 +55,8 @@ export const BtcNetwork = {
   regtest: "regtest",
 } as const
 
-// Offchain routing fees are capped at 0.5%
-export const FEECAP_BASIS_POINTS = 50n // 100 basis points == 1%
+// Offchain routing fees are capped at 0.5% by default
+export const FEECAP_BASIS_POINTS = 50n
 export const FEECAP_MIN = {
   amount: 10n,
   currency: WalletCurrency.Btc,

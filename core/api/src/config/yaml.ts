@@ -153,6 +153,9 @@ export const getValuesToSkipProbe = (): SkipFeeProbeConfig => {
 export const getSkipFeeReimbursement = (): boolean =>
   yamlConfig.paymentNetworks.lightning.send.skipFeeReimbursement
 
+export const getLightningFeeCapBasisPoints = (): bigint =>
+  BigInt(yamlConfig.paymentNetworks.lightning.send.feeCapBasisPoints)
+
 export const getCustodialMigrationFlowConfig = (): CustodialMigrationFlowConfig => ({
   enabled: yamlConfig.custodialMigrationFlow.enabled,
   deMinimisThresholdSats: yamlConfig.custodialMigrationFlow.deMinimisThresholdSats,

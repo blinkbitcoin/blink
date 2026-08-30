@@ -306,6 +306,7 @@ paymentNetworks:
         pubkeys: []
         chanIds: []
       skipFeeReimbursement: true
+      feeCapBasisPoints: 50
     historicalPubkeys: []
   intraledger:
     receive:

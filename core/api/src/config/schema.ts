@@ -1,4 +1,5 @@
 import { AccountStatus } from "@/domain/accounts/primitives"
+import { FEECAP_BASIS_POINTS } from "@/domain/bitcoin"
 import { WalletCurrency } from "@/domain/shared"
 import { DEFAULT_WIND_DOWN_REGION_CODE } from "@/domain/wind-down"
 
@@ -396,6 +397,12 @@ const paymentNetworksSchema = {
               additionalProperties: false,
             },
             skipFeeReimbursement: { type: "boolean" },
+            feeCapBasisPoints: {
+              type: "integer",
+              minimum: 1,
+              maximum: 10_000,
+              default: Number(FEECAP_BASIS_POINTS),
+            },
           },
           required: ["feeStrategies", "skipFeeProbe"],
           additionalProperties: false,
@@ -510,6 +517,7 @@ const paymentNetworksSchema = {
           chanIds: [],
         },
         skipFeeReimbursement: true,
+        feeCapBasisPoints: Number(FEECAP_BASIS_POINTS),
       },
       historicalPubkeys: [],
     },

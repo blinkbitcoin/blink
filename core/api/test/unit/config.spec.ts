@@ -12,6 +12,7 @@ import { toCents } from "@/domain/fiat"
 import {
   configSchema,
   getAccountLimits,
+  getLightningFeeCapBasisPoints,
   yamlConfig,
   getOnchainNetworkConfig,
 } from "@/config"
@@ -85,6 +86,36 @@ describe("config.ts", () => {
       const contentNew = fs.readFileSync("./galoy.yaml", "utf8")
 
       expect(contentOrg).toEqual(contentNew)
+    })
+
+    it("uses a 0.5% Lightning fee cap by default", () => {
+      expect(getLightningFeeCapBasisPoints()).toBe(50n)
+    })
+
+    it("loads a custom Lightning fee cap", () => {
+      withCustomYaml(
+        {
+          paymentNetworks: {
+            lightning: { send: { feeCapBasisPoints: 100 } },
+          },
+        },
+        () => {
+          const {
+            getLightningFeeCapBasisPoints: getConfiguredFeeCap,
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+          } = require("@/config/yaml")
+          expect(getConfiguredFeeCap()).toBe(100n)
+        },
+      )
+    })
+
+    it.each([0, 10_001, 0.5])("rejects invalid Lightning fee cap %p", (feeCap) => {
+      const freshYamlConfig = JSON.parse(JSON.stringify(yamlConfig))
+      freshYamlConfig.paymentNetworks.lightning.send.feeCapBasisPoints = feeCap
+
+      // @ts-ignore-next-line no-implicit-any error
+      const valid = validate(freshYamlConfig)
+      expect(valid).toBeFalsy()
     })
 
     it("passes with custom yaml", () => {

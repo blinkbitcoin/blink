@@ -31,6 +31,7 @@ import {
 } from "@/app/migration-flow/execute-transfer"
 import { LnFees } from "@/domain/payments"
 import { BtcPaymentAmount, InvalidBtcPaymentAmountError } from "@/domain/shared"
+import * as Config from "@/config"
 
 const reserve = (amount: bigint): bigint =>
   LnFees().maxProtocolAndBankFee(BtcPaymentAmount(amount)).amount
@@ -139,6 +140,17 @@ describe("migrationDrainPlan", () => {
     const plan = expectExactZero(2111n)
     expect(plan.amount).toBe(2101n)
     expect(2111n - plan.amount).toBe(10n)
+  })
+
+  it("uses the configured fee cap for drain planning", () => {
+    const feeCapSpy = jest
+      .spyOn(Config, "getLightningFeeCapBasisPoints")
+      .mockReturnValue(100n)
+
+    const plan = expectExactZero(1061n)
+    expect(plan).toEqual({ amount: 1051n, residualTopUp: 1n })
+
+    feeCapSpy.mockRestore()
   })
 
   it("drains to zero with at most a 1-sat top-up across an exhaustive sweep", () => {

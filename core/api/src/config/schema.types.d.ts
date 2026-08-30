@@ -146,6 +146,7 @@ type LightningSendInput = {
   feeStrategies: string[]
   skipFeeProbe: SkipFeeProbeInput
   skipFeeReimbursement: boolean
+  feeCapBasisPoints: number
 }
 
 type LightningNetworkInput = {
