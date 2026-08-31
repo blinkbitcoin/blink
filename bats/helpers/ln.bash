@@ -96,8 +96,11 @@ check_for_ln_update() {
 
 check_lnd_invoice_accepted() {
   local payment_hash=$1
+  local lnd_command=${2:-lnd_cli}
+  local invoice_info
+  local state
 
-  invoice_info="$(lnd_cli lookupinvoice "$payment_hash")"
+  invoice_info="$("$lnd_command" lookupinvoice "$payment_hash")"
   state="$(echo "$invoice_info" | jq -r '.state')"
   [[ "${state}" = "ACCEPTED" ]] || exit 1
 }
