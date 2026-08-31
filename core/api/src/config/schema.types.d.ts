@@ -140,6 +140,10 @@ type LightningReceiveInput = {
 type SkipFeeProbeInput = {
   pubkeys: string[]
   chanIds: string[]
+  feeCapGroups: {
+    pubkeys: string[]
+    feeCapBasisPoints: number
+  }[]
 }
 
 type LightningSendInput = {
@@ -221,6 +225,7 @@ type YamlSchema = {
     addQuizPerIp: RateLimitInput
     addQuizPerPhone: RateLimitInput
     regionCheckIpResolution: RateLimitInput
+    btcMapPlaceSubmitPerAccount: RateLimitInput
   }
   accounts: {
     initialStatus: string

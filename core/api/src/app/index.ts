@@ -3,6 +3,7 @@ import * as AuthenticationMod from "./authentication"
 import * as AdminMod from "./admin"
 import * as CallbackMod from "./callback"
 import * as CommMod from "./comm"
+import * as BtcMapMod from "./btcmap"
 import * as QuizMod from "./quiz"
 import * as LightningMod from "./lightning"
 import * as MigrationFlowMod from "./migration-flow"
@@ -24,6 +25,7 @@ const allFunctions = {
   Admin: { ...AdminMod },
   Callback: { ...CallbackMod },
   Comm: { ...CommMod },
+  BtcMap: { ...BtcMapMod },
   Quiz: { ...QuizMod },
   Lightning: { ...LightningMod },
   MigrationFlow: { ...MigrationFlowMod },
@@ -57,6 +59,7 @@ export const {
   Admin,
   Callback,
   Comm,
+  BtcMap,
   Quiz,
   Lightning,
   MigrationFlow,

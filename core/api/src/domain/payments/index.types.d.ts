@@ -78,6 +78,7 @@ type PaymentFlowState<
 > = XorPaymentHashProperty & {
   descriptionFromInvoice: string
   skipProbeForDestination: boolean
+  feeCapBasisPoints?: bigint
   btcBankFee: BtcPaymentAmount
   usdBankFee: UsdPaymentAmount
 } & PaymentFlowCommonState<S, R>
@@ -248,6 +249,7 @@ type LPFBWithInvoiceState = LightningPaymentFlowBuilderConfig &
     btcProtocolAndBankFee?: BtcPaymentAmount
     usdProtocolAndBankFee?: UsdPaymentAmount
     skipProbeForDestination: boolean
+    feeCapBasisPoints?: bigint
   }
 
 type LPFBWithSenderWalletState<S extends WalletCurrency> = RequireField<

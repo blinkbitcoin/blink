@@ -478,6 +478,97 @@ describe("initiated via lightning", () => {
       lndServiceSpy.mockRestore()
     })
 
+    it("passes persisted fee cap through final verification to LND", async () => {
+      // Setup mocks
+      const { LndService: LnServiceOrig } = jest.requireActual("@/services/lnd")
+      const payInvoiceViaPaymentDetails = jest.fn(() => ({
+        roundedUpFee: toSats(0),
+        revealedPreImage: "revealedPreImage" as RevealedPreImage,
+        sentFromPubkey: DEFAULT_PUBKEY,
+      }))
+      const lndServiceSpy = jest.spyOn(LndImpl, "LndService").mockReturnValue({
+        ...LnServiceOrig(),
+        listAllPubkeys: () => [],
+        defaultPubkey: (): Pubkey => DEFAULT_PUBKEY,
+        payInvoiceViaPaymentDetails,
+      })
+
+      const feeCapBasisPoints = 10n
+      const configSpy = jest.spyOn(ConfigImpl, "getValuesToSkipProbe").mockReturnValue({
+        pubkey: [],
+        chanId: [],
+        feeCapGroups: [
+          {
+            pubkeys: [noAmountLnInvoice.destination],
+            feeCapBasisPoints,
+          },
+        ],
+      })
+
+      const { LnFees: LnFeesOrig } = jest.requireActual("@/domain/payments")
+      const actualLnFees = LnFeesOrig()
+      const verifyMaxFee = jest.fn(actualLnFees.verifyMaxFee)
+      const lndFeesSpy = jest.spyOn(LnFeesImpl, "LnFees").mockReturnValue({
+        ...actualLnFees,
+        verifyMaxFee,
+      })
+
+      // Create and fund user
+      const newWalletDescriptor = await createRandomUserAndBtcWallet()
+      const newAccount = await AccountsRepository().findById(
+        newWalletDescriptor.accountId,
+      )
+      if (newAccount instanceof Error) throw newAccount
+
+      const receive = await recordReceiveLnPayment({
+        walletDescriptor: newWalletDescriptor,
+        paymentAmount: receiveAmounts,
+        bankFee: receiveBankFee,
+        displayAmounts: receiveDisplayAmounts,
+        memo,
+      })
+      if (receive instanceof Error) throw receive
+
+      // Persist the payment flow during fee estimation
+      const feeEstimate = await Payments.getNoAmountLightningFeeEstimationForBtcWallet({
+        walletId: newWalletDescriptor.id,
+        uncheckedPaymentRequest: noAmountLnInvoice.paymentRequest,
+        amount,
+      })
+      expect(feeEstimate.error).toBeUndefined()
+
+      const persistedPaymentFlow = await PaymentFlowStateRepository(
+        defaultTimeToExpiryInSeconds,
+      ).findLightningPaymentFlow({
+        walletId: newWalletDescriptor.id,
+        paymentHash: noAmountLnInvoice.paymentHash,
+        inputAmount: btcPaymentAmount.amount,
+      })
+      if (persistedPaymentFlow instanceof Error) throw persistedPaymentFlow
+      expect(persistedPaymentFlow.feeCapBasisPoints).toBe(feeCapBasisPoints)
+
+      // Pay using the persisted payment flow
+      const paymentResult = await Payments.payNoAmountInvoiceByWalletIdForBtcWallet({
+        uncheckedPaymentRequest: noAmountLnInvoice.paymentRequest,
+        memo,
+        senderWalletId: newWalletDescriptor.id,
+        senderAccount: newAccount,
+        amount,
+      })
+      expect(paymentResult).not.toBeInstanceOf(Error)
+      expect(verifyMaxFee).toHaveBeenCalledWith(
+        expect.objectContaining({ feeCapBasisPoints }),
+      )
+      expect(payInvoiceViaPaymentDetails).toHaveBeenCalledWith(
+        expect.objectContaining({ feeCapBasisPoints }),
+      )
+
+      // Restore system state
+      lndFeesSpy.mockRestore()
+      configSpy.mockRestore()
+      lndServiceSpy.mockRestore()
+    })
+
     it("persists ln-payment on successful ln send", async () => {
       // Setup mocks
       const { LndService: LnServiceOrig } = jest.requireActual("@/services/lnd")

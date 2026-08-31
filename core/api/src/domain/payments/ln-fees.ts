@@ -12,10 +12,9 @@ import {
 const calc = AmountCalculator()
 
 export const LnFees = () => {
-  const feeCapBasisPoints = FEECAP_BASIS_POINTS
-
   const maxProtocolAndBankFee = <T extends WalletCurrency>(
     amount: PaymentAmount<T>,
+    feeCapBasisPoints = FEECAP_BASIS_POINTS,
   ): PaymentAmount<T> => {
     if (amount.amount === 0n) return amount
 
@@ -48,6 +47,7 @@ export const LnFees = () => {
     priceRatio,
     senderWalletCurrency,
     isFromNoAmountInvoice,
+    feeCapBasisPoints,
   }: {
     maxFeeAmount: BtcPaymentAmount
     btcPaymentAmount: BtcPaymentAmount
@@ -55,11 +55,15 @@ export const LnFees = () => {
     priceRatio: WalletPriceRatio
     senderWalletCurrency: WalletCurrency
     isFromNoAmountInvoice: boolean
+    feeCapBasisPoints?: bigint
   }) => {
-    const btcCalculatedMaxFeeAmount = maxProtocolAndBankFee(btcPaymentAmount)
+    const btcCalculatedMaxFeeAmount = maxProtocolAndBankFee(
+      btcPaymentAmount,
+      feeCapBasisPoints,
+    )
     let calculatedMaxFeeAmount = btcCalculatedMaxFeeAmount
     if (senderWalletCurrency === WalletCurrency.Usd) {
-      const maxFeeInUsd = maxProtocolAndBankFee(usdPaymentAmount)
+      const maxFeeInUsd = maxProtocolAndBankFee(usdPaymentAmount, feeCapBasisPoints)
       const usdCalculatedMaxFeeAmount = priceRatio.convertFromUsd(maxFeeInUsd)
 
       calculatedMaxFeeAmount = usdCalculatedMaxFeeAmount

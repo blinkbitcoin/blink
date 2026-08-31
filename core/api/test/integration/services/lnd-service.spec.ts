@@ -509,7 +509,6 @@ describe("Lnd", () => {
             hops: [
               {
                 channel,
-                channel_capacity: 1,
                 fee: 1,
                 fee_mtokens: "1000",
                 forward: 1,

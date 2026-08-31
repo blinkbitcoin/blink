@@ -1079,6 +1079,7 @@ const lockedPaymentViaLnSteps = async ({
       senderWalletCurrency: senderWalletDescriptor.currency,
       isFromNoAmountInvoice:
         decodedInvoice.amount === 0 || decodedInvoice.amount === null,
+      feeCapBasisPoints: paymentFlow.feeCapBasisPoints,
     }
     const maxFeeCheck = LnFees().verifyMaxFee(maxFeeCheckArgs)
 

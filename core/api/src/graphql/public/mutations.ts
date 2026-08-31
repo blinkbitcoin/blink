@@ -69,6 +69,7 @@ import MigrationStartMutation from "@/graphql/public/root/mutation/migration-sta
 import MigrationCommitMutation from "@/graphql/public/root/mutation/migration-commit"
 import MigrationLnAddressTransferMutation from "@/graphql/public/root/mutation/migration-ln-address-transfer"
 import MerchantMapSuggestMutation from "@/graphql/public/root/mutation/merchant-map-suggest"
+import BtcMapPlaceSubmitMutation from "@/graphql/public/root/mutation/btc-map-place-submit"
 import SupportChatMessageAddMutation from "@/graphql/public/root/mutation/support-chat-message-add"
 import SupportChatResetMutation from "@/graphql/public/root/mutation/support-chat-reset"
 
@@ -123,6 +124,7 @@ export const mutationFields = {
 
       accountDelete: AccountDeleteMutation,
       feedbackSubmit: FeedbackSubmitMutation,
+      btcMapPlaceSubmit: BtcMapPlaceSubmitMutation,
 
       migrationStart: MigrationStartMutation,
       migrationCommit: MigrationCommitMutation,

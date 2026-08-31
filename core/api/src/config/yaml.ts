@@ -147,6 +147,12 @@ export const getValuesToSkipProbe = (): SkipFeeProbeConfig => {
   return {
     pubkey: (skipProbe.pubkeys || []) as Pubkey[],
     chanId: (skipProbe.chanIds || []) as ChanId[],
+    feeCapGroups: (skipProbe.feeCapGroups || []).map(
+      ({ pubkeys, feeCapBasisPoints }) => ({
+        pubkeys: pubkeys as Pubkey[],
+        feeCapBasisPoints: BigInt(feeCapBasisPoints),
+      }),
+    ),
   }
 }
 
@@ -238,6 +244,9 @@ export const getAddQuizPerPhoneLimits = () =>
 
 export const getRegionCheckIpResolutionLimits = () =>
   getRateLimits(yamlConfig.rateLimits.regionCheckIpResolution)
+
+export const getBtcMapPlaceSubmitPerAccountLimits = () =>
+  getRateLimits(yamlConfig.rateLimits.btcMapPlaceSubmitPerAccount)
 
 export const getOnChainWalletConfig = () => ({
   dustThreshold: yamlConfig.paymentNetworks.onchain.dustThreshold,
