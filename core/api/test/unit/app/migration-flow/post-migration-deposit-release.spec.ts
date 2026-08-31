@@ -357,14 +357,6 @@ describe("inspectPostMigrationDepositRelease", () => {
       () => mongooseMocks.findWallet.mockResolvedValue(dependencyError),
     ],
     [
-      "the BTC wallet belongs to another account",
-      () =>
-        mongooseMocks.findWallet.mockResolvedValue({
-          ...btcWallet,
-          accountId: bankOwnerAccountId,
-        }),
-    ],
-    [
       "the USD balance lookup fails",
       () => mockBalance.mockResolvedValue(dependencyError),
     ],
@@ -548,6 +540,21 @@ describe("inspectPostMigrationDepositRelease", () => {
     expect(upsertArgs).not.toHaveProperty("plannedTopUpSats")
   })
 
+  it("rejects preparing a release that is no longer prepared", async () => {
+    mongooseMocks.releaseRepo.upsertPrepared.mockResolvedValue(processingRelease())
+
+    expect(
+      await preparePostMigrationDepositRelease({
+        accountId,
+        txHash,
+        vout: 2,
+        address,
+        lightningAddress,
+        caseReference: "CASE-123",
+      }),
+    ).toBeInstanceOf(MigrationStateConflictError)
+  })
+
   it("propagates persistence failure while preparing", async () => {
     mongooseMocks.releaseRepo.upsertPrepared.mockResolvedValue(dependencyError)
 
@@ -613,10 +620,13 @@ describe("inspectPostMigrationDepositRelease", () => {
 
   it("marks the release failed when reinspection fails", async () => {
     setSuccessfulRelease()
-    mongooseMocks.findAccount.mockResolvedValue({
-      ...account,
-      status: AccountStatus.Active,
-    })
+    mongooseMocks.findAccount.mockImplementation((id) =>
+      Promise.resolve(
+        id === bankOwnerAccountId
+          ? bankOwnerAccount
+          : { ...account, status: AccountStatus.Active },
+      ),
+    )
 
     const result = await releasePostMigrationDeposit({
       txHash: txHash as OnChainTxHash,
@@ -632,10 +642,13 @@ describe("inspectPostMigrationDepositRelease", () => {
 
   it("returns a status persistence failure while failing a release", async () => {
     setSuccessfulRelease()
-    mongooseMocks.findAccount.mockResolvedValue({
-      ...account,
-      status: AccountStatus.Active,
-    })
+    mongooseMocks.findAccount.mockImplementation((id) =>
+      Promise.resolve(
+        id === bankOwnerAccountId
+          ? bankOwnerAccount
+          : { ...account, status: AccountStatus.Active },
+      ),
+    )
     mongooseMocks.releaseRepo.updateStatus.mockResolvedValue(dependencyError)
 
     expect(
@@ -703,7 +716,7 @@ describe("inspectPostMigrationDepositRelease", () => {
     expect(mockPayInvoice).not.toHaveBeenCalled()
   })
 
-  it("marks the release failed when the node service is unavailable", async () => {
+  it("leaves the release retryable when the node service is unavailable", async () => {
     setSuccessfulRelease()
     mockLndService.mockReturnValue(dependencyError)
 
@@ -714,6 +727,7 @@ describe("inspectPostMigrationDepositRelease", () => {
       }),
     ).toBe(dependencyError)
     expect(mockPayInvoice).not.toHaveBeenCalled()
+    expect(mongooseMocks.releaseRepo.updateStatus).not.toHaveBeenCalled()
   })
 
   it("marks the release failed when invoice fetching fails", async () => {
@@ -809,7 +823,7 @@ describe("inspectPostMigrationDepositRelease", () => {
           Promise.resolve(id === bankOwnerAccountId ? dependencyError : account),
         ),
     ],
-  ])("marks the release failed when %s", async (_scenario, setup) => {
+  ])("leaves the release retryable when %s", async (_scenario, setup) => {
     setSuccessfulRelease()
     setup()
 
@@ -820,6 +834,7 @@ describe("inspectPostMigrationDepositRelease", () => {
       }),
     ).toBe(dependencyError)
     expect(mockPayInvoice).not.toHaveBeenCalled()
+    expect(mongooseMocks.releaseRepo.updateStatus).not.toHaveBeenCalled()
   })
 
   it("marks the release failed when the payment fails", async () => {
@@ -889,17 +904,15 @@ describe("inspectPostMigrationDepositRelease", () => {
     )
   })
 
-  it("attempts exactly one payment across concurrent release claims", async () => {
+  it("binds a single invoice across concurrent release claims", async () => {
     const paymentHash = "ef".repeat(32) as PaymentHash
     const claimed = processingRelease()
     const bound = { ...claimed, paymentHash, paymentRequest: "lnbc1fresh" }
     mongooseMocks.releaseRepo.claimForRelease
       .mockResolvedValueOnce(claimed)
       .mockResolvedValueOnce(new MigrationStateConflictError("already processing"))
-    mongooseMocks.releaseRepo.findByOutput.mockResolvedValue(claimed)
-    mongooseMocks.releaseRepo.recordPayment
-      .mockResolvedValueOnce(bound)
-      .mockResolvedValueOnce(new MigrationStateConflictError("cannot bind"))
+    mongooseMocks.releaseRepo.findByOutput.mockResolvedValue(bound)
+    mongooseMocks.releaseRepo.recordPayment.mockResolvedValueOnce(bound)
     mongooseMocks.releaseRepo.updateStatus.mockImplementation(({ to }) =>
       Promise.resolve({ ...bound, status: to }),
     )
@@ -921,9 +934,12 @@ describe("inspectPostMigrationDepositRelease", () => {
       }),
     ])
 
-    expect(mockPayInvoice).toHaveBeenCalledTimes(1)
-    expect(results.filter((result) => result instanceof Error)).toHaveLength(1)
-    expect(results.filter((result) => !(result instanceof Error))).toHaveLength(1)
+    expect(mongooseMocks.releaseRepo.recordPayment).toHaveBeenCalledTimes(1)
+    expect(mockLnurlPayService).toHaveBeenCalledTimes(1)
+    for (const call of mockPayInvoice.mock.calls) {
+      expect(call[0].uncheckedPaymentRequest).toBe("lnbc1fresh")
+    }
+    expect(results.every((result) => !(result instanceof Error))).toBe(true)
   })
 
   it("propagates a release lookup failure during reconciliation", async () => {

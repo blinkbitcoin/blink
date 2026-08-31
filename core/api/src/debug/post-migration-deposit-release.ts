@@ -10,7 +10,7 @@
  * pnpm tsx src/debug/post-migration-deposit-release.ts /var/yaml/custom.yaml reconcile <txid> <vout>
  */
 
-import { accessSync, constants } from "fs"
+import { accessSync, constants, statSync } from "fs"
 
 import {
   inspectPostMigrationDepositRelease,
@@ -131,6 +131,7 @@ export const main = async () => {
   }
   try {
     accessSync(configPath, constants.R_OK)
+    if (!statSync(configPath).isFile()) throw new Error("not a file")
   } catch {
     console.error(`Cannot read config file at ${configPath}\n${usage}`)
     process.exitCode = 1

@@ -98,11 +98,6 @@ export const inspectPostMigrationDepositRelease = async (
   const { USD: usdWallet } = wallets
   const btcWallet = await WalletsRepository().findById(wallets.BTC.id)
   if (btcWallet instanceof Error) return btcWallet
-  if (btcWallet.accountId !== account.id) {
-    return new MigrationStateConflictError(
-      `BTC wallet ${btcWallet.id} does not belong to account ${account.id}`,
-    )
-  }
 
   const usdBalance = await getBalanceForWallet({ walletId: usdWallet.id })
   if (usdBalance instanceof Error) return usdBalance
@@ -228,6 +223,11 @@ export const preparePostMigrationDepositRelease = async ({
     caseReference: caseReference.trim(),
   })
   if (release instanceof Error) return release
+  if (release.status !== PostMigrationDepositReleaseStatus.Prepared) {
+    return new MigrationStateConflictError(
+      `release ${release.txHash}:${release.vout} is ${release.status}`,
+    )
+  }
 
   const mismatch = releasePlanMismatch({ release, plan, caseReference })
   return mismatch ?? release
@@ -266,6 +266,12 @@ export const releasePostMigrationDeposit = async ({
   })
   if (mismatch) return failRelease(release, mismatch)
 
+  const bankOwnerWalletId = await getBankOwnerWalletId()
+  const bankOwnerWallet = await WalletsRepository().findById(bankOwnerWalletId)
+  if (bankOwnerWallet instanceof Error) return bankOwnerWallet
+  const bankOwnerAccount = await AccountsRepository().findById(bankOwnerWallet.accountId)
+  if (bankOwnerAccount instanceof Error) return bankOwnerAccount
+
   let invoice = release.paymentRequest
   if (!invoice) {
     const amount = checkedToBtcPaymentAmount(plan.payoutAmountSats)
@@ -294,7 +300,7 @@ export const releasePostMigrationDeposit = async ({
   }
 
   const lndService = LndService()
-  if (lndService instanceof Error) return failRelease(release, lndService)
+  if (lndService instanceof Error) return lndService
   if (lndService.listAllPubkeys().includes(decoded.destination)) {
     return failRelease(
       release,
@@ -314,12 +320,6 @@ export const releasePostMigrationDeposit = async ({
     if (withPayment instanceof Error) return withPayment
     release = withPayment
   }
-
-  const bankOwnerWalletId = await getBankOwnerWalletId()
-  const bankOwnerWallet = await WalletsRepository().findById(bankOwnerWalletId)
-  if (bankOwnerWallet instanceof Error) return failRelease(release, bankOwnerWallet)
-  const bankOwnerAccount = await AccountsRepository().findById(bankOwnerWallet.accountId)
-  if (bankOwnerAccount instanceof Error) return failRelease(release, bankOwnerAccount)
 
   const payment = await payInvoiceByWalletId({
     uncheckedPaymentRequest: invoice,

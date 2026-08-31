@@ -1,6 +1,7 @@
 jest.mock("fs", () => ({
   ...jest.requireActual("fs"),
   accessSync: jest.fn(),
+  statSync: jest.fn(),
 }))
 jest.mock("@/app/migration-flow/post-migration-deposit-release", () => ({
   inspectPostMigrationDepositRelease: jest.fn(),
@@ -10,7 +11,7 @@ jest.mock("@/app/migration-flow/post-migration-deposit-release", () => ({
 }))
 jest.mock("@/services/mongodb", () => ({ setupMongoConnection: jest.fn() }))
 
-import { accessSync } from "fs"
+import { accessSync, statSync } from "fs"
 
 import {
   inspectPostMigrationDepositRelease,
@@ -34,6 +35,7 @@ const mockPrepare = preparePostMigrationDepositRelease as jest.Mock
 const mockRelease = releasePostMigrationDeposit as jest.Mock
 const mockReconcile = reconcilePostMigrationDepositRelease as jest.Mock
 const mockAccessSync = accessSync as jest.Mock
+const mockStatSync = statSync as jest.Mock
 
 describe("post-migration deposit release CLI", () => {
   const txid = "ab".repeat(32)
@@ -49,6 +51,7 @@ describe("post-migration deposit release CLI", () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockAccessSync.mockReturnValue(undefined)
+    mockStatSync.mockReturnValue({ isFile: () => true })
     process.exitCode = undefined
   })
 
@@ -179,6 +182,19 @@ describe("post-migration deposit release CLI", () => {
 
     expect(process.exitCode).toBe(1)
     expect(error).toHaveBeenCalledWith(expect.stringContaining("/missing/custom.yaml"))
+    expect(mockRelease).not.toHaveBeenCalled()
+    error.mockRestore()
+  })
+
+  it("hard-fails before running any step when the config path is not a regular file", async () => {
+    const error = jest.spyOn(console, "error").mockImplementation()
+    mockStatSync.mockReturnValue({ isFile: () => false })
+    process.argv = ["node", "script", "/var/yaml", "release", txid, "2"]
+
+    await main()
+
+    expect(process.exitCode).toBe(1)
+    expect(error).toHaveBeenCalledWith(expect.stringContaining("/var/yaml"))
     expect(mockRelease).not.toHaveBeenCalled()
     error.mockRestore()
   })
