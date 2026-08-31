@@ -44,8 +44,12 @@ lnd_outside_rest() {
       xxd -p -c 10000 /root/.lnd/admin.macaroon
   )
 
+  # The LND image ships wget rather than curl. Preserve response bodies on
+  # server errors, but do not let wget retry and stall the test suite.
   docker exec "${COMPOSE_PROJECT_NAME}-lnd-outside-1-1" \
     wget -qO- \
+      --tries=1 \
+      --content-on-error \
       --ca-certificate /root/.lnd/tls.cert \
       --header "Grpc-Metadata-macaroon: $macaroon_hex" \
       "${request_args[@]}" \

@@ -772,7 +772,9 @@ local_resource(
   "test-api",
   labels = ["test"],
   auto_init = is_ci and CORE_TEST_LABEL in cfg.get("test", []),
-  cmd = "buck2 test {}".format(api_test_target),
+  # The external runner defaults to 10 minutes for the complete rule. LND 0.21
+  # makes this serial suite exceed that limit on GitHub-hosted runners.
+  cmd = "buck2 test {} -- --timeout 1200".format(api_test_target),
   resource_deps = [
     "api",
   ]

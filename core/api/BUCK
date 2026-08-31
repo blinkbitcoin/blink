@@ -235,10 +235,7 @@ jest_test(
         # Jest's default 60s timeout on GitHub runners.
         "JEST_TIMEOUT": "600000",
         "LOGLEVEL": "warn",
-    },
-    # LND 0.21 makes the full serial suite exceed Buck's default 10-minute
-    # rule timeout on GitHub-hosted runners, even though individual tests pass.
-    test_rule_timeout_ms = 1200000,
+    }
 )
 
 test_suite(
