@@ -6,6 +6,7 @@ type WalletIdAbortSignal = RedlockAbortSignal & { readonly brand: unique symbol 
 type PaymentHashAbortSignal = RedlockAbortSignal & { readonly brand: unique symbol }
 type OnChainTxAbortSignal = RedlockAbortSignal & { readonly brand: unique symbol }
 type IdempotencyKeyAbortSignal = RedlockAbortSignal & { readonly brand: unique symbol }
+type BtcMapSubmissionAbortSignal = RedlockAbortSignal & { readonly brand: unique symbol }
 
 interface ILockService {
   lockWalletId<Res>(
@@ -25,6 +26,13 @@ interface ILockService {
     f: (signal: OnChainTxAbortSignal) => Promise<Res>,
   ): Promise<Res | LockServiceError>
   lockIdempotencyKey(idempotencyKey: IdempotencyKey): Promise<void | LockServiceError>
+  lockBtcMapPlaceSubmission<Res>(
+    {
+      accountId,
+      submissionId,
+    }: { accountId: AccountId; submissionId: BtcMapSubmissionId },
+    f: (signal: BtcMapSubmissionAbortSignal) => Promise<Res>,
+  ): Promise<Res | LockServiceError>
 }
 
 type RedlockArgs<Signal, Ret> = {

@@ -239,6 +239,9 @@ export const getAddQuizPerPhoneLimits = () =>
 export const getRegionCheckIpResolutionLimits = () =>
   getRateLimits(yamlConfig.rateLimits.regionCheckIpResolution)
 
+export const getBtcMapPlaceSubmitPerAccountLimits = () =>
+  getRateLimits(yamlConfig.rateLimits.btcMapPlaceSubmitPerAccount)
+
 export const getOnChainWalletConfig = () => ({
   dustThreshold: yamlConfig.paymentNetworks.onchain.dustThreshold,
 })

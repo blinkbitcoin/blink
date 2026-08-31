@@ -24,3 +24,4 @@ export class UserCodeAttemptAppcheckJtiLimiterExceededError extends RateLimiterE
 export class AddQuizAttemptIpRateLimiterExceededError extends RateLimiterExceededError {}
 export class AddQuizAttemptPhoneRateLimiterExceededError extends RateLimiterExceededError {}
 export class RegionCheckIpResolutionBudgetExceededError extends RateLimiterExceededError {}
+export class BtcMapPlaceSubmitPerAccountRateLimiterExceededError extends RateLimiterExceededError {}

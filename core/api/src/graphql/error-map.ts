@@ -46,6 +46,8 @@ import {
   ReceiveDisabledError,
   MigrationOnHoldError,
 } from "@/graphql/error"
+
+import { BtcMapError } from "@/domain/btcmap/errors"
 import { baseLogger } from "@/services/logger"
 
 const assertUnreachable = (x: never): never => {
@@ -53,6 +55,22 @@ const assertUnreachable = (x: never): never => {
 }
 
 export const mapError = (error: ApplicationError): CustomGraphQLError => {
+  // family-level mapping: the switch below dispatches on the error NAME as a
+  // string, so a "BtcMapServiceError" case would never catch a subclass. Map
+  // the whole BtcMapError family polymorphically instead — any current or
+  // future subtype gets the fixed, non-leaking client response automatically,
+  // and an unregistered subtype can no longer fall through to
+  // assertUnreachable and throw. The enumerated BtcMap* cases in the switch
+  // are unreachable at runtime but stay so the compiler still requires every
+  // ApplicationErrorKey to be listed.
+  if (error instanceof BtcMapError) {
+    return new UnknownClientError({
+      message:
+        "Could not submit the place to the map, please try again later or contact support if it persists.",
+      logger: baseLogger,
+    })
+  }
+
   const errorName = error.name as ApplicationErrorKey
   let message = ""
   switch (errorName) {
@@ -367,6 +385,10 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       message = "Too many attempts, please wait for a while and try again."
       return new TooManyRequestError({ message, logger: baseLogger })
 
+    case "BtcMapPlaceSubmitPerAccountRateLimiterExceededError":
+      message = "Too many place submissions, please wait for a while and try again."
+      return new TooManyRequestError({ message, logger: baseLogger })
+
     case "InvalidQuizQuestionIdError":
       message = "Invalid quiz question id was passed."
       return new ValidationInternalError({ message, logger: baseLogger })
@@ -516,6 +538,35 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "InvalidBusinessTitleLengthError":
       return new InvalidBusinessTitleLengthError({ logger: baseLogger })
 
+    case "InvalidBtcMapCategoryError":
+      message =
+        "Invalid category. Use up to 50 lowercase alphanumeric characters, '-' or '_'."
+      return new ValidationInternalError({ message, logger: baseLogger })
+
+    case "InvalidBtcMapPlaceNameError":
+      message = "Name should be between 3 and 100 characters."
+      return new ValidationInternalError({ message, logger: baseLogger })
+
+    case "InvalidBtcMapSubmissionIdError":
+      message = "submissionId must be a valid UUID."
+      return new ValidationInternalError({ message, logger: baseLogger })
+
+    // fixed message: btcmap error details are internal and must not reach clients.
+    // unreachable at runtime — the instanceof BtcMapError pre-check above maps
+    // the whole family; these names stay for compile-time exhaustiveness over
+    // ApplicationErrorKey
+    case "BtcMapError":
+    case "BtcMapServiceError":
+    case "BtcMapNotConfiguredError":
+    case "BtcMapUnauthorizedError":
+    case "BtcMapUnavailableError":
+    case "BtcMapSubmitPlaceRejectedError":
+    case "MalformedBtcMapResponseError":
+    case "UnknownBtcMapServiceError":
+      message =
+        "Could not submit the place to the map, please try again later or contact support if it persists."
+      return new UnknownClientError({ message, logger: baseLogger })
+
     case "CannotConnectToDbError":
     case "DbConnectionClosedError":
       message =
@@ -636,6 +687,10 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       message = `Invalid nonce ${error.message}`
       return new NotFoundError({ message, logger: baseLogger })
 
+    case "InsufficientAccountLevelError":
+      message = "This action requires a higher account verification level"
+      return new AuthorizationError({ message, logger: baseLogger })
+
     case "WaitingDataTelegramPassportError":
       message =
         "Authorization data from Telegram is still pending. Please wait a few seconds and try again."
@@ -682,6 +737,7 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "RateLimitError":
     case "RateLimitServiceError":
     case "CouldNotFindUserError":
+    case "CouldNotFindBtcMapPlaceSubmissionError":
     case "LedgerError":
     case "LedgerServiceError":
     case "LedgerFacadeError":
