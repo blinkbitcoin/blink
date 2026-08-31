@@ -5,12 +5,12 @@ import { intraledgerPaymentSendWalletIdForBtcWallet } from "@/app/payments/send-
 import { payNoAmountInvoiceByWalletId } from "@/app/payments/send-lightning"
 import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
 
-import { getCustodialMigrationFlowConfig } from "@/config"
+import { getCustodialMigrationFlowConfig, getValuesToSkipProbe } from "@/config"
 
 import { FEECAP_BASIS_POINTS, FEECAP_MIN, toSats } from "@/domain/bitcoin"
-import { PaymentSendStatus } from "@/domain/bitcoin/lightning"
+import { PaymentSendStatus, decodeInvoice } from "@/domain/bitcoin/lightning"
 import { MigrationFlowPhase, MigrationStateConflictError } from "@/domain/migration-flow"
-import { LnFees } from "@/domain/payments"
+import { LnFees, feeCapBasisPointsForInvoice } from "@/domain/payments"
 import {
   BtcPaymentAmount,
   ErrorLevel,
@@ -25,26 +25,28 @@ import {
 } from "@/services/mongoose"
 import { recordExceptionInCurrentSpan } from "@/services/tracing"
 
-export const reserveForAmount = (amount: bigint): bigint =>
-  LnFees().maxProtocolAndBankFee(BtcPaymentAmount(amount)).amount
+export const reserveForAmount = (amount: bigint, feeCapBasisPoints?: bigint): bigint =>
+  LnFees().maxProtocolAndBankFee(BtcPaymentAmount(amount), feeCapBasisPoints).amount
 
-const totalDebitForAmount = (amount: bigint): bigint => amount + reserveForAmount(amount)
+const totalDebitForAmount = (amount: bigint, feeCapBasisPoints?: bigint): bigint =>
+  amount + reserveForAmount(amount, feeCapBasisPoints)
 
 export const migrationDrainAmount = (
   balance: bigint,
+  feeCapBasisPoints = FEECAP_BASIS_POINTS,
 ): bigint | InvalidBtcPaymentAmountError => {
   if (balance <= FEECAP_MIN.amount) {
     return new InvalidBtcPaymentAmountError(`balance: ${balance}`)
   }
 
   const flatSeed = balance - FEECAP_MIN.amount
-  const pctSeed = (10_000n * balance) / (10_000n + FEECAP_BASIS_POINTS)
+  const pctSeed = (10_000n * balance) / (10_000n + feeCapBasisPoints)
   let amount = flatSeed < pctSeed ? flatSeed : pctSeed
-  while (totalDebitForAmount(amount + 1n) <= balance) {
+  while (totalDebitForAmount(amount + 1n, feeCapBasisPoints) <= balance) {
     amount += 1n
   }
 
-  if (amount <= 0n || totalDebitForAmount(amount) > balance) {
+  if (amount <= 0n || totalDebitForAmount(amount, feeCapBasisPoints) > balance) {
     return new InvalidBtcPaymentAmountError(`no drain amount for balance: ${balance}`)
   }
   return amount
@@ -52,16 +54,17 @@ export const migrationDrainAmount = (
 
 export const migrationDrainPlan = (
   balance: bigint,
+  feeCapBasisPoints = FEECAP_BASIS_POINTS,
 ): { amount: bigint; residualTopUp: bigint } | InvalidBtcPaymentAmountError => {
-  const amount = migrationDrainAmount(balance)
+  const amount = migrationDrainAmount(balance, feeCapBasisPoints)
   if (amount instanceof Error) return amount
 
-  const residual = balance - totalDebitForAmount(amount)
+  const residual = balance - totalDebitForAmount(amount, feeCapBasisPoints)
   if (residual === 0n) return { amount, residualTopUp: 0n }
 
-  const toppedAmount = migrationDrainAmount(balance + residual)
+  const toppedAmount = migrationDrainAmount(balance + residual, feeCapBasisPoints)
   if (toppedAmount instanceof Error) return toppedAmount
-  if (balance + residual - totalDebitForAmount(toppedAmount) !== 0n) {
+  if (balance + residual - totalDebitForAmount(toppedAmount, feeCapBasisPoints) !== 0n) {
     return new InvalidBtcPaymentAmountError(
       `residual not drainable for balance: ${balance}`,
     )
@@ -149,6 +152,15 @@ export const executeMigrationTransfer = async ({
 
   const { deMinimisThresholdSats } = getCustodialMigrationFlowConfig()
 
+  const decodedInvoice = decodeInvoice(paymentRequest)
+  const feeCapBasisPoints =
+    decodedInvoice instanceof Error
+      ? undefined
+      : feeCapBasisPointsForInvoice({
+          invoice: decodedInvoice,
+          feeCapGroups: getValuesToSkipProbe().feeCapGroups,
+        })
+
   const topUpFromBankOwner = async (amount: bigint, maxAmount: bigint, memo: string) => {
     if (amount <= 0n || amount > maxAmount) {
       return new InvalidBtcPaymentAmountError(
@@ -175,7 +187,7 @@ export const executeMigrationTransfer = async ({
   let drainAmount: bigint
   let topUpSats = 0n
   if (balanceSats <= BigInt(deMinimisThresholdSats)) {
-    const topUpAmount = reserveForAmount(balanceSats)
+    const topUpAmount = reserveForAmount(balanceSats, feeCapBasisPoints)
 
     const topUp = await topUpFromBankOwner(
       topUpAmount,
@@ -194,7 +206,7 @@ export const executeMigrationTransfer = async ({
     topUpSats = topUpAmount
     drainAmount = balanceSats
   } else {
-    const plan = migrationDrainPlan(balanceSats)
+    const plan = migrationDrainPlan(balanceSats, feeCapBasisPoints)
     if (plan instanceof Error) {
       return failMigration(plan, `drain amount failed: ${plan.name}`)
     }
@@ -217,10 +229,13 @@ export const executeMigrationTransfer = async ({
     }
     drainAmount = plan.amount
 
-    const residual = balanceSats + plan.residualTopUp - totalDebitForAmount(drainAmount)
+    const residual =
+      balanceSats +
+      plan.residualTopUp -
+      totalDebitForAmount(drainAmount, feeCapBasisPoints)
     await recordStep(
       "drain-computed",
-      `amount: ${drainAmount} sats, reserve: ${reserveForAmount(drainAmount)} sats, expected residual: ${residual} sats`,
+      `amount: ${drainAmount} sats, reserve: ${reserveForAmount(drainAmount, feeCapBasisPoints)} sats, fee cap: ${feeCapBasisPoints ?? FEECAP_BASIS_POINTS} bps, expected residual: ${residual} sats`,
     )
   }
 

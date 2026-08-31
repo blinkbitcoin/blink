@@ -37,6 +37,33 @@ import { ModifiedSet } from "@/utils"
 
 const calc = AmountCalculator()
 
+export const feeCapBasisPointsForInvoice = ({
+  invoice,
+  feeCapGroups,
+}: {
+  invoice: LnInvoice
+  feeCapGroups: SkipFeeProbeFeeCapGroup[]
+}): bigint | undefined => {
+  const invoicePubkeySet = new ModifiedSet([
+    invoice.destination,
+    ...parseFinalHopsFromInvoice(invoice),
+  ])
+  const matchingFeeCaps = feeCapGroups
+    .filter(
+      ({ pubkeys }) => invoicePubkeySet.intersect(new ModifiedSet(pubkeys)).size > 0,
+    )
+    .map(({ feeCapBasisPoints }) => feeCapBasisPoints)
+  const configuredFeeCap = matchingFeeCaps.reduce<bigint | undefined>(
+    (lowest, current) => (lowest === undefined || current < lowest ? current : lowest),
+    undefined,
+  )
+  return configuredFeeCap === undefined
+    ? undefined
+    : configuredFeeCap < FEECAP_BASIS_POINTS
+      ? configuredFeeCap
+      : FEECAP_BASIS_POINTS
+}
+
 export const LightningPaymentFlowBuilder = <S extends WalletCurrency>(
   config: LightningPaymentFlowBuilderConfig,
 ): LightningPaymentFlowBuilder<S> => {
@@ -70,10 +97,6 @@ export const LightningPaymentFlowBuilder = <S extends WalletCurrency>(
     invoice: LnInvoice,
   ): { skipProbe: boolean; feeCapBasisPoints?: bigint } => {
     const routeHintPubkeySet = new ModifiedSet(parseFinalHopsFromInvoice(invoice))
-    const feeCapGroupPubkeySet = new ModifiedSet([
-      invoice.destination,
-      ...routeHintPubkeySet,
-    ])
     const flaggedPubkeySet = new ModifiedSet(config.skipProbe.pubkey)
     const pubkeyIsFlagged = routeHintPubkeySet.intersect(flaggedPubkeySet).size > 0
 
@@ -81,22 +104,10 @@ export const LightningPaymentFlowBuilder = <S extends WalletCurrency>(
     const flaggedChanIdSet = new ModifiedSet(config.skipProbe.chanId)
     const chanIdIsFlagged = invoiceChanIdSet.intersect(flaggedChanIdSet).size > 0
 
-    const matchingFeeCaps = config.skipProbe.feeCapGroups
-      .filter(
-        ({ pubkeys }) =>
-          feeCapGroupPubkeySet.intersect(new ModifiedSet(pubkeys)).size > 0,
-      )
-      .map(({ feeCapBasisPoints }) => feeCapBasisPoints)
-    const configuredFeeCapBasisPoints = matchingFeeCaps.reduce<bigint | undefined>(
-      (lowest, current) => (lowest === undefined || current < lowest ? current : lowest),
-      undefined,
-    )
-    const feeCapBasisPoints =
-      configuredFeeCapBasisPoints === undefined
-        ? undefined
-        : configuredFeeCapBasisPoints < FEECAP_BASIS_POINTS
-          ? configuredFeeCapBasisPoints
-          : FEECAP_BASIS_POINTS
+    const feeCapBasisPoints = feeCapBasisPointsForInvoice({
+      invoice,
+      feeCapGroups: config.skipProbe.feeCapGroups,
+    })
 
     addAttributesToCurrentSpan({
       pubkeyIsFlagged: `${pubkeyIsFlagged}`,
