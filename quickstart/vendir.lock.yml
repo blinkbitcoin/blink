@@ -2,27 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat(api): add btcMapPlaceSubmit mutation proxying btcmap submit_place
-        RPC (#791)...'
-      sha: af91f007f481097192153ef772c293bb20bf318b
+      commitTitle: 'feat(core): add fee caps for probe-excluded node groups (#803)...'
+      sha: d73fcf7989c980f54fa7739dffd03d73e9fcf9e3
       tags:
-      - 0.22.54-3-gaf91f007f
+      - 0.22.54-5-gd73fcf798
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat(api): add btcMapPlaceSubmit mutation proxying btcmap submit_place
-        RPC (#791)...'
-      sha: af91f007f481097192153ef772c293bb20bf318b
+      commitTitle: 'feat(core): add fee caps for probe-excluded node groups (#803)...'
+      sha: d73fcf7989c980f54fa7739dffd03d73e9fcf9e3
       tags:
-      - 0.22.54-3-gaf91f007f
+      - 0.22.54-5-gd73fcf798
     path: schemas
   - git:
-      commitTitle: 'feat(api): add btcMapPlaceSubmit mutation proxying btcmap submit_place
-        RPC (#791)...'
-      sha: af91f007f481097192153ef772c293bb20bf318b
+      commitTitle: 'feat(core): add fee caps for probe-excluded node groups (#803)...'
+      sha: d73fcf7989c980f54fa7739dffd03d73e9fcf9e3
       tags:
-      - 0.22.54-3-gaf91f007f
+      - 0.22.54-5-gd73fcf798
     path: gql
   path: graphql
 kind: LockConfig
