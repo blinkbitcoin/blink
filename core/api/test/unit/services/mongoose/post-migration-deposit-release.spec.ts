@@ -36,6 +36,20 @@ describe("PostMigrationDepositReleaseRepository", () => {
     createdAt: new Date("2026-08-26T00:00:00Z"),
     updatedAt: new Date("2026-08-26T00:00:00Z"),
   }
+  const preparedArgs = (): PreparePostMigrationDepositReleaseArgs => ({
+    accountId: rawRelease.accountId as AccountId,
+    walletId: rawRelease.walletId as WalletId,
+    txHash,
+    vout,
+    address: rawRelease.address as OnChainAddress,
+    receiptJournalId: rawRelease.receiptJournalId as LedgerJournalId,
+    receiptAmountSats: rawRelease.receiptAmountSats as Satoshis,
+    payoutAmountSats: rawRelease.payoutAmountSats as Satoshis,
+    plannedTopUpSats: rawRelease.plannedTopUpSats as Satoshis,
+    topUpSats: rawRelease.topUpSats as Satoshis,
+    lightningAddress: rawRelease.lightningAddress as LightningAddress,
+    caseReference: rawRelease.caseReference,
+  })
   const repo = PostMigrationDepositReleaseRepository()
 
   beforeEach(() => jest.clearAllMocks())
@@ -51,20 +65,7 @@ describe("PostMigrationDepositReleaseRepository", () => {
 
   it("creates a prepared record with an atomic output upsert", async () => {
     mockFindOneAndUpdate.mockResolvedValue(rawRelease)
-    const args: PreparePostMigrationDepositReleaseArgs = {
-      accountId: rawRelease.accountId as AccountId,
-      walletId: rawRelease.walletId as WalletId,
-      txHash,
-      vout,
-      address: rawRelease.address as OnChainAddress,
-      receiptJournalId: rawRelease.receiptJournalId as LedgerJournalId,
-      receiptAmountSats: rawRelease.receiptAmountSats as Satoshis,
-      payoutAmountSats: rawRelease.payoutAmountSats as Satoshis,
-      plannedTopUpSats: rawRelease.plannedTopUpSats as Satoshis,
-      topUpSats: rawRelease.topUpSats as Satoshis,
-      lightningAddress: rawRelease.lightningAddress as LightningAddress,
-      caseReference: rawRelease.caseReference,
-    }
+    const args = preparedArgs()
 
     const result = await repo.upsertPrepared(args)
 
@@ -144,5 +145,154 @@ describe("PostMigrationDepositReleaseRepository", () => {
     const result = await repo.claimForRelease({ txHash, vout })
 
     expect(result).toBeInstanceOf(UnknownRepositoryError)
+  })
+
+  it("maps a found raw record including optional fields", async () => {
+    mockFindOne.mockResolvedValue({
+      ...rawRelease,
+      paymentHash: "cd".repeat(32),
+      paymentRequest: "lnbc1invoice",
+      failureReason: "failed",
+    })
+
+    expect(await repo.findByOutput({ txHash, vout })).toMatchObject({
+      paymentHash: "cd".repeat(32),
+      paymentRequest: "lnbc1invoice",
+      failureReason: "failed",
+    })
+  })
+
+  it("maps find failures to repository errors", async () => {
+    mockFindOne.mockRejectedValue(new Error("mongo unavailable"))
+
+    expect(await repo.findByOutput({ txHash, vout })).toBeInstanceOf(
+      UnknownRepositoryError,
+    )
+  })
+
+  it("returns the concurrently inserted record after an upsert duplicate", async () => {
+    mockFindOneAndUpdate.mockRejectedValue(
+      new Error("E11000 duplicate key error collection releases"),
+    )
+    mockFindOne.mockResolvedValue(rawRelease)
+
+    expect(await repo.upsertPrepared(preparedArgs())).toMatchObject({ txHash, vout })
+    expect(mockFindOne).toHaveBeenCalledWith({ txHash, vout })
+  })
+
+  it("maps a nonduplicate upsert failure", async () => {
+    mockFindOneAndUpdate.mockRejectedValue(new Error("mongo unavailable"))
+
+    expect(await repo.upsertPrepared(preparedArgs())).toBeInstanceOf(
+      UnknownRepositoryError,
+    )
+  })
+
+  it("refuses to bind a payment when the compare-and-set misses", async () => {
+    mockFindOneAndUpdate.mockResolvedValue(null)
+
+    expect(
+      await repo.recordPayment({
+        txHash,
+        vout,
+        paymentHash: "cd".repeat(32) as PaymentHash,
+        paymentRequest: "lnbc1invoice",
+      }),
+    ).toBeInstanceOf(MigrationStateConflictError)
+  })
+
+  it("maps payment binding persistence failures", async () => {
+    mockFindOneAndUpdate.mockRejectedValue(new Error("mongo unavailable"))
+
+    expect(
+      await repo.recordPayment({
+        txHash,
+        vout,
+        paymentHash: "cd".repeat(32) as PaymentHash,
+        paymentRequest: "lnbc1invoice",
+      }),
+    ).toBeInstanceOf(UnknownRepositoryError)
+  })
+
+  it("records a top-up while processing", async () => {
+    mockFindOneAndUpdate.mockResolvedValue({ ...rawRelease, topUpSats: 10 })
+
+    expect(
+      await repo.recordTopUp({ txHash, vout, topUpSats: 10 as Satoshis }),
+    ).toMatchObject({ topUpSats: 10 })
+  })
+
+  it("refuses to record a top-up when the compare-and-set misses", async () => {
+    mockFindOneAndUpdate.mockResolvedValue(null)
+
+    expect(
+      await repo.recordTopUp({ txHash, vout, topUpSats: 10 as Satoshis }),
+    ).toBeInstanceOf(MigrationStateConflictError)
+  })
+
+  it("maps top-up persistence failures", async () => {
+    mockFindOneAndUpdate.mockRejectedValue(new Error("mongo unavailable"))
+
+    expect(
+      await repo.recordTopUp({ txHash, vout, topUpSats: 10 as Satoshis }),
+    ).toBeInstanceOf(UnknownRepositoryError)
+  })
+
+  it.each([
+    [undefined, PostMigrationDepositReleaseStatus.Completed],
+    ["ledger failed", PostMigrationDepositReleaseStatus.Failed],
+  ] as const)("updates status with failure reason %s", async (failureReason, status) => {
+    mockFindOneAndUpdate.mockResolvedValue({
+      ...rawRelease,
+      status,
+      failureReason,
+    })
+
+    const result = await repo.updateStatus({
+      txHash,
+      vout,
+      from: PostMigrationDepositReleaseStatus.Processing,
+      to: status,
+      failureReason,
+    })
+
+    expect(result).toMatchObject({ status })
+    expect(mockFindOneAndUpdate).toHaveBeenCalledWith(
+      { txHash, vout, status: PostMigrationDepositReleaseStatus.Processing },
+      {
+        $set: {
+          status,
+          updatedAt: expect.any(Date),
+          ...(failureReason ? { failureReason } : {}),
+        },
+      },
+      { new: true },
+    )
+  })
+
+  it("refuses a status transition when the compare-and-set misses", async () => {
+    mockFindOneAndUpdate.mockResolvedValue(null)
+
+    expect(
+      await repo.updateStatus({
+        txHash,
+        vout,
+        from: PostMigrationDepositReleaseStatus.Processing,
+        to: PostMigrationDepositReleaseStatus.Completed,
+      }),
+    ).toBeInstanceOf(MigrationStateConflictError)
+  })
+
+  it("maps status persistence failures", async () => {
+    mockFindOneAndUpdate.mockRejectedValue(new Error("mongo unavailable"))
+
+    expect(
+      await repo.updateStatus({
+        txHash,
+        vout,
+        from: PostMigrationDepositReleaseStatus.Processing,
+        to: PostMigrationDepositReleaseStatus.Completed,
+      }),
+    ).toBeInstanceOf(UnknownRepositoryError)
   })
 })

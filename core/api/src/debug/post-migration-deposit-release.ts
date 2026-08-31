@@ -123,7 +123,7 @@ export const reconcile = async (args: string[]) => {
   return true
 }
 
-const main = async () => {
+export const main = async () => {
   const [configPath, stepRaw, ...args] = process.argv.slice(2)
   if (!configPath) {
     console.error(`Missing custom.yaml path\n${usage}`)
