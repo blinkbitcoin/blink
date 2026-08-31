@@ -1,5 +1,5 @@
 type SkipFeeProbeFeeCapGroup = {
-  pubkey: Pubkey[]
+  pubkeys: Pubkey[]
   feeCapBasisPoints: bigint
 }
 

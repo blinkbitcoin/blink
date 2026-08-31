@@ -165,11 +165,15 @@ describe("OnChainPaymentFlowFromLedgerTransaction", <S extends WalletCurrency, R
 describe("PaymentFlowStateRepository", () => {
   afterEach(() => jest.restoreAllMocks())
 
-  it.each([undefined, 100n])("round-trips fee cap %p", async (feeCapBasisPoints) => {
-    jest.spyOn(PaymentFlowStateModel.prototype, "save").mockResolvedValue({} as never)
+  it.each([undefined, 10n, BigInt(Number.MAX_SAFE_INTEGER) + 1n])(
+    "round-trips fee cap %p",
+    async (feeCapBasisPoints) => {
+      jest.spyOn(PaymentFlowStateModel.prototype, "save").mockResolvedValue({} as never)
 
-    const paymentFlow = PaymentFlow<typeof WalletCurrency.Btc, typeof WalletCurrency.Btc>(
-      {
+      const paymentFlow = PaymentFlow<
+        typeof WalletCurrency.Btc,
+        typeof WalletCurrency.Btc
+      >({
         senderWalletId: "walletId" as WalletId,
         senderAccountId: "accountId" as AccountId,
         senderWalletCurrency: WalletCurrency.Btc,
@@ -188,17 +192,17 @@ describe("PaymentFlowStateRepository", () => {
         usdProtocolAndBankFee,
         btcBankFee,
         usdBankFee,
-      },
-    )
-    if (paymentFlow instanceof Error) throw paymentFlow
+      })
+      if (paymentFlow instanceof Error) throw paymentFlow
 
-    const persisted = await PaymentFlowStateRepository(toSeconds(300)).persistNew(
-      paymentFlow,
-    )
-    if (persisted instanceof Error) throw persisted
+      const persisted = await PaymentFlowStateRepository(toSeconds(300)).persistNew(
+        paymentFlow,
+      )
+      if (persisted instanceof Error) throw persisted
 
-    expect(persisted.feeCapBasisPoints).toBe(feeCapBasisPoints)
-  })
+      expect(persisted.feeCapBasisPoints).toBe(feeCapBasisPoints)
+    },
+  )
 })
 
 describe("inputAmountFromLedgerTransaction", () => {

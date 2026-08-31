@@ -320,7 +320,7 @@ const rawFromPaymentFlow = <S extends WalletCurrency, R extends WalletCurrency>(
     feeCapBasisPoints:
       paymentFlow.feeCapBasisPoints === undefined
         ? undefined
-        : Number(paymentFlow.feeCapBasisPoints),
+        : paymentFlow.feeCapBasisPoints.toString(),
     createdAt: paymentFlow.createdAt,
     paymentSentAndPending: paymentFlow.paymentSentAndPending,
 

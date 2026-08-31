@@ -29,6 +29,7 @@ import {
   parseFinalChanIdFromInvoice,
   parseFinalHopsFromInvoice,
 } from "@/domain/bitcoin/lightning"
+import { FEECAP_BASIS_POINTS } from "@/domain/bitcoin"
 
 import { addAttributesToCurrentSpan } from "@/services/tracing"
 
@@ -68,12 +69,13 @@ export const LightningPaymentFlowBuilder = <S extends WalletCurrency>(
   const probeConfigFromInvoice = (
     invoice: LnInvoice,
   ): { skipProbe: boolean; feeCapBasisPoints?: bigint } => {
-    const invoicePubkeySet = new ModifiedSet([
+    const routeHintPubkeySet = new ModifiedSet(parseFinalHopsFromInvoice(invoice))
+    const feeCapGroupPubkeySet = new ModifiedSet([
       invoice.destination,
-      ...parseFinalHopsFromInvoice(invoice),
+      ...routeHintPubkeySet,
     ])
     const flaggedPubkeySet = new ModifiedSet(config.skipProbe.pubkey)
-    const pubkeyIsFlagged = invoicePubkeySet.intersect(flaggedPubkeySet).size > 0
+    const pubkeyIsFlagged = routeHintPubkeySet.intersect(flaggedPubkeySet).size > 0
 
     const invoiceChanIdSet = new ModifiedSet(parseFinalChanIdFromInvoice(invoice))
     const flaggedChanIdSet = new ModifiedSet(config.skipProbe.chanId)
@@ -81,17 +83,25 @@ export const LightningPaymentFlowBuilder = <S extends WalletCurrency>(
 
     const matchingFeeCaps = config.skipProbe.feeCapGroups
       .filter(
-        ({ pubkey }) => invoicePubkeySet.intersect(new ModifiedSet(pubkey)).size > 0,
+        ({ pubkeys }) =>
+          feeCapGroupPubkeySet.intersect(new ModifiedSet(pubkeys)).size > 0,
       )
       .map(({ feeCapBasisPoints }) => feeCapBasisPoints)
-    const feeCapBasisPoints = matchingFeeCaps.reduce<bigint | undefined>(
+    const configuredFeeCapBasisPoints = matchingFeeCaps.reduce<bigint | undefined>(
       (lowest, current) => (lowest === undefined || current < lowest ? current : lowest),
       undefined,
     )
+    const feeCapBasisPoints =
+      configuredFeeCapBasisPoints === undefined
+        ? undefined
+        : configuredFeeCapBasisPoints < FEECAP_BASIS_POINTS
+          ? configuredFeeCapBasisPoints
+          : FEECAP_BASIS_POINTS
 
     addAttributesToCurrentSpan({
       pubkeyIsFlagged: `${pubkeyIsFlagged}`,
-      pubkeysFromInvoice: `${Array.from(invoicePubkeySet)}`,
+      pubkeysFromInvoice: `${Array.from(routeHintPubkeySet)}`,
+      invoiceDestination: invoice.destination,
 
       chanIdIsFlagged: `${chanIdIsFlagged}`,
       chanIdsFromInvoice: `${Array.from(invoiceChanIdSet)}`,

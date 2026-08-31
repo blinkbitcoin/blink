@@ -409,7 +409,7 @@ describe("initiated via lightning", () => {
       expect(noAmountPaymentResult).toBeInstanceOf(WithdrawalLimitsExceededError)
     })
 
-    it("passes persisted fee cap to final verification and reverts when rejected", async () => {
+    it("pay zero amount invoice & revert txn when verifyMaxFee fails", async () => {
       // Setup mocks
       const { LndService: LnServiceOrig } = jest.requireActual("@/services/lnd")
       const lndServiceSpy = jest.spyOn(LndImpl, "LndService").mockReturnValue({
@@ -418,23 +418,10 @@ describe("initiated via lightning", () => {
         defaultPubkey: (): Pubkey => DEFAULT_PUBKEY,
       })
 
-      const feeCapBasisPoints = 10n
-      const configSpy = jest.spyOn(ConfigImpl, "getValuesToSkipProbe").mockReturnValue({
-        pubkey: [],
-        chanId: [],
-        feeCapGroups: [
-          {
-            pubkey: [noAmountLnInvoice.destination],
-            feeCapBasisPoints,
-          },
-        ],
-      })
-
       const { LnFees: LnFeesOrig } = jest.requireActual("@/domain/payments")
-      const verifyMaxFee = jest.fn(() => new MaxFeeTooLargeForRoutelessPaymentError())
       const lndFeesSpy = jest.spyOn(LnFeesImpl, "LnFees").mockReturnValue({
         ...LnFeesOrig(),
-        verifyMaxFee,
+        verifyMaxFee: () => new MaxFeeTooLargeForRoutelessPaymentError(),
       })
 
       // Create users
@@ -445,6 +432,94 @@ describe("initiated via lightning", () => {
       if (newAccount instanceof Error) throw newAccount
 
       // Fund balance for send
+      const receive = await recordReceiveLnPayment({
+        walletDescriptor: newWalletDescriptor,
+        paymentAmount: receiveAmounts,
+        bankFee: receiveBankFee,
+        displayAmounts: receiveDisplayAmounts,
+        memo,
+      })
+      if (receive instanceof Error) throw receive
+
+      // Attempt pay
+      const paymentResult = await Payments.payInvoiceByWalletId({
+        uncheckedPaymentRequest: lnInvoice.paymentRequest,
+        memo,
+        senderWalletId: newWalletDescriptor.id,
+        senderAccount: newAccount,
+      })
+      expect(paymentResult).toBeInstanceOf(MaxFeeTooLargeForRoutelessPaymentError)
+
+      // Expect transaction to be canceled
+      const txns = await LedgerService().getTransactionsByHash(lnInvoice.paymentHash)
+      if (txns instanceof Error) throw txns
+
+      const { satsAmount, satsFee } = txns[0]
+      expect(txns.length).toEqual(2)
+      expect(txns).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            lnMemo: "Payment canceled",
+            credit: (satsAmount || 0) + (satsFee || 0),
+            debit: 0,
+            pendingConfirmation: false,
+          }),
+          expect.objectContaining({
+            lnMemo: memo,
+            debit: (satsAmount || 0) + (satsFee || 0),
+            credit: 0,
+            pendingConfirmation: false,
+          }),
+        ]),
+      )
+
+      // Restore system state
+      lndFeesSpy.mockRestore()
+      lndServiceSpy.mockRestore()
+    })
+
+    it("passes persisted fee cap through final verification to LND", async () => {
+      // Setup mocks
+      const { LndService: LnServiceOrig } = jest.requireActual("@/services/lnd")
+      const payInvoiceViaPaymentDetails = jest.fn(() => ({
+        roundedUpFee: toSats(0),
+        revealedPreImage: "revealedPreImage" as RevealedPreImage,
+        sentFromPubkey: DEFAULT_PUBKEY,
+      }))
+      const lndServiceSpy = jest.spyOn(LndImpl, "LndService").mockReturnValue({
+        ...LnServiceOrig(),
+        listAllPubkeys: () => [],
+        defaultPubkey: (): Pubkey => DEFAULT_PUBKEY,
+        payInvoiceViaPaymentDetails,
+      })
+
+      const feeCapBasisPoints = 10n
+      const configSpy = jest.spyOn(ConfigImpl, "getValuesToSkipProbe").mockReturnValue({
+        pubkey: [],
+        chanId: [],
+        feeCapGroups: [
+          {
+            pubkeys: [noAmountLnInvoice.destination],
+            feeCapBasisPoints,
+          },
+        ],
+      })
+
+      const { LnFees: LnFeesOrig } = jest.requireActual("@/domain/payments")
+      const actualLnFees = LnFeesOrig()
+      const verifyMaxFee = jest.fn(actualLnFees.verifyMaxFee)
+      const lndFeesSpy = jest.spyOn(LnFeesImpl, "LnFees").mockReturnValue({
+        ...actualLnFees,
+        verifyMaxFee,
+      })
+
+      // Create and fund user
+      const newWalletDescriptor = await createRandomUserAndBtcWallet()
+      const newAccount = await AccountsRepository().findById(
+        newWalletDescriptor.accountId,
+      )
+      if (newAccount instanceof Error) throw newAccount
+
       const receive = await recordReceiveLnPayment({
         walletDescriptor: newWalletDescriptor,
         paymentAmount: receiveAmounts,
@@ -472,7 +547,7 @@ describe("initiated via lightning", () => {
       if (persistedPaymentFlow instanceof Error) throw persistedPaymentFlow
       expect(persistedPaymentFlow.feeCapBasisPoints).toBe(feeCapBasisPoints)
 
-      // Attempt pay using the persisted payment flow
+      // Pay using the persisted payment flow
       const paymentResult = await Payments.payNoAmountInvoiceByWalletIdForBtcWallet({
         uncheckedPaymentRequest: noAmountLnInvoice.paymentRequest,
         memo,
@@ -480,34 +555,12 @@ describe("initiated via lightning", () => {
         senderAccount: newAccount,
         amount,
       })
-      expect(paymentResult).toBeInstanceOf(MaxFeeTooLargeForRoutelessPaymentError)
+      expect(paymentResult).not.toBeInstanceOf(Error)
       expect(verifyMaxFee).toHaveBeenCalledWith(
         expect.objectContaining({ feeCapBasisPoints }),
       )
-
-      // Expect transaction to be canceled
-      const txns = await LedgerService().getTransactionsByHash(
-        noAmountLnInvoice.paymentHash,
-      )
-      if (txns instanceof Error) throw txns
-
-      const { satsAmount, satsFee } = txns[0]
-      expect(txns.length).toEqual(2)
-      expect(txns).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            lnMemo: "Payment canceled",
-            credit: (satsAmount || 0) + (satsFee || 0),
-            debit: 0,
-            pendingConfirmation: false,
-          }),
-          expect.objectContaining({
-            lnMemo: memo,
-            debit: (satsAmount || 0) + (satsFee || 0),
-            credit: 0,
-            pendingConfirmation: false,
-          }),
-        ]),
+      expect(payInvoiceViaPaymentDetails).toHaveBeenCalledWith(
+        expect.objectContaining({ feeCapBasisPoints }),
       )
 
       // Restore system state

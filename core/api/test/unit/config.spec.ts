@@ -8,6 +8,7 @@ import * as yaml from "js-yaml"
 
 import mergeWith from "lodash.mergewith"
 
+import { FEECAP_BASIS_POINTS } from "@/domain/bitcoin"
 import { toCents } from "@/domain/fiat"
 import {
   configSchema,
@@ -107,13 +108,13 @@ describe("config.ts", () => {
             // eslint-disable-next-line @typescript-eslint/no-require-imports
           } = require("@/config/yaml")
           expect(getConfiguredValuesToSkipProbe().feeCapGroups).toEqual([
-            { pubkey: [pubkey], feeCapBasisPoints: 10n },
+            { pubkeys: [pubkey], feeCapBasisPoints: 10n },
           ])
         },
       )
     })
 
-    it.each([0, 10_001, 0.5])(
+    it.each([-1, 0, Number(FEECAP_BASIS_POINTS) + 1, 0.5])(
       "rejects invalid probe-excluded group fee cap %p",
       (feeCapBasisPoints) => {
         const freshYamlConfig = JSON.parse(JSON.stringify(yamlConfig))

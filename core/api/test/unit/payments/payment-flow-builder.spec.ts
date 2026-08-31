@@ -1,6 +1,7 @@
 /* eslint jest/expect-expect: ["error", { "assertFunctionNames": ["expect", "checkSettlementMethod", "checkInvoice", "checkSenderWallet", "checkRecipientWallet"] }] */
 import * as ConfigImpl from "@/config"
 import { SettlementMethod, PaymentInitiationMethod } from "@/domain/wallets"
+import { FEECAP_BASIS_POINTS } from "@/domain/bitcoin"
 import { decodeInvoice } from "@/domain/bitcoin/lightning"
 import { SelfPaymentError } from "@/domain/errors"
 import {
@@ -19,6 +20,8 @@ import {
 
 const skippedPubkey =
   "038f8f113c580048d847d6949371726653e02b928196bad310e3eda39ff61723f6" as Pubkey
+const unrelatedPubkey =
+  "02a98e8c590a1b5602049d6b21d8f4c8861970aa310762f42eae1b2be88372e924" as Pubkey
 const skippedChanId = "1x0x0" as ChanId
 const skippedFeeCapBasisPoints = 10n
 const skipProbe = {
@@ -30,9 +33,9 @@ const groupedSkipProbe = {
   pubkey: [],
   chanId: [],
   feeCapGroups: [
-    { pubkey: [skippedPubkey], feeCapBasisPoints: 20n },
-    { pubkey: [skippedPubkey], feeCapBasisPoints: skippedFeeCapBasisPoints },
-    { pubkey: [skippedPubkey], feeCapBasisPoints: 30n },
+    { pubkeys: [unrelatedPubkey], feeCapBasisPoints: 5n },
+    { pubkeys: [skippedPubkey], feeCapBasisPoints: skippedFeeCapBasisPoints },
+    { pubkeys: [skippedPubkey], feeCapBasisPoints: 30n },
   ],
 }
 
@@ -261,6 +264,9 @@ describe("LightningPaymentFlowBuilder", () => {
       const withSkippedChanIdAmountBuilder = lightningBuilder.withInvoice(
         skippedChanIdInvoiceWithAmount,
       )
+      const withLegacyDestinationAmountBuilder = lightningBuilder.withInvoice(
+        skippedDestinationInvoiceWithAmount,
+      )
       const withGroupedFeeCapAmountBuilder = groupedFeeCapLightningBuilder.withInvoice(
         skippedPubkeyInvoiceWithAmount,
       )
@@ -292,6 +298,13 @@ describe("LightningPaymentFlowBuilder", () => {
           .withoutRecipientWallet()
 
         const withSkippedChanIdBtcWalletBuilder = withSkippedChanIdAmountBuilder
+          .withSenderWalletAndAccount({
+            wallet: senderBtcWalletDescriptor,
+            account: senderAccount,
+          })
+          .withoutRecipientWallet()
+
+        const withLegacyDestinationBtcWalletBuilder = withLegacyDestinationAmountBuilder
           .withSenderWalletAndAccount({
             wallet: senderBtcWalletDescriptor,
             account: senderAccount,
@@ -330,7 +343,7 @@ describe("LightningPaymentFlowBuilder", () => {
               hedgeBuyUsd,
               hedgeSellUsd,
             })
-          expect(skippedPubkeyBuilder.skipProbeForDestination()).toBeTruthy()
+          expect(await skippedPubkeyBuilder.skipProbeForDestination()).toBeTruthy()
 
           const skippedChanIdBuilder =
             await withSkippedChanIdBtcWalletBuilder.withConversion({
@@ -338,7 +351,7 @@ describe("LightningPaymentFlowBuilder", () => {
               hedgeBuyUsd,
               hedgeSellUsd,
             })
-          expect(skippedChanIdBuilder.skipProbeForDestination()).toBeTruthy()
+          expect(await skippedChanIdBuilder.skipProbeForDestination()).toBeTruthy()
         })
 
         it("uses the matching probe-excluded group fee cap", async () => {
@@ -348,7 +361,7 @@ describe("LightningPaymentFlowBuilder", () => {
               hedgeBuyUsd,
               hedgeSellUsd,
             })
-          expect(groupedFeeCapBuilder.skipProbeForDestination()).toBeTruthy()
+          expect(await groupedFeeCapBuilder.skipProbeForDestination()).toBeTruthy()
 
           const payment = await groupedFeeCapBuilder.withoutRoute()
           if (payment instanceof Error) throw payment
@@ -365,6 +378,16 @@ describe("LightningPaymentFlowBuilder", () => {
           expect(payment.feeCapBasisPoints).toBe(skippedFeeCapBasisPoints)
         })
 
+        it("does not match a legacy probe exclusion by invoice destination", async () => {
+          const builder = await withLegacyDestinationBtcWalletBuilder.withConversion({
+            mid,
+            hedgeBuyUsd,
+            hedgeSellUsd,
+          })
+
+          expect(await builder.skipProbeForDestination()).toBeFalsy()
+        })
+
         it("matches a probe-excluded group by invoice destination", async () => {
           const builder =
             await withGroupedDestinationFeeCapBtcWalletBuilder.withConversion({
@@ -373,7 +396,36 @@ describe("LightningPaymentFlowBuilder", () => {
               hedgeSellUsd,
             })
 
-          expect(builder.skipProbeForDestination()).toBeTruthy()
+          expect(await builder.skipProbeForDestination()).toBeTruthy()
+        })
+
+        it("prevents a group from raising the application-wide fee cap", async () => {
+          const builder = LightningPaymentFlowBuilder({
+            localNodeIds: [],
+            skipProbe: {
+              pubkey: [],
+              chanId: [],
+              feeCapGroups: [
+                {
+                  pubkeys: [skippedPubkey],
+                  feeCapBasisPoints: FEECAP_BASIS_POINTS + 1n,
+                },
+              ],
+            },
+          })
+            .withInvoice(skippedDestinationInvoiceWithAmount)
+            .withSenderWalletAndAccount({
+              wallet: senderBtcWalletDescriptor,
+              account: senderAccount,
+            })
+            .withoutRecipientWallet()
+
+          const payment = await (
+            await builder.withConversion({ mid, hedgeBuyUsd, hedgeSellUsd })
+          ).withoutRoute()
+          if (payment instanceof Error) throw payment
+
+          expect(payment.feeCapBasisPoints).toBe(FEECAP_BASIS_POINTS)
         })
 
         it("uses mid price and max btc fees", async () => {
