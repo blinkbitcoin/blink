@@ -187,6 +187,7 @@ type PaymentFlowStateRecordPartial = XOR<
   paymentSentAndPending: boolean
   descriptionFromInvoice: string
   skipProbeForDestination: boolean
+  feeCapBasisPoints?: string
 
   btcPaymentAmount: number
   usdPaymentAmount: number

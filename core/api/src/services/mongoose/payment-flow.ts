@@ -251,6 +251,12 @@ const paymentFlowFromRaw = <S extends WalletCurrency, R extends WalletCurrency>(
   })
   if (usdBankFee instanceof Error) return usdBankFee
 
+  const feeCapBasisPoints =
+    paymentFlowState.feeCapBasisPoints === undefined
+      ? undefined
+      : safeBigInt(paymentFlowState.feeCapBasisPoints)
+  if (feeCapBasisPoints instanceof Error) return feeCapBasisPoints
+
   return PaymentFlow<S, R>({
     ...hash,
 
@@ -262,6 +268,7 @@ const paymentFlowFromRaw = <S extends WalletCurrency, R extends WalletCurrency>(
       paymentFlowState.paymentInitiationMethod as PaymentInitiationMethod,
     descriptionFromInvoice: paymentFlowState.descriptionFromInvoice,
     skipProbeForDestination: paymentFlowState.skipProbeForDestination,
+    feeCapBasisPoints,
     createdAt: paymentFlowState.createdAt,
     paymentSentAndPending: paymentFlowState.paymentSentAndPending,
 
@@ -310,6 +317,10 @@ const rawFromPaymentFlow = <S extends WalletCurrency, R extends WalletCurrency>(
     paymentInitiationMethod: paymentFlow.paymentInitiationMethod,
     descriptionFromInvoice: paymentFlow.descriptionFromInvoice,
     skipProbeForDestination: paymentFlow.skipProbeForDestination,
+    feeCapBasisPoints:
+      paymentFlow.feeCapBasisPoints === undefined
+        ? undefined
+        : paymentFlow.feeCapBasisPoints.toString(),
     createdAt: paymentFlow.createdAt,
     paymentSentAndPending: paymentFlow.paymentSentAndPending,
 

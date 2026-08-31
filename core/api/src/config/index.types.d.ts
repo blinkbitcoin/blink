@@ -1,4 +1,13 @@
-type SkipFeeProbeConfig = { pubkey: Pubkey[]; chanId: ChanId[] }
+type SkipFeeProbeFeeCapGroup = {
+  pubkeys: Pubkey[]
+  feeCapBasisPoints: bigint
+}
+
+type SkipFeeProbeConfig = {
+  pubkey: Pubkey[]
+  chanId: ChanId[]
+  feeCapGroups: SkipFeeProbeFeeCapGroup[]
+}
 
 type CustodialMigrationFlowConfig = {
   enabled: boolean

@@ -1,4 +1,5 @@
 import { AccountStatus } from "@/domain/accounts/primitives"
+import { FEECAP_BASIS_POINTS } from "@/domain/bitcoin"
 import { WalletCurrency } from "@/domain/shared"
 import { DEFAULT_WIND_DOWN_REGION_CODE } from "@/domain/wind-down"
 
@@ -391,6 +392,32 @@ const paymentNetworksSchema = {
                   items: { type: "string" },
                   uniqueItems: true,
                 },
+                feeCapGroups: {
+                  type: "array",
+                  description:
+                    "Node groups whose invoice destinations or final route hints skip probing and use a lower fee cap",
+                  items: {
+                    type: "object",
+                    properties: {
+                      pubkeys: {
+                        type: "array",
+                        items: { type: "string", maxLength: 66, minLength: 66 },
+                        minItems: 1,
+                        uniqueItems: true,
+                      },
+                      feeCapBasisPoints: {
+                        type: "integer",
+                        description:
+                          "Fee cap in basis points; it can only tighten the application-wide cap",
+                        minimum: 1,
+                        maximum: Number(FEECAP_BASIS_POINTS),
+                      },
+                    },
+                    required: ["pubkeys", "feeCapBasisPoints"],
+                    additionalProperties: false,
+                  },
+                  default: [],
+                },
               },
               required: ["pubkeys", "chanIds"],
               additionalProperties: false,
@@ -508,6 +535,7 @@ const paymentNetworksSchema = {
         skipFeeProbe: {
           pubkeys: [],
           chanIds: [],
+          feeCapGroups: [],
         },
         skipFeeReimbursement: true,
       },

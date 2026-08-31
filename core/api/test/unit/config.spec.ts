@@ -8,6 +8,7 @@ import * as yaml from "js-yaml"
 
 import mergeWith from "lodash.mergewith"
 
+import { FEECAP_BASIS_POINTS } from "@/domain/bitcoin"
 import { toCents } from "@/domain/fiat"
 import {
   configSchema,
@@ -85,6 +86,65 @@ describe("config.ts", () => {
       const contentNew = fs.readFileSync("./galoy.yaml", "utf8")
 
       expect(contentOrg).toEqual(contentNew)
+    })
+
+    it("loads fee caps for probe-excluded node groups", () => {
+      const pubkey = "02a98e8c590a1b5602049d6b21d8f4c8861970aa310762f42eae1b2be88372e924"
+      withCustomYaml(
+        {
+          paymentNetworks: {
+            lightning: {
+              send: {
+                skipFeeProbe: {
+                  feeCapGroups: [{ pubkeys: [pubkey], feeCapBasisPoints: 10 }],
+                },
+              },
+            },
+          },
+        },
+        () => {
+          const {
+            getValuesToSkipProbe: getConfiguredValuesToSkipProbe,
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+          } = require("@/config/yaml")
+          expect(getConfiguredValuesToSkipProbe().feeCapGroups).toEqual([
+            { pubkeys: [pubkey], feeCapBasisPoints: 10n },
+          ])
+        },
+      )
+    })
+
+    it.each([-1, 0, Number(FEECAP_BASIS_POINTS) + 1, 0.5])(
+      "rejects invalid probe-excluded group fee cap %p",
+      (feeCapBasisPoints) => {
+        const freshYamlConfig = JSON.parse(JSON.stringify(yamlConfig))
+        freshYamlConfig.paymentNetworks.lightning.send.skipFeeProbe.feeCapGroups = [
+          {
+            pubkeys: [
+              "02a98e8c590a1b5602049d6b21d8f4c8861970aa310762f42eae1b2be88372e924",
+            ],
+            feeCapBasisPoints,
+          },
+        ]
+
+        // @ts-ignore-next-line no-implicit-any error
+        const valid = validate(freshYamlConfig)
+        expect(valid).toBeFalsy()
+      },
+    )
+
+    it.each([
+      { pubkeys: [], feeCapBasisPoints: 10 },
+      { pubkeys: ["not-a-pubkey"], feeCapBasisPoints: 10 },
+    ])("rejects invalid probe-excluded node group %p", (feeCapGroup) => {
+      const freshYamlConfig = JSON.parse(JSON.stringify(yamlConfig))
+      freshYamlConfig.paymentNetworks.lightning.send.skipFeeProbe.feeCapGroups = [
+        feeCapGroup,
+      ]
+
+      // @ts-ignore-next-line no-implicit-any error
+      const valid = validate(freshYamlConfig)
+      expect(valid).toBeFalsy()
     })
 
     it("passes with custom yaml", () => {

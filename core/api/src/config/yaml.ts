@@ -147,6 +147,12 @@ export const getValuesToSkipProbe = (): SkipFeeProbeConfig => {
   return {
     pubkey: (skipProbe.pubkeys || []) as Pubkey[],
     chanId: (skipProbe.chanIds || []) as ChanId[],
+    feeCapGroups: (skipProbe.feeCapGroups || []).map(
+      ({ pubkeys, feeCapBasisPoints }) => ({
+        pubkeys: pubkeys as Pubkey[],
+        feeCapBasisPoints: BigInt(feeCapBasisPoints),
+      }),
+    ),
   }
 }
 

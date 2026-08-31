@@ -3,8 +3,11 @@ import { InsufficientBalanceError, InvalidCurrencyForWalletError } from "@/domai
 import { toCents } from "@/domain/fiat"
 import { inputAmountFromLedgerTransaction } from "@/domain/ledger"
 import { OnChainPaymentFlow, PaymentFlow } from "@/domain/payments"
+import { toSeconds } from "@/domain/primitives"
 import { WalletCurrency, safeBigInt, AmountCalculator } from "@/domain/shared"
 import { PaymentInitiationMethod, SettlementMethod } from "@/domain/wallets"
+import { PaymentFlowStateRepository } from "@/services/mongoose"
+import { PaymentFlowState as PaymentFlowStateModel } from "@/services/mongoose/schema"
 
 const calc = AmountCalculator()
 
@@ -157,6 +160,49 @@ describe("OnChainPaymentFlowFromLedgerTransaction", <S extends WalletCurrency, R
 
     runCheckBalanceTests({ name, paymentFlow: onChainPaymentFlow })
   }
+})
+
+describe("PaymentFlowStateRepository", () => {
+  afterEach(() => jest.restoreAllMocks())
+
+  it.each([undefined, 10n, BigInt(Number.MAX_SAFE_INTEGER) + 1n])(
+    "round-trips fee cap %p",
+    async (feeCapBasisPoints) => {
+      jest.spyOn(PaymentFlowStateModel.prototype, "save").mockResolvedValue({} as never)
+
+      const paymentFlow = PaymentFlow<
+        typeof WalletCurrency.Btc,
+        typeof WalletCurrency.Btc
+      >({
+        senderWalletId: "walletId" as WalletId,
+        senderAccountId: "accountId" as AccountId,
+        senderWalletCurrency: WalletCurrency.Btc,
+        settlementMethod: SettlementMethod.Lightning,
+        paymentInitiationMethod: PaymentInitiationMethod.Lightning,
+        paymentHash: "paymentHash" as PaymentHash,
+        descriptionFromInvoice: "",
+        skipProbeForDestination: true,
+        feeCapBasisPoints,
+        createdAt: timestamp,
+        paymentSentAndPending: false,
+        btcPaymentAmount,
+        usdPaymentAmount,
+        inputAmount: btcPaymentAmount.amount,
+        btcProtocolAndBankFee,
+        usdProtocolAndBankFee,
+        btcBankFee,
+        usdBankFee,
+      })
+      if (paymentFlow instanceof Error) throw paymentFlow
+
+      const persisted = await PaymentFlowStateRepository(toSeconds(300)).persistNew(
+        paymentFlow,
+      )
+      if (persisted instanceof Error) throw persisted
+
+      expect(persisted.feeCapBasisPoints).toBe(feeCapBasisPoints)
+    },
+  )
 })
 
 describe("inputAmountFromLedgerTransaction", () => {

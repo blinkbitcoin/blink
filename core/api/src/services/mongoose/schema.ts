@@ -572,6 +572,7 @@ const paymentFlowStateSchema = new Schema<PaymentFlowStateRecord>(
     createdAt: { type: Date, required: true },
     paymentSentAndPending: { type: Boolean, required: true },
     descriptionFromInvoice: String,
+    feeCapBasisPoints: String,
 
     btcPaymentAmount: { type: Number, required: true },
     usdPaymentAmount: { type: Number, required: true },

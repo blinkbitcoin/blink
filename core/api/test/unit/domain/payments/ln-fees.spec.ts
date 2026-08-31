@@ -69,6 +69,17 @@ describe("LnFees", () => {
         currency: WalletCurrency.Usd,
       })
     })
+    it("uses an explicit fee cap instead of the default", () => {
+      const btcAmount = {
+        amount: 10_000n,
+        currency: WalletCurrency.Btc,
+      }
+
+      expect(LnFees().maxProtocolAndBankFee(btcAmount, 10n)).toEqual({
+        amount: 10n,
+        currency: WalletCurrency.Btc,
+      })
+    })
   })
 
   const amountsToTest = [
@@ -234,6 +245,63 @@ describe("LnFees", () => {
       })
     })
   }
+
+  it("verifies a routeless fee against its explicit fee cap", () => {
+    const btc = { amount: 10_000n, currency: WalletCurrency.Btc }
+    const usd = { amount: 200n, currency: WalletCurrency.Usd }
+    const priceRatio = WalletPriceRatio({ btc, usd })
+    if (priceRatio instanceof Error) throw priceRatio
+
+    expect(
+      LnFees().verifyMaxFee({
+        maxFeeAmount: { amount: 100n, currency: WalletCurrency.Btc },
+        btcPaymentAmount: btc,
+        usdPaymentAmount: usd,
+        priceRatio,
+        senderWalletCurrency: WalletCurrency.Btc,
+        isFromNoAmountInvoice: true,
+        feeCapBasisPoints: 100n,
+      }),
+    ).toBe(true)
+  })
+
+  it.each([
+    {
+      description: "BTC wallet",
+      senderWalletCurrency: WalletCurrency.Btc,
+      isFromNoAmountInvoice: true,
+    },
+    {
+      description: "USD wallet with no-amount invoice",
+      senderWalletCurrency: WalletCurrency.Usd,
+      isFromNoAmountInvoice: true,
+    },
+    {
+      description: "USD wallet with amount invoice",
+      senderWalletCurrency: WalletCurrency.Usd,
+      isFromNoAmountInvoice: false,
+    },
+  ])(
+    "rejects a routeless fee above the explicit cap for $description",
+    ({ senderWalletCurrency, isFromNoAmountInvoice }) => {
+      const btc = { amount: 1_000_000n, currency: WalletCurrency.Btc }
+      const usd = { amount: 20_000n, currency: WalletCurrency.Usd }
+      const priceRatio = WalletPriceRatio({ btc, usd })
+      if (priceRatio instanceof Error) throw priceRatio
+
+      expect(
+        LnFees().verifyMaxFee({
+          maxFeeAmount: { amount: 1_001n, currency: WalletCurrency.Btc },
+          btcPaymentAmount: btc,
+          usdPaymentAmount: usd,
+          priceRatio,
+          senderWalletCurrency,
+          isFromNoAmountInvoice,
+          feeCapBasisPoints: 10n,
+        }),
+      ).toBeInstanceOf(MaxFeeTooLargeForRoutelessPaymentError)
+    },
+  )
 
   describe("feeFromRawRoute", () => {
     it("returns the feeFromRawRoute", () => {
