@@ -29,19 +29,21 @@ import {
   migrationDrainAmount,
   migrationDrainPlan,
 } from "@/app/migration-flow/execute-transfer"
+import { FEECAP_BASIS_POINTS } from "@/domain/bitcoin"
 import { LnFees } from "@/domain/payments"
 import { BtcPaymentAmount, InvalidBtcPaymentAmountError } from "@/domain/shared"
 
-const reserve = (amount: bigint): bigint =>
-  LnFees().maxProtocolAndBankFee(BtcPaymentAmount(amount)).amount
+const reserve = (amount: bigint, feeCapBasisPoints?: bigint): bigint =>
+  LnFees().maxProtocolAndBankFee(BtcPaymentAmount(amount), feeCapBasisPoints).amount
 
-const totalDebit = (amount: bigint): bigint => amount + reserve(amount)
+const totalDebit = (amount: bigint, feeCapBasisPoints?: bigint): bigint =>
+  amount + reserve(amount, feeCapBasisPoints)
 
-const expectFixedPoint = (balance: bigint) => {
-  const amount = migrationDrainAmount(balance)
+const expectFixedPoint = (balance: bigint, feeCapBasisPoints?: bigint) => {
+  const amount = migrationDrainAmount(balance, feeCapBasisPoints)
   if (amount instanceof Error) throw amount
-  expect(totalDebit(amount)).toBeLessThanOrEqual(balance)
-  expect(totalDebit(amount + 1n)).toBeGreaterThan(balance)
+  expect(totalDebit(amount, feeCapBasisPoints)).toBeLessThanOrEqual(balance)
+  expect(totalDebit(amount + 1n, feeCapBasisPoints)).toBeGreaterThan(balance)
   return amount
 }
 
@@ -101,6 +103,63 @@ describe("migrationDrainAmount", () => {
       const balance = 2111n + (seed % 50_000_000n)
       const amount = expectFixedPoint(balance)
       expect(balance - totalDebit(amount)).toBeLessThanOrEqual(1n)
+    }
+  })
+})
+
+describe("migrationDrainAmount with a group fee cap", () => {
+  const groupCap = 20n
+
+  it("matches the default result when passed the default cap explicitly", () => {
+    for (const balance of [11n, 2110n, 2111n, 100_000n, 10_000_000n]) {
+      expect(migrationDrainAmount(balance, FEECAP_BASIS_POINTS)).toStrictEqual(
+        migrationDrainAmount(balance),
+      )
+    }
+  })
+
+  it("lands on exactly zero across the extended flat regime (fee floor to B = 5010)", () => {
+    for (let balance = 11n; balance <= 5010n; balance += 499n) {
+      const amount = expectFixedPoint(balance, groupCap)
+      expect(amount).toBe(balance - 10n)
+      expect(balance - totalDebit(amount, groupCap)).toBe(0n)
+    }
+  })
+
+  it("gives the user more of a large balance than the default cap", () => {
+    const defaultAmount = migrationDrainAmount(1_000_000n)
+    const groupAmount = migrationDrainAmount(1_000_000n, groupCap)
+    if (defaultAmount instanceof Error || groupAmount instanceof Error) {
+      throw new Error("drain amount failed")
+    }
+    expect(groupAmount - defaultAmount).toBeGreaterThan(2_900n)
+  })
+
+  it("drains to zero with at most a 1-sat top-up across an exhaustive group-cap sweep", () => {
+    let checked = 0n
+    for (let balance = 11n; balance <= 30_000n; balance += 1n) {
+      const plan = migrationDrainPlan(balance, groupCap)
+      if (plan instanceof Error) throw plan
+      if (plan.residualTopUp > 1n) {
+        throw new Error(`residual top-up ${plan.residualTopUp} at balance ${balance}`)
+      }
+      if (balance + plan.residualTopUp - totalDebit(plan.amount, groupCap) !== 0n) {
+        throw new Error(`did not drain to zero at balance ${balance}`)
+      }
+      checked += 1n
+    }
+    expect(checked).toBe(29_990n)
+  })
+
+  it("satisfies the fixed-point property across caps on a pseudo-random sweep", () => {
+    let seed = 48271n
+    for (const cap of [1n, 5n, 20n, 25n, 49n]) {
+      for (let i = 0; i < 100; i++) {
+        seed = (seed * 16807n) % 2147483647n
+        const balance = 2111n + (seed % 50_000_000n)
+        const amount = expectFixedPoint(balance, cap)
+        expect(balance - totalDebit(amount, cap)).toBeLessThanOrEqual(1n)
+      }
     }
   })
 })
