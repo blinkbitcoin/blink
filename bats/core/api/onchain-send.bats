@@ -20,25 +20,46 @@ setup_file() {
 }
 
 teardown() {
-   if [[ "$(balance_for_check)" != 0 ]]; then
-     fail "Error: balance_for_check failed"
-   fi
+  # Payout settlement is asynchronous across Bria, api-trigger, and the
+  # exporter. Once the relevant Bria event has been processed, allow metrics
+  # time to reflect the resulting ledger state.
+  assert_balance_for_check 45 1
 }
 
 wait_for_new_payout_id() {
-  prior_id="$1"
+  local prior_id="$1"
+  local current_id
 
-  payout_id=$(
+  current_id=$(
     grep_in_trigger_logs "sequence.*payout_submitted" \
     | tail -n 1 \
     | jq -r '.id'
   )
 
-  if [[ "$payout_id" == "$prior_id" ]]; then
+  if [[ -z "$current_id" || "$current_id" == "$prior_id" ]]; then
     return 1
   else
     return 0
   fi
+}
+
+latest_payout_id() {
+  grep_in_trigger_logs "sequence.*payout_submitted" \
+    | tail -n 1 \
+    | jq -r '.id'
+}
+
+capture_new_payout_id() {
+  local prior_id=$1
+
+  retry 10 1 wait_for_new_payout_id "$prior_id" || return 1
+  latest_payout_id
+}
+
+wait_for_payout_settlement() {
+  local payout_id=$1
+
+  retry 60 1 bria_event_is_persisted "payout_settled" "$payout_id"
 }
 
 @test "onchain-send: settle trade intraccount" {
@@ -272,6 +293,7 @@ wait_for_new_payout_id() {
   usd_wallet_name="alice.usd_wallet_id"
 
   # mutation: onChainPaymentSend
+  prior_payout_id=$(latest_payout_id)
   on_chain_payment_send_address=$(bitcoin_cli getnewaddress)
   [[ "${on_chain_payment_send_address}" != "null" ]] || exit 1
 
@@ -285,8 +307,10 @@ wait_for_new_payout_id() {
   exec_graphql 'alice' 'on-chain-payment-send' "$variables"
   send_status="$(graphql_output '.data.onChainPaymentSend.status')"
   [[ "${send_status}" = "SUCCESS" ]] || exit 1
+  on_chain_payment_send_payout_id=$(capture_new_payout_id "$prior_payout_id")
 
   # mutation: onChainUsdPaymentSend
+  prior_payout_id=$(latest_payout_id)
   on_chain_usd_payment_send_address=$(bitcoin_cli getnewaddress)
   [[ "${on_chain_usd_payment_send_address}" != "null" ]] || exit 1
 
@@ -300,8 +324,10 @@ wait_for_new_payout_id() {
   exec_graphql 'alice' 'on-chain-usd-payment-send' "$variables"
   send_status="$(graphql_output '.data.onChainUsdPaymentSend.status')"
   [[ "${send_status}" = "SUCCESS" ]] || exit 1
+  on_chain_usd_payment_send_payout_id=$(capture_new_payout_id "$prior_payout_id")
 
   # mutation: onChainUsdPaymentSendAsBtcDenominated
+  prior_payout_id=$(latest_payout_id)
   on_chain_usd_payment_send_as_btc_denominated_address=$(bitcoin_cli getnewaddress)
   [[ "${on_chain_usd_payment_send_as_btc_denominated_address}" != "null" ]] || exit 1
 
@@ -315,8 +341,12 @@ wait_for_new_payout_id() {
   exec_graphql 'alice' 'on-chain-usd-payment-send-as-btc-denominated' "$variables"
   send_status="$(graphql_output '.data.onChainUsdPaymentSendAsBtcDenominated.status')"
   [[ "${send_status}" = "SUCCESS" ]] || exit 1
+  on_chain_usd_payment_send_as_btc_denominated_payout_id=$(
+    capture_new_payout_id "$prior_payout_id"
+  )
 
   # mutation: onChainPaymentSendAll
+  prior_payout_id=$(latest_payout_id)
   on_chain_payment_send_all_address=$(bitcoin_cli getnewaddress)
   [[ "${on_chain_payment_send_all_address}" != "null" ]] || exit 1
 
@@ -329,6 +359,7 @@ wait_for_new_payout_id() {
   exec_graphql 'alice' 'on-chain-payment-send-all' "$variables"
   send_status="$(graphql_output '.data.onChainPaymentSendAll.status')"
   [[ "${send_status}" = "SUCCESS" ]] || exit 1
+  on_chain_payment_send_all_payout_id=$(capture_new_payout_id "$prior_payout_id")
 
   # CHECK FOR TRANSACTIONS IN DATABASE
   # ----------
@@ -347,10 +378,20 @@ wait_for_new_payout_id() {
   retry 3 1 check_for_onchain_initiated_settled 'alice' "$on_chain_usd_payment_send_as_btc_denominated_address" 4
   retry 3 1 check_for_onchain_initiated_settled 'alice' "$on_chain_usd_payment_send_address" 4
   retry 3 1 check_for_onchain_initiated_settled 'alice' "$on_chain_payment_send_address" 4
+
+  # Transaction status can become SUCCESS before api-trigger has finished
+  # handling and persisting Bria's payout_settled events. Do not let the next
+  # test mine another payout into the same settlement batch while these four
+  # handlers are still in flight.
+  wait_for_payout_settlement "$on_chain_payment_send_all_payout_id"
+  wait_for_payout_settlement "$on_chain_usd_payment_send_as_btc_denominated_payout_id"
+  wait_for_payout_settlement "$on_chain_usd_payment_send_payout_id"
+  wait_for_payout_settlement "$on_chain_payment_send_payout_id"
 }
 
 @test "onchain-send: settle onchain with payout speed FAST" {
   btc_wallet_name="alice.btc_wallet_id"
+  prior_payout_id=$(latest_payout_id)
   address=$(bitcoin_cli getnewaddress)
   [[ "${address}" != "null" ]] || exit 1
 
@@ -365,14 +406,17 @@ wait_for_new_payout_id() {
   exec_graphql 'alice' 'on-chain-payment-send' "$variables"
   send_status="$(graphql_output '.data.onChainPaymentSend.status')"
   [[ "$send_status" == "SUCCESS" ]] || exit 1
+  payout_id=$(capture_new_payout_id "$prior_payout_id")
 
   retry 20 2 check_for_outgoing_broadcast 'alice' "$address" 4
   bitcoin_cli -generate 2
   retry 20 2 check_for_onchain_initiated_settled 'alice' "$address" 4
+  wait_for_payout_settlement "$payout_id"
 }
 
 @test "onchain-send: settle onchain with payout speed MEDIUM" {
   btc_wallet_name="alice.btc_wallet_id"
+  prior_payout_id=$(latest_payout_id)
   address=$(bitcoin_cli getnewaddress)
   [[ "${address}" != "null" ]] || exit 1
 
@@ -387,14 +431,17 @@ wait_for_new_payout_id() {
   exec_graphql 'alice' 'on-chain-payment-send' "$variables"
   send_status="$(graphql_output '.data.onChainPaymentSend.status')"
   [[ "$send_status" == "SUCCESS" ]] || exit 1
+  payout_id=$(capture_new_payout_id "$prior_payout_id")
 
   retry 20 2 check_for_outgoing_broadcast 'alice' "$address" 4
   bitcoin_cli -generate 2
   retry 20 2 check_for_onchain_initiated_settled 'alice' "$address" 4
+  wait_for_payout_settlement "$payout_id"
 }
 
 @test "onchain-send: settle onchain with payout speed SLOW" {
   btc_wallet_name="alice.btc_wallet_id"
+  prior_payout_id=$(latest_payout_id)
   address=$(bitcoin_cli getnewaddress)
   [[ "${address}" != "null" ]] || exit 1
 
@@ -409,10 +456,12 @@ wait_for_new_payout_id() {
   exec_graphql 'alice' 'on-chain-payment-send' "$variables"
   send_status="$(graphql_output '.data.onChainPaymentSend.status')"
   [[ "$send_status" == "SUCCESS" ]] || exit 1
+  payout_id=$(capture_new_payout_id "$prior_payout_id")
 
   retry 20 2 check_for_outgoing_broadcast 'alice' "$address" 4
   bitcoin_cli -generate 2
   retry 20 2 check_for_onchain_initiated_settled 'alice' "$address" 4
+  wait_for_payout_settlement "$payout_id"
 }
 
 @test "onchain-send: get fee for external address" {

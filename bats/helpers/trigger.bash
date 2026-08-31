@@ -1,5 +1,6 @@
 CURRENT_FILE=${BASH_SOURCE:-bats/helpers/.}
 source "$(dirname "$CURRENT_FILE")/_common.bash"
+source "$(dirname "$CURRENT_FILE")/cli.bash"
 
 TRIGGER_STOP_FILE="$BATS_ROOT_DIR/.stop_trigger"
 
@@ -29,4 +30,16 @@ grep_in_trigger_logs() {
     | awk -F'│ ' '{print $2}' \
     | grep $1
   return "$?"
+}
+
+bria_event_is_persisted() {
+  local event_type=$1
+  local event_id=$2
+  local event_count
+
+  event_count=$(mongo_cli \
+    "db.briaeventsequences.countDocuments({'payload.type':'${event_type}','payload.id':'${event_id}'})"
+  )
+
+  [[ "$event_count" -gt 0 ]]
 }
