@@ -25,11 +25,10 @@ import {
   LightningPaymentFlowBuilder,
   toDisplayBaseAmount,
 } from "@/domain/payments"
-import { AccountValidator, PostMigrationAccountValidator } from "@/domain/accounts"
+import { AccountValidator } from "@/domain/accounts"
 import { DisplayAmountsConverter } from "@/domain/fiat"
 import { ErrorLevel, WalletCurrency } from "@/domain/shared"
 import { PaymentSendStatus } from "@/domain/bitcoin/lightning"
-import { FEECAP_MIN } from "@/domain/bitcoin"
 import { ResourceExpiredLockServiceError } from "@/domain/lock"
 import { checkedToWalletId, SettlementMethod } from "@/domain/wallets"
 
@@ -58,34 +57,15 @@ const intraledgerPaymentSendWalletId = async ({
   memo,
   senderWalletId: uncheckedSenderWalletId,
   apiKeyId,
-  accountValidation = "standard",
-}: IntraLedgerPaymentSendWalletIdArgs & {
-  accountValidation?: "standard" | "post-migration-sender" | "post-migration-recipient"
-}): Promise<PaymentSendResult | ApplicationError> => {
+}: IntraLedgerPaymentSendWalletIdArgs): Promise<PaymentSendResult | ApplicationError> => {
   const validatedPaymentInputs = await validateIntraledgerPaymentInputs({
     uncheckedSenderWalletId,
     uncheckedRecipientWalletId,
-    accountValidation,
   })
   if (validatedPaymentInputs instanceof Error) return validatedPaymentInputs
 
-  const {
-    senderWallet,
-    senderAccount: persistedSenderAccount,
-    recipientWallet,
-    recipientAccount,
-    recipientUser,
-    senderUser,
-  } = validatedPaymentInputs
-
-  if (
-    accountValidation !== "standard" &&
-    persistedSenderAccount.id !== senderAccount.id
-  ) {
-    return new InvalidLightningPaymentFlowBuilderStateError(
-      "Sender account does not own sender wallet",
-    )
-  }
+  const { senderWallet, recipientWallet, recipientAccount, recipientUser, senderUser } =
+    validatedPaymentInputs
 
   const { currency: recipientWalletCurrency } = recipientWallet
   const {
@@ -208,53 +188,15 @@ export const intraledgerPaymentSendWalletIdForUsdWallet = async (
   return validated instanceof Error ? validated : intraledgerPaymentSendWalletId(args)
 }
 
-export const intraledgerPaymentSendWalletIdForPostMigrationDepositRelease = async (
-  args: IntraLedgerPaymentSendWalletIdArgs & {
-    postMigrationAccountRole: "sender" | "recipient"
-  },
-): Promise<PaymentSendResult | ApplicationError> => {
-  if (args.amount <= 0 || BigInt(args.amount) > FEECAP_MIN.amount) {
-    return new InvalidLightningPaymentFlowBuilderStateError(
-      `Post-migration release top-up must be between 1 and ${FEECAP_MIN.amount} sats`,
-    )
-  }
-
-  const bankOwnerWalletId = await getBankOwnerWalletId()
-  if (
-    (args.postMigrationAccountRole === "recipient" &&
-      args.senderWalletId !== bankOwnerWalletId) ||
-    (args.postMigrationAccountRole === "sender" &&
-      args.recipientWalletId !== bankOwnerWalletId)
-  ) {
-    return new InvalidLightningPaymentFlowBuilderStateError(
-      "Post-migration release top-up must be sent from or reclaimed to bankowner",
-    )
-  }
-
-  const validated = await validateIsBtcWallet(args.senderWalletId)
-  if (validated instanceof Error) return validated
-
-  return intraledgerPaymentSendWalletId({
-    ...args,
-    accountValidation:
-      args.postMigrationAccountRole === "sender"
-        ? "post-migration-sender"
-        : "post-migration-recipient",
-  })
-}
-
 const validateIntraledgerPaymentInputs = async ({
   uncheckedSenderWalletId,
   uncheckedRecipientWalletId,
-  accountValidation,
 }: {
   uncheckedSenderWalletId: string
   uncheckedRecipientWalletId: string
-  accountValidation: "standard" | "post-migration-sender" | "post-migration-recipient"
 }): Promise<
   | {
       senderWallet: Wallet
-      senderAccount: Account
       recipientWallet: Wallet
       recipientAccount: Account
       recipientUser: User
@@ -271,14 +213,8 @@ const validateIntraledgerPaymentInputs = async ({
   const senderAccount = await AccountsRepository().findById(senderWallet.accountId)
   if (senderAccount instanceof Error) return senderAccount
 
-  const senderAccountValidator =
-    accountValidation === "post-migration-sender"
-      ? PostMigrationAccountValidator(senderAccount)
-      : AccountValidator(senderAccount)
+  const senderAccountValidator = AccountValidator(senderAccount)
   if (senderAccountValidator instanceof Error) return senderAccountValidator
-  const validateSenderWallet =
-    senderAccountValidator.validateWalletForAccount(senderWallet)
-  if (validateSenderWallet instanceof Error) return validateSenderWallet
 
   const recipientWalletId = checkedToWalletId(uncheckedRecipientWalletId)
   if (recipientWalletId instanceof Error) return recipientWalletId
@@ -289,10 +225,7 @@ const validateIntraledgerPaymentInputs = async ({
   const recipientAccount = await AccountsRepository().findById(recipientWallet.accountId)
   if (recipientAccount instanceof Error) return recipientAccount
 
-  const recipientAccountValidator =
-    accountValidation === "post-migration-recipient"
-      ? PostMigrationAccountValidator(recipientAccount)
-      : AccountValidator(recipientAccount)
+  const recipientAccountValidator = AccountValidator(recipientAccount)
   if (recipientAccountValidator instanceof Error) return recipientAccountValidator
 
   const receiveAllowed = await checkReceiveAllowed({ account: recipientAccount })
@@ -319,7 +252,6 @@ const validateIntraledgerPaymentInputs = async ({
 
   return {
     senderWallet,
-    senderAccount,
     recipientWallet,
     recipientAccount,
     recipientUser,

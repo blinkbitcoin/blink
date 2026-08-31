@@ -1,7 +1,4 @@
-import {
-  AccountValidator,
-  PostMigrationAccountValidator,
-} from "@/domain/accounts/account-validator"
+import { AccountValidator } from "@/domain/accounts/account-validator"
 import { InactiveAccountError, InvalidWalletId } from "@/domain/errors"
 import { AccountStatus, AccountLevel } from "@/domain/accounts/primitives"
 import { UsdDisplayCurrency } from "@/domain/fiat/primitives"
@@ -122,49 +119,5 @@ describe("AccountValidator", () => {
     const result = validator.validateWalletForAccount(invalidWallet)
     expect(result).toBeInstanceOf(InvalidWalletId)
     expect(result).toHaveProperty("message")
-  })
-})
-
-describe("PostMigrationAccountValidator", () => {
-  const account = (status: AccountStatus): Account =>
-    ({
-      id: "account-id" as AccountId,
-      status,
-    }) as Account
-  const wallet = (accountId: AccountId): Wallet =>
-    ({
-      id: "wallet-id" as WalletId,
-      accountId,
-      currency: WalletCurrency.Btc,
-      type: WalletType.Checking,
-      onChainAddressIdentifiers: [],
-      onChainAddresses: () => [],
-    }) as Wallet
-
-  it.each([AccountStatus.Migrated, AccountStatus.Closed])(
-    "allows %s only for its own wallet",
-    (status) => {
-      const validator = PostMigrationAccountValidator(account(status))
-      if (validator instanceof Error) throw validator
-
-      expect(validator.validateWalletForAccount(wallet("account-id" as AccountId))).toBe(
-        true,
-      )
-      expect(
-        validator.validateWalletForAccount(wallet("another-account" as AccountId)),
-      ).toBeInstanceOf(InvalidWalletId)
-    },
-  )
-
-  it.each([
-    AccountStatus.New,
-    AccountStatus.Invited,
-    AccountStatus.Pending,
-    AccountStatus.Active,
-    AccountStatus.Locked,
-  ])("rejects %s", (status) => {
-    expect(PostMigrationAccountValidator(account(status))).toBeInstanceOf(
-      InactiveAccountError,
-    )
   })
 })

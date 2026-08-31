@@ -2,13 +2,10 @@ import { AccountStatus } from "./primitives"
 
 import { InactiveAccountError, InvalidWalletId } from "@/domain/errors"
 
-const validatorForStatuses = ({
-  account,
-  allowedStatuses,
-}: {
-  account: Account
-  allowedStatuses: AccountStatus[]
-}): AccountValidator | ValidationError => {
+export const AccountValidator = (
+  account: Account,
+): AccountValidator | ValidationError => {
+  const allowedStatuses: AccountStatus[] = [AccountStatus.Active, AccountStatus.Invited]
   if (!allowedStatuses.includes(account.status)) {
     return new InactiveAccountError(account.id)
   }
@@ -29,17 +26,3 @@ const validatorForStatuses = ({
 
   return { validateWalletForAccount }
 }
-
-export const PostMigrationAccountValidator = (
-  account: Account,
-): AccountValidator | ValidationError =>
-  validatorForStatuses({
-    account,
-    allowedStatuses: [AccountStatus.Migrated, AccountStatus.Closed],
-  })
-
-export const AccountValidator = (account: Account): AccountValidator | ValidationError =>
-  validatorForStatuses({
-    account,
-    allowedStatuses: [AccountStatus.Active, AccountStatus.Invited],
-  })
