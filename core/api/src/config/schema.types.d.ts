@@ -140,6 +140,10 @@ type LightningReceiveInput = {
 type SkipFeeProbeInput = {
   pubkeys: string[]
   chanIds: string[]
+  feeCapGroups: {
+    pubkeys: string[]
+    feeCapBasisPoints: number
+  }[]
 }
 
 type LightningSendInput = {

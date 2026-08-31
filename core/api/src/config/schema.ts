@@ -391,6 +391,28 @@ const paymentNetworksSchema = {
                   items: { type: "string" },
                   uniqueItems: true,
                 },
+                feeCapGroups: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      pubkeys: {
+                        type: "array",
+                        items: { type: "string", maxLength: 66, minLength: 66 },
+                        minItems: 1,
+                        uniqueItems: true,
+                      },
+                      feeCapBasisPoints: {
+                        type: "integer",
+                        minimum: 1,
+                        maximum: 10_000,
+                      },
+                    },
+                    required: ["pubkeys", "feeCapBasisPoints"],
+                    additionalProperties: false,
+                  },
+                  default: [],
+                },
               },
               required: ["pubkeys", "chanIds"],
               additionalProperties: false,
@@ -508,6 +530,7 @@ const paymentNetworksSchema = {
         skipFeeProbe: {
           pubkeys: [],
           chanIds: [],
+          feeCapGroups: [],
         },
         skipFeeReimbursement: true,
       },

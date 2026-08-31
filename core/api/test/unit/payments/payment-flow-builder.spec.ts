@@ -20,7 +20,21 @@ import {
 const skippedPubkey =
   "038f8f113c580048d847d6949371726653e02b928196bad310e3eda39ff61723f6" as Pubkey
 const skippedChanId = "1x0x0" as ChanId
-const skipProbe = { pubkey: [skippedPubkey], chanId: [skippedChanId] }
+const skippedFeeCapBasisPoints = 10n
+const skipProbe = {
+  pubkey: [skippedPubkey],
+  chanId: [skippedChanId],
+  feeCapGroups: [],
+}
+const groupedSkipProbe = {
+  pubkey: [],
+  chanId: [],
+  feeCapGroups: [
+    { pubkey: [skippedPubkey], feeCapBasisPoints: 20n },
+    { pubkey: [skippedPubkey], feeCapBasisPoints: skippedFeeCapBasisPoints },
+    { pubkey: [skippedPubkey], feeCapBasisPoints: 30n },
+  ],
+}
 
 interface ConversionBtc {
   sats: number
@@ -43,6 +57,11 @@ describe("LightningPaymentFlowBuilder", () => {
   const skippedPubkeyInvoiceWithAmount = decodeInvoice(
     skippedPubkeyPaymentRequestWithAmount,
   ) as LnInvoice
+  const skippedDestinationInvoiceWithAmount = {
+    ...invoiceWithAmount,
+    destination: skippedPubkey,
+    routeHints: [],
+  }
 
   const skippedChanIdPaymentRequestWithAmount =
     "lnbc1m1pjz2963pp5eeed387k90rxz9ggkarh3qzf42tw5epay0v3adv79aldgjf2a0nqdqqcqzpgxqrrssrzjqvgptfurj3528snx6e3dtwepafxw5fpzdymw9pj20jj09sunnqmwqqqqqyqqqqqqqqqqqqlgqqqqqqgqjqnp4qdruvn0zq9wqqhtryvch753zm6hqq4kyt48dsstkemjjc3njvggnqsp5s4pla42w34ekurw8ywfwjpwcakz5h3ynn8hx5znfckda8udmn5sq9qyyssq4sll8vh2n6kds0ht7l942jqa33nrrrhd9fhfdrdfec6mwtms05ppdrnztn2zg87cm4q7lye39f0gmt9tpjwy26hafrkqza4esjmctuqpxchx3a" as EncodedPaymentRequest
@@ -53,6 +72,11 @@ describe("LightningPaymentFlowBuilder", () => {
   const paymentRequestWithNoAmount =
     "lnbc1p3zn402pp54skf32qeal5jnfm73u5e3d9h5448l4yutszy0kr9l56vdsy8jefsdqqcqzpuxqyz5vqsp5c6z7a4lrey4ejvhx5q4l83jm9fhy34dsqgxnceem4dgz6fmh456s9qyyssqkxkg6ke6nt39dusdhpansu8j0r5f7gadwcampnw2g8ap0fccteer7hzjc8tgat9m5wxd98nxjxhwx0ha6g95v9edmgd30f0m8kujslgpxtzt6w" as EncodedPaymentRequest
   const invoiceWithNoAmount = decodeInvoice(paymentRequestWithNoAmount) as LnInvoice
+  const groupedInvoiceWithNoAmount = {
+    ...invoiceWithNoAmount,
+    destination: skippedPubkey,
+    routeHints: [],
+  }
 
   const senderBtcWalletDescriptor = {
     id: "senderBtcWalletId" as WalletId,
@@ -213,6 +237,10 @@ describe("LightningPaymentFlowBuilder", () => {
       localNodeIds: [],
       skipProbe,
     })
+    const groupedFeeCapLightningBuilder = LightningPaymentFlowBuilder({
+      localNodeIds: [],
+      skipProbe: groupedSkipProbe,
+    })
 
     /* eslint @typescript-eslint/ban-ts-comment: "off" */
     // @ts-ignore-next-line no-implicit-any error
@@ -233,6 +261,11 @@ describe("LightningPaymentFlowBuilder", () => {
       const withSkippedChanIdAmountBuilder = lightningBuilder.withInvoice(
         skippedChanIdInvoiceWithAmount,
       )
+      const withGroupedFeeCapAmountBuilder = groupedFeeCapLightningBuilder.withInvoice(
+        skippedPubkeyInvoiceWithAmount,
+      )
+      const withGroupedDestinationFeeCapAmountBuilder =
+        groupedFeeCapLightningBuilder.withInvoice(skippedDestinationInvoiceWithAmount)
       // @ts-ignore-next-line no-implicit-any error
       const checkInvoice = (payment) => {
         expect(payment).toEqual(
@@ -265,6 +298,21 @@ describe("LightningPaymentFlowBuilder", () => {
           })
           .withoutRecipientWallet()
 
+        const withGroupedFeeCapBtcWalletBuilder = withGroupedFeeCapAmountBuilder
+          .withSenderWalletAndAccount({
+            wallet: senderBtcWalletDescriptor,
+            account: senderAccount,
+          })
+          .withoutRecipientWallet()
+
+        const withGroupedDestinationFeeCapBtcWalletBuilder =
+          withGroupedDestinationFeeCapAmountBuilder
+            .withSenderWalletAndAccount({
+              wallet: senderBtcWalletDescriptor,
+              account: senderAccount,
+            })
+            .withoutRecipientWallet()
+
         // @ts-ignore-next-line no-implicit-any error
         const checkSenderWallet = (payment) => {
           expect(payment).toEqual(
@@ -291,6 +339,41 @@ describe("LightningPaymentFlowBuilder", () => {
               hedgeSellUsd,
             })
           expect(skippedChanIdBuilder.skipProbeForDestination()).toBeTruthy()
+        })
+
+        it("uses the matching probe-excluded group fee cap", async () => {
+          const groupedFeeCapBuilder =
+            await withGroupedFeeCapBtcWalletBuilder.withConversion({
+              mid,
+              hedgeBuyUsd,
+              hedgeSellUsd,
+            })
+          expect(groupedFeeCapBuilder.skipProbeForDestination()).toBeTruthy()
+
+          const payment = await groupedFeeCapBuilder.withoutRoute()
+          if (payment instanceof Error) throw payment
+          if (skippedPubkeyInvoiceWithAmount.paymentAmount === null) {
+            throw new Error("paymentAmount should not be null")
+          }
+
+          expect(payment.btcProtocolAndBankFee).toEqual(
+            LnFees().maxProtocolAndBankFee(
+              skippedPubkeyInvoiceWithAmount.paymentAmount,
+              skippedFeeCapBasisPoints,
+            ),
+          )
+          expect(payment.feeCapBasisPoints).toBe(skippedFeeCapBasisPoints)
+        })
+
+        it("matches a probe-excluded group by invoice destination", async () => {
+          const builder =
+            await withGroupedDestinationFeeCapBtcWalletBuilder.withConversion({
+              mid,
+              hedgeBuyUsd,
+              hedgeSellUsd,
+            })
+
+          expect(builder.skipProbeForDestination()).toBeTruthy()
         })
 
         it("uses mid price and max btc fees", async () => {
@@ -474,6 +557,10 @@ describe("LightningPaymentFlowBuilder", () => {
         invoice: invoiceWithNoAmount,
         uncheckedAmount: Number(uncheckedAmount),
       })
+      const withGroupedFeeCapBuilder = groupedFeeCapLightningBuilder.withNoAmountInvoice({
+        invoice: groupedInvoiceWithNoAmount,
+        uncheckedAmount: Number(uncheckedAmount),
+      })
       // @ts-ignore-next-line no-implicit-any error
       const checkInvoice = (payment) => {
         expect(payment).toEqual(
@@ -486,6 +573,12 @@ describe("LightningPaymentFlowBuilder", () => {
 
       describe("with btc wallet", () => {
         const withBtcWalletBuilder = withAmountBuilder
+          .withSenderWalletAndAccount({
+            wallet: senderBtcWalletDescriptor,
+            account: senderAccount,
+          })
+          .withoutRecipientWallet()
+        const withGroupedFeeCapBtcWalletBuilder = withGroupedFeeCapBuilder
           .withSenderWalletAndAccount({
             wallet: senderBtcWalletDescriptor,
             account: senderAccount,
@@ -549,10 +642,30 @@ describe("LightningPaymentFlowBuilder", () => {
             }),
           )
         })
+
+        it("uses a probe-excluded group fee cap", async () => {
+          const payment = await withGroupedFeeCapBtcWalletBuilder
+            .withConversion({ mid, hedgeBuyUsd, hedgeSellUsd })
+            .withoutRoute()
+          if (payment instanceof Error) throw payment
+
+          expect(payment.btcProtocolAndBankFee).toEqual(
+            LnFees().maxProtocolAndBankFee(
+              { amount: uncheckedAmount, currency: WalletCurrency.Btc },
+              skippedFeeCapBasisPoints,
+            ),
+          )
+        })
       })
 
       describe("with usd wallet", () => {
         const withUsdWalletBuilder = withAmountBuilder
+          .withSenderWalletAndAccount({
+            wallet: senderUsdWalletDescriptor,
+            account: senderAccount,
+          })
+          .withoutRecipientWallet()
+        const withGroupedFeeCapUsdWalletBuilder = withGroupedFeeCapBuilder
           .withSenderWalletAndAccount({
             wallet: senderUsdWalletDescriptor,
             account: senderAccount,
@@ -598,6 +711,20 @@ describe("LightningPaymentFlowBuilder", () => {
               btcProtocolAndBankFee: LnFees().maxProtocolAndBankFee(btcPaymentAmount),
               skipProbeForDestination: false,
             }),
+          )
+        })
+
+        it("uses a probe-excluded group fee cap", async () => {
+          const payment = await withGroupedFeeCapUsdWalletBuilder
+            .withConversion({ mid, hedgeBuyUsd, hedgeSellUsd })
+            .withoutRoute()
+          if (payment instanceof Error) throw payment
+
+          expect(payment.usdProtocolAndBankFee).toEqual(
+            LnFees().maxProtocolAndBankFee(
+              { amount: uncheckedAmount, currency: WalletCurrency.Usd },
+              skippedFeeCapBasisPoints,
+            ),
           )
         })
       })

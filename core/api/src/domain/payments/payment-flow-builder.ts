@@ -65,8 +65,13 @@ export const LightningPaymentFlowBuilder = <S extends WalletCurrency>(
     }
   }
 
-  const skipProbeFromInvoice = (invoice: LnInvoice): boolean => {
-    const invoicePubkeySet = new ModifiedSet(parseFinalHopsFromInvoice(invoice))
+  const probeConfigFromInvoice = (
+    invoice: LnInvoice,
+  ): { skipProbe: boolean; feeCapBasisPoints?: bigint } => {
+    const invoicePubkeySet = new ModifiedSet([
+      invoice.destination,
+      ...parseFinalHopsFromInvoice(invoice),
+    ])
     const flaggedPubkeySet = new ModifiedSet(config.skipProbe.pubkey)
     const pubkeyIsFlagged = invoicePubkeySet.intersect(flaggedPubkeySet).size > 0
 
@@ -74,15 +79,29 @@ export const LightningPaymentFlowBuilder = <S extends WalletCurrency>(
     const flaggedChanIdSet = new ModifiedSet(config.skipProbe.chanId)
     const chanIdIsFlagged = invoiceChanIdSet.intersect(flaggedChanIdSet).size > 0
 
+    const matchingFeeCaps = config.skipProbe.feeCapGroups
+      .filter(
+        ({ pubkey }) => invoicePubkeySet.intersect(new ModifiedSet(pubkey)).size > 0,
+      )
+      .map(({ feeCapBasisPoints }) => feeCapBasisPoints)
+    const feeCapBasisPoints = matchingFeeCaps.reduce<bigint | undefined>(
+      (lowest, current) => (lowest === undefined || current < lowest ? current : lowest),
+      undefined,
+    )
+
     addAttributesToCurrentSpan({
       pubkeyIsFlagged: `${pubkeyIsFlagged}`,
       pubkeysFromInvoice: `${Array.from(invoicePubkeySet)}`,
 
       chanIdIsFlagged: `${chanIdIsFlagged}`,
       chanIdsFromInvoice: `${Array.from(invoiceChanIdSet)}`,
+      skipProbeFeeCapBasisPoints: feeCapBasisPoints?.toString() || "undefined",
     })
 
-    return pubkeyIsFlagged || chanIdIsFlagged
+    return {
+      skipProbe: pubkeyIsFlagged || chanIdIsFlagged || feeCapBasisPoints !== undefined,
+      feeCapBasisPoints,
+    }
   }
 
   const withInvoice = (invoice: LnInvoice): LPFBWithInvoice<S> | LPFBWithError => {
@@ -93,6 +112,7 @@ export const LightningPaymentFlowBuilder = <S extends WalletCurrency>(
         ),
       )
     }
+    const { skipProbe, feeCapBasisPoints } = probeConfigFromInvoice(invoice)
     return LPFBWithInvoice({
       ...config,
       ...settlementMethodFromDestination(invoice.destination),
@@ -101,7 +121,8 @@ export const LightningPaymentFlowBuilder = <S extends WalletCurrency>(
       btcPaymentAmount: invoice.paymentAmount,
       inputAmount: invoice.paymentAmount.amount,
       descriptionFromInvoice: invoice.description,
-      skipProbeForDestination: skipProbeFromInvoice(invoice),
+      skipProbeForDestination: skipProbe,
+      feeCapBasisPoints,
     })
   }
 
@@ -112,6 +133,7 @@ export const LightningPaymentFlowBuilder = <S extends WalletCurrency>(
     invoice: LnInvoice
     uncheckedAmount: number
   }): LPFBWithInvoice<S> | LPFBWithError => {
+    const { skipProbe, feeCapBasisPoints } = probeConfigFromInvoice(invoice)
     return LPFBWithInvoice({
       ...config,
       ...settlementMethodFromDestination(invoice.destination),
@@ -119,7 +141,8 @@ export const LightningPaymentFlowBuilder = <S extends WalletCurrency>(
       paymentHash: invoice.paymentHash,
       uncheckedAmount,
       descriptionFromInvoice: invoice.description,
-      skipProbeForDestination: skipProbeFromInvoice(invoice),
+      skipProbeForDestination: skipProbe,
+      feeCapBasisPoints,
     })
   }
 
@@ -180,7 +203,8 @@ const LPFBWithInvoice = <S extends WalletCurrency>(
           btcPaymentAmount: paymentAmount,
           inputAmount: paymentAmount.amount,
           btcProtocolAndBankFee:
-            state.btcProtocolAndBankFee || LnFees().maxProtocolAndBankFee(paymentAmount),
+            state.btcProtocolAndBankFee ||
+            LnFees().maxProtocolAndBankFee(paymentAmount, state.feeCapBasisPoints),
         })
       } else {
         const paymentAmount = checkedToUsdPaymentAmount(state.uncheckedAmount)
@@ -196,7 +220,8 @@ const LPFBWithInvoice = <S extends WalletCurrency>(
           usdPaymentAmount: paymentAmount,
           inputAmount: paymentAmount.amount,
           usdProtocolAndBankFee:
-            state.usdProtocolAndBankFee || LnFees().maxProtocolAndBankFee(paymentAmount),
+            state.usdProtocolAndBankFee ||
+            LnFees().maxProtocolAndBankFee(paymentAmount, state.feeCapBasisPoints),
         })
       }
     }
@@ -212,7 +237,8 @@ const LPFBWithInvoice = <S extends WalletCurrency>(
         senderAccountRole,
         btcPaymentAmount,
         btcProtocolAndBankFee:
-          state.btcProtocolAndBankFee || LnFees().maxProtocolAndBankFee(btcPaymentAmount),
+          state.btcProtocolAndBankFee ||
+          LnFees().maxProtocolAndBankFee(btcPaymentAmount, state.feeCapBasisPoints),
         inputAmount,
       })
     }
@@ -568,6 +594,7 @@ const LPFBWithConversion = <S extends WalletCurrency, R extends WalletCurrency>(
 
       descriptionFromInvoice: state.descriptionFromInvoice,
       skipProbeForDestination: state.skipProbeForDestination,
+      feeCapBasisPoints: state.feeCapBasisPoints,
       btcPaymentAmount: state.btcPaymentAmount,
       usdPaymentAmount: state.usdPaymentAmount,
       inputAmount: state.inputAmount,

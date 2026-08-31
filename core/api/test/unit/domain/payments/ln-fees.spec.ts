@@ -69,6 +69,17 @@ describe("LnFees", () => {
         currency: WalletCurrency.Usd,
       })
     })
+    it("uses an explicit fee cap instead of the default", () => {
+      const btcAmount = {
+        amount: 10_000n,
+        currency: WalletCurrency.Btc,
+      }
+
+      expect(LnFees().maxProtocolAndBankFee(btcAmount, 10n)).toEqual({
+        amount: 10n,
+        currency: WalletCurrency.Btc,
+      })
+    })
   })
 
   const amountsToTest = [
@@ -234,6 +245,25 @@ describe("LnFees", () => {
       })
     })
   }
+
+  it("verifies a routeless fee against its explicit fee cap", () => {
+    const btc = { amount: 10_000n, currency: WalletCurrency.Btc }
+    const usd = { amount: 200n, currency: WalletCurrency.Usd }
+    const priceRatio = WalletPriceRatio({ btc, usd })
+    if (priceRatio instanceof Error) throw priceRatio
+
+    expect(
+      LnFees().verifyMaxFee({
+        maxFeeAmount: { amount: 100n, currency: WalletCurrency.Btc },
+        btcPaymentAmount: btc,
+        usdPaymentAmount: usd,
+        priceRatio,
+        senderWalletCurrency: WalletCurrency.Btc,
+        isFromNoAmountInvoice: true,
+        feeCapBasisPoints: 100n,
+      }),
+    ).toBe(true)
+  })
 
   describe("feeFromRawRoute", () => {
     it("returns the feeFromRawRoute", () => {

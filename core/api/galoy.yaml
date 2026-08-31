@@ -309,6 +309,7 @@ paymentNetworks:
       skipFeeProbe:
         pubkeys: []
         chanIds: []
+        feeCapGroups: []
       skipFeeReimbursement: true
     historicalPubkeys: []
   intraledger:
