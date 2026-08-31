@@ -18,11 +18,24 @@ describe("PostMigrationDepositReleaseRepository", () => {
     address: `bcrt1q${randomUUID().replaceAll("-", "")}` as OnChainAddress,
     receiptJournalId: randomUUID() as LedgerJournalId,
     receiptAmountSats: toSats(10_000),
-    payoutAmountSats: toSats(9_940),
-    plannedTopUpSats: toSats(0),
-    topUpSats: toSats(0),
+    payoutAmountSats: toSats(10_000),
     lightningAddress: `user-${randomUUID()}@wallet.example` as LightningAddress,
     caseReference: `CASE-${randomUUID()}`,
+  })
+
+  it("prepares a release with empty sweep fields", async () => {
+    const args = preparedArgs()
+
+    const prepared = await repo.upsertPrepared(args)
+    if (prepared instanceof Error) throw prepared
+
+    expect(prepared).toMatchObject({
+      txHash: args.txHash,
+      vout: args.vout,
+      status: PostMigrationDepositReleaseStatus.Prepared,
+    })
+    expect(prepared.sweptAt).toBeUndefined()
+    expect(prepared.sweepJournalId).toBeUndefined()
   })
 
   it("creates only one record when the same output is prepared concurrently", async () => {

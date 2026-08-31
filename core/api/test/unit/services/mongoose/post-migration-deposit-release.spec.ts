@@ -27,9 +27,7 @@ describe("PostMigrationDepositReleaseRepository", () => {
     address: "bc1qaddress",
     receiptJournalId: "receipt-journal",
     receiptAmountSats: 10_000,
-    payoutAmountSats: 9_940,
-    plannedTopUpSats: 0,
-    topUpSats: 0,
+    payoutAmountSats: 10_000,
     lightningAddress: "alice@wallet.example",
     caseReference: "CASE-123",
     status: PostMigrationDepositReleaseStatus.Prepared,
@@ -45,8 +43,6 @@ describe("PostMigrationDepositReleaseRepository", () => {
     receiptJournalId: rawRelease.receiptJournalId as LedgerJournalId,
     receiptAmountSats: rawRelease.receiptAmountSats as Satoshis,
     payoutAmountSats: rawRelease.payoutAmountSats as Satoshis,
-    plannedTopUpSats: rawRelease.plannedTopUpSats as Satoshis,
-    topUpSats: rawRelease.topUpSats as Satoshis,
     lightningAddress: rawRelease.lightningAddress as LightningAddress,
     caseReference: rawRelease.caseReference,
   })
@@ -148,18 +144,33 @@ describe("PostMigrationDepositReleaseRepository", () => {
   })
 
   it("maps a found raw record including optional fields", async () => {
+    const sweptAt = new Date("2026-08-27T00:00:00Z")
     mockFindOne.mockResolvedValue({
       ...rawRelease,
       paymentHash: "cd".repeat(32),
       paymentRequest: "lnbc1invoice",
       failureReason: "failed",
+      sweptAt,
+      sweepJournalId: "sweep-journal",
     })
 
     expect(await repo.findByOutput({ txHash, vout })).toMatchObject({
       paymentHash: "cd".repeat(32),
       paymentRequest: "lnbc1invoice",
       failureReason: "failed",
+      sweptAt,
+      sweepJournalId: "sweep-journal",
     })
+  })
+
+  it("leaves the sweep fields empty when unset", async () => {
+    mockFindOne.mockResolvedValue(rawRelease)
+
+    const result = await repo.findByOutput({ txHash, vout })
+    if (result instanceof Error) throw result
+
+    expect(result.sweptAt).toBeUndefined()
+    expect(result.sweepJournalId).toBeUndefined()
   })
 
   it("maps find failures to repository errors", async () => {
@@ -211,30 +222,6 @@ describe("PostMigrationDepositReleaseRepository", () => {
         paymentHash: "cd".repeat(32) as PaymentHash,
         paymentRequest: "lnbc1invoice",
       }),
-    ).toBeInstanceOf(UnknownRepositoryError)
-  })
-
-  it("records a top-up while processing", async () => {
-    mockFindOneAndUpdate.mockResolvedValue({ ...rawRelease, topUpSats: 10 })
-
-    expect(
-      await repo.recordTopUp({ txHash, vout, topUpSats: 10 as Satoshis }),
-    ).toMatchObject({ topUpSats: 10 })
-  })
-
-  it("refuses to record a top-up when the compare-and-set misses", async () => {
-    mockFindOneAndUpdate.mockResolvedValue(null)
-
-    expect(
-      await repo.recordTopUp({ txHash, vout, topUpSats: 10 as Satoshis }),
-    ).toBeInstanceOf(MigrationStateConflictError)
-  })
-
-  it("maps top-up persistence failures", async () => {
-    mockFindOneAndUpdate.mockRejectedValue(new Error("mongo unavailable"))
-
-    expect(
-      await repo.recordTopUp({ txHash, vout, topUpSats: 10 as Satoshis }),
     ).toBeInstanceOf(UnknownRepositoryError)
   })
 

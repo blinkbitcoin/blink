@@ -1,15 +1,8 @@
-jest.mock("@/app/migration-flow/execute-transfer", () => ({
-  migrationDrainPlan: jest.fn(() => ({ amount: 990n, residualTopUp: 0n })),
-  reserveForAmount: jest.fn(() => 10n),
-}))
 jest.mock("@/app/accounts/lnurl-server", () => ({
   getLnurlServerService: jest.fn(),
 }))
-jest.mock("@/app/payments/send-intraledger", () => ({
-  intraledgerPaymentSendWalletIdForPostMigrationDepositRelease: jest.fn(),
-}))
-jest.mock("@/app/payments/send-lightning", () => ({
-  payInvoiceByWalletIdForPostMigrationDepositRelease: jest.fn(),
+jest.mock("@/app/payments", () => ({
+  payInvoiceByWalletId: jest.fn(),
 }))
 jest.mock("@/app/payments/update-pending-payments", () => ({
   updatePendingPaymentByHash: jest.fn(),
@@ -18,10 +11,6 @@ jest.mock("@/app/wallets/get-balance-for-wallet", () => ({
   getBalanceForWallet: jest.fn(),
 }))
 jest.mock("@/config", () => ({
-  getSkipFeeReimbursement: jest.fn(() => true),
-  getCustodialMigrationFlowConfig: jest.fn(() => ({
-    deMinimisThresholdSats: 100,
-  })),
   LNURL_SERVER_LN_ADDRESS_DOMAIN: "wallet.example",
   NETWORK: "regtest",
 }))
@@ -37,6 +26,7 @@ jest.mock("@/services/ledger", () => ({
   }),
 }))
 jest.mock("@/services/ledger/caching", () => ({ getBankOwnerWalletId: jest.fn() }))
+jest.mock("@/services/lnd", () => ({ LndService: jest.fn() }))
 jest.mock("@/services/mongoose", () => ({
   __mocks: {
     findAccount: jest.fn(),
@@ -48,7 +38,6 @@ jest.mock("@/services/mongoose", () => ({
       upsertPrepared: jest.fn(),
       claimForRelease: jest.fn(),
       recordPayment: jest.fn(),
-      recordTopUp: jest.fn(),
       updateStatus: jest.fn(),
     },
   },
@@ -94,12 +83,9 @@ import {
   reconcilePostMigrationDepositRelease,
   releasePostMigrationDeposit,
 } from "@/app/migration-flow/post-migration-deposit-release"
-import { migrationDrainPlan } from "@/app/migration-flow/execute-transfer"
-import { intraledgerPaymentSendWalletIdForPostMigrationDepositRelease } from "@/app/payments/send-intraledger"
-import { payInvoiceByWalletIdForPostMigrationDepositRelease } from "@/app/payments/send-lightning"
+import { payInvoiceByWalletId } from "@/app/payments"
 import { updatePendingPaymentByHash } from "@/app/payments/update-pending-payments"
 import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
-import { getSkipFeeReimbursement } from "@/config"
 import { AccountLevel, AccountStatus } from "@/domain/accounts"
 import { decodeInvoice, PaymentSendStatus } from "@/domain/bitcoin/lightning"
 import { LedgerTransactionType } from "@/domain/ledger"
@@ -117,6 +103,7 @@ import { WalletCurrency } from "@/domain/shared"
 import { WalletType } from "@/domain/wallets"
 import { checkedToOnChainAddress } from "@/domain/bitcoin/onchain"
 import { getBankOwnerWalletId } from "@/services/ledger/caching"
+import { LndService } from "@/services/lnd"
 import { LnurlPayService } from "@/services/lnurl-pay"
 
 const mongooseMocks = jest.requireMock("@/services/mongoose").__mocks as {
@@ -129,7 +116,6 @@ const mongooseMocks = jest.requireMock("@/services/mongoose").__mocks as {
     upsertPrepared: jest.Mock
     claimForRelease: jest.Mock
     recordPayment: jest.Mock
-    recordTopUp: jest.Mock
     updateStatus: jest.Mock
   }
 }
@@ -139,16 +125,13 @@ const mockTransactions = jest.requireMock("@/services/ledger")
 const mockBalance = getBalanceForWallet as jest.Mock
 const mockGetLnurlServer = getLnurlServerService as jest.Mock
 const mockDecodeInvoice = decodeInvoice as jest.Mock
-const mockPayInvoice = payInvoiceByWalletIdForPostMigrationDepositRelease as jest.Mock
+const mockPayInvoice = payInvoiceByWalletId as jest.Mock
 const mockLnurlPayService = LnurlPayService as jest.Mock
-const mockIntraledger =
-  intraledgerPaymentSendWalletIdForPostMigrationDepositRelease as jest.Mock
+const mockLndService = LndService as jest.Mock
 const mockUpdatePending = updatePendingPaymentByHash as jest.Mock
 const mockGetBankOwnerWalletId = getBankOwnerWalletId as jest.Mock
 const mockStateDeterminator = LnPaymentStateDeterminator as jest.Mock
-const mockSkipFeeReimbursement = getSkipFeeReimbursement as jest.Mock
 const mockCheckedToOnChainAddress = checkedToOnChainAddress as jest.Mock
-const mockMigrationDrainPlan = migrationDrainPlan as jest.Mock
 
 describe("inspectPostMigrationDepositRelease", () => {
   const accountId = "11111111-1111-4111-8111-111111111111" as AccountId
@@ -160,10 +143,17 @@ describe("inspectPostMigrationDepositRelease", () => {
   const address = "bcrt1qhistoricaladdress"
   const lightningAddress = "alice@wallet.example"
   const sparkPubkey = "02" + "cd".repeat(32)
+  const ownNodePubkey = "03" + "ab".repeat(32)
+  const externalNodePubkey = "02" + "77".repeat(32)
   const account = {
     id: accountId,
     status: AccountStatus.Migrated,
     level: AccountLevel.One,
+  } as Account
+  const bankOwnerAccount = {
+    id: bankOwnerAccountId,
+    status: AccountStatus.Active,
+    level: AccountLevel.Two,
   } as Account
   const btcWallet = {
     id: walletId,
@@ -172,6 +162,11 @@ describe("inspectPostMigrationDepositRelease", () => {
     type: WalletType.Checking,
     onChainAddressIdentifiers: [],
     onChainAddresses: () => [],
+  } as Wallet
+  const bankOwnerWallet = {
+    id: bankOwnerWalletId,
+    accountId: bankOwnerAccountId,
+    currency: WalletCurrency.Btc,
   } as Wallet
   const exactReceipt = (overrides: Record<string, unknown> = {}) => ({
     type: LedgerTransactionType.OnchainReceipt,
@@ -189,15 +184,17 @@ describe("inspectPostMigrationDepositRelease", () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    mockSkipFeeReimbursement.mockReturnValue(true)
     mockCheckedToOnChainAddress.mockImplementation(({ value }) => value)
-    mockMigrationDrainPlan.mockReturnValue({ amount: 990n, residualTopUp: 0n })
-    mongooseMocks.findAccount.mockResolvedValue(account)
+    mongooseMocks.findAccount.mockImplementation((id) =>
+      Promise.resolve(id === bankOwnerAccountId ? bankOwnerAccount : account),
+    )
     mongooseMocks.findWallets.mockResolvedValue({
       BTC: { id: walletId, accountId, currency: WalletCurrency.Btc },
       USD: { id: usdWalletId, accountId, currency: WalletCurrency.Usd },
     })
-    mongooseMocks.findWallet.mockResolvedValue(btcWallet)
+    mongooseMocks.findWallet.mockImplementation((id) =>
+      Promise.resolve(id === bankOwnerWalletId ? bankOwnerWallet : btcWallet),
+    )
     mongooseMocks.findMigration.mockResolvedValue({
       accountId,
       phase: MigrationFlowPhase.Completed,
@@ -218,7 +215,7 @@ describe("inspectPostMigrationDepositRelease", () => {
     mockStateDeterminator.mockReturnValue({ determine: () => LnPaymentState.Pending })
     mockUpdatePending.mockResolvedValue(true)
     mockGetBankOwnerWalletId.mockResolvedValue(bankOwnerWalletId)
-    mockIntraledger.mockResolvedValue({ status: PaymentSendStatus.Success })
+    mockLndService.mockReturnValue({ listAllPubkeys: () => [ownNodePubkey] })
     mockLnurlPayService.mockReturnValue({
       fetchInvoiceFromLnAddressOrLnurl: jest.fn().mockResolvedValue("lnbc1fresh"),
     })
@@ -243,9 +240,7 @@ describe("inspectPostMigrationDepositRelease", () => {
     address: address as OnChainAddress,
     receiptJournalId: "journal-id" as LedgerJournalId,
     receiptAmountSats: 1_000 as Satoshis,
-    payoutAmountSats: 990 as Satoshis,
-    plannedTopUpSats: 0 as Satoshis,
-    topUpSats: 0 as Satoshis,
+    payoutAmountSats: 1_000 as Satoshis,
     lightningAddress: lightningAddress as LightningAddress,
     caseReference: "CASE-123",
     status: PostMigrationDepositReleaseStatus.Processing,
@@ -264,13 +259,13 @@ describe("inspectPostMigrationDepositRelease", () => {
     }
     mongooseMocks.releaseRepo.claimForRelease.mockResolvedValue(claimed)
     mongooseMocks.releaseRepo.recordPayment.mockResolvedValue(bound)
-    mongooseMocks.releaseRepo.recordTopUp.mockResolvedValue(bound)
     mongooseMocks.releaseRepo.updateStatus.mockImplementation(({ to }) =>
       Promise.resolve({ ...bound, status: to }),
     )
     mockDecodeInvoice.mockReturnValue({
       paymentAmount: { amount: BigInt(claimed.payoutAmountSats) },
       paymentHash,
+      destination: externalNodePubkey,
     })
     mockPayInvoice.mockResolvedValue({ status: PaymentSendStatus.Success })
     return { claimed, bound, paymentHash }
@@ -287,45 +282,24 @@ describe("inspectPostMigrationDepositRelease", () => {
         txHash,
         vout: 2,
         receiptAmountSats: 1_000,
-        payoutAmountSats: 990,
+        payoutAmountSats: 1_000,
         walletBalanceSats: 2_000,
         lightningAddress,
       })
     },
   )
 
-  it("pays the full receipt and plans the configured reserve below de minimis", async () => {
-    mockReceipt.mockResolvedValueOnce({
-      type: LedgerTransactionType.OnchainReceipt,
-      pendingConfirmation: false,
-      walletId,
-      currency: WalletCurrency.Btc,
-      txHash,
-      vout: 2,
-      address,
-      journalId: "journal-id",
-      credit: 50,
-    })
+  it("plans a payout exactly equal to the receipt credit", async () => {
+    mockReceipt.mockResolvedValueOnce(exactReceipt({ credit: 50 }))
 
     expect(await inspect()).toMatchObject({
       receiptAmountSats: 50,
       payoutAmountSats: 50,
-      topUpSats: 10,
     })
   })
 
   it("rejects an address mismatch even when txid and vout exist", async () => {
-    mockReceipt.mockResolvedValueOnce({
-      type: LedgerTransactionType.OnchainReceipt,
-      pendingConfirmation: false,
-      walletId,
-      currency: WalletCurrency.Btc,
-      txHash,
-      vout: 2,
-      address: "bcrt1qdifferent",
-      journalId: "journal-id",
-      credit: 1_000,
-    })
+    mockReceipt.mockResolvedValueOnce(exactReceipt({ address: "bcrt1qdifferent" }))
 
     expect(await inspect()).toBeInstanceOf(MigrationStateConflictError)
   })
@@ -350,10 +324,6 @@ describe("inspectPostMigrationDepositRelease", () => {
   })
 
   it.each<[string, () => void]>([
-    [
-      "fee reimbursement is enabled",
-      () => mockSkipFeeReimbursement.mockReturnValue(false),
-    ],
     [
       "the account id is invalid",
       () => mongooseMocks.findAccount.mockImplementation(() => undefined),
@@ -470,10 +440,6 @@ describe("inspectPostMigrationDepositRelease", () => {
       () => mockReceipt.mockResolvedValue(exactReceipt({ credit: 0 })),
     ],
     [
-      "the drain plan fails",
-      () => mockMigrationDrainPlan.mockReturnValue(dependencyError),
-    ],
-    [
       "the BTC balance lookup fails",
       () =>
         mockBalance.mockImplementation(({ walletId: id }) =>
@@ -552,7 +518,7 @@ describe("inspectPostMigrationDepositRelease", () => {
     expect(result).toBeInstanceOf(MigrationInvalidDestinationError)
   })
 
-  it("prepares an immutable release and trims its case reference", async () => {
+  it("prepares an immutable release without any top-up fields", async () => {
     const prepared = processingRelease({
       status: PostMigrationDepositReleaseStatus.Prepared,
     })
@@ -573,9 +539,13 @@ describe("inspectPostMigrationDepositRelease", () => {
         accountId,
         walletId,
         caseReference: "CASE-123",
-        topUpSats: 0,
+        receiptAmountSats: 1_000,
+        payoutAmountSats: 1_000,
       }),
     )
+    const upsertArgs = mongooseMocks.releaseRepo.upsertPrepared.mock.calls[0][0]
+    expect(upsertArgs).not.toHaveProperty("topUpSats")
+    expect(upsertArgs).not.toHaveProperty("plannedTopUpSats")
   })
 
   it("propagates persistence failure while preparing", async () => {
@@ -643,7 +613,10 @@ describe("inspectPostMigrationDepositRelease", () => {
 
   it("marks the release failed when reinspection fails", async () => {
     setSuccessfulRelease()
-    mockSkipFeeReimbursement.mockReturnValue(false)
+    mongooseMocks.findAccount.mockResolvedValue({
+      ...account,
+      status: AccountStatus.Active,
+    })
 
     const result = await releasePostMigrationDeposit({
       txHash: txHash as OnChainTxHash,
@@ -654,11 +627,15 @@ describe("inspectPostMigrationDepositRelease", () => {
     expect(mongooseMocks.releaseRepo.updateStatus).toHaveBeenCalledWith(
       expect.objectContaining({ to: PostMigrationDepositReleaseStatus.Failed }),
     )
+    expect(mockPayInvoice).not.toHaveBeenCalled()
   })
 
   it("returns a status persistence failure while failing a release", async () => {
     setSuccessfulRelease()
-    mockSkipFeeReimbursement.mockReturnValue(false)
+    mongooseMocks.findAccount.mockResolvedValue({
+      ...account,
+      status: AccountStatus.Active,
+    })
     mongooseMocks.releaseRepo.updateStatus.mockResolvedValue(dependencyError)
 
     expect(
@@ -678,9 +655,10 @@ describe("inspectPostMigrationDepositRelease", () => {
         vout: 2 as OnChainTxVout,
       }),
     ).toBeInstanceOf(MigrationStateConflictError)
+    expect(mockPayInvoice).not.toHaveBeenCalled()
   })
 
-  it("fetches, binds, and pays a fresh invoice", async () => {
+  it("fetches, binds, and pays a fresh invoice from the bankowner wallet", async () => {
     const { paymentHash } = setSuccessfulRelease()
 
     const result = await releasePostMigrationDeposit({
@@ -695,18 +673,47 @@ describe("inspectPostMigrationDepositRelease", () => {
       paymentHash,
       paymentRequest: "lnbc1fresh",
     })
+    expect(mockPayInvoice).toHaveBeenCalledTimes(1)
+    expect(mockPayInvoice).toHaveBeenCalledWith({
+      uncheckedPaymentRequest: "lnbc1fresh",
+      memo: "post-migration deposit release CASE-123",
+      senderWalletId: bankOwnerWalletId,
+      senderAccount: bankOwnerAccount,
+    })
   })
 
-  it("rejects a nonpositive planned payout before fetching an invoice", async () => {
-    mockMigrationDrainPlan.mockReturnValue({ amount: 0n, residualTopUp: 0n })
-    setSuccessfulRelease({ payoutAmountSats: 0 as Satoshis })
+  it("refuses an invoice whose destination is one of our own nodes", async () => {
+    const { paymentHash } = setSuccessfulRelease()
+    mockDecodeInvoice.mockReturnValue({
+      paymentAmount: { amount: 1_000n },
+      paymentHash,
+      destination: ownNodePubkey,
+    })
+
+    const result = await releasePostMigrationDeposit({
+      txHash: txHash as OnChainTxHash,
+      vout: 2 as OnChainTxVout,
+    })
+
+    expect(result).toBeInstanceOf(MigrationInvalidDestinationError)
+    expect(mongooseMocks.releaseRepo.updateStatus).toHaveBeenCalledWith(
+      expect.objectContaining({ to: PostMigrationDepositReleaseStatus.Failed }),
+    )
+    expect(mongooseMocks.releaseRepo.recordPayment).not.toHaveBeenCalled()
+    expect(mockPayInvoice).not.toHaveBeenCalled()
+  })
+
+  it("marks the release failed when the node service is unavailable", async () => {
+    setSuccessfulRelease()
+    mockLndService.mockReturnValue(dependencyError)
 
     expect(
       await releasePostMigrationDeposit({
         txHash: txHash as OnChainTxHash,
         vout: 2 as OnChainTxVout,
       }),
-    ).toBeInstanceOf(Error)
+    ).toBe(dependencyError)
+    expect(mockPayInvoice).not.toHaveBeenCalled()
   })
 
   it("marks the release failed when invoice fetching fails", async () => {
@@ -738,8 +745,9 @@ describe("inspectPostMigrationDepositRelease", () => {
   it("rejects an invoice whose amount differs from the plan", async () => {
     const { paymentHash } = setSuccessfulRelease()
     mockDecodeInvoice.mockReturnValue({
-      paymentAmount: { amount: 989n },
+      paymentAmount: { amount: 999n },
       paymentHash,
+      destination: externalNodePubkey,
     })
 
     expect(
@@ -748,6 +756,7 @@ describe("inspectPostMigrationDepositRelease", () => {
         vout: 2 as OnChainTxVout,
       }),
     ).toBeInstanceOf(MigrationInvalidDestinationError)
+    expect(mockPayInvoice).not.toHaveBeenCalled()
   })
 
   it("rejects a changed payment hash for a persisted invoice", async () => {
@@ -757,8 +766,9 @@ describe("inspectPostMigrationDepositRelease", () => {
     })
     mongooseMocks.releaseRepo.claimForRelease.mockResolvedValue(release)
     mockDecodeInvoice.mockReturnValue({
-      paymentAmount: { amount: 990n },
+      paymentAmount: { amount: 1_000n },
       paymentHash: "ef".repeat(32),
+      destination: externalNodePubkey,
     })
     mongooseMocks.releaseRepo.updateStatus.mockResolvedValue(release)
 
@@ -768,9 +778,10 @@ describe("inspectPostMigrationDepositRelease", () => {
         vout: 2 as OnChainTxVout,
       }),
     ).toBeInstanceOf(MigrationStateConflictError)
+    expect(mockPayInvoice).not.toHaveBeenCalled()
   })
 
-  it("propagates failure to bind a fresh invoice", async () => {
+  it("propagates failure to bind a fresh invoice without paying", async () => {
     setSuccessfulRelease()
     mongooseMocks.releaseRepo.recordPayment.mockResolvedValue(dependencyError)
 
@@ -780,66 +791,26 @@ describe("inspectPostMigrationDepositRelease", () => {
         vout: 2 as OnChainTxVout,
       }),
     ).toBe(dependencyError)
-  })
-
-  it("tops up, records, and pays a below-de-minimis release", async () => {
-    mockReceipt.mockResolvedValue(exactReceipt({ credit: 50 }))
-    const { bound } = setSuccessfulRelease({
-      receiptAmountSats: 50 as Satoshis,
-      payoutAmountSats: 50 as Satoshis,
-      plannedTopUpSats: 10 as Satoshis,
-    })
-    mongooseMocks.findWallet.mockResolvedValueOnce(btcWallet).mockResolvedValueOnce({
-      id: bankOwnerWalletId,
-      accountId: bankOwnerAccountId,
-      currency: WalletCurrency.Btc,
-    })
-    mongooseMocks.findAccount
-      .mockResolvedValueOnce(account)
-      .mockResolvedValueOnce({ ...account, id: bankOwnerAccountId })
-    mongooseMocks.releaseRepo.recordTopUp.mockResolvedValue({
-      ...bound,
-      topUpSats: 10 as Satoshis,
-    })
-
-    const result = await releasePostMigrationDeposit({
-      txHash: txHash as OnChainTxHash,
-      vout: 2 as OnChainTxVout,
-    })
-
-    expect(result).toMatchObject({ status: PostMigrationDepositReleaseStatus.Completed })
-    expect(mockIntraledger).toHaveBeenCalledWith(
-      expect.objectContaining({
-        senderWalletId: bankOwnerWalletId,
-        recipientWalletId: walletId,
-        postMigrationAccountRole: "recipient",
-      }),
-    )
+    expect(mockPayInvoice).not.toHaveBeenCalled()
   })
 
   it.each<[string, () => void]>([
     [
-      "bankowner wallet lookup",
+      "the bankowner wallet lookup fails",
       () =>
-        mongooseMocks.findWallet
-          .mockResolvedValueOnce(btcWallet)
-          .mockResolvedValueOnce(dependencyError),
+        mongooseMocks.findWallet.mockImplementation((id) =>
+          Promise.resolve(id === bankOwnerWalletId ? dependencyError : btcWallet),
+        ),
     ],
     [
-      "bankowner account lookup",
+      "the bankowner account lookup fails",
       () =>
-        mongooseMocks.findAccount
-          .mockResolvedValueOnce(account)
-          .mockResolvedValueOnce(dependencyError),
+        mongooseMocks.findAccount.mockImplementation((id) =>
+          Promise.resolve(id === bankOwnerAccountId ? dependencyError : account),
+        ),
     ],
-    ["bankowner transfer", () => mockIntraledger.mockResolvedValue(dependencyError)],
-  ])("marks the release failed when %s fails", async (_scenario, setup) => {
-    mockReceipt.mockResolvedValue(exactReceipt({ credit: 50 }))
-    setSuccessfulRelease({
-      receiptAmountSats: 50 as Satoshis,
-      payoutAmountSats: 50 as Satoshis,
-      plannedTopUpSats: 10 as Satoshis,
-    })
+  ])("marks the release failed when %s", async (_scenario, setup) => {
+    setSuccessfulRelease()
     setup()
 
     expect(
@@ -848,26 +819,10 @@ describe("inspectPostMigrationDepositRelease", () => {
         vout: 2 as OnChainTxVout,
       }),
     ).toBe(dependencyError)
+    expect(mockPayInvoice).not.toHaveBeenCalled()
   })
 
-  it("propagates failure to record a completed top-up", async () => {
-    mockReceipt.mockResolvedValue(exactReceipt({ credit: 50 }))
-    setSuccessfulRelease({
-      receiptAmountSats: 50 as Satoshis,
-      payoutAmountSats: 50 as Satoshis,
-      plannedTopUpSats: 10 as Satoshis,
-    })
-    mongooseMocks.releaseRepo.recordTopUp.mockResolvedValue(dependencyError)
-
-    expect(
-      await releasePostMigrationDeposit({
-        txHash: txHash as OnChainTxHash,
-        vout: 2 as OnChainTxVout,
-      }),
-    ).toBe(dependencyError)
-  })
-
-  it("marks a failed payment failed when no top-up needs reclaiming", async () => {
+  it("marks the release failed when the payment fails", async () => {
     setSuccessfulRelease()
     mockPayInvoice.mockResolvedValue(dependencyError)
 
@@ -877,71 +832,9 @@ describe("inspectPostMigrationDepositRelease", () => {
         vout: 2 as OnChainTxVout,
       }),
     ).toBe(dependencyError)
-  })
-
-  it("reclaims a recorded top-up after payment failure", async () => {
-    mockReceipt.mockResolvedValue(exactReceipt({ credit: 50 }))
-    setSuccessfulRelease({
-      receiptAmountSats: 50 as Satoshis,
-      payoutAmountSats: 50 as Satoshis,
-      plannedTopUpSats: 10 as Satoshis,
-      topUpSats: 10 as Satoshis,
-    })
-    mockPayInvoice.mockResolvedValue(dependencyError)
-
-    expect(
-      await releasePostMigrationDeposit({
-        txHash: txHash as OnChainTxHash,
-        vout: 2 as OnChainTxVout,
-      }),
-    ).toBe(dependencyError)
-    expect(mockIntraledger).toHaveBeenCalledWith(
-      expect.objectContaining({
-        senderWalletId: walletId,
-        recipientWalletId: bankOwnerWalletId,
-        postMigrationAccountRole: "sender",
-      }),
+    expect(mongooseMocks.releaseRepo.updateStatus).toHaveBeenCalledWith(
+      expect.objectContaining({ to: PostMigrationDepositReleaseStatus.Failed }),
     )
-  })
-
-  it("returns an account lookup failure while reclaiming a top-up", async () => {
-    mockReceipt.mockResolvedValue(exactReceipt({ credit: 50 }))
-    setSuccessfulRelease({
-      receiptAmountSats: 50 as Satoshis,
-      payoutAmountSats: 50 as Satoshis,
-      plannedTopUpSats: 10 as Satoshis,
-      topUpSats: 10 as Satoshis,
-    })
-    mockPayInvoice.mockResolvedValue(dependencyError)
-    mongooseMocks.findAccount
-      .mockResolvedValueOnce(account)
-      .mockResolvedValueOnce(dependencyError)
-
-    expect(
-      await releasePostMigrationDeposit({
-        txHash: txHash as OnChainTxHash,
-        vout: 2 as OnChainTxVout,
-      }),
-    ).toBe(dependencyError)
-  })
-
-  it("returns a transfer failure while reclaiming a top-up", async () => {
-    mockReceipt.mockResolvedValue(exactReceipt({ credit: 50 }))
-    setSuccessfulRelease({
-      receiptAmountSats: 50 as Satoshis,
-      payoutAmountSats: 50 as Satoshis,
-      plannedTopUpSats: 10 as Satoshis,
-      topUpSats: 10 as Satoshis,
-    })
-    mockPayInvoice.mockResolvedValue(new MigrationInvalidDestinationError("payment"))
-    mockIntraledger.mockResolvedValue(dependencyError)
-
-    expect(
-      await releasePostMigrationDeposit({
-        txHash: txHash as OnChainTxHash,
-        vout: 2 as OnChainTxVout,
-      }),
-    ).toBe(dependencyError)
   })
 
   it("records a non-successful payment as pending", async () => {
@@ -968,8 +861,9 @@ describe("inspectPostMigrationDepositRelease", () => {
     )
     mongooseMocks.releaseRepo.findByOutput.mockResolvedValue(release)
     mockDecodeInvoice.mockReturnValue({
-      paymentAmount: { amount: 990n },
+      paymentAmount: { amount: 1_000n },
       paymentHash,
+      destination: externalNodePubkey,
     })
     mockPayInvoice.mockResolvedValue({ status: PaymentSendStatus.Success })
     mongooseMocks.releaseRepo.updateStatus.mockResolvedValue({
@@ -988,32 +882,48 @@ describe("inspectPostMigrationDepositRelease", () => {
     expect(mockLnurlPayService).not.toHaveBeenCalled()
     expect(mongooseMocks.releaseRepo.recordPayment).not.toHaveBeenCalled()
     expect(mockPayInvoice).toHaveBeenCalledWith(
-      expect.objectContaining({ uncheckedPaymentRequest: paymentRequest }),
+      expect.objectContaining({
+        uncheckedPaymentRequest: paymentRequest,
+        senderWalletId: bankOwnerWalletId,
+      }),
     )
   })
 
-  it("stops a resumed release when the planned top-up state is ambiguous", async () => {
-    mockReceipt.mockResolvedValue(exactReceipt({ credit: 50 }))
-    const release = processingRelease({
-      paymentHash: "ef".repeat(32) as PaymentHash,
-      paymentRequest: "lnbc1persisted",
-      receiptAmountSats: 50 as Satoshis,
-      payoutAmountSats: 50 as Satoshis,
-      plannedTopUpSats: 10 as Satoshis,
-    })
-    mongooseMocks.releaseRepo.claimForRelease.mockResolvedValue(
-      new MigrationStateConflictError("already processing"),
+  it("attempts exactly one payment across concurrent release claims", async () => {
+    const paymentHash = "ef".repeat(32) as PaymentHash
+    const claimed = processingRelease()
+    const bound = { ...claimed, paymentHash, paymentRequest: "lnbc1fresh" }
+    mongooseMocks.releaseRepo.claimForRelease
+      .mockResolvedValueOnce(claimed)
+      .mockResolvedValueOnce(new MigrationStateConflictError("already processing"))
+    mongooseMocks.releaseRepo.findByOutput.mockResolvedValue(claimed)
+    mongooseMocks.releaseRepo.recordPayment
+      .mockResolvedValueOnce(bound)
+      .mockResolvedValueOnce(new MigrationStateConflictError("cannot bind"))
+    mongooseMocks.releaseRepo.updateStatus.mockImplementation(({ to }) =>
+      Promise.resolve({ ...bound, status: to }),
     )
-    mongooseMocks.releaseRepo.findByOutput.mockResolvedValue(release)
-
-    const result = await releasePostMigrationDeposit({
-      txHash: txHash as OnChainTxHash,
-      vout: 2 as OnChainTxVout,
+    mockDecodeInvoice.mockReturnValue({
+      paymentAmount: { amount: 1_000n },
+      paymentHash,
+      destination: externalNodePubkey,
     })
+    mockPayInvoice.mockResolvedValue({ status: PaymentSendStatus.Success })
 
-    expect(result).toBeInstanceOf(MigrationStateConflictError)
-    expect(mockDecodeInvoice).not.toHaveBeenCalled()
-    expect(mockPayInvoice).not.toHaveBeenCalled()
+    const results = await Promise.all([
+      releasePostMigrationDeposit({
+        txHash: txHash as OnChainTxHash,
+        vout: 2 as OnChainTxVout,
+      }),
+      releasePostMigrationDeposit({
+        txHash: txHash as OnChainTxHash,
+        vout: 2 as OnChainTxVout,
+      }),
+    ])
+
+    expect(mockPayInvoice).toHaveBeenCalledTimes(1)
+    expect(results.filter((result) => result instanceof Error)).toHaveLength(1)
+    expect(results.filter((result) => !(result instanceof Error))).toHaveLength(1)
   })
 
   it("propagates a release lookup failure during reconciliation", async () => {
@@ -1144,24 +1054,6 @@ describe("inspectPostMigrationDepositRelease", () => {
         vout: 2 as OnChainTxVout,
       }),
     ).toMatchObject({ status: PostMigrationDepositReleaseStatus.Failed })
-  })
-
-  it("returns a top-up reclaim failure while reconciling a failed payment", async () => {
-    const release = processingRelease({
-      status: PostMigrationDepositReleaseStatus.Pending,
-      paymentHash: "ef".repeat(32) as PaymentHash,
-      topUpSats: 10 as Satoshis,
-    })
-    mongooseMocks.releaseRepo.findByOutput.mockResolvedValue(release)
-    mockStateDeterminator.mockReturnValue({ determine: () => LnPaymentState.Failed })
-    mockIntraledger.mockResolvedValue(dependencyError)
-
-    expect(
-      await reconcilePostMigrationDepositRelease({
-        txHash: txHash as OnChainTxHash,
-        vout: 2 as OnChainTxVout,
-      }),
-    ).toBe(dependencyError)
   })
 
   it("leaves an indeterminate ledger state pending", async () => {

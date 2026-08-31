@@ -1,3 +1,7 @@
+jest.mock("fs", () => ({
+  ...jest.requireActual("fs"),
+  accessSync: jest.fn(),
+}))
 jest.mock("@/app/migration-flow/post-migration-deposit-release", () => ({
   inspectPostMigrationDepositRelease: jest.fn(),
   preparePostMigrationDepositRelease: jest.fn(),
@@ -5,6 +9,8 @@ jest.mock("@/app/migration-flow/post-migration-deposit-release", () => ({
   reconcilePostMigrationDepositRelease: jest.fn(),
 }))
 jest.mock("@/services/mongodb", () => ({ setupMongoConnection: jest.fn() }))
+
+import { accessSync } from "fs"
 
 import {
   inspectPostMigrationDepositRelease,
@@ -27,6 +33,7 @@ const mockInspect = inspectPostMigrationDepositRelease as jest.Mock
 const mockPrepare = preparePostMigrationDepositRelease as jest.Mock
 const mockRelease = releasePostMigrationDeposit as jest.Mock
 const mockReconcile = reconcilePostMigrationDepositRelease as jest.Mock
+const mockAccessSync = accessSync as jest.Mock
 
 describe("post-migration deposit release CLI", () => {
   const txid = "ab".repeat(32)
@@ -41,6 +48,7 @@ describe("post-migration deposit release CLI", () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    mockAccessSync.mockReturnValue(undefined)
     process.exitCode = undefined
   })
 
@@ -97,15 +105,12 @@ describe("post-migration deposit release CLI", () => {
       address: inspectionArgs[3],
       receiptJournalId: "journal-id",
       receiptAmountSats: 1_000,
-      payoutAmountSats: 990,
-      topUpSats: 0,
+      payoutAmountSats: 1_000,
       lightningAddress: inspectionArgs[4],
     })
 
     expect(await inspect(inspectionArgs)).toBe(true)
-    expect(log).toHaveBeenCalledWith(
-      expect.stringContaining('"maximumLightningFeeSats": 10'),
-    )
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('"payoutAmountSats": 1000'))
     log.mockRestore()
   })
 
@@ -160,6 +165,21 @@ describe("post-migration deposit release CLI", () => {
 
     expect(process.exitCode).toBe(1)
     expect(error).toHaveBeenCalled()
+    error.mockRestore()
+  })
+
+  it("hard-fails before running any step when the config path is unreadable", async () => {
+    const error = jest.spyOn(console, "error").mockImplementation()
+    mockAccessSync.mockImplementation(() => {
+      throw new Error("ENOENT")
+    })
+    process.argv = ["node", "script", "/missing/custom.yaml", "release", txid, "2"]
+
+    await main()
+
+    expect(process.exitCode).toBe(1)
+    expect(error).toHaveBeenCalledWith(expect.stringContaining("/missing/custom.yaml"))
+    expect(mockRelease).not.toHaveBeenCalled()
     error.mockRestore()
   })
 
