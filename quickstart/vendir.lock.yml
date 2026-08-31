@@ -2,24 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix(api): populate fee columns in csv transaction export (#716)...'
-      sha: f002d27f6075cc4737a6615e668a071707a761e5
+      commitTitle: 'feat(api): add btcMapPlaceSubmit mutation proxying btcmap submit_place
+        RPC (#791)...'
+      sha: af91f007f481097192153ef772c293bb20bf318b
       tags:
-      - 0.22.54-1-gf002d27f6
+      - 0.22.54-3-gaf91f007f
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'fix(api): populate fee columns in csv transaction export (#716)...'
-      sha: f002d27f6075cc4737a6615e668a071707a761e5
+      commitTitle: 'feat(api): add btcMapPlaceSubmit mutation proxying btcmap submit_place
+        RPC (#791)...'
+      sha: af91f007f481097192153ef772c293bb20bf318b
       tags:
-      - 0.22.54-1-gf002d27f6
+      - 0.22.54-3-gaf91f007f
     path: schemas
   - git:
-      commitTitle: 'fix(api): populate fee columns in csv transaction export (#716)...'
-      sha: f002d27f6075cc4737a6615e668a071707a761e5
+      commitTitle: 'feat(api): add btcMapPlaceSubmit mutation proxying btcmap submit_place
+        RPC (#791)...'
+      sha: af91f007f481097192153ef772c293bb20bf318b
       tags:
-      - 0.22.54-1-gf002d27f6
+      - 0.22.54-3-gaf91f007f
     path: gql
   path: graphql
 kind: LockConfig
