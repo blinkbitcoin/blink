@@ -2,24 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat(core): add fee caps for probe-excluded node groups (#803)...'
-      sha: d73fcf7989c980f54fa7739dffd03d73e9fcf9e3
+      commitTitle: 'fix(core): budget migration drain reserve with group fee caps
+        (#805)'
+      sha: 8f83552c9ae56607360ec2ffe35345b7ab1e7858
       tags:
-      - 0.22.54-5-gd73fcf798
+      - 0.22.55-1-g8f83552c9
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat(core): add fee caps for probe-excluded node groups (#803)...'
-      sha: d73fcf7989c980f54fa7739dffd03d73e9fcf9e3
+      commitTitle: 'fix(core): budget migration drain reserve with group fee caps
+        (#805)'
+      sha: 8f83552c9ae56607360ec2ffe35345b7ab1e7858
       tags:
-      - 0.22.54-5-gd73fcf798
+      - 0.22.55-1-g8f83552c9
     path: schemas
   - git:
-      commitTitle: 'feat(core): add fee caps for probe-excluded node groups (#803)...'
-      sha: d73fcf7989c980f54fa7739dffd03d73e9fcf9e3
+      commitTitle: 'fix(core): budget migration drain reserve with group fee caps
+        (#805)'
+      sha: 8f83552c9ae56607360ec2ffe35345b7ab1e7858
       tags:
-      - 0.22.54-5-gd73fcf798
+      - 0.22.55-1-g8f83552c9
     path: gql
   path: graphql
 kind: LockConfig
