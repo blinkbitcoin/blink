@@ -409,7 +409,7 @@ describe("initiated via lightning", () => {
       expect(noAmountPaymentResult).toBeInstanceOf(WithdrawalLimitsExceededError)
     })
 
-    it("pay zero amount invoice & revert txn when verifyMaxFee fails", async () => {
+    it("passes persisted fee cap to final verification and reverts when rejected", async () => {
       // Setup mocks
       const { LndService: LnServiceOrig } = jest.requireActual("@/services/lnd")
       const lndServiceSpy = jest.spyOn(LndImpl, "LndService").mockReturnValue({
@@ -418,10 +418,23 @@ describe("initiated via lightning", () => {
         defaultPubkey: (): Pubkey => DEFAULT_PUBKEY,
       })
 
+      const feeCapBasisPoints = 10n
+      const configSpy = jest.spyOn(ConfigImpl, "getValuesToSkipProbe").mockReturnValue({
+        pubkey: [],
+        chanId: [],
+        feeCapGroups: [
+          {
+            pubkey: [noAmountLnInvoice.destination],
+            feeCapBasisPoints,
+          },
+        ],
+      })
+
       const { LnFees: LnFeesOrig } = jest.requireActual("@/domain/payments")
+      const verifyMaxFee = jest.fn(() => new MaxFeeTooLargeForRoutelessPaymentError())
       const lndFeesSpy = jest.spyOn(LnFeesImpl, "LnFees").mockReturnValue({
         ...LnFeesOrig(),
-        verifyMaxFee: () => new MaxFeeTooLargeForRoutelessPaymentError(),
+        verifyMaxFee,
       })
 
       // Create users
@@ -441,17 +454,41 @@ describe("initiated via lightning", () => {
       })
       if (receive instanceof Error) throw receive
 
-      // Attempt pay
-      const paymentResult = await Payments.payInvoiceByWalletId({
-        uncheckedPaymentRequest: lnInvoice.paymentRequest,
+      // Persist the payment flow during fee estimation
+      const feeEstimate = await Payments.getNoAmountLightningFeeEstimationForBtcWallet({
+        walletId: newWalletDescriptor.id,
+        uncheckedPaymentRequest: noAmountLnInvoice.paymentRequest,
+        amount,
+      })
+      expect(feeEstimate.error).toBeUndefined()
+
+      const persistedPaymentFlow = await PaymentFlowStateRepository(
+        defaultTimeToExpiryInSeconds,
+      ).findLightningPaymentFlow({
+        walletId: newWalletDescriptor.id,
+        paymentHash: noAmountLnInvoice.paymentHash,
+        inputAmount: btcPaymentAmount.amount,
+      })
+      if (persistedPaymentFlow instanceof Error) throw persistedPaymentFlow
+      expect(persistedPaymentFlow.feeCapBasisPoints).toBe(feeCapBasisPoints)
+
+      // Attempt pay using the persisted payment flow
+      const paymentResult = await Payments.payNoAmountInvoiceByWalletIdForBtcWallet({
+        uncheckedPaymentRequest: noAmountLnInvoice.paymentRequest,
         memo,
         senderWalletId: newWalletDescriptor.id,
         senderAccount: newAccount,
+        amount,
       })
       expect(paymentResult).toBeInstanceOf(MaxFeeTooLargeForRoutelessPaymentError)
+      expect(verifyMaxFee).toHaveBeenCalledWith(
+        expect.objectContaining({ feeCapBasisPoints }),
+      )
 
       // Expect transaction to be canceled
-      const txns = await LedgerService().getTransactionsByHash(lnInvoice.paymentHash)
+      const txns = await LedgerService().getTransactionsByHash(
+        noAmountLnInvoice.paymentHash,
+      )
       if (txns instanceof Error) throw txns
 
       const { satsAmount, satsFee } = txns[0]
@@ -475,6 +512,7 @@ describe("initiated via lightning", () => {
 
       // Restore system state
       lndFeesSpy.mockRestore()
+      configSpy.mockRestore()
       lndServiceSpy.mockRestore()
     })
 

@@ -265,6 +265,44 @@ describe("LnFees", () => {
     ).toBe(true)
   })
 
+  it.each([
+    {
+      description: "BTC wallet",
+      senderWalletCurrency: WalletCurrency.Btc,
+      isFromNoAmountInvoice: true,
+    },
+    {
+      description: "USD wallet with no-amount invoice",
+      senderWalletCurrency: WalletCurrency.Usd,
+      isFromNoAmountInvoice: true,
+    },
+    {
+      description: "USD wallet with amount invoice",
+      senderWalletCurrency: WalletCurrency.Usd,
+      isFromNoAmountInvoice: false,
+    },
+  ])(
+    "rejects a routeless fee above the explicit cap for $description",
+    ({ senderWalletCurrency, isFromNoAmountInvoice }) => {
+      const btc = { amount: 1_000_000n, currency: WalletCurrency.Btc }
+      const usd = { amount: 20_000n, currency: WalletCurrency.Usd }
+      const priceRatio = WalletPriceRatio({ btc, usd })
+      if (priceRatio instanceof Error) throw priceRatio
+
+      expect(
+        LnFees().verifyMaxFee({
+          maxFeeAmount: { amount: 1_001n, currency: WalletCurrency.Btc },
+          btcPaymentAmount: btc,
+          usdPaymentAmount: usd,
+          priceRatio,
+          senderWalletCurrency,
+          isFromNoAmountInvoice,
+          feeCapBasisPoints: 10n,
+        }),
+      ).toBeInstanceOf(MaxFeeTooLargeForRoutelessPaymentError)
+    },
+  )
+
   describe("feeFromRawRoute", () => {
     it("returns the feeFromRawRoute", () => {
       const rawRoute = { total_mtokens: "21000000", safe_fee: 210 } as RawRoute
