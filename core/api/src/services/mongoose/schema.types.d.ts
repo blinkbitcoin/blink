@@ -246,14 +246,14 @@ interface PostMigrationDepositReleaseRecord {
   receiptJournalId: string
   receiptAmountSats: number
   payoutAmountSats: number
-  plannedTopUpSats: number
-  topUpSats: number
   lightningAddress: string
   caseReference: string
   status: string
   paymentHash?: string
   paymentRequest?: string
   failureReason?: string
+  sweptAt?: Date
+  sweepJournalId?: string
   createdAt: Date
   updatedAt: Date
 }

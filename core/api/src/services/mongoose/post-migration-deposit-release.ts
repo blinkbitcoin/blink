@@ -115,32 +115,6 @@ export const PostMigrationDepositReleaseRepository =
       }
     }
 
-    const recordTopUp = async ({
-      txHash,
-      vout,
-      topUpSats,
-    }: {
-      txHash: OnChainTxHash
-      vout: OnChainTxVout
-      topUpSats: Satoshis
-    }): Promise<PostMigrationDepositRelease | RepositoryError | MigrationFlowError> => {
-      try {
-        const result = await PostMigrationDepositReleaseModel.findOneAndUpdate(
-          { txHash, vout, status: PostMigrationDepositReleaseStatus.Processing },
-          { $set: { topUpSats, updatedAt: new Date() } },
-          { new: true },
-        )
-        if (!result) {
-          return new MigrationStateConflictError(
-            `release ${txHash}:${vout} cannot record top-up`,
-          )
-        }
-        return releaseFromRaw(result)
-      } catch (err) {
-        return parseRepositoryError(err)
-      }
-    }
-
     const updateStatus = async ({
       txHash,
       vout,
@@ -182,7 +156,6 @@ export const PostMigrationDepositReleaseRepository =
       upsertPrepared,
       claimForRelease,
       recordPayment,
-      recordTopUp,
       updateStatus,
     }
   }
@@ -198,14 +171,14 @@ const releaseFromRaw = (
   receiptJournalId: result.receiptJournalId as LedgerJournalId,
   receiptAmountSats: toSats(result.receiptAmountSats),
   payoutAmountSats: toSats(result.payoutAmountSats),
-  plannedTopUpSats: toSats(result.plannedTopUpSats),
-  topUpSats: toSats(result.topUpSats),
   lightningAddress: result.lightningAddress as LightningAddress,
   caseReference: result.caseReference,
   status: result.status as PostMigrationDepositReleaseStatus,
   paymentHash: (result.paymentHash as PaymentHash) || undefined,
   paymentRequest: result.paymentRequest || undefined,
   failureReason: result.failureReason || undefined,
+  sweptAt: result.sweptAt || undefined,
+  sweepJournalId: (result.sweepJournalId as LedgerJournalId) || undefined,
   createdAt: result.createdAt,
   updatedAt: result.updatedAt,
 })

@@ -21,14 +21,14 @@ type PostMigrationDepositRelease = {
   receiptJournalId: LedgerJournalId
   receiptAmountSats: Satoshis
   payoutAmountSats: Satoshis
-  plannedTopUpSats: Satoshis
-  topUpSats: Satoshis
   lightningAddress: LightningAddress
   caseReference: string
   status: PostMigrationDepositReleaseStatus
   paymentHash?: PaymentHash
   paymentRequest?: string
   failureReason?: string
+  sweptAt?: Date
+  sweepJournalId?: LedgerJournalId
   createdAt: Date
   updatedAt: Date
 }
@@ -39,6 +39,8 @@ type PreparePostMigrationDepositReleaseArgs = Omit<
   | "paymentHash"
   | "paymentRequest"
   | "failureReason"
+  | "sweptAt"
+  | "sweepJournalId"
   | "createdAt"
   | "updatedAt"
 >
@@ -60,11 +62,6 @@ interface IPostMigrationDepositReleaseRepository {
     vout: OnChainTxVout
     paymentHash: PaymentHash
     paymentRequest: string
-  }): Promise<PostMigrationDepositRelease | RepositoryError | MigrationFlowError>
-  recordTopUp(args: {
-    txHash: OnChainTxHash
-    vout: OnChainTxVout
-    topUpSats: Satoshis
   }): Promise<PostMigrationDepositRelease | RepositoryError | MigrationFlowError>
   updateStatus(args: {
     txHash: OnChainTxHash

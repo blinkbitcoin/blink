@@ -10,6 +10,8 @@
  * pnpm tsx src/debug/post-migration-deposit-release.ts /var/yaml/custom.yaml reconcile <txid> <vout>
  */
 
+import { accessSync, constants } from "fs"
+
 import {
   inspectPostMigrationDepositRelease,
   preparePostMigrationDepositRelease,
@@ -80,9 +82,6 @@ export const inspect = async (args: string[]) => {
         receiptJournalId: plan.receiptJournalId,
         receiptAmountSats: plan.receiptAmountSats,
         payoutAmountSats: plan.payoutAmountSats,
-        maximumLightningFeeSats:
-          plan.receiptAmountSats + plan.topUpSats - plan.payoutAmountSats,
-        topUpSats: plan.topUpSats,
         lightningAddress: plan.lightningAddress,
       },
       null,
@@ -127,6 +126,13 @@ export const main = async () => {
   const [configPath, stepRaw, ...args] = process.argv.slice(2)
   if (!configPath) {
     console.error(`Missing custom.yaml path\n${usage}`)
+    process.exitCode = 1
+    return
+  }
+  try {
+    accessSync(configPath, constants.R_OK)
+  } catch {
+    console.error(`Cannot read config file at ${configPath}\n${usage}`)
     process.exitCode = 1
     return
   }

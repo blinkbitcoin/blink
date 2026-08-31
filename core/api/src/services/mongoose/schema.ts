@@ -681,8 +681,6 @@ const postMigrationDepositReleaseSchema = new Schema<PostMigrationDepositRelease
     receiptJournalId: { type: String, required: true },
     receiptAmountSats: { type: Number, required: true },
     payoutAmountSats: { type: Number, required: true },
-    plannedTopUpSats: { type: Number, required: true },
-    topUpSats: { type: Number, required: true, default: 0 },
     lightningAddress: { type: String, required: true },
     caseReference: { type: String, required: true },
     status: {
@@ -693,6 +691,8 @@ const postMigrationDepositReleaseSchema = new Schema<PostMigrationDepositRelease
     paymentHash: String,
     paymentRequest: String,
     failureReason: String,
+    sweptAt: Date,
+    sweepJournalId: String,
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now, required: true },
   },

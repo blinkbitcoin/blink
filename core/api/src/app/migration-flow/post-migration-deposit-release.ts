@@ -1,22 +1,14 @@
-import { migrationDrainPlan, reserveForAmount } from "./execute-transfer"
-
 import { getLnurlServerService } from "@/app/accounts/lnurl-server"
-import { intraledgerPaymentSendWalletIdForPostMigrationDepositRelease } from "@/app/payments/send-intraledger"
-import { payInvoiceByWalletIdForPostMigrationDepositRelease } from "@/app/payments/send-lightning"
+import { payInvoiceByWalletId } from "@/app/payments"
 import { updatePendingPaymentByHash } from "@/app/payments/update-pending-payments"
 import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
 
-import {
-  getCustodialMigrationFlowConfig,
-  getSkipFeeReimbursement,
-  LNURL_SERVER_LN_ADDRESS_DOMAIN,
-  NETWORK,
-} from "@/config"
+import { LNURL_SERVER_LN_ADDRESS_DOMAIN, NETWORK } from "@/config"
 
 import {
+  AccountStatus,
   checkedToAccountId,
   checkedToLightningAddress,
-  PostMigrationAccountValidator,
 } from "@/domain/accounts"
 import { isSha256Hash, toSats } from "@/domain/bitcoin"
 import { checkedToOnChainAddress } from "@/domain/bitcoin/onchain"
@@ -36,6 +28,7 @@ import {
 
 import { LedgerService } from "@/services/ledger"
 import { getBankOwnerWalletId } from "@/services/ledger/caching"
+import { LndService } from "@/services/lnd"
 import { baseLogger } from "@/services/logger"
 import {
   AccountsRepository,
@@ -62,7 +55,6 @@ export type PostMigrationDepositReleasePlan = {
   receiptJournalId: LedgerJournalId
   receiptAmountSats: Satoshis
   payoutAmountSats: Satoshis
-  topUpSats: Satoshis
   lightningAddress: LightningAddress
   walletBalanceSats: Satoshis
 }
@@ -70,12 +62,6 @@ export type PostMigrationDepositReleasePlan = {
 export const inspectPostMigrationDepositRelease = async (
   raw: RawReleaseOutput,
 ): Promise<PostMigrationDepositReleasePlan | ApplicationError> => {
-  if (!getSkipFeeReimbursement()) {
-    return new MigrationStateConflictError(
-      "post-migration release requires skipFeeReimbursement=true for deterministic accounting",
-    )
-  }
-
   const accountId = checkedToAccountId(raw.accountId)
   if (accountId instanceof Error) return accountId
   if (!isSha256Hash(raw.txHash)) {
@@ -98,16 +84,25 @@ export const inspectPostMigrationDepositRelease = async (
 
   const account = await AccountsRepository().findById(accountId)
   if (account instanceof Error) return account
-  const accountValidator = PostMigrationAccountValidator(account)
-  if (accountValidator instanceof Error) return accountValidator
+  if (
+    account.status !== AccountStatus.Migrated &&
+    account.status !== AccountStatus.Closed
+  ) {
+    return new MigrationStateConflictError(
+      `account status must be ${AccountStatus.Migrated} or ${AccountStatus.Closed}, got ${account.status}`,
+    )
+  }
 
   const wallets = await WalletsRepository().findAccountWalletsByAccountId(accountId)
   if (wallets instanceof Error) return wallets
   const { USD: usdWallet } = wallets
   const btcWallet = await WalletsRepository().findById(wallets.BTC.id)
   if (btcWallet instanceof Error) return btcWallet
-  const walletValidation = accountValidator.validateWalletForAccount(btcWallet)
-  if (walletValidation instanceof Error) return walletValidation
+  if (btcWallet.accountId !== account.id) {
+    return new MigrationStateConflictError(
+      `BTC wallet ${btcWallet.id} does not belong to account ${account.id}`,
+    )
+  }
 
   const usdBalance = await getBalanceForWallet({ walletId: usdWallet.id })
   if (usdBalance instanceof Error) return usdBalance
@@ -185,18 +180,6 @@ export const inspectPostMigrationDepositRelease = async (
       `on-chain receipt credit must be positive, got ${receiptAmount}`,
     )
   }
-  const { deMinimisThresholdSats } = getCustodialMigrationFlowConfig()
-  let payoutAmount: bigint
-  let topUpAmount: bigint
-  if (receiptAmount <= BigInt(deMinimisThresholdSats)) {
-    payoutAmount = receiptAmount
-    topUpAmount = reserveForAmount(receiptAmount)
-  } else {
-    const drainPlan = migrationDrainPlan(receiptAmount)
-    if (drainPlan instanceof Error) return drainPlan
-    payoutAmount = drainPlan.amount
-    topUpAmount = drainPlan.residualTopUp
-  }
 
   const walletBalance = await getBalanceForWallet({ walletId: btcWallet.id })
   if (walletBalance instanceof Error) return walletBalance
@@ -214,8 +197,7 @@ export const inspectPostMigrationDepositRelease = async (
     address,
     receiptJournalId: receipt.journalId,
     receiptAmountSats: toSats(receiptAmount),
-    payoutAmountSats: toSats(payoutAmount),
-    topUpSats: toSats(topUpAmount),
+    payoutAmountSats: toSats(receiptAmount),
     lightningAddress,
     walletBalanceSats: toSats(walletBalance),
   }
@@ -242,8 +224,6 @@ export const preparePostMigrationDepositRelease = async ({
     receiptJournalId: plan.receiptJournalId,
     receiptAmountSats: plan.receiptAmountSats,
     payoutAmountSats: plan.payoutAmountSats,
-    plannedTopUpSats: plan.topUpSats,
-    topUpSats: toSats(0),
     lightningAddress: plan.lightningAddress,
     caseReference: caseReference.trim(),
   })
@@ -261,7 +241,6 @@ export const releasePostMigrationDeposit = async ({
   vout: OnChainTxVout
 }): Promise<PostMigrationDepositRelease | ApplicationError> => {
   const repo = PostMigrationDepositReleaseRepository()
-  let resumedProcessing = false
   let release = await repo.claimForRelease({ txHash, vout })
   if (release instanceof Error) {
     const existing = await repo.findByOutput({ txHash, vout })
@@ -269,7 +248,6 @@ export const releasePostMigrationDeposit = async ({
     if (existing.status !== PostMigrationDepositReleaseStatus.Processing) {
       return release
     }
-    resumedProcessing = true
     release = existing
   }
 
@@ -287,16 +265,6 @@ export const releasePostMigrationDeposit = async ({
     caseReference: release.caseReference,
   })
   if (mismatch) return failRelease(release, mismatch)
-  if (
-    resumedProcessing &&
-    release.paymentHash &&
-    release.plannedTopUpSats > 0 &&
-    release.topUpSats === 0
-  ) {
-    return new MigrationStateConflictError(
-      "top-up state is ambiguous; inspect the ledger before continuing",
-    )
-  }
 
   let invoice = release.paymentRequest
   if (!invoice) {
@@ -325,6 +293,17 @@ export const releasePostMigrationDeposit = async ({
     )
   }
 
+  const lndService = LndService()
+  if (lndService instanceof Error) return failRelease(release, lndService)
+  if (lndService.listAllPubkeys().includes(decoded.destination)) {
+    return failRelease(
+      release,
+      new MigrationInvalidDestinationError(
+        "release invoice must settle over external Lightning",
+      ),
+    )
+  }
+
   if (!release.paymentHash) {
     const withPayment = await repo.recordPayment({
       txHash,
@@ -336,32 +315,19 @@ export const releasePostMigrationDeposit = async ({
     release = withPayment
   }
 
-  if (plan.topUpSats > 0 && release.topUpSats === 0) {
-    const topUp = await transferBankOwnerTopUp({
-      release,
-      amount: plan.topUpSats,
-    })
-    if (topUp instanceof Error) return failRelease(release, topUp)
-    const recordedTopUp = await repo.recordTopUp({
-      txHash,
-      vout,
-      topUpSats: plan.topUpSats,
-    })
-    if (recordedTopUp instanceof Error) return recordedTopUp
-    release = recordedTopUp
-  }
+  const bankOwnerWalletId = await getBankOwnerWalletId()
+  const bankOwnerWallet = await WalletsRepository().findById(bankOwnerWalletId)
+  if (bankOwnerWallet instanceof Error) return failRelease(release, bankOwnerWallet)
+  const bankOwnerAccount = await AccountsRepository().findById(bankOwnerWallet.accountId)
+  if (bankOwnerAccount instanceof Error) return failRelease(release, bankOwnerAccount)
 
-  const payment = await payInvoiceByWalletIdForPostMigrationDepositRelease({
+  const payment = await payInvoiceByWalletId({
     uncheckedPaymentRequest: invoice,
     memo: `post-migration deposit release ${release.caseReference}`,
-    senderWalletId: release.walletId,
-    senderAccount: plan.account,
+    senderWalletId: bankOwnerWalletId,
+    senderAccount: bankOwnerAccount,
   })
-  if (payment instanceof Error) {
-    const reclaimed = await reclaimTopUp(release)
-    if (reclaimed instanceof Error) return reclaimed
-    return failRelease(release, payment)
-  }
+  if (payment instanceof Error) return failRelease(release, payment)
 
   const to =
     payment.status === PaymentSendStatus.Success
@@ -425,8 +391,6 @@ export const reconcilePostMigrationDepositRelease = async ({
     state === LnPaymentState.FailedAfterSuccess ||
     state === LnPaymentState.FailedAfterSuccessWithReimbursement
   ) {
-    const reclaimed = await reclaimTopUp(release)
-    if (reclaimed instanceof Error) return reclaimed
     return repo.updateStatus({
       txHash,
       vout,
@@ -467,54 +431,11 @@ const releasePlanMismatch = ({
     release.receiptJournalId === plan.receiptJournalId &&
     release.receiptAmountSats === plan.receiptAmountSats &&
     release.payoutAmountSats === plan.payoutAmountSats &&
-    release.plannedTopUpSats === plan.topUpSats &&
     release.lightningAddress === plan.lightningAddress &&
     release.caseReference === caseReference.trim()
   return matches
     ? null
     : new MigrationStateConflictError("stored release does not match current plan")
-}
-
-const transferBankOwnerTopUp = async ({
-  release,
-  amount,
-}: {
-  release: PostMigrationDepositRelease
-  amount: Satoshis
-}): Promise<true | ApplicationError> => {
-  const bankOwnerWalletId = await getBankOwnerWalletId()
-  const bankOwnerWallet = await WalletsRepository().findById(bankOwnerWalletId)
-  if (bankOwnerWallet instanceof Error) return bankOwnerWallet
-  const bankOwnerAccount = await AccountsRepository().findById(bankOwnerWallet.accountId)
-  if (bankOwnerAccount instanceof Error) return bankOwnerAccount
-
-  const result = await intraledgerPaymentSendWalletIdForPostMigrationDepositRelease({
-    recipientWalletId: release.walletId,
-    amount,
-    memo: `post-migration release top-up ${release.caseReference}`,
-    senderWalletId: bankOwnerWalletId,
-    senderAccount: bankOwnerAccount,
-    postMigrationAccountRole: "recipient",
-  })
-  return result instanceof Error ? result : true
-}
-
-const reclaimTopUp = async (
-  release: PostMigrationDepositRelease,
-): Promise<true | ApplicationError> => {
-  if (release.topUpSats <= 0) return true
-  const account = await AccountsRepository().findById(release.accountId)
-  if (account instanceof Error) return account
-  const bankOwnerWalletId = await getBankOwnerWalletId()
-  const result = await intraledgerPaymentSendWalletIdForPostMigrationDepositRelease({
-    recipientWalletId: bankOwnerWalletId,
-    amount: release.topUpSats,
-    memo: `post-migration release top-up reclaim ${release.caseReference}`,
-    senderWalletId: release.walletId,
-    senderAccount: account,
-    postMigrationAccountRole: "sender",
-  })
-  return result instanceof Error ? result : true
 }
 
 const failRelease = async (
