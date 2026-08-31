@@ -1,6 +1,7 @@
 jest.mock("@/config", () => ({
   ...jest.requireActual("@/config"),
   getCustodialMigrationFlowConfig: jest.fn(),
+  getValuesToSkipProbe: jest.fn(),
 }))
 
 jest.mock("@/app/migration-flow/reclaim-top-up", () => ({
@@ -59,8 +60,12 @@ import { intraledgerPaymentSendWalletIdForBtcWallet } from "@/app/payments/send-
 import { payNoAmountInvoiceByWalletId } from "@/app/payments/send-lightning"
 import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
 import { AccountStatus } from "@/domain/accounts"
-import { PaymentSendStatus, RouteNotFoundError } from "@/domain/bitcoin/lightning"
-import { getCustodialMigrationFlowConfig } from "@/config"
+import {
+  PaymentSendStatus,
+  RouteNotFoundError,
+  decodeInvoice,
+} from "@/domain/bitcoin/lightning"
+import { getCustodialMigrationFlowConfig, getValuesToSkipProbe } from "@/config"
 import { InsufficientBalanceError } from "@/domain/errors"
 import { MigrationFlowPhase, MigrationStateConflictError } from "@/domain/migration-flow"
 import { InvalidBtcPaymentAmountError } from "@/domain/shared"
@@ -80,6 +85,7 @@ const mockIntraledgerSend = intraledgerPaymentSendWalletIdForBtcWallet as jest.M
 const mockGetBankOwnerWalletId = getBankOwnerWalletId as jest.Mock
 const mockCompleteFlow = completeMigrationFlowForSettledPayment as jest.Mock
 const mockGetMigrationConfig = getCustodialMigrationFlowConfig as jest.Mock
+const mockGetSkipProbe = getValuesToSkipProbe as jest.Mock
 
 describe("executeMigrationTransfer", () => {
   const accountId = "account-id" as AccountId
@@ -87,6 +93,8 @@ describe("executeMigrationTransfer", () => {
   const btcWalletId = "btc-wallet-id" as WalletId
   const paymentHash = "payment-hash" as PaymentHash
   const paymentRequest = "lnbc1noamountinvoice"
+  const groupPaymentRequest =
+    "lnbc1p3zn402pp54skf32qeal5jnfm73u5e3d9h5448l4yutszy0kr9l56vdsy8jefsdqqcqzpuxqyz5vqsp5c6z7a4lrey4ejvhx5q4l83jm9fhy34dsqgxnceem4dgz6fmh456s9qyyssqkxkg6ke6nt39dusdhpansu8j0r5f7gadwcampnw2g8ap0fccteer7hzjc8tgat9m5wxd98nxjxhwx0ha6g95v9edmgd30f0m8kujslgpxtzt6w"
   const bankOwnerWalletId = "bank-owner-wallet-id" as WalletId
   const bankOwnerAccount = {
     id: "bank-owner-account-id" as AccountId,
@@ -111,6 +119,7 @@ describe("executeMigrationTransfer", () => {
     mockPayNoAmountInvoice.mockResolvedValue({ status: PaymentSendStatus.Success })
     mockCompleteFlow.mockResolvedValue(undefined)
     mockGetMigrationConfig.mockReturnValue({ enabled: true, deMinimisThresholdSats: 100 })
+    mockGetSkipProbe.mockReturnValue({ pubkey: [], chanId: [], feeCapGroups: [] })
   })
 
   it("skips the transfer and completes directly on a zero balance", async () => {
@@ -286,6 +295,49 @@ describe("executeMigrationTransfer", () => {
       }),
     )
     expect(mockCompleteFlow).not.toHaveBeenCalled()
+  })
+
+  it("budgets the drain with the group fee cap when the invoice matches a fee-cap group", async () => {
+    const groupInvoice = decodeInvoice(groupPaymentRequest)
+    if (groupInvoice instanceof Error) throw groupInvoice
+    mockGetSkipProbe.mockReturnValue({
+      pubkey: [],
+      chanId: [],
+      feeCapGroups: [{ pubkeys: [groupInvoice.destination], feeCapBasisPoints: 20n }],
+    })
+    mockGetBalanceForWallet.mockResolvedValue(100_000)
+
+    const result = await executeMigrationTransfer({
+      ...transferArgs,
+      paymentRequest: groupPaymentRequest,
+    })
+
+    expect(result).toBe(PaymentSendStatus.Success)
+    expect(mockIntraledgerSend).not.toHaveBeenCalled()
+    expect(mockPayNoAmountInvoice).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: 99_800, skipChecks: true }),
+    )
+  })
+
+  it("keeps the default fee-cap budget when the invoice matches no fee-cap group", async () => {
+    const unrelatedPubkey =
+      "038f8f113c580048d847d6949371726653e02b928196bad310e3eda39ff61723f6"
+    mockGetSkipProbe.mockReturnValue({
+      pubkey: [],
+      chanId: [],
+      feeCapGroups: [{ pubkeys: [unrelatedPubkey], feeCapBasisPoints: 20n }],
+    })
+    mockGetBalanceForWallet.mockResolvedValue(100_000)
+
+    const result = await executeMigrationTransfer({
+      ...transferArgs,
+      paymentRequest: groupPaymentRequest,
+    })
+
+    expect(result).toBe(PaymentSendStatus.Success)
+    expect(mockPayNoAmountInvoice).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: 99_502, skipChecks: true }),
+    )
   })
 
   it("stays pending while the swap invoice is held in-flight", async () => {
