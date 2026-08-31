@@ -207,7 +207,7 @@ const MeSubscription = {
 
       const minorUnitPerSat = majorToMinorUnit({
         amount: source.price.pricePerSat,
-        displayCurrency: source.price.displayCurrency,
+        fractionDigits: source.price.currency.fractionDigits,
       })
 
       return userPayload(null)({
@@ -232,11 +232,11 @@ const MeSubscription = {
       const { timestamp, currency, pricePerSat, pricePerUsdCent } = source.realtimePrice
       const minorUnitPerSat = majorToMinorUnit({
         amount: pricePerSat,
-        displayCurrency: currency.code,
+        fractionDigits: currency.fractionDigits,
       })
       const minorUnitPerUsdCent = majorToMinorUnit({
         amount: pricePerUsdCent,
-        displayCurrency: currency.code,
+        fractionDigits: currency.fractionDigits,
       })
       return myPayload({
         resolveType: "RealtimePrice",

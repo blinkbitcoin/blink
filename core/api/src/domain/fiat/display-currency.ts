@@ -18,14 +18,13 @@ export const MajorExponent = {
 
 export const majorToMinorUnit = ({
   amount,
-  displayCurrency,
+  fractionDigits,
 }: {
   amount: number | bigint
-  displayCurrency: DisplayCurrency
+  fractionDigits: number
 }): number => {
-  const displayMajorExponent = getCurrencyMajorExponent(displayCurrency)
   return BigNumber(amount.toString())
-    .times(10 ** displayMajorExponent)
+    .times(10 ** fractionDigits)
     .toNumber()
 }
 

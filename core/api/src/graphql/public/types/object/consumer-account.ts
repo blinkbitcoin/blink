@@ -132,11 +132,11 @@ const ConsumerAccount = GT.Object<Account, GraphQLPublicContextAuth>({
 
         const minorUnitPerSat = majorToMinorUnit({
           amount: btcPrice.price,
-          displayCurrency: currency,
+          fractionDigits: priceCurrency.fractionDigits,
         })
         const minorUnitPerUsdCent = majorToMinorUnit({
           amount: usdPrice.price,
-          displayCurrency: currency,
+          fractionDigits: priceCurrency.fractionDigits,
         })
 
         return {

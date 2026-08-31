@@ -54,7 +54,12 @@ import { CallbackEventType } from "@/domain/callback"
 import { CallbackError } from "@/domain/callback/errors"
 import { WalletInvoiceStatus } from "@/domain/wallet-invoices"
 import { customPubSubTrigger, PubSubDefaultTriggers } from "@/domain/pubsub"
-import { majorToMinorUnit, toCents, UsdDisplayCurrency } from "@/domain/fiat"
+import {
+  getCurrencyMajorExponent,
+  majorToMinorUnit,
+  toCents,
+  UsdDisplayCurrency,
+} from "@/domain/fiat"
 
 import { PubSubService } from "@/services/pubsub"
 import { CallbackService } from "@/services/svix"
@@ -225,7 +230,10 @@ export const NotificationsService = (): INotificationsService => {
       const displayCurrency = transaction.settlementDisplayPrice.displayCurrency
       const displayAmountMinor = Math.abs(
         Math.round(
-          majorToMinorUnit({ amount: Number(displayAmountMajor), displayCurrency }),
+          majorToMinorUnit({
+            amount: Number(displayAmountMajor),
+            fractionDigits: getCurrencyMajorExponent(displayCurrency),
+          }),
         ),
       )
       const displayAmount = new ProtoMoney()

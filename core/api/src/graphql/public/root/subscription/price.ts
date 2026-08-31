@@ -5,6 +5,7 @@ import { Prices } from "@/app"
 import { customPubSubTrigger, PubSubDefaultTriggers } from "@/domain/pubsub"
 import {
   checkedToDisplayCurrency,
+  MajorExponent,
   majorToMinorUnit,
   SAT_PRICE_PRECISION_OFFSET,
   UsdDisplayCurrency,
@@ -78,7 +79,7 @@ const PriceSubscription = {
 
     const minorUnitPerSat = majorToMinorUnit({
       amount: source.pricePerSat,
-      displayCurrency: source.displayCurrency,
+      fractionDigits: MajorExponent.STANDARD,
     })
 
     const amountPriceInCents = args.input.amount * minorUnitPerSat

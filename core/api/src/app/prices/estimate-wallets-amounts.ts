@@ -6,7 +6,11 @@ import {
   getCurrentUsdCentPriceAsDisplayPriceRatio,
 } from "./get-current-price"
 
-import { displayAmountFromNumber, majorToMinorUnit } from "@/domain/fiat"
+import {
+  displayAmountFromNumber,
+  getCurrencyMajorExponent,
+  majorToMinorUnit,
+} from "@/domain/fiat"
 
 export const estimateWalletsAmounts = async ({
   amount,
@@ -32,7 +36,10 @@ export const estimateWalletsAmounts = async ({
   if (centPriceRatio instanceof Error) return centPriceRatio
 
   const amountInMinor = displayAmountFromNumber({
-    amount: majorToMinorUnit({ amount, displayCurrency: currency }),
+    amount: majorToMinorUnit({
+      amount,
+      fractionDigits: getCurrencyMajorExponent(currency),
+    }),
     currency,
   })
   if (amountInMinor instanceof Error) return amountInMinor

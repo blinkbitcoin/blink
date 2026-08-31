@@ -3,32 +3,37 @@ import { majorToMinorUnit } from "@/domain/fiat"
 describe("majorToMinorUnit", () => {
   it("should handle float correctly", () => {
     let amount = 68.85
-    let displayCurrency = "USD" as DisplayCurrency
-    let result = majorToMinorUnit({ amount, displayCurrency })
+    let fractionDigits = 2
+    let result = majorToMinorUnit({ amount, fractionDigits })
     expect(result).toBe(6885)
 
     amount = 0.000638418984375
-    result = majorToMinorUnit({ amount, displayCurrency })
+    result = majorToMinorUnit({ amount, fractionDigits })
     expect(result).toBe(0.0638418984375)
 
     amount = 68.85
-    displayCurrency = "JPY" as DisplayCurrency
-    result = majorToMinorUnit({ amount, displayCurrency })
+    fractionDigits = 0
+    result = majorToMinorUnit({ amount, fractionDigits })
     expect(result).toBe(68.85)
 
     amount = 0.000638418984375
-    result = majorToMinorUnit({ amount, displayCurrency })
+    result = majorToMinorUnit({ amount, fractionDigits })
     expect(result).toBe(0.000638418984375)
   })
 
   it("should handle bigint correctly", () => {
     const amount = BigInt(10)
-    let displayCurrency = "USD" as DisplayCurrency
-    let result = majorToMinorUnit({ amount, displayCurrency })
+    let fractionDigits = 2
+    let result = majorToMinorUnit({ amount, fractionDigits })
     expect(result).toBe(1000)
 
-    displayCurrency = "JPY" as DisplayCurrency
-    result = majorToMinorUnit({ amount, displayCurrency })
+    fractionDigits = 0
+    result = majorToMinorUnit({ amount, fractionDigits })
     expect(result).toBe(10)
+  })
+
+  it("uses price-service fraction digits instead of runtime ICU data", () => {
+    expect(majorToMinorUnit({ amount: 2.78, fractionDigits: 2 })).toBe(278)
+    expect(majorToMinorUnit({ amount: 1.23, fractionDigits: 0 })).toBe(1.23)
   })
 })
