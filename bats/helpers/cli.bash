@@ -33,6 +33,11 @@ lnd_outside_rest() {
   local endpoint="https://localhost:8080/$route"
 
   local data=$2
+  local request_args=()
+
+  if [[ -n $data ]]; then
+    request_args=(--post-data "$data")
+  fi
 
   local macaroon_hex=$(
     docker exec "${COMPOSE_PROJECT_NAME}-lnd-outside-1-1" \
@@ -40,10 +45,10 @@ lnd_outside_rest() {
   )
 
   docker exec "${COMPOSE_PROJECT_NAME}-lnd-outside-1-1" \
-    curl -s \
-      --cacert /root/.lnd/tls.cert \
-      -H "Grpc-Metadata-macaroon: $macaroon_hex" \
-      ${data:+ -X POST -d $data} \
+    wget -qO- \
+      --ca-certificate /root/.lnd/tls.cert \
+      --header "Grpc-Metadata-macaroon: $macaroon_hex" \
+      "${request_args[@]}" \
       "$endpoint" \
   > "$LNDS_REST_LOG"
 }
