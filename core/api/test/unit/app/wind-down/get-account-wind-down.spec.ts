@@ -227,4 +227,96 @@ describe("getAccountWindDown", () => {
     const result = await getAccountWindDown({ account: makeAccount() })
     expect(result).toBe(error)
   })
+
+  describe("level-zero region", () => {
+    const levelZeroRegion = region({
+      code: "level-zero",
+      countries: [],
+      timezone: "Europe/Paris",
+      receiveDisabledAt: new Date("2026-10-01T00:00:00+02:00"),
+      finalDeadline: new Date("2026-10-31T23:59:59+02:00"),
+      gateArmsAt: new Date("2026-11-01T00:00:00+02:00"),
+    })
+
+    it("resolves the level-zero region's state for an unmatched Level 0 account when includeLevelZero is on", async () => {
+      mockGetWindDownConfig.mockReturnValue(
+        windDownConfig({
+          includeLevelZero: true,
+          regions: [euRegion, levelZeroRegion, region()],
+        }),
+      )
+      withPhoneCountry("US")
+
+      const result = await getAccountWindDown({
+        account: makeAccount({ level: 0 as AccountLevel }),
+      })
+      expect(result).toEqual({
+        status: "PRE_CUTOFF",
+        receiveDisabledAt: new Date("2026-10-01T00:00:00+02:00"),
+        finalDeadline: new Date("2026-10-31T23:59:59+02:00"),
+        gateArmsAt: new Date("2026-11-01T00:00:00+02:00"),
+        timezone: "Europe/Paris",
+      })
+    })
+
+    it("keeps a country-matched Level 0 account on its country's region", async () => {
+      mockGetWindDownConfig.mockReturnValue(
+        windDownConfig({
+          includeLevelZero: true,
+          regions: [euRegion, levelZeroRegion, region()],
+        }),
+      )
+      withPhoneCountry("DE")
+
+      const result = (await getAccountWindDown({
+        account: makeAccount({ level: 0 as AccountLevel }),
+      })) as WindDownState
+      expect(result.timezone).toBe("Europe/Berlin")
+    })
+
+    it("keeps a country-matched Level 0 account on the default region when its country is unlisted", async () => {
+      mockGetWindDownConfig.mockReturnValue(
+        windDownConfig({
+          includeLevelZero: true,
+          regions: [euRegion, levelZeroRegion, region()],
+        }),
+      )
+      withPhoneCountry("IS")
+
+      const result = (await getAccountWindDown({
+        account: makeAccount({ level: 0 as AccountLevel }),
+      })) as WindDownState
+      expect(result.timezone).toBe("Europe/Paris")
+    })
+
+    it("returns null for an unmatched Level 0 account when includeLevelZero is off, even with a level-zero region", async () => {
+      mockGetWindDownConfig.mockReturnValue(
+        windDownConfig({
+          includeLevelZero: false,
+          regions: [euRegion, levelZeroRegion, region()],
+        }),
+      )
+      withPhoneCountry("US")
+
+      const result = await getAccountWindDown({
+        account: makeAccount({ level: 0 as AccountLevel }),
+      })
+      expect(result).toBeNull()
+    })
+
+    it("never routes a non-Level-0 account to the level-zero region", async () => {
+      mockGetWindDownConfig.mockReturnValue(
+        windDownConfig({
+          includeLevelZero: true,
+          regions: [euRegion, levelZeroRegion, region()],
+        }),
+      )
+      withPhoneCountry("US")
+
+      const result = await getAccountWindDown({
+        account: makeAccount({ level: 1 as AccountLevel }),
+      })
+      expect(result).toBeNull()
+    })
+  })
 })
