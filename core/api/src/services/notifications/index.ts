@@ -53,7 +53,7 @@ import { CallbackEventType } from "@/domain/callback"
 import { CallbackError } from "@/domain/callback/errors"
 import { WalletInvoiceStatus } from "@/domain/wallet-invoices"
 import { customPubSubTrigger, PubSubDefaultTriggers } from "@/domain/pubsub"
-import { getCurrencyMajorExponent, toCents, UsdDisplayCurrency } from "@/domain/fiat"
+import { toCents, UsdDisplayCurrency } from "@/domain/fiat"
 
 import { PubSubService } from "@/services/pubsub"
 import { CallbackService } from "@/services/svix"
@@ -216,16 +216,10 @@ export const NotificationsService = (): INotificationsService => {
       const type = getPushNotificationEventType(transaction)
       if (type === undefined) return true
 
-      const displayCurrency = transaction.settlementDisplayPrice.displayCurrency
-      const fractionDigits =
-        transaction.settlementDisplayCurrencyFractionDigits ??
-        getCurrencyMajorExponent(displayCurrency)
-
       const request = walletTransactionToNotificationEventRequest({
         userId: recipient.userId,
         transaction,
         type,
-        fractionDigits,
       })
 
       await notificationsGrpc.handleNotificationEvent(
