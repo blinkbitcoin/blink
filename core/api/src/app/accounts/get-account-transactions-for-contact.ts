@@ -1,9 +1,9 @@
-import { MAX_PAGINATION_PAGE_SIZE, memoSharingConfig } from "@/config"
+import { MAX_PAGINATION_PAGE_SIZE } from "@/config"
+import { translateLedgerTransactionEdges } from "@/app/wallets"
 import { LedgerError } from "@/domain/ledger"
 import { checkedToPaginatedQueryArgs } from "@/domain/primitives"
-import { WalletTransactionHistory } from "@/domain/wallets"
 
-import { getNonEndUserWalletIds, LedgerService } from "@/services/ledger"
+import { LedgerService } from "@/services/ledger"
 import { WalletsRepository } from "@/services/mongoose"
 
 export const getAccountTransactionsForContact = async ({
@@ -34,20 +34,7 @@ export const getAccountTransactionsForContact = async ({
   })
   if (ledgerTxs instanceof LedgerError) return ledgerTxs
 
-  const nonEndUserWalletIds = Object.values(await getNonEndUserWalletIds())
-
-  const txEdges = ledgerTxs.edges.map((edge) => {
-    const transaction = WalletTransactionHistory.fromLedger({
-      txn: edge.node,
-      nonEndUserWalletIds,
-      memoSharingConfig,
-    })
-
-    return {
-      cursor: edge.cursor,
-      node: transaction,
-    }
-  })
+  const txEdges = await translateLedgerTransactionEdges(ledgerTxs.edges)
 
   return { ...ledgerTxs, edges: txEdges }
 }

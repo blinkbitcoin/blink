@@ -12,6 +12,7 @@ import { recordExceptionInCurrentSpan } from "@/services/tracing"
 export const SettlementAmounts = () => {
   const fromTxn = <S extends WalletCurrency>(
     txn: LedgerTransaction<S>,
+    displayCurrencyFractionDigits?: number,
   ): {
     settlementAmount: Satoshis | UsdCents
     settlementDisplayAmount: DisplayCurrencyMajorAmount
@@ -106,7 +107,9 @@ export const SettlementAmounts = () => {
     }
 
     const exponent =
-      txn.displayCurrencyFractionDigits ?? getCurrencyMajorExponent(displayCurrency)
+      txn.displayCurrencyFractionDigits ??
+      displayCurrencyFractionDigits ??
+      getCurrencyMajorExponent(displayCurrency)
 
     let settlementDisplayAmountObj = displayAmountFromNumber({
       amount: settlementDisplayAmountMinorAsNumber,

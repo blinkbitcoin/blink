@@ -5,6 +5,33 @@ import { WalletCurrency } from "@/domain/shared"
 import { translateToLedgerTx } from "@/services/ledger/translate"
 
 describe("translateToLedgerTx", () => {
+  it("normalizes a null persisted fraction digit value", () => {
+    const raw = {
+      _id: new mongoose.Types.ObjectId(),
+      _journal: new mongoose.Types.ObjectId(),
+      accounts: "Liabilities:wallet-id",
+      type: LedgerTransactionType.OnchainReceipt,
+      debit: 0,
+      credit: 1_000,
+      currency: WalletCurrency.Btc,
+      timestamp: new Date(),
+      pending: false,
+      displayAmount: null,
+      displayFee: null,
+      displayCurrency: null,
+      displayCurrencyFractionDigits: null,
+    } as unknown as ILedgerTransaction
+
+    expect(translateToLedgerTx(raw)).toEqual(
+      expect.objectContaining({
+        displayAmount: undefined,
+        displayFee: undefined,
+        displayCurrency: undefined,
+        displayCurrencyFractionDigits: undefined,
+      }),
+    )
+  })
+
   it("preserves output index zero", () => {
     const raw = {
       _id: new mongoose.Types.ObjectId(),
