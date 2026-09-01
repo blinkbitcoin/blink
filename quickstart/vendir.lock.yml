@@ -2,27 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix(core): update majorToMinorUnit to use fractionDigits from
-        priceCurrency (#807)...'
-      sha: ca9eccfe4296c1e1a2a560d9b60eac26d23d6a5b
+      commitTitle: 'feat: add post-migration deposit release workflow (#796)...'
+      sha: a1c2b749e246727d6b562b94fd4974665d73857c
       tags:
-      - 0.22.56-3-gca9eccfe4
+      - 0.22.57-1-ga1c2b749e
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'fix(core): update majorToMinorUnit to use fractionDigits from
-        priceCurrency (#807)...'
-      sha: ca9eccfe4296c1e1a2a560d9b60eac26d23d6a5b
+      commitTitle: 'feat: add post-migration deposit release workflow (#796)...'
+      sha: a1c2b749e246727d6b562b94fd4974665d73857c
       tags:
-      - 0.22.56-3-gca9eccfe4
+      - 0.22.57-1-ga1c2b749e
     path: schemas
   - git:
-      commitTitle: 'fix(core): update majorToMinorUnit to use fractionDigits from
-        priceCurrency (#807)...'
-      sha: ca9eccfe4296c1e1a2a560d9b60eac26d23d6a5b
+      commitTitle: 'feat: add post-migration deposit release workflow (#796)...'
+      sha: a1c2b749e246727d6b562b94fd4974665d73857c
       tags:
-      - 0.22.56-3-gca9eccfe4
+      - 0.22.57-1-ga1c2b749e
     path: gql
   path: graphql
 kind: LockConfig
