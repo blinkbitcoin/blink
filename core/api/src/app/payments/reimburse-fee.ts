@@ -1,8 +1,4 @@
-import {
-  DisplayAmountsConverter,
-  displayAmountFromNumber,
-  getCurrencyMajorExponent,
-} from "@/domain/fiat"
+import { DisplayAmountsConverter, displayAmountFromNumber } from "@/domain/fiat"
 import { FeeReimbursement } from "@/domain/ledger/fee-reimbursement"
 import {
   DisplayPriceRatio,
@@ -37,7 +33,7 @@ export const reimburseFee = async <S extends WalletCurrency, R extends WalletCur
   paymentFlow: PaymentFlow<S, R>
   senderDisplayAmount: DisplayCurrencyBaseAmount
   senderDisplayCurrency: DisplayCurrency
-  senderDisplayCurrencyFractionDigits?: number
+  senderDisplayCurrencyFractionDigits: number
   journalId: LedgerJournalId
   actualFee: Satoshis
   revealedPreImage?: RevealedPreImage
@@ -99,19 +95,17 @@ export const reimburseFee = async <S extends WalletCurrency, R extends WalletCur
     return true
   }
 
-  const displayCurrencyFractionDigits =
-    senderDisplayCurrencyFractionDigits ?? getCurrencyMajorExponent(senderDisplayCurrency)
   const displayAmount = displayAmountFromNumber({
     amount: senderDisplayAmount,
     currency: senderDisplayCurrency,
-    fractionDigits: displayCurrencyFractionDigits,
+    fractionDigits: senderDisplayCurrencyFractionDigits,
   })
   if (displayAmount instanceof Error) return displayAmount
 
   const displayPriceRatio = DisplayPriceRatio({
     displayAmount,
     walletAmount: paymentFlow.btcPaymentAmount,
-    fractionDigits: displayCurrencyFractionDigits,
+    fractionDigits: senderDisplayCurrencyFractionDigits,
   })
   if (displayPriceRatio instanceof Error) return displayPriceRatio
 

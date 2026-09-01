@@ -1,6 +1,10 @@
 import { updatePendingPaymentByHash } from "@/app/payments"
 
-import { LedgerTransactionType } from "@/domain/ledger"
+import { toSats } from "@/domain/bitcoin"
+import {
+  LedgerTransactionType,
+  MissingExpectedDisplayAmountsForTransactionError,
+} from "@/domain/ledger"
 import { FAILED_USD_MEMO } from "@/domain/ledger/ln-payment-state"
 import { PaymentStatus } from "@/domain/bitcoin/lightning"
 import { CouldNotFindLightningPaymentFlowError } from "@/domain/errors"
@@ -49,6 +53,133 @@ describe("update pending payments", () => {
     displayCurrency: "EUR" as DisplayCurrency,
   }
 
+  const mockSuccessfulPayment = ({
+    paymentHash,
+    walletDescriptor,
+  }: {
+    paymentHash: PaymentHash
+    walletDescriptor: WalletDescriptor<WalletCurrency>
+  }) => {
+    const { LndService: LndServiceOrig } = jest.requireActual("@/services/lnd")
+    jest.spyOn(LndImpl, "LndService").mockReturnValue({
+      ...LndServiceOrig(),
+      lookupPayment: () =>
+        ({
+          createdAt: new Date(),
+          status: PaymentStatus.Settled,
+          paymentHash,
+          paymentRequest: samplePaymentRequest,
+          milliSatsAmount: 60_000 as MilliSatoshis,
+          roundedUpAmount: toSats(80),
+          confirmedDetails: {
+            confirmedAt: new Date(),
+            destination: "02".padEnd(66, "0") as Pubkey,
+            revealedPreImage: "00".repeat(32) as RevealedPreImage,
+            roundedUpFee: toSats(20),
+            milliSatsFee: 20_000 as MilliSatoshis,
+            hopPubkeys: undefined,
+          },
+          attempts: undefined,
+        }) as LnPaymentLookup,
+    })
+
+    const { LnPaymentsRepository: LnPaymentsRepositoryOrig } =
+      jest.requireActual("@/services/mongoose")
+    jest.spyOn(MongooseImpl, "LnPaymentsRepository").mockReturnValue({
+      ...LnPaymentsRepositoryOrig(),
+      findByPaymentHash: () => ({ paymentRequest: samplePaymentRequest }),
+    })
+
+    const paymentFlow = {
+      senderWalletCurrency: WalletCurrency.Btc,
+      btcPaymentAmount: sendAmount.btc,
+      usdPaymentAmount: sendAmount.usd,
+      btcProtocolAndBankFee: bankFee.btc,
+      usdProtocolAndBankFee: bankFee.usd,
+      btcBankFee: ZERO_SATS,
+      usdBankFee: ZERO_CENTS,
+      paymentAmounts: () => sendAmount,
+      paymentHashForFlow: () => paymentHash,
+      senderWalletDescriptor: () => walletDescriptor,
+    } as unknown as PaymentFlow<WalletCurrency, WalletCurrency>
+
+    const { PaymentFlowStateRepository: PaymentFlowStateRepositoryOrig } =
+      jest.requireActual("@/services/mongoose")
+    jest.spyOn(MongooseImpl, "PaymentFlowStateRepository").mockReturnValue({
+      ...PaymentFlowStateRepositoryOrig(),
+      markLightningPaymentFlowNotPending: () => paymentFlow,
+    })
+  }
+
+  it.each(["amount", "fee", "currency"] as const)(
+    "validates missing display %s before settling",
+    async (field) => {
+      const displayAmounts = { ...displaySendEurAmounts }
+      if (field === "amount") {
+        displayAmounts.amountDisplayCurrency =
+          undefined as unknown as DisplayCurrencyBaseAmount
+      }
+      if (field === "fee") {
+        displayAmounts.feeDisplayCurrency =
+          undefined as unknown as DisplayCurrencyBaseAmount
+      }
+      if (field === "currency") {
+        displayAmounts.displayCurrency = undefined as unknown as DisplayCurrency
+      }
+
+      const walletDescriptor = await createRandomUserAndBtcWallet()
+      const { paymentHash } = await recordSendLnPayment({
+        walletDescriptor,
+        paymentAmount: sendAmount,
+        bankFee,
+        displayAmounts,
+        feeKnownInAdvance: false,
+      })
+      mockSuccessfulPayment({ paymentHash, walletDescriptor })
+      const settleSpy = jest.spyOn(LedgerFacadeImpl, "settlePendingLnSend")
+
+      const result = await updatePendingPaymentByHash({
+        paymentHash,
+        logger: baseLogger,
+      })
+
+      expect(result).toBeInstanceOf(MissingExpectedDisplayAmountsForTransactionError)
+      expect(settleSpy).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([0, 2])(
+    "reimburses a confirmed payment with persisted display precision %i",
+    async (displayCurrencyFractionDigits) => {
+      const walletDescriptor = await createRandomUserAndBtcWallet()
+      const { paymentHash } = await recordSendLnPayment({
+        walletDescriptor,
+        paymentAmount: sendAmount,
+        bankFee,
+        displayAmounts: {
+          ...displaySendEurAmounts,
+          displayCurrencyFractionDigits,
+        },
+        feeKnownInAdvance: false,
+      })
+      mockSuccessfulPayment({ paymentHash, walletDescriptor })
+      const reimbursementMetadataSpy = jest.spyOn(
+        LedgerFacadeImpl,
+        "LnFeeReimbursementReceiveLedgerMetadata",
+      )
+      jest
+        .spyOn(LedgerFacadeImpl, "recordReceiveOffChain")
+        .mockResolvedValue(true as unknown as LedgerJournal)
+
+      const result = await updatePendingPaymentByHash({ paymentHash, logger: baseLogger })
+
+      expect(result).not.toBeInstanceOf(Error)
+      expect(
+        reimbursementMetadataSpy.mock.calls[0][0].displayCurrencyFractionDigits,
+      ).toBe(displayCurrencyFractionDigits)
+    },
+  )
+
   it("records transaction with ln-failed-payment metadata on ln update", async () => {
     // Setup mocks
     const { LndService: LnServiceOrig } = jest.requireActual("@/services/lnd")
@@ -85,7 +216,10 @@ describe("update pending payments", () => {
       walletDescriptor: newWalletDescriptor,
       paymentAmount: sendAmount,
       bankFee,
-      displayAmounts: displaySendEurAmounts,
+      displayAmounts: {
+        ...displaySendEurAmounts,
+        displayCurrencyFractionDigits: 3,
+      },
     })
 
     // Setup payment-flow mock
@@ -119,6 +253,10 @@ describe("update pending payments", () => {
     // Check record function was called with right metadata
     expect(displayAmountsConverterSpy).toHaveBeenCalledTimes(0)
     expect(lnFailedPaymentReceiveLedgerMetadataSpy).toHaveBeenCalledTimes(1)
+    expect(
+      lnFailedPaymentReceiveLedgerMetadataSpy.mock.calls[0][0]
+        .displayCurrencyFractionDigits,
+    ).toBe(3)
     const args = recordRefundSpy.mock.calls[0][0]
     expect(args.metadata.type).toBe(LedgerTransactionType.Payment)
     expect(args.description).toBe(FAILED_USD_MEMO)
