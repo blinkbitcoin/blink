@@ -30,13 +30,13 @@ impl From<proto::NotificationChannel> for UserNotificationChannel {
 
 impl From<ApplicationError> for tonic::Status {
     fn from(err: ApplicationError) -> Self {
-        if let ApplicationError::UserNotificationSettingsError(
-            UserNotificationSettingsError::ConcurrentModification,
-        ) = err
-        {
-            tonic::Status::aborted(err.to_string())
-        } else {
-            tonic::Status::internal(err.to_string())
+        let message = err.to_string();
+        match err {
+            ApplicationError::InvalidFractionDigits(_) => tonic::Status::invalid_argument(message),
+            ApplicationError::UserNotificationSettingsError(
+                UserNotificationSettingsError::ConcurrentModification,
+            ) => tonic::Status::aborted(message),
+            _ => tonic::Status::internal(message),
         }
     }
 }
@@ -154,11 +154,76 @@ impl TryFrom<proto::Money> for notification_event::TransactionAmount {
     type Error = ApplicationError;
 
     fn try_from(money: proto::Money) -> Result<Self, Self::Error> {
+        const MAX_FRACTION_DIGITS: u32 = 4;
+        if let Some(digits) = money.fraction_digits {
+            if digits > MAX_FRACTION_DIGITS {
+                return Err(ApplicationError::InvalidFractionDigits(digits));
+            }
+        }
+
         Ok(Self {
             minor_units: money.minor_units,
+            fraction_digits: money.fraction_digits,
             currency: Currency::try_from(money.currency_code)
                 .map_err(ApplicationError::UnknownCurrencyCode)?,
         })
+    }
+}
+
+#[cfg(test)]
+mod money_tests {
+    use prost::Message;
+
+    use super::*;
+
+    #[test]
+    fn transaction_amount_preserves_fraction_digits_on_the_wire() {
+        for fraction_digits in [None, Some(0), Some(4)] {
+            let encoded = proto::Money {
+                minor_units: 100,
+                currency_code: "XTS".to_string(),
+                fraction_digits,
+            }
+            .encode_to_vec();
+            let decoded = proto::Money::decode(encoded.as_slice()).expect("valid money");
+            let amount =
+                notification_event::TransactionAmount::try_from(decoded).expect("known currency");
+
+            assert_eq!(amount.minor_units, 100);
+            assert_eq!(amount.fraction_digits, fraction_digits);
+        }
+    }
+
+    #[test]
+    fn transaction_amount_rejects_invalid_fraction_digits() {
+        let money = proto::Money {
+            minor_units: 100,
+            currency_code: "XTS".to_string(),
+            fraction_digits: Some(5),
+        };
+
+        assert!(matches!(
+            notification_event::TransactionAmount::try_from(money),
+            Err(ApplicationError::InvalidFractionDigits(5))
+        ));
+    }
+
+    #[test]
+    fn invalid_fraction_digits_map_to_invalid_argument() {
+        let status = tonic::Status::from(ApplicationError::InvalidFractionDigits(5));
+
+        assert_eq!(status.code(), tonic::Code::InvalidArgument);
+        assert_eq!(status.message(), "invalid fraction digits: 5");
+    }
+
+    #[test]
+    fn concurrent_modification_still_maps_to_aborted() {
+        let error = ApplicationError::UserNotificationSettingsError(
+            UserNotificationSettingsError::ConcurrentModification,
+        );
+        let status = tonic::Status::from(error);
+
+        assert_eq!(status.code(), tonic::Code::Aborted);
     }
 }
 

@@ -844,6 +844,11 @@ export class Money extends jspb.Message {
     getMinorUnits(): number;
     setMinorUnits(value: number): Money;
 
+    hasFractionDigits(): boolean;
+    clearFractionDigits(): void;
+    getFractionDigits(): number | undefined;
+    setFractionDigits(value: number): Money;
+
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Money.AsObject;
     static toObject(includeInstance: boolean, msg: Money): Money.AsObject;
@@ -858,6 +863,7 @@ export namespace Money {
     export type AsObject = {
         currencyCode: string,
         minorUnits: number,
+        fractionDigits?: number,
     }
 }
 
