@@ -2,7 +2,11 @@ name: "E2e test"
 
 on:
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - fix/simplify-price-fraction-digits
+      - fix/price-fraction-digits-history
+      - fix/price-fraction-digits-notifications
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}

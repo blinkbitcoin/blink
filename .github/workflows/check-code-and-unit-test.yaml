@@ -1,7 +1,11 @@
 name: Check Code & Unit Test
 on:
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - fix/simplify-price-fraction-digits
+      - fix/price-fraction-digits-history
+      - fix/price-fraction-digits-notifications
     types: [opened, synchronize, labeled, unlabeled]
 
 concurrency:
