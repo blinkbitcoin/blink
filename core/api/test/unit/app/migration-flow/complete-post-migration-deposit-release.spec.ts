@@ -1,3 +1,6 @@
+jest.mock("@/app/prices", () => ({
+  getCurrentPriceAsWalletPriceRatio: jest.fn(),
+}))
 jest.mock("@/services/ledger", () => ({
   __getByJournal: jest.fn(),
   __getByExternalId: jest.fn(),
@@ -28,6 +31,7 @@ jest.mock("@/services/mongoose", () => ({
 }))
 
 import { completePostMigrationDepositRelease } from "@/app/migration-flow/complete-post-migration-deposit-release"
+import { getCurrentPriceAsWalletPriceRatio } from "@/app/prices"
 import { UnknownRepositoryError } from "@/domain/errors"
 import { LedgerTransactionType, UnknownLedgerError } from "@/domain/ledger"
 import {
@@ -47,6 +51,7 @@ const repo = jest.requireMock("@/services/mongoose").__repo as {
   updateStatus: jest.Mock
 }
 const mockRecordIntraledger = LedgerFacade.recordIntraledger as jest.Mock
+const mockPriceRatio = getCurrentPriceAsWalletPriceRatio as jest.Mock
 const lockSignal = jest.requireMock("@/services/lock").__signal as {
   aborted: boolean
   error?: Error
@@ -99,6 +104,12 @@ describe("completePostMigrationDepositRelease", () => {
       return Promise.resolve(sweepTx(id))
     })
     mockRecordIntraledger.mockResolvedValue({ journalId: sweepJournalId })
+    mockPriceRatio.mockResolvedValue({
+      convertFromBtc: ({ amount }: BtcPaymentAmount) => ({
+        amount: amount / 2n,
+        currency: WalletCurrency.Usd,
+      }),
+    })
   })
 
   it("persists the exact sweep before marking the release completed", async () => {
@@ -111,8 +122,13 @@ describe("completePostMigrationDepositRelease", () => {
     expect(mockRecordIntraledger).toHaveBeenCalledWith(
       expect.objectContaining({
         externalId: sweepExternalId,
-        amount: expect.objectContaining({
+        amount: {
           btc: { amount: 1_000n, currency: WalletCurrency.Btc },
+          usd: { amount: 500n, currency: WalletCurrency.Usd },
+        },
+        metadata: expect.objectContaining({
+          satsAmount: 1_000,
+          centsAmount: 500,
         }),
       }),
     )
@@ -174,6 +190,16 @@ describe("completePostMigrationDepositRelease", () => {
 
     expect(await complete()).toBe(ledgerError)
     expect(mockRecordIntraledger).not.toHaveBeenCalled()
+    expect(repo.updateStatus).not.toHaveBeenCalled()
+  })
+
+  it("leaves the release retryable when the price lookup fails", async () => {
+    const priceError = new UnknownLedgerError("price unavailable")
+    mockPriceRatio.mockResolvedValue(priceError)
+
+    expect(await complete()).toBe(priceError)
+    expect(mockRecordIntraledger).not.toHaveBeenCalled()
+    expect(repo.recordSweep).not.toHaveBeenCalled()
     expect(repo.updateStatus).not.toHaveBeenCalled()
   })
 

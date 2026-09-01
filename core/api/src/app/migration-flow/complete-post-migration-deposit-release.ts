@@ -1,5 +1,7 @@
+import { getCurrentPriceAsWalletPriceRatio } from "@/app/prices"
+
 import { toSats } from "@/domain/bitcoin"
-import { toCents } from "@/domain/fiat"
+import { toCents, UsdDisplayCurrency } from "@/domain/fiat"
 import { checkedToLedgerExternalId, LedgerTransactionType } from "@/domain/ledger"
 import { ResourceExpiredLockServiceError } from "@/domain/lock"
 import {
@@ -10,7 +12,6 @@ import {
   BtcWalletDescriptor,
   checkedToBtcPaymentAmount,
   WalletCurrency,
-  ZERO_CENTS,
 } from "@/domain/shared"
 import { LedgerService } from "@/services/ledger"
 import * as LedgerFacade from "@/services/ledger/facade"
@@ -77,17 +78,22 @@ export const completePostMigrationDepositRelease = async ({
 
         const amount = checkedToBtcPaymentAmount(release.receiptAmountSats)
         if (amount instanceof Error) return amount
+        const priceRatio = await getCurrentPriceAsWalletPriceRatio({
+          currency: UsdDisplayCurrency,
+        })
+        if (priceRatio instanceof Error) return priceRatio
+        const usdAmount = priceRatio.convertFromBtc(amount)
         const journal = await LedgerFacade.recordIntraledger({
           description: `post-migration deposit sweep ${release.caseReference}`,
           senderWalletDescriptor: BtcWalletDescriptor(release.walletId),
           recipientWalletDescriptor: BtcWalletDescriptor(bankOwnerWalletId),
-          amount: { btc: amount, usd: ZERO_CENTS },
+          amount: { btc: amount, usd: usdAmount },
           externalId: sweepExternalId,
           metadata: {
             type: LedgerTransactionType.IntraLedger,
             pending: false,
             satsAmount: toSats(release.receiptAmountSats),
-            centsAmount: toCents(0),
+            centsAmount: toCents(usdAmount.amount),
             satsFee: toSats(0),
             centsFee: toCents(0),
           },
