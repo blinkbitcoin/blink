@@ -40,6 +40,7 @@ interface ILedgerTransaction {
   displayAmount: number
   displayFee: number
   displayCurrency: string
+  displayCurrencyFractionDigits?: number
 
   // FIXME: Admin-only, to be removed with satsAmount changes
   fee?: number

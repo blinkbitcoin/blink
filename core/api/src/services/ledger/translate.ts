@@ -55,6 +55,7 @@ export const translateToLedgerTx = <S extends WalletCurrency, T extends DisplayC
         ? (tx.displayFee as DisplayCurrencyBaseAmount)
         : undefined,
     displayCurrency,
+    displayCurrencyFractionDigits: tx.displayCurrencyFractionDigits,
 
     fee: tx.fee,
     usd: tx.usd,

@@ -77,6 +77,7 @@ type BaseWalletTransaction = {
   readonly settlementCurrency: WalletCurrency
   readonly settlementDisplayAmount: DisplayCurrencyMajorAmount
   readonly settlementDisplayFee: DisplayCurrencyMajorAmount
+  readonly settlementDisplayCurrencyFractionDigits?: number
   readonly settlementDisplayPrice: WalletMinorUnitDisplayPrice<
     WalletCurrency,
     DisplayCurrency

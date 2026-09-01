@@ -337,6 +337,7 @@ const lockedUpdatePendingInvoiceSteps = async ({
     feeDisplayCurrency: toDisplayBaseAmount(displayFee),
     amountDisplayCurrency: toDisplayBaseAmount(displayPaymentAmount),
     displayCurrency: recipientDisplayCurrency,
+    displayCurrencyFractionDigits: displayPriceRatio.fractionDigits,
   })
 
   // Idempotent settle invoice in lnd

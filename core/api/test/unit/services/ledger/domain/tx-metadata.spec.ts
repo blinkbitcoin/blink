@@ -15,7 +15,7 @@ import {
   LnReceiveLedgerMetadata,
   LnFeeReimbursementReceiveLedgerMetadata,
   LnFailedPaymentReceiveLedgerMetadata,
-} from "@/services/ledger/facade"
+} from "@/services/ledger/facade/tx-metadata"
 
 describe("Tx metadata", () => {
   const senderUsername = "sender" as Username
@@ -34,10 +34,12 @@ describe("Tx metadata", () => {
   const senderAmountDisplayCurrency = 100 as DisplayCurrencyBaseAmount
   const senderFeeDisplayCurrency = 10 as DisplayCurrencyBaseAmount
   const senderDisplayCurrency = "CRC" as DisplayCurrency
+  const senderDisplayCurrencyFractionDigits = 2
 
   const recipientAmountDisplayCurrency = 15 as DisplayCurrencyBaseAmount
   const recipientFeeDisplayCurrency = 2 as DisplayCurrencyBaseAmount
   const recipientDisplayCurrency = "EUR" as DisplayCurrency
+  const recipientDisplayCurrencyFractionDigits = 0
 
   const paymentAmounts = {
     btcPaymentAmount: { amount: 2000n, currency: WalletCurrency.Btc },
@@ -52,6 +54,7 @@ describe("Tx metadata", () => {
     senderAmountDisplayCurrency,
     senderFeeDisplayCurrency,
     senderDisplayCurrency,
+    senderDisplayCurrencyFractionDigits,
 
     memoOfPayer,
   }
@@ -73,18 +76,21 @@ describe("Tx metadata", () => {
         paymentAmounts.usdProtocolAndBankFee.amount,
       ) as DisplayCurrencyBaseAmount,
       displayCurrency: UsdDisplayCurrency,
+      displayCurrencyFractionDigits: 2,
     },
 
     sender: {
       displayAmount: senderAmountDisplayCurrency,
       displayFee: senderFeeDisplayCurrency,
       displayCurrency: senderDisplayCurrency,
+      displayCurrencyFractionDigits: senderDisplayCurrencyFractionDigits,
     },
 
     recipient: {
       displayAmount: recipientAmountDisplayCurrency,
       displayFee: recipientFeeDisplayCurrency,
       displayCurrency: recipientDisplayCurrency,
+      displayCurrencyFractionDigits: recipientDisplayCurrencyFractionDigits,
     },
   }
 
@@ -141,6 +147,7 @@ describe("Tx metadata", () => {
             recipientAmountDisplayCurrency,
             recipientFeeDisplayCurrency,
             recipientDisplayCurrency,
+            recipientDisplayCurrencyFractionDigits,
 
             senderUsername,
             recipientUsername,
@@ -457,6 +464,7 @@ describe("Tx metadata", () => {
       feeDisplayCurrency: expectedAmounts.sender.displayFee,
       amountDisplayCurrency: expectedAmounts.sender.displayAmount,
       displayCurrency: expectedAmounts.sender.displayCurrency,
+      displayCurrencyFractionDigits: expectedAmounts.sender.displayCurrencyFractionDigits,
     }
 
     const commonUsdMetadataArgs = {
@@ -464,6 +472,8 @@ describe("Tx metadata", () => {
       feeDisplayCurrency: expectedAmounts.internal.displayFee,
       amountDisplayCurrency: expectedAmounts.internal.displayAmount,
       displayCurrency: expectedAmounts.internal.displayCurrency as DisplayCurrency,
+      displayCurrencyFractionDigits:
+        expectedAmounts.internal.displayCurrencyFractionDigits,
     }
 
     const sendMetadataArgs = {

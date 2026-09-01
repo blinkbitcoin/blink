@@ -24,6 +24,10 @@ describe("NotificationsService", () => {
     })
 
     it("should send a notification", async () => {
+      jest.spyOn(PriceServiceImpl, "PriceService").mockImplementation(() => {
+        throw new Error("persisted fraction digits should avoid a price-service lookup")
+      })
+
       const accountId = "AccountId" as AccountId
       const walletId = "walletId" as WalletId
       const userId = "UserId" as UserId
@@ -81,6 +85,7 @@ describe("NotificationsService", () => {
           settlementCurrency: paymentAmount.currency,
           settlementFee: paymentAmount.settlementFee,
           settlementDisplayAmount: crcDisplayPaymentAmount.displayInMajor,
+          settlementDisplayCurrencyFractionDigits: 2,
           settlementDisplayPrice: crcSettlementDisplayPrice({
             walletAmount: toSats(paymentAmount.amount),
             walletCurrency: paymentAmount.currency,

@@ -1,4 +1,8 @@
-import { DisplayAmountsConverter, displayAmountFromNumber } from "@/domain/fiat"
+import {
+  DisplayAmountsConverter,
+  displayAmountFromNumber,
+  getCurrencyMajorExponent,
+} from "@/domain/fiat"
 import { FeeReimbursement } from "@/domain/ledger/fee-reimbursement"
 import {
   DisplayPriceRatio,
@@ -25,6 +29,7 @@ export const reimburseFee = async <S extends WalletCurrency, R extends WalletCur
   paymentFlow,
   senderDisplayAmount,
   senderDisplayCurrency,
+  senderDisplayCurrencyFractionDigits,
   journalId,
   actualFee,
   revealedPreImage,
@@ -32,6 +37,7 @@ export const reimburseFee = async <S extends WalletCurrency, R extends WalletCur
   paymentFlow: PaymentFlow<S, R>
   senderDisplayAmount: DisplayCurrencyBaseAmount
   senderDisplayCurrency: DisplayCurrency
+  senderDisplayCurrencyFractionDigits?: number
   journalId: LedgerJournalId
   actualFee: Satoshis
   revealedPreImage?: RevealedPreImage
@@ -93,15 +99,19 @@ export const reimburseFee = async <S extends WalletCurrency, R extends WalletCur
     return true
   }
 
+  const displayCurrencyFractionDigits =
+    senderDisplayCurrencyFractionDigits ?? getCurrencyMajorExponent(senderDisplayCurrency)
   const displayAmount = displayAmountFromNumber({
     amount: senderDisplayAmount,
     currency: senderDisplayCurrency,
+    fractionDigits: displayCurrencyFractionDigits,
   })
   if (displayAmount instanceof Error) return displayAmount
 
   const displayPriceRatio = DisplayPriceRatio({
     displayAmount,
     walletAmount: paymentFlow.btcPaymentAmount,
+    fractionDigits: displayCurrencyFractionDigits,
   })
   if (displayPriceRatio instanceof Error) return displayPriceRatio
 
@@ -134,6 +144,7 @@ export const reimburseFee = async <S extends WalletCurrency, R extends WalletCur
     feeDisplayCurrency: toDisplayBaseAmount(reimburseFeeDisplayCurrency),
     amountDisplayCurrency: toDisplayBaseAmount(reimburseAmountDisplayCurrency),
     displayCurrency: senderDisplayCurrency,
+    displayCurrencyFractionDigits: displayPriceRatio.fractionDigits,
   })
 
   const txMetadata: LnLedgerTransactionMetadataUpdate = {

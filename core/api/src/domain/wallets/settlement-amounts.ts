@@ -105,11 +105,13 @@ export const SettlementAmounts = () => {
       settlementDisplayAmountMinorAsNumber = amountToUse.display + feeToUse.display
     }
 
-    const exponent = getCurrencyMajorExponent(displayCurrency)
+    const exponent =
+      txn.displayCurrencyFractionDigits ?? getCurrencyMajorExponent(displayCurrency)
 
     let settlementDisplayAmountObj = displayAmountFromNumber({
       amount: settlementDisplayAmountMinorAsNumber,
       currency: displayCurrency,
+      fractionDigits: exponent,
     })
     if (settlementDisplayAmountObj instanceof Error) {
       recordExceptionInCurrentSpan({
@@ -126,6 +128,7 @@ export const SettlementAmounts = () => {
     let settlementDisplayFeeObj = displayAmountFromNumber({
       amount: displayFee,
       currency: displayCurrency,
+      fractionDigits: exponent,
     })
     if (settlementDisplayFeeObj instanceof Error) {
       recordExceptionInCurrentSpan({

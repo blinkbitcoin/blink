@@ -463,6 +463,7 @@ const lockedPendingPaymentSteps = async ({
     paymentFlow,
     senderDisplayAmount: displayAmount,
     senderDisplayCurrency: displayCurrency,
+    senderDisplayCurrencyFractionDigits: pendingPayment.displayCurrencyFractionDigits,
     journalId,
     actualFee: roundedUpFee,
     revealedPreImage,

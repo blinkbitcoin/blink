@@ -82,6 +82,7 @@ const translateLedgerTxnToWalletTxn = <S extends WalletCurrency>({
     settlementCurrency: txn.currency,
     settlementDisplayAmount,
     settlementDisplayFee,
+    settlementDisplayCurrencyFractionDigits: txn.displayCurrencyFractionDigits,
     settlementDisplayPrice: displayCurrencyPerBaseUnitFromAmounts({
       displayAmount,
       displayCurrency,

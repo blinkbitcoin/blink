@@ -464,20 +464,9 @@ const lockedPaymentViaIntraledgerSteps = async <
   let metadata:
     | AddOnChainIntraledgerSendLedgerMetadata
     | AddOnChainTradeIntraAccountLedgerMetadata
-  let additionalDebitMetadata: {
-    [key: string]:
-      | Username
-      | DisplayCurrencyBaseAmount
-      | DisplayCurrency
-      | string
-      | undefined
-  } = {}
-  let additionalCreditMetadata: {
-    [key: string]: Username | DisplayCurrencyBaseAmount | DisplayCurrency | undefined
-  } = {}
-  let additionalInternalMetadata: {
-    [key: string]: DisplayCurrencyBaseAmount | DisplayCurrency | undefined
-  } = {}
+  let additionalDebitMetadata: TxMetadata = {}
+  let additionalCreditMetadata: TxMetadata = {}
+  let additionalInternalMetadata: TxMetadata = {}
 
   if (senderWalletDescriptor.accountId === recipientWalletDescriptor.accountId) {
     ;({
@@ -493,6 +482,7 @@ const lockedPaymentViaIntraledgerSteps = async <
       senderAmountDisplayCurrency: toDisplayBaseAmount(senderDisplayAmount),
       senderFeeDisplayCurrency: toDisplayBaseAmount(senderDisplayFee),
       senderDisplayCurrency,
+      senderDisplayCurrencyFractionDigits: senderDisplayPriceRatio.fractionDigits,
 
       memoOfPayer: memo || undefined,
     }))
@@ -510,10 +500,12 @@ const lockedPaymentViaIntraledgerSteps = async <
       senderAmountDisplayCurrency: toDisplayBaseAmount(senderDisplayAmount),
       senderFeeDisplayCurrency: toDisplayBaseAmount(senderDisplayFee),
       senderDisplayCurrency,
+      senderDisplayCurrencyFractionDigits: senderDisplayPriceRatio.fractionDigits,
 
       recipientAmountDisplayCurrency: toDisplayBaseAmount(recipientDisplayAmount),
       recipientFeeDisplayCurrency: toDisplayBaseAmount(recipientDisplayFee),
       recipientDisplayCurrency,
+      recipientDisplayCurrencyFractionDigits: recipientDisplayPriceRatio.fractionDigits,
 
       memoOfPayer: memo || undefined,
       senderUsername,
@@ -696,6 +688,7 @@ const lockedPaymentViaOnChainSteps = async <
       amountDisplayCurrency: toDisplayBaseAmount(displayAmount),
       feeDisplayCurrency: toDisplayBaseAmount(displayFee),
       displayCurrency: senderDisplayCurrency,
+      displayCurrencyFractionDigits: displayPriceRatio.fractionDigits,
 
       payeeAddresses: [paymentFlow.address],
       sendAll,

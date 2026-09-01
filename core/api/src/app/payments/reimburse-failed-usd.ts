@@ -1,6 +1,7 @@
 import { FAILED_USD_MEMO } from "@/domain/ledger/ln-payment-state"
 import { CouldNotFindBtcWalletForAccountError } from "@/domain/errors"
 import { ErrorLevel, WalletCurrency } from "@/domain/shared"
+import { getCurrencyMajorExponent } from "@/domain/fiat"
 
 import { AccountsRepository, WalletsRepository } from "@/services/mongoose"
 import * as LedgerFacade from "@/services/ledger/facade"
@@ -47,6 +48,10 @@ export const reimburseFailedUsdPayment = async <
     displayCurrency = account.displayCurrency
   }
 
+  const displayCurrencyFractionDigits =
+    pendingPayment.displayCurrencyFractionDigits ??
+    getCurrencyMajorExponent(displayCurrency)
+
   const paymentHash = paymentFlow.paymentHashForFlow()
   if (paymentHash instanceof Error) return paymentHash
 
@@ -61,6 +66,7 @@ export const reimburseFailedUsdPayment = async <
     feeDisplayCurrency: displayFee || (0 as DisplayCurrencyBaseAmount),
     amountDisplayCurrency: displayAmount || (0 as DisplayCurrencyBaseAmount),
     displayCurrency,
+    displayCurrencyFractionDigits,
   })
 
   const txMetadata: LnLedgerTransactionMetadataUpdate = {

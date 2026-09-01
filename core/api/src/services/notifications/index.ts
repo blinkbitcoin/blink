@@ -236,8 +236,12 @@ export const NotificationsService = (): INotificationsService => {
       if (type === undefined) return true
 
       const displayCurrency = transaction.settlementDisplayPrice.displayCurrency
-      const fractionDigits = await getCurrencyFractionDigits(displayCurrency)
-      if (fractionDigits instanceof Error) throw fractionDigits
+      let { settlementDisplayCurrencyFractionDigits: fractionDigits } = transaction
+      if (fractionDigits === undefined) {
+        const fallbackFractionDigits = await getCurrencyFractionDigits(displayCurrency)
+        if (fallbackFractionDigits instanceof Error) throw fallbackFractionDigits
+        fractionDigits = fallbackFractionDigits
+      }
 
       const request = walletTransactionToNotificationEventRequest({
         userId: recipient.userId,
