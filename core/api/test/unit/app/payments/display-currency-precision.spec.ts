@@ -156,7 +156,6 @@ describe("payment display-currency precision", () => {
       userId: "userId" as UserId,
       transaction,
       type: TransactionType.INTRA_LEDGER_RECEIPT,
-      fractionDigits: settlementDisplayCurrencyFractionDigits,
     })
 
     expect(

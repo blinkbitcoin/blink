@@ -15,121 +15,87 @@ beforeAll(async () => {
 
 describe("NotificationsService", () => {
   describe("sendTransaction", () => {
+    const walletId = "walletId" as WalletId
+    const recipient = {
+      accountId: "AccountId" as AccountId,
+      walletId,
+      userId: "UserId" as UserId,
+      level: AccountLevel.One,
+      status: "active" as const,
+    }
+    const transactionFor = ({
+      displayCurrency,
+      displayAmountInMinor,
+      displayAmountInMajor,
+      displayCurrencyFractionDigits,
+      settlementAmount,
+    }: {
+      displayCurrency: DisplayCurrency
+      displayAmountInMinor: number
+      displayAmountInMajor: DisplayCurrencyMajorAmount
+      displayCurrencyFractionDigits?: number
+      settlementAmount: Satoshis
+    }): WalletTransaction => ({
+      id: "id" as LedgerTransactionId,
+      status: "success",
+      memo: "",
+      walletId,
+      externalId: "externalId" as LedgerExternalId,
+      initiationVia: { type: "onchain" },
+      settlementVia: {
+        type: "intraledger",
+        counterPartyWalletId: "counterPartyWalletId" as WalletId,
+        counterPartyUsername: "counterPartyUsername" as Username,
+      },
+      settlementAmount,
+      settlementCurrency: WalletCurrency.Btc,
+      settlementFee: toSats(0),
+      settlementDisplayAmount: displayAmountInMajor,
+      settlementDisplayCurrencyFractionDigits: displayCurrencyFractionDigits,
+      settlementDisplayPrice: displayCurrencyPerBaseUnitFromAmounts({
+        displayCurrency,
+        displayAmount: displayAmountInMinor,
+        walletAmount: Math.abs(settlementAmount),
+        walletCurrency: WalletCurrency.Btc,
+      }),
+      settlementDisplayFee: "0.00" as DisplayCurrencyMajorAmount,
+      createdAt: new Date(),
+    })
+
     afterEach(() => {
       jest.restoreAllMocks()
     })
 
     it("should send a notification", async () => {
-      const accountId = "AccountId" as AccountId
-      const walletId = "walletId" as WalletId
-      const userId = "UserId" as UserId
-
-      const paymentAmount = {
-        amount: 1000n,
-        currency: WalletCurrency.Btc,
-        settlementAmount: toSats(-1000),
-        settlementAmountSend: toSats(-1000),
-        settlementFee: toSats(0),
-        settlementDisplayFee: "0",
-      }
-      const crcDisplayPaymentAmount = {
-        amountInMinor: 350050n,
-        currency: "CRC" as DisplayCurrency,
-        displayInMajor: "3500.50",
-      }
-      const crcSettlementDisplayPrice = <S extends WalletCurrency>({
-        walletAmount,
-        walletCurrency,
-      }: {
-        walletAmount: number
-        walletCurrency: S
-      }) =>
-        displayCurrencyPerBaseUnitFromAmounts({
-          displayCurrency: crcDisplayPaymentAmount.currency,
-          displayAmount: Number(crcDisplayPaymentAmount.amountInMinor),
-          walletAmount,
-          walletCurrency,
-        })
-
       const result = await NotificationsService().sendTransaction({
-        recipient: {
-          accountId,
-          walletId,
-          userId,
-          level: AccountLevel.One,
-          status: "active",
-        },
-        transaction: {
-          id: "id" as LedgerTransactionId,
-          status: "success",
-          memo: "",
-          walletId,
-          externalId: "externalId" as LedgerExternalId,
-          initiationVia: {
-            type: "onchain",
-          },
-          settlementVia: {
-            type: "intraledger",
-            counterPartyWalletId: "counterPartyWalletId" as WalletId,
-            counterPartyUsername: "counterPartyUsername" as Username,
-          },
-          settlementAmount: paymentAmount.settlementAmount,
-          settlementCurrency: paymentAmount.currency,
-          settlementFee: paymentAmount.settlementFee,
-          settlementDisplayAmount: crcDisplayPaymentAmount.displayInMajor,
-          settlementDisplayCurrencyFractionDigits: 2,
-          settlementDisplayPrice: crcSettlementDisplayPrice({
-            walletAmount: toSats(paymentAmount.amount),
-            walletCurrency: paymentAmount.currency,
-          }),
-          settlementDisplayFee: paymentAmount.settlementDisplayFee,
-          createdAt: new Date(),
-        },
+        recipient,
+        transaction: transactionFor({
+          displayCurrency: "CRC" as DisplayCurrency,
+          displayAmountInMinor: 350_050,
+          displayAmountInMajor: "3500.50" as DisplayCurrencyMajorAmount,
+          displayCurrencyFractionDigits: 2,
+          settlementAmount: toSats(-1000),
+        }),
       })
       expect(result).not.toBeInstanceOf(Error)
     })
 
-    it("serializes legacy display amounts using the historical ICU precision", async () => {
-      const PKR = "PKR" as DisplayCurrency
+    it("serializes COP display amounts using the transaction precision", async () => {
+      const COP = "COP" as DisplayCurrency
 
       const handleNotificationEvent = jest
         .spyOn(notificationsGrpc, "handleNotificationEvent")
         .mockResolvedValue(new HandleNotificationEventResponse())
 
-      const walletId = "walletId" as WalletId
       const result = await NotificationsService().sendTransaction({
-        recipient: {
-          accountId: "AccountId" as AccountId,
-          walletId,
-          userId: "UserId" as UserId,
-          level: AccountLevel.One,
-          status: "active",
-        },
-        transaction: {
-          id: "id" as LedgerTransactionId,
-          status: "success",
-          memo: "",
-          walletId,
-          externalId: "externalId" as LedgerExternalId,
-          initiationVia: { type: "onchain" },
-          settlementVia: {
-            type: "intraledger",
-            counterPartyWalletId: "counterPartyWalletId" as WalletId,
-            counterPartyUsername: "counterPartyUsername" as Username,
-          },
+        recipient,
+        transaction: transactionFor({
+          displayCurrency: COP,
+          displayAmountInMinor: 103_900_513,
+          displayAmountInMajor: "1039005.13" as DisplayCurrencyMajorAmount,
+          displayCurrencyFractionDigits: 2,
           settlementAmount: toSats(-100),
-          settlementCurrency: WalletCurrency.Btc,
-          settlementFee: toSats(0),
-          settlementDisplayAmount: "22" as DisplayCurrencyMajorAmount,
-          settlementDisplayPrice: displayCurrencyPerBaseUnitFromAmounts({
-            displayCurrency: PKR,
-            displayAmount: 22,
-            walletAmount: 100,
-            walletCurrency: WalletCurrency.Btc,
-          }),
-          settlementDisplayFee: "0" as DisplayCurrencyMajorAmount,
-          createdAt: new Date(),
-        },
+        }),
       })
 
       expect(result).not.toBeInstanceOf(Error)
@@ -138,8 +104,28 @@ describe("NotificationsService", () => {
         ?.getEvent()
         ?.getTransactionOccurred()
         ?.getDisplayAmount()
-      expect(displayAmount?.getCurrencyCode()).toBe(PKR)
-      expect(displayAmount?.getMinorUnits()).toBe(22)
+      expect(displayAmount?.getCurrencyCode()).toBe(COP)
+      expect(displayAmount?.getMinorUnits()).toBe(103900513)
+      expect(displayAmount?.getFractionDigits()).toBe(2)
+    })
+
+    it("sends a push without querying currency metadata", async () => {
+      const handleNotificationEvent = jest
+        .spyOn(notificationsGrpc, "handleNotificationEvent")
+        .mockResolvedValue(new HandleNotificationEventResponse())
+
+      const result = await NotificationsService().sendTransaction({
+        recipient,
+        transaction: transactionFor({
+          displayCurrency: "ZZZ" as DisplayCurrency,
+          displayAmountInMinor: 100,
+          displayAmountInMajor: "1.00" as DisplayCurrencyMajorAmount,
+          settlementAmount: toSats(-100),
+        }),
+      })
+
+      expect(result).not.toBeInstanceOf(Error)
+      expect(handleNotificationEvent).toHaveBeenCalledTimes(1)
     })
   })
 })
