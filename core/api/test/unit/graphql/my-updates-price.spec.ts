@@ -84,7 +84,7 @@ describe("MyUpdatesSubscription price events", () => {
     countryCodes: ["PK"],
   }
 
-  it("uses published currency metadata for the deprecated USD event", () => {
+  it("preserves the USD-cent contract for the deprecated USD event", () => {
     const result = MyUpdatesSubscription.resolve(
       {
         errors: undefined as never,
@@ -106,7 +106,8 @@ describe("MyUpdatesSubscription price events", () => {
 
     expect(result.update).toMatchObject({
       resolveType: "Price",
-      formattedAmount: "123.4",
+      base: 12340000000000,
+      formattedAmount: "12.34",
       currencyUnit: "USDCENT",
     })
   })

@@ -2,6 +2,7 @@ import { Prices } from "@/app"
 
 import {
   majorToMinorUnit,
+  MajorExponent,
   SAT_PRICE_PRECISION_OFFSET,
   USD_PRICE_PRECISION_OFFSET,
   UsdDisplayCurrency,
@@ -207,7 +208,7 @@ const MeSubscription = {
 
       const minorUnitPerSat = majorToMinorUnit({
         amount: source.price.pricePerSat,
-        fractionDigits: source.price.currency.fractionDigits,
+        fractionDigits: MajorExponent.STANDARD,
       })
 
       return userPayload(null)({
