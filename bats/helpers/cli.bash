@@ -33,17 +33,26 @@ lnd_outside_rest() {
   local endpoint="https://localhost:8080/$route"
 
   local data=$2
+  local request_args=()
+
+  if [[ -n $data ]]; then
+    request_args=(--post-data "$data")
+  fi
 
   local macaroon_hex=$(
     docker exec "${COMPOSE_PROJECT_NAME}-lnd-outside-1-1" \
       xxd -p -c 10000 /root/.lnd/admin.macaroon
   )
 
+  # The LND image ships wget rather than curl. Preserve response bodies on
+  # server errors, but do not let wget retry and stall the test suite.
   docker exec "${COMPOSE_PROJECT_NAME}-lnd-outside-1-1" \
-    curl -s \
-      --cacert /root/.lnd/tls.cert \
-      -H "Grpc-Metadata-macaroon: $macaroon_hex" \
-      ${data:+ -X POST -d $data} \
+    wget -qO- \
+      --tries=1 \
+      --content-on-error \
+      --ca-certificate /root/.lnd/tls.cert \
+      --header "Grpc-Metadata-macaroon: $macaroon_hex" \
+      "${request_args[@]}" \
       "$endpoint" \
   > "$LNDS_REST_LOG"
 }
