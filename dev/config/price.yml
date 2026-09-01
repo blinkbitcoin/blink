@@ -22,6 +22,11 @@ quotes:
     name: "Test Currency"
     flag: "🧪"
     fractionDigits: 0
+  - code: "COP"
+    symbol: "$"
+    name: "Colombian Peso"
+    flag: "🇨🇴"
+    fractionDigits: 2
 
 exchanges:
   - provider: "dev-mock"
@@ -34,6 +39,7 @@ exchanges:
           EUR: 17500
           PKR: 5600000
           XTS: 2000000
+          COP: 200000000
           USD: 20000
     # Following require dummy values
     name: ""
