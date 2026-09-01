@@ -11,6 +11,10 @@ type GetCurrentSatPriceArgs = {
   currency: DisplayCurrency
 }
 
+type GetCurrentDisplayPriceRatioArgs = GetCurrentSatPriceArgs & {
+  fractionDigits?: number
+}
+
 type GetCurrentUsdCentPriceArgs = {
   currency: string
 }

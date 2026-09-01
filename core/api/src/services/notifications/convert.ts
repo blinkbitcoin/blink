@@ -1,5 +1,6 @@
 import * as Grpc from "./proto/notifications_pb"
 
+import { majorToMinorUnit } from "@/domain/fiat"
 import {
   InvalidNotificationCategoryError,
   InvalidPushNotificationSettingError,
@@ -9,6 +10,54 @@ import {
   DeepLinkAction,
   Icon,
 } from "@/domain/notifications"
+
+export const walletTransactionToNotificationEventRequest = ({
+  userId,
+  transaction,
+  type,
+  fractionDigits,
+}: {
+  userId: UserId
+  transaction: Pick<
+    WalletTransaction,
+    | "settlementAmount"
+    | "settlementCurrency"
+    | "settlementDisplayAmount"
+    | "settlementDisplayPrice"
+  >
+  type: Grpc.TransactionType
+  fractionDigits: number
+}): Grpc.HandleNotificationEventRequest => {
+  const settlementAmount = new Grpc.Money()
+  settlementAmount.setMinorUnits(Math.abs(transaction.settlementAmount))
+  settlementAmount.setCurrencyCode(transaction.settlementCurrency)
+
+  const displayAmount = new Grpc.Money()
+  displayAmount.setMinorUnits(
+    Math.abs(
+      Math.round(
+        majorToMinorUnit({
+          amount: Number(transaction.settlementDisplayAmount),
+          fractionDigits,
+        }),
+      ),
+    ),
+  )
+  displayAmount.setCurrencyCode(transaction.settlementDisplayPrice.displayCurrency)
+
+  const transactionOccurred = new Grpc.TransactionOccurred()
+  transactionOccurred.setUserId(userId)
+  transactionOccurred.setType(type)
+  transactionOccurred.setSettlementAmount(settlementAmount)
+  transactionOccurred.setDisplayAmount(displayAmount)
+
+  const event = new Grpc.NotificationEvent()
+  event.setTransactionOccurred(transactionOccurred)
+
+  const request = new Grpc.HandleNotificationEventRequest()
+  request.setEvent(event)
+  return request
+}
 
 export const grpcNotificationSettingsToNotificationSettings = (
   settings: Grpc.NotificationSettings | undefined,

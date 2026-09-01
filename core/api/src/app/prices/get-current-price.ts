@@ -79,15 +79,19 @@ export const getCurrentPriceAsWalletPriceRatio = async ({
 
 export const getCurrentPriceAsDisplayPriceRatio = async <T extends DisplayCurrency>({
   currency,
-}: GetCurrentSatPriceArgs): Promise<DisplayPriceRatio<"BTC", T> | PriceServiceError> => {
+  fractionDigits,
+}: GetCurrentDisplayPriceRatioArgs): Promise<
+  DisplayPriceRatio<"BTC", T> | PriceServiceError
+> => {
   const price = await getCurrentSatPrice({ currency })
   if (price instanceof Error) return price
 
-  const exponent = getCurrencyMajorExponent(currency)
+  const exponent = fractionDigits ?? getCurrencyMajorExponent(currency)
 
   return toDisplayPriceRatio({
     ratio: price.price * 10 ** exponent,
     displayCurrency: currency as T,
+    fractionDigits: exponent,
   })
 }
 
@@ -95,15 +99,20 @@ export const getCurrentUsdCentPriceAsDisplayPriceRatio = async <
   T extends DisplayCurrency,
 >({
   currency,
-}: GetCurrentSatPriceArgs): Promise<DisplayPriceRatio<"USD", T> | ApplicationError> => {
+  fractionDigits,
+}: GetCurrentDisplayPriceRatioArgs): Promise<
+  DisplayPriceRatio<"USD", T> | ApplicationError
+> => {
   const price = await getCurrentUsdCentPrice({ currency })
   if (price instanceof Error) return price
 
-  const exponent = getCurrencyMajorExponent(currency)
+  const exponent = fractionDigits ?? getCurrencyMajorExponent(currency)
 
   return toDisplayPriceRatio({
     ratio: price.price * 10 ** exponent,
     displayCurrency: currency as T,
+    walletCurrency: WalletCurrency.Usd,
+    fractionDigits: exponent,
   })
 }
 
