@@ -100,6 +100,7 @@ const transactionSchema = new Schema<ILedgerTransaction>(
       type: String,
       default: "USD",
     },
+    displayCurrencyFractionDigits: Number,
 
     // when transaction with on_us transaction, this is the other party username
     // TODO: refactor, define username as a type so that every property that should be an username can inherit from those parameters

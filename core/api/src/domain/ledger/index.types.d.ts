@@ -63,6 +63,7 @@ type LedgerTransaction<S extends WalletCurrency> = {
   readonly displayAmount?: DisplayCurrencyBaseAmount
   readonly displayFee?: DisplayCurrencyBaseAmount
   readonly displayCurrency?: DisplayCurrency
+  readonly displayCurrencyFractionDigits?: number
 
   // for onchain
   readonly address?: OnChainAddress

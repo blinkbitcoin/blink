@@ -439,15 +439,9 @@ const lockedPaymentViaIntraledgerSteps = async ({
   let metadata:
     | AddWalletIdIntraledgerSendLedgerMetadata
     | AddWalletIdTradeIntraAccountLedgerMetadata
-  let additionalDebitMetadata: {
-    [key: string]: Username | DisplayCurrencyBaseAmount | DisplayCurrency | undefined
-  } = {}
-  let additionalCreditMetadata: {
-    [key: string]: DisplayCurrencyBaseAmount | DisplayCurrency | undefined
-  }
-  let additionalInternalMetadata: {
-    [key: string]: DisplayCurrencyBaseAmount | DisplayCurrency | undefined
-  } = {}
+  let additionalDebitMetadata: TxMetadata = {}
+  let additionalCreditMetadata: TxMetadata
+  let additionalInternalMetadata: TxMetadata = {}
   if (senderWalletDescriptor.accountId === recipientWalletDescriptor.accountId) {
     ;({
       metadata,
@@ -460,6 +454,7 @@ const lockedPaymentViaIntraledgerSteps = async ({
       senderAmountDisplayCurrency: toDisplayBaseAmount(senderDisplayAmount),
       senderFeeDisplayCurrency: toDisplayBaseAmount(senderDisplayFee),
       senderDisplayCurrency,
+      senderDisplayCurrencyFractionDigits: senderDisplayPriceRatio.fractionDigits,
 
       memoOfPayer: memo || undefined,
     }))
@@ -475,10 +470,12 @@ const lockedPaymentViaIntraledgerSteps = async ({
       senderAmountDisplayCurrency: toDisplayBaseAmount(senderDisplayAmount),
       senderFeeDisplayCurrency: toDisplayBaseAmount(senderDisplayFee),
       senderDisplayCurrency,
+      senderDisplayCurrencyFractionDigits: senderDisplayPriceRatio.fractionDigits,
 
       recipientAmountDisplayCurrency: toDisplayBaseAmount(recipientDisplayAmount),
       recipientFeeDisplayCurrency: toDisplayBaseAmount(recipientDisplayFee),
       recipientDisplayCurrency,
+      recipientDisplayCurrencyFractionDigits: recipientDisplayPriceRatio.fractionDigits,
 
       memoOfPayer: memo || undefined,
       senderUsername,

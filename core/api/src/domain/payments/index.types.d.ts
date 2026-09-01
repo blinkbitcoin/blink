@@ -22,6 +22,7 @@ type DisplayPriceRatio<S extends WalletCurrency, T extends DisplayCurrency> = {
   displayMinorUnitPerWalletUnit(): DisplayCurrencyBasePerSat
   walletCurrency: S
   displayCurrency: T
+  fractionDigits: number
 }
 
 type XorPaymentHashProperty = XOR<

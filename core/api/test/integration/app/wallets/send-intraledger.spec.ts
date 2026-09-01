@@ -352,5 +352,14 @@ describe("intraLedgerPay", () => {
     expect(walletIdIntraledgerLedgerMetadataSpy).toHaveBeenCalledTimes(1)
     const args = recordIntraledgerSpy.mock.calls[0][0]
     expect(args.metadata.type).toBe(LedgerTransactionType.IntraLedger)
+
+    const persistedTransactions = await Transaction.find({
+      memoPayer: memo,
+      type: LedgerTransactionType.IntraLedger,
+    })
+    expect(persistedTransactions.length).toBeGreaterThan(0)
+    expect(
+      persistedTransactions.every((tx) => tx.displayCurrencyFractionDigits === 2),
+    ).toBe(true)
   })
 })

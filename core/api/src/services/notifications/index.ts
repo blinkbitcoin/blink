@@ -5,11 +5,11 @@ import {
   iconToGrpcIcon,
   notificationCategoryToGrpcNotificationCategory,
   notificationChannelToGrpcNotificationChannel,
+  walletTransactionToNotificationEventRequest,
 } from "./convert"
 
 import {
   TransactionType as ProtoTransactionType,
-  Money as ProtoMoney,
   LocalizedContent,
   AddPushDeviceTokenRequest,
   DisableNotificationCategoryRequest,
@@ -23,7 +23,6 @@ import {
   UpdateUserLocaleRequest,
   HandleNotificationEventRequest,
   NotificationEvent,
-  TransactionOccurred,
   MarketingNotificationTriggered,
   DeepLink as ProtoDeepLink,
   HandleNotificationEventResponse,
@@ -54,7 +53,7 @@ import { CallbackEventType } from "@/domain/callback"
 import { CallbackError } from "@/domain/callback/errors"
 import { WalletInvoiceStatus } from "@/domain/wallet-invoices"
 import { customPubSubTrigger, PubSubDefaultTriggers } from "@/domain/pubsub"
-import { majorToMinorUnit, toCents, UsdDisplayCurrency } from "@/domain/fiat"
+import { getCurrencyMajorExponent, toCents, UsdDisplayCurrency } from "@/domain/fiat"
 
 import { PubSubService } from "@/services/pubsub"
 import { CallbackService } from "@/services/svix"
@@ -217,32 +216,17 @@ export const NotificationsService = (): INotificationsService => {
       const type = getPushNotificationEventType(transaction)
       if (type === undefined) return true
 
-      const settlementAmount = new ProtoMoney()
-      settlementAmount.setMinorUnits(Math.abs(transaction.settlementAmount))
-      settlementAmount.setCurrencyCode(transaction.settlementCurrency)
-
-      const displayAmountMajor = transaction.settlementDisplayAmount
       const displayCurrency = transaction.settlementDisplayPrice.displayCurrency
-      const displayAmountMinor = Math.abs(
-        Math.round(
-          majorToMinorUnit({ amount: Number(displayAmountMajor), displayCurrency }),
-        ),
-      )
-      const displayAmount = new ProtoMoney()
-      displayAmount.setMinorUnits(displayAmountMinor)
-      displayAmount.setCurrencyCode(displayCurrency)
+      const fractionDigits =
+        transaction.settlementDisplayCurrencyFractionDigits ??
+        getCurrencyMajorExponent(displayCurrency)
 
-      const tx = new TransactionOccurred()
-      tx.setUserId(recipient.userId)
-      tx.setType(type)
-      tx.setSettlementAmount(settlementAmount)
-      tx.setDisplayAmount(displayAmount)
-
-      const event = new NotificationEvent()
-      event.setTransactionOccurred(tx)
-
-      const request = new HandleNotificationEventRequest()
-      request.setEvent(event)
+      const request = walletTransactionToNotificationEventRequest({
+        userId: recipient.userId,
+        transaction,
+        type,
+        fractionDigits,
+      })
 
       await notificationsGrpc.handleNotificationEvent(
         request,

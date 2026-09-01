@@ -1,33 +1,39 @@
 import { toSats } from "@/domain/bitcoin"
-import { UsdDisplayCurrency, toCents } from "@/domain/fiat"
+import { MajorExponent, UsdDisplayCurrency, toCents } from "@/domain/fiat"
 import { LedgerTransactionType } from "@/domain/ledger"
 
 const displayArgsFromArgs = ({
   senderAmountDisplayCurrency,
   senderFeeDisplayCurrency,
   senderDisplayCurrency,
+  senderDisplayCurrencyFractionDigits,
 
   recipientAmountDisplayCurrency,
   recipientFeeDisplayCurrency,
   recipientDisplayCurrency,
+  recipientDisplayCurrencyFractionDigits,
 }: {
   senderAmountDisplayCurrency: DisplayCurrencyBaseAmount
   senderFeeDisplayCurrency: DisplayCurrencyBaseAmount
   senderDisplayCurrency: DisplayCurrency
+  senderDisplayCurrencyFractionDigits?: number
 
   recipientAmountDisplayCurrency: DisplayCurrencyBaseAmount
   recipientFeeDisplayCurrency: DisplayCurrencyBaseAmount
   recipientDisplayCurrency: DisplayCurrency
+  recipientDisplayCurrencyFractionDigits?: number
 }) => ({
   sender: {
     displayAmount: senderAmountDisplayCurrency,
     displayFee: senderFeeDisplayCurrency,
     displayCurrency: senderDisplayCurrency,
+    displayCurrencyFractionDigits: senderDisplayCurrencyFractionDigits,
   },
   recipient: {
     displayAmount: recipientAmountDisplayCurrency,
     displayFee: recipientFeeDisplayCurrency,
     displayCurrency: recipientDisplayCurrency,
+    displayCurrencyFractionDigits: recipientDisplayCurrencyFractionDigits,
   },
 })
 
@@ -41,6 +47,7 @@ const internalMetadataAmounts = ({
   displayAmount: Number(centsAmount) as DisplayCurrencyBaseAmount,
   displayFee: Number(centsFee) as DisplayCurrencyBaseAmount,
   displayCurrency: UsdDisplayCurrency,
+  displayCurrencyFractionDigits: MajorExponent.STANDARD,
 })
 
 const debitOrCreditMetadataAmounts = ({
@@ -50,6 +57,7 @@ const debitOrCreditMetadataAmounts = ({
   displayAmount,
   displayFee,
   displayCurrency,
+  displayCurrencyFractionDigits,
 }: {
   centsAmount: bigint
   centsFee: bigint
@@ -64,12 +72,17 @@ const debitOrCreditMetadataAmounts = ({
     displayCurrency === UsdDisplayCurrency ? walletUsdAmount : displayAmount
   const resultDisplayFee =
     displayCurrency === UsdDisplayCurrency ? walletUsdFee : displayFee
+  const resultDisplayCurrencyFractionDigits =
+    displayCurrency === UsdDisplayCurrency
+      ? MajorExponent.STANDARD
+      : displayCurrencyFractionDigits
 
   return {
     debitOrCreditAdditionalMetadata: {
       displayAmount: resultDisplayAmount,
       displayFee: resultDisplayFee,
       displayCurrency,
+      displayCurrencyFractionDigits: resultDisplayCurrencyFractionDigits,
     },
     internalAccountsAdditionalMetadata: internalMetadataAmounts({
       centsAmount,
@@ -123,6 +136,7 @@ export const LnSendLedgerMetadata = ({
   feeDisplayCurrency: displayFee,
   amountDisplayCurrency: displayAmount,
   displayCurrency,
+  displayCurrencyFractionDigits,
   feeKnownInAdvance,
   memoOfPayer,
 }: {
@@ -133,6 +147,7 @@ export const LnSendLedgerMetadata = ({
   feeDisplayCurrency: DisplayCurrencyBaseAmount
   amountDisplayCurrency: DisplayCurrencyBaseAmount
   displayCurrency: DisplayCurrency
+  displayCurrencyFractionDigits?: number
 
   feeKnownInAdvance: boolean
   memoOfPayer?: string
@@ -168,6 +183,7 @@ export const LnSendLedgerMetadata = ({
     displayAmount,
     displayFee,
     displayCurrency,
+    displayCurrencyFractionDigits,
   })
 
   return {
@@ -182,6 +198,7 @@ export const OnChainSendLedgerMetadata = ({
   feeDisplayCurrency: displayFee,
   amountDisplayCurrency: displayAmount,
   displayCurrency,
+  displayCurrencyFractionDigits,
   payeeAddresses,
   sendAll,
   memoOfPayer,
@@ -191,6 +208,7 @@ export const OnChainSendLedgerMetadata = ({
   feeDisplayCurrency: DisplayCurrencyBaseAmount
   amountDisplayCurrency: DisplayCurrencyBaseAmount
   displayCurrency: DisplayCurrency
+  displayCurrencyFractionDigits?: number
 
   payeeAddresses: OnChainAddress[]
   sendAll: boolean
@@ -227,6 +245,7 @@ export const OnChainSendLedgerMetadata = ({
     displayAmount,
     displayFee,
     displayCurrency,
+    displayCurrencyFractionDigits,
   })
 
   return {
@@ -243,6 +262,7 @@ export const OnChainReceiveLedgerMetadata = ({
   feeDisplayCurrency: displayFee,
   amountDisplayCurrency: displayAmount,
   displayCurrency,
+  displayCurrencyFractionDigits,
 
   payeeAddresses,
   newAddressRequestId,
@@ -254,6 +274,7 @@ export const OnChainReceiveLedgerMetadata = ({
   feeDisplayCurrency: DisplayCurrencyBaseAmount
   amountDisplayCurrency: DisplayCurrencyBaseAmount
   displayCurrency: DisplayCurrency
+  displayCurrencyFractionDigits?: number
 
   payeeAddresses: OnChainAddress[]
   newAddressRequestId: OnChainAddressRequestId | undefined
@@ -290,6 +311,7 @@ export const OnChainReceiveLedgerMetadata = ({
     displayAmount,
     displayFee,
     displayCurrency,
+    displayCurrencyFractionDigits,
   })
 
   return {
@@ -307,6 +329,7 @@ export const LnReceiveLedgerMetadata = ({
   feeDisplayCurrency: displayFee,
   amountDisplayCurrency: displayAmount,
   displayCurrency,
+  displayCurrencyFractionDigits,
 }: {
   paymentHash: PaymentHash
   pubkey: Pubkey
@@ -315,6 +338,7 @@ export const LnReceiveLedgerMetadata = ({
   feeDisplayCurrency: DisplayCurrencyBaseAmount
   amountDisplayCurrency: DisplayCurrencyBaseAmount
   displayCurrency: DisplayCurrency
+  displayCurrencyFractionDigits?: number
 }) => {
   const {
     btcPaymentAmount: { amount: satsAmount },
@@ -346,6 +370,7 @@ export const LnReceiveLedgerMetadata = ({
     displayAmount,
     displayFee,
     displayCurrency,
+    displayCurrencyFractionDigits,
   })
 
   return {
@@ -362,6 +387,7 @@ export const LnFeeReimbursementReceiveLedgerMetadata = ({
   feeDisplayCurrency: displayFee,
   amountDisplayCurrency: displayAmount,
   displayCurrency,
+  displayCurrencyFractionDigits,
 }: {
   paymentAmounts: AmountsAndFees
   paymentHash: PaymentHash
@@ -369,6 +395,7 @@ export const LnFeeReimbursementReceiveLedgerMetadata = ({
   feeDisplayCurrency: DisplayCurrencyBaseAmount
   amountDisplayCurrency: DisplayCurrencyBaseAmount
   displayCurrency: DisplayCurrency
+  displayCurrencyFractionDigits?: number
 }) => {
   const {
     btcPaymentAmount: { amount: satsAmount },
@@ -399,6 +426,7 @@ export const LnFeeReimbursementReceiveLedgerMetadata = ({
     displayAmount,
     displayFee,
     displayCurrency,
+    displayCurrencyFractionDigits,
   })
 
   return {
@@ -415,6 +443,7 @@ export const LnFailedPaymentReceiveLedgerMetadata = ({
   feeDisplayCurrency: displayFee,
   amountDisplayCurrency: displayAmount,
   displayCurrency,
+  displayCurrencyFractionDigits,
 }: {
   paymentAmounts: AmountsAndFees
   paymentHash: PaymentHash
@@ -422,6 +451,7 @@ export const LnFailedPaymentReceiveLedgerMetadata = ({
   feeDisplayCurrency: DisplayCurrencyBaseAmount
   amountDisplayCurrency: DisplayCurrencyBaseAmount
   displayCurrency: DisplayCurrency
+  displayCurrencyFractionDigits?: number
 }) => {
   const {
     btcPaymentAmount: { amount: satsAmount },
@@ -452,6 +482,7 @@ export const LnFailedPaymentReceiveLedgerMetadata = ({
     displayAmount,
     displayFee,
     displayCurrency,
+    displayCurrencyFractionDigits,
   })
 
   return {
@@ -477,10 +508,12 @@ export const OnChainIntraledgerLedgerMetadata = ({
   senderFeeDisplayCurrency: DisplayCurrencyBaseAmount
   senderAmountDisplayCurrency: DisplayCurrencyBaseAmount
   senderDisplayCurrency: DisplayCurrency
+  senderDisplayCurrencyFractionDigits?: number
 
   recipientFeeDisplayCurrency: DisplayCurrencyBaseAmount
   recipientAmountDisplayCurrency: DisplayCurrencyBaseAmount
   recipientDisplayCurrency: DisplayCurrency
+  recipientDisplayCurrencyFractionDigits?: number
 
   memoOfPayer?: string
   senderUsername?: Username
@@ -543,10 +576,12 @@ export const WalletIdIntraledgerLedgerMetadata = ({
   senderFeeDisplayCurrency: DisplayCurrencyBaseAmount
   senderAmountDisplayCurrency: DisplayCurrencyBaseAmount
   senderDisplayCurrency: DisplayCurrency
+  senderDisplayCurrencyFractionDigits?: number
 
   recipientFeeDisplayCurrency: DisplayCurrencyBaseAmount
   recipientAmountDisplayCurrency: DisplayCurrencyBaseAmount
   recipientDisplayCurrency: DisplayCurrency
+  recipientDisplayCurrencyFractionDigits?: number
 
   memoOfPayer?: string
   senderUsername?: Username
@@ -611,10 +646,12 @@ export const LnIntraledgerLedgerMetadata = ({
   senderFeeDisplayCurrency: DisplayCurrencyBaseAmount
   senderAmountDisplayCurrency: DisplayCurrencyBaseAmount
   senderDisplayCurrency: DisplayCurrency
+  senderDisplayCurrencyFractionDigits?: number
 
   recipientFeeDisplayCurrency: DisplayCurrencyBaseAmount
   recipientAmountDisplayCurrency: DisplayCurrencyBaseAmount
   recipientDisplayCurrency: DisplayCurrency
+  recipientDisplayCurrencyFractionDigits?: number
 
   memoOfPayer?: string
   memoForRecipient?: string
@@ -683,6 +720,7 @@ export const OnChainTradeIntraAccountLedgerMetadata = ({
   senderFeeDisplayCurrency: DisplayCurrencyBaseAmount
   senderAmountDisplayCurrency: DisplayCurrencyBaseAmount
   senderDisplayCurrency: DisplayCurrency
+  senderDisplayCurrencyFractionDigits?: number
 
   memoOfPayer?: string
 }) => {
@@ -691,6 +729,8 @@ export const OnChainTradeIntraAccountLedgerMetadata = ({
     recipientFeeDisplayCurrency: displayArgs.senderFeeDisplayCurrency,
     recipientAmountDisplayCurrency: displayArgs.senderAmountDisplayCurrency,
     recipientDisplayCurrency: displayArgs.senderDisplayCurrency,
+    recipientDisplayCurrencyFractionDigits:
+      displayArgs.senderDisplayCurrencyFractionDigits,
   }
 
   const {
@@ -746,6 +786,7 @@ export const WalletIdTradeIntraAccountLedgerMetadata = ({
   senderFeeDisplayCurrency: DisplayCurrencyBaseAmount
   senderAmountDisplayCurrency: DisplayCurrencyBaseAmount
   senderDisplayCurrency: DisplayCurrency
+  senderDisplayCurrencyFractionDigits?: number
 
   memoOfPayer?: string
 }) => {
@@ -754,6 +795,8 @@ export const WalletIdTradeIntraAccountLedgerMetadata = ({
     recipientFeeDisplayCurrency: displayArgs.senderFeeDisplayCurrency,
     recipientAmountDisplayCurrency: displayArgs.senderAmountDisplayCurrency,
     recipientDisplayCurrency: displayArgs.senderDisplayCurrency,
+    recipientDisplayCurrencyFractionDigits:
+      displayArgs.senderDisplayCurrencyFractionDigits,
   }
 
   const {
@@ -809,6 +852,7 @@ export const LnTradeIntraAccountLedgerMetadata = ({
   senderFeeDisplayCurrency: DisplayCurrencyBaseAmount
   senderAmountDisplayCurrency: DisplayCurrencyBaseAmount
   senderDisplayCurrency: DisplayCurrency
+  senderDisplayCurrencyFractionDigits?: number
 
   memoOfPayer?: string
   memoForRecipient?: string
@@ -818,6 +862,8 @@ export const LnTradeIntraAccountLedgerMetadata = ({
     recipientFeeDisplayCurrency: displayArgs.senderFeeDisplayCurrency,
     recipientAmountDisplayCurrency: displayArgs.senderAmountDisplayCurrency,
     recipientDisplayCurrency: displayArgs.senderDisplayCurrency,
+    recipientDisplayCurrencyFractionDigits:
+      displayArgs.senderDisplayCurrencyFractionDigits,
   }
 
   const {

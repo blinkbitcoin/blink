@@ -1,5 +1,5 @@
 import { toSats } from "@/domain/bitcoin"
-import { toCents } from "@/domain/fiat"
+import { getCurrencyMajorExponent, toCents } from "@/domain/fiat"
 import { LedgerTransactionType } from "@/domain/ledger"
 import { WalletCurrency } from "@/domain/shared"
 
@@ -153,6 +153,48 @@ describe("reimburseFee", () => {
       "walletId",
     )
   })
+
+  it.each([
+    {
+      description: "persisted precision",
+      fractionDigits: 2,
+      expectedFractionDigits: 2,
+    },
+    {
+      description: "historical ICU precision",
+      fractionDigits: undefined,
+      expectedFractionDigits: getCurrencyMajorExponent("PKR" as DisplayCurrency),
+    },
+  ])(
+    "reconstructs the display ratio with $description",
+    async ({ fractionDigits, expectedFractionDigits }) => {
+      mockGetSkipFeeReimbursement.mockReturnValue(false)
+      jest
+        .spyOn(LedgerFacadeImpl, "recordReceiveOffChain")
+        .mockResolvedValue(
+          true as unknown as Awaited<
+            ReturnType<typeof LedgerFacadeImpl.recordReceiveOffChain>
+          >,
+        )
+      const metadataSpy = jest.spyOn(
+        LedgerFacadeImpl,
+        "LnFeeReimbursementReceiveLedgerMetadata",
+      )
+
+      const result = await reimburseFee({
+        paymentFlow: buildPaymentFlow(),
+        ...reimburseArgs,
+        senderDisplayAmount: 2197 as DisplayCurrencyBaseAmount,
+        senderDisplayCurrency: "PKR" as DisplayCurrency,
+        senderDisplayCurrencyFractionDigits: fractionDigits,
+      })
+
+      expect(result).toBe(true)
+      expect(metadataSpy.mock.calls[0][0].displayCurrencyFractionDigits).toBe(
+        expectedFractionDigits,
+      )
+    },
+  )
 
   it("returns true without crediting when the fee difference is zero (short-circuits the retention flag)", async () => {
     mockGetSkipFeeReimbursement.mockReturnValue(true)

@@ -90,11 +90,11 @@ const RealtimePriceSubscription = {
 
     const minorUnitPerSat = majorToMinorUnit({
       amount: pricePerSat,
-      displayCurrency: currency,
+      fractionDigits: priceCurrency.fractionDigits,
     })
     const minorUnitPerUsdCent = majorToMinorUnit({
       amount: pricePerUsdCent,
-      displayCurrency: currency,
+      fractionDigits: priceCurrency.fractionDigits,
     })
 
     return {

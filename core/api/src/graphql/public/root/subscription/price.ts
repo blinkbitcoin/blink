@@ -5,6 +5,7 @@ import { Prices } from "@/app"
 import { customPubSubTrigger, PubSubDefaultTriggers } from "@/domain/pubsub"
 import {
   checkedToDisplayCurrency,
+  MajorExponent,
   majorToMinorUnit,
   SAT_PRICE_PRECISION_OFFSET,
   UsdDisplayCurrency,
@@ -76,9 +77,11 @@ const PriceSubscription = {
       return { errors: [{ message: "No price info" }] }
     }
 
+    // This deprecated subscription rejects non-USD payloads above, and its output
+    // contract is explicitly denominated in USD cents.
     const minorUnitPerSat = majorToMinorUnit({
       amount: source.pricePerSat,
-      displayCurrency: source.displayCurrency,
+      fractionDigits: MajorExponent.STANDARD,
     })
 
     const amountPriceInCents = args.input.amount * minorUnitPerSat

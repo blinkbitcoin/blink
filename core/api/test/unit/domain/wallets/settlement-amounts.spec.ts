@@ -229,4 +229,22 @@ describe("SettlementAmounts", () => {
       }
     })
   })
+
+  it("uses historical ICU precision when persisted precision is absent", () => {
+    const settlementAmounts = SettlementAmounts().fromTxn({
+      ...txnCommon,
+      currency: WalletCurrency.Btc,
+      credit: toSats(100),
+      debit: toSats(0),
+      satsAmount: toSats(100),
+      satsFee: toSats(0),
+      centsAmount: toCents(1),
+      centsFee: toCents(0),
+      displayAmount: 22 as DisplayCurrencyBaseAmount,
+      displayFee: 0 as DisplayCurrencyBaseAmount,
+      displayCurrency: "PKR" as DisplayCurrency,
+    })
+
+    expect(settlementAmounts.settlementDisplayAmount).toBe("22")
+  })
 })

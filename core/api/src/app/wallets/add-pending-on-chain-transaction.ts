@@ -121,6 +121,7 @@ export const addPendingTransaction = async ({
       settlementCurrency: wallet.currency,
       settlementDisplayAmount,
       settlementDisplayFee,
+      settlementDisplayCurrencyFractionDigits: displayPriceRatio.fractionDigits,
       settlementDisplayPrice,
 
       createdAt: new Date(),

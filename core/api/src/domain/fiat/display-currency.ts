@@ -18,14 +18,13 @@ export const MajorExponent = {
 
 export const majorToMinorUnit = ({
   amount,
-  displayCurrency,
+  fractionDigits,
 }: {
   amount: number | bigint
-  displayCurrency: DisplayCurrency
+  fractionDigits: number
 }): number => {
-  const displayMajorExponent = getCurrencyMajorExponent(displayCurrency)
   return BigNumber(amount.toString())
-    .times(10 ** displayMajorExponent)
+    .times(10 ** fractionDigits)
     .toNumber()
 }
 
@@ -58,20 +57,22 @@ const displayMinorToMajor = ({
   displayMajorExponent,
 }: {
   amountInMinor: bigint
-  displayMajorExponent: CurrencyMajorExponent
+  displayMajorExponent: number
 }) => (Number(amountInMinor) / 10 ** displayMajorExponent).toFixed(displayMajorExponent)
 
 export const displayAmountFromNumber = <T extends DisplayCurrency>({
   amount,
   currency,
+  fractionDigits,
 }: {
   amount: number
   currency: T
+  fractionDigits?: number
 }): DisplayAmount<T> | ValidationError => {
   const amountInMinor = safeBigInt(Math.round(amount))
   if (amountInMinor instanceof Error) return amountInMinor
 
-  const displayMajorExponent = getCurrencyMajorExponent(currency)
+  const displayMajorExponent = fractionDigits ?? getCurrencyMajorExponent(currency)
 
   return {
     amountInMinor,
