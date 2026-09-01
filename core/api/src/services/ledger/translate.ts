@@ -10,7 +10,9 @@ export const translateToLedgerTx = <S extends WalletCurrency, T extends DisplayC
   const currency = tx.currency as S
 
   const displayCurrency =
-    tx.displayCurrency !== undefined ? (tx.displayCurrency as T) : undefined
+    tx.displayCurrency !== undefined && tx.displayCurrency !== null
+      ? (tx.displayCurrency as T)
+      : undefined
 
   const debit = currency === WalletCurrency.Btc ? toSats(tx.debit) : toCents(tx.debit)
   const credit = currency === WalletCurrency.Btc ? toSats(tx.credit) : toCents(tx.credit)
@@ -47,15 +49,15 @@ export const translateToLedgerTx = <S extends WalletCurrency, T extends DisplayC
     satsFee: tx.satsFee !== undefined ? toSats(tx.satsFee) : undefined,
     centsFee: tx.centsFee !== undefined ? toCents(tx.centsFee) : undefined,
     displayAmount:
-      tx.displayAmount !== undefined
+      tx.displayAmount !== undefined && tx.displayAmount !== null
         ? (tx.displayAmount as DisplayCurrencyBaseAmount)
         : undefined,
     displayFee:
-      tx.displayFee !== undefined
+      tx.displayFee !== undefined && tx.displayFee !== null
         ? (tx.displayFee as DisplayCurrencyBaseAmount)
         : undefined,
     displayCurrency,
-    displayCurrencyFractionDigits: tx.displayCurrencyFractionDigits,
+    displayCurrencyFractionDigits: tx.displayCurrencyFractionDigits ?? undefined,
 
     fee: tx.fee,
     usd: tx.usd,

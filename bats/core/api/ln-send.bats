@@ -11,6 +11,8 @@ load "../../helpers/wallet.bash"
 
 ALICE='alice'
 BOB='bob'
+COP_HISTORY_USER='cop_history'
+XTS_HISTORY_USER='xts_history'
 
 setup_file() {
   clear_cache
@@ -37,6 +39,71 @@ teardown() {
 
 btc_amount=1000
 usd_amount=50
+
+assert_transaction_history_precision() {
+  local token_name="$1"
+  local currency="$2"
+  local expected_amount="$3"
+  local expected_fee="$4"
+  local simulate_legacy_row="${5:-false}"
+  local btc_wallet_name="$token_name.btc_wallet_id"
+
+  create_user "$token_name"
+  fund_user_onchain "$token_name" 'btc_wallet'
+  variables="$(jq -n --arg currency "$currency" '{input: {currency: $currency}}')"
+  exec_graphql "$token_name" 'update-display-currency' "$variables"
+  errors="$(graphql_output '.data.accountUpdateDisplayCurrency.errors | length')"
+  [[ "$errors" = "0" ]] || exit 1
+
+  invoice_response="$(lnd_outside_cli addinvoice --amt $btc_amount)"
+  payment_request="$(echo "$invoice_response" | jq -r '.payment_request')"
+  payment_hash="$(echo "$invoice_response" | jq -r '.r_hash')"
+  [[ "$payment_request" != "null" ]] || exit 1
+
+  variables=$(
+    jq -n \
+      --arg wallet_id "$(read_value "$btc_wallet_name")" \
+      --arg payment_request "$payment_request" \
+      '{input: {walletId: $wallet_id, paymentRequest: $payment_request}}'
+  )
+
+  exec_graphql "$token_name" 'ln-invoice-payment-send' "$variables"
+  send_status="$(graphql_output '.data.lnInvoicePaymentSend.status')"
+  [[ "$send_status" = "SUCCESS" ]] || exit 1
+
+  retry 15 1 check_for_ln_initiated_settled "$token_name" "$payment_hash"
+
+  if [[ "$simulate_legacy_row" = "true" ]]; then
+    mongo_command=$(echo "db.getCollection('medici_transactions').updateMany({
+      'hash': '$payment_hash',
+    }, {
+      \$unset: { 'displayCurrencyFractionDigits': '' },
+      \$set: { 'timestamp': ISODate('2026-07-03T14:22:08Z') }
+    });" | tr -d '[:space:]')
+    mongo_cli "$mongo_command"
+    legacy_rows_count=$(mongo_cli "db.getCollection('medici_transactions').countDocuments({
+      'hash': '$payment_hash',
+      'displayCurrencyFractionDigits': { \$exists: false },
+      'timestamp': ISODate('2026-07-03T14:22:08Z')
+    })")
+    [[ "$legacy_rows_count" -gt 0 ]] || exit 1
+  fi
+
+  history_transactions="$(txns_for_hash "$token_name" "$payment_hash")"
+  [[ "$(echo "$history_transactions" | jq -r 'length')" = "1" ]] || exit 1
+  history_transaction="$(echo "$history_transactions" | jq -c '.[0].node')"
+  [[ "$(echo "$history_transaction" | jq -r '.settlementDisplayCurrency')" = "$currency" ]] || exit 1
+  [[ "$(echo "$history_transaction" | jq -r '.settlementDisplayAmount')" = "$expected_amount" ]] || exit 1
+  [[ "$(echo "$history_transaction" | jq -r '.settlementDisplayFee')" = "$expected_fee" ]] || exit 1
+}
+
+@test "ln-send: COP transaction history honors two price-service fraction digits" {
+  assert_transaction_history_precision "$COP_HISTORY_USER" "COP" "-2000.00" "0.00" true
+}
+
+@test "ln-send: XTS transaction history honors zero price-service fraction digits" {
+  assert_transaction_history_precision "$XTS_HISTORY_USER" "XTS" "-20" "0"
+}
 
 @test "ln-send: lightning settled - lnInvoicePaymentSend from btc" {
   token_name="$ALICE"

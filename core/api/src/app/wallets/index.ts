@@ -24,6 +24,7 @@ export * from "./get-pending-incoming-on-chain-transactions-for-wallets"
 export * from "./get-pending-incoming-on-chain-transactions-by-addresses"
 export * from "./get-invoices-for-wallets"
 export * from "./send-invoice-webhook"
+export * from "./translate-ledger-transactions"
 
 import { WalletsRepository } from "@/services/mongoose"
 

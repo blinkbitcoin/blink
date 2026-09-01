@@ -28,6 +28,12 @@ quotes:
     flag: "🧪"
     fractionDigits: 0
     countryCodes: []
+  - code: "COP"
+    symbol: "$"
+    name: "Colombian Peso"
+    flag: "🇨🇴"
+    fractionDigits: 2
+    countryCodes: ["CO"]
 
 exchanges:
   - provider: "dev-mock"
@@ -40,6 +46,7 @@ exchanges:
           EUR: 17500
           PKR: 5600000
           XTS: 2000000
+          COP: 200000000
           USD: 20000
     # Following require dummy values
     name: ""
