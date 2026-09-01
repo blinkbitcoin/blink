@@ -837,18 +837,39 @@ describe("inspectPostMigrationDepositRelease", () => {
     expect(mongooseMocks.releaseRepo.updateStatus).not.toHaveBeenCalled()
   })
 
-  it("marks the release failed when the payment fails", async () => {
-    setSuccessfulRelease()
-    mockPayInvoice.mockResolvedValue(dependencyError)
+  it("reconciles an LND success after post-payment bookkeeping fails", async () => {
+    const { bound, paymentHash } = setSuccessfulRelease()
+    const postPaymentError = new MigrationStateConflictError(
+      "LND succeeded but post-payment bookkeeping failed",
+    )
+    mockPayInvoice.mockResolvedValue(postPaymentError)
 
     expect(
       await releasePostMigrationDeposit({
         txHash: txHash as OnChainTxHash,
         vout: 2 as OnChainTxVout,
       }),
-    ).toBe(dependencyError)
+    ).toBe(postPaymentError)
+    expect(mongooseMocks.releaseRepo.updateStatus).not.toHaveBeenCalled()
+
+    mongooseMocks.releaseRepo.findByOutput.mockResolvedValue(bound)
+    mockStateDeterminator.mockReturnValue({ determine: () => LnPaymentState.Success })
+
+    expect(
+      await reconcilePostMigrationDepositRelease({
+        txHash: txHash as OnChainTxHash,
+        vout: 2 as OnChainTxVout,
+      }),
+    ).toMatchObject({ status: PostMigrationDepositReleaseStatus.Completed })
+    expect(mockUpdatePending).toHaveBeenCalledWith({
+      paymentHash,
+      logger: {},
+    })
     expect(mongooseMocks.releaseRepo.updateStatus).toHaveBeenCalledWith(
-      expect.objectContaining({ to: PostMigrationDepositReleaseStatus.Failed }),
+      expect.objectContaining({
+        from: PostMigrationDepositReleaseStatus.Processing,
+        to: PostMigrationDepositReleaseStatus.Completed,
+      }),
     )
   })
 

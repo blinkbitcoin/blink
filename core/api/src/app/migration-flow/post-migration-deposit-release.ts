@@ -327,7 +327,8 @@ export const releasePostMigrationDeposit = async ({
     senderWalletId: bankOwnerWalletId,
     senderAccount: bankOwnerAccount,
   })
-  if (payment instanceof Error) return failRelease(release, payment)
+  // Payment errors can surface after LND succeeds. Keep the bound hash reconcilable.
+  if (payment instanceof Error) return payment
 
   const to =
     payment.status === PaymentSendStatus.Success
