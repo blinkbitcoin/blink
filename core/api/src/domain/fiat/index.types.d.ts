@@ -9,6 +9,7 @@ type DisplayTxnAmounts = {
   displayAmount: DisplayCurrencyBaseAmount
   displayFee: DisplayCurrencyBaseAmount
   displayCurrency: DisplayCurrency
+  displayCurrencyFractionDigits?: number
 }
 
 // TODO: a better way to type it can be:

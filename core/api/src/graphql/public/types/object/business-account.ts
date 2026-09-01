@@ -90,11 +90,11 @@ const BusinessAccount = GT.Object({
 
         const minorUnitPerSat = majorToMinorUnit({
           amount: btcPrice.price,
-          displayCurrency: currency,
+          fractionDigits: priceCurrency.fractionDigits,
         })
         const minorUnitPerUsdCent = majorToMinorUnit({
           amount: usdPrice.price,
-          displayCurrency: currency,
+          fractionDigits: priceCurrency.fractionDigits,
         })
 
         return {

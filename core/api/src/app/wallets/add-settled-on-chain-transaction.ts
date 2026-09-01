@@ -149,6 +149,7 @@ const addSettledTransactionBeforeFinally = async ({
       feeDisplayCurrency: toDisplayBaseAmount(displayFee),
       amountDisplayCurrency: toDisplayBaseAmount(displayAmount),
       displayCurrency,
+      displayCurrencyFractionDigits: displayPriceRatio.fractionDigits,
 
       payeeAddresses: [address],
       newAddressRequestId,

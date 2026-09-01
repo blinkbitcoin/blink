@@ -265,6 +265,7 @@ type WalletOnChainPendingReceiveRecord = {
   walletCurrency: string
   displayAmount: string
   displayFee: string
+  displayCurrencyFractionDigits?: number
   displayPriceBase: string
   displayPriceOffset: string
   displayPriceCurrency: string

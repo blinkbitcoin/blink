@@ -12,6 +12,7 @@ type TxMetadata = Record<
   | boolean
   | OnChainAddress[]
   | OnChainTxVout
+  | number
   | undefined
 >
 

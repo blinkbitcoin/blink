@@ -1,13 +1,16 @@
+import { getCurrency } from "./get-currency"
+
 import { SECS_PER_10_MINS } from "@/config"
 
 import { CacheKeys } from "@/domain/cache"
-import { WalletCurrency } from "@/domain/shared"
+import { ErrorLevel, WalletCurrency } from "@/domain/shared"
 import { PriceNotAvailableError } from "@/domain/price"
 import { checkedToDisplayCurrency, getCurrencyMajorExponent } from "@/domain/fiat"
 import { toDisplayPriceRatio, toWalletPriceRatio } from "@/domain/payments"
 
 import { PriceService } from "@/services/price"
 import { LocalCacheService } from "@/services/cache/local-cache"
+import { recordExceptionInCurrentSpan } from "@/services/tracing"
 
 export const getCurrentSatPrice = ({
   currency,
@@ -79,15 +82,20 @@ export const getCurrentPriceAsWalletPriceRatio = async ({
 
 export const getCurrentPriceAsDisplayPriceRatio = async <T extends DisplayCurrency>({
   currency,
-}: GetCurrentSatPriceArgs): Promise<DisplayPriceRatio<"BTC", T> | PriceServiceError> => {
+  fractionDigits,
+}: GetCurrentDisplayPriceRatioArgs): Promise<
+  DisplayPriceRatio<"BTC", T> | ApplicationError
+> => {
   const price = await getCurrentSatPrice({ currency })
   if (price instanceof Error) return price
 
-  const exponent = getCurrencyMajorExponent(currency)
+  const exponent = await getCurrencyFractionDigits({ currency, fractionDigits })
+  if (exponent instanceof Error) return exponent
 
   return toDisplayPriceRatio({
     ratio: price.price * 10 ** exponent,
     displayCurrency: currency as T,
+    fractionDigits: exponent,
   })
 }
 
@@ -95,16 +103,37 @@ export const getCurrentUsdCentPriceAsDisplayPriceRatio = async <
   T extends DisplayCurrency,
 >({
   currency,
-}: GetCurrentSatPriceArgs): Promise<DisplayPriceRatio<"USD", T> | ApplicationError> => {
+  fractionDigits,
+}: GetCurrentDisplayPriceRatioArgs): Promise<
+  DisplayPriceRatio<"USD", T> | ApplicationError
+> => {
   const price = await getCurrentUsdCentPrice({ currency })
   if (price instanceof Error) return price
 
-  const exponent = getCurrencyMajorExponent(currency)
+  const exponent = await getCurrencyFractionDigits({ currency, fractionDigits })
+  if (exponent instanceof Error) return exponent
 
   return toDisplayPriceRatio({
     ratio: price.price * 10 ** exponent,
     displayCurrency: currency as T,
+    walletCurrency: WalletCurrency.Usd,
+    fractionDigits: exponent,
   })
+}
+
+const getCurrencyFractionDigits = async ({
+  currency,
+  fractionDigits,
+}: GetCurrentDisplayPriceRatioArgs): Promise<number | ApplicationError> => {
+  if (fractionDigits !== undefined) return fractionDigits
+
+  const priceCurrency = await getCurrency({ currency })
+  if (priceCurrency instanceof Error) {
+    recordExceptionInCurrentSpan({ error: priceCurrency, level: ErrorLevel.Warn })
+    return getCurrencyMajorExponent(currency)
+  }
+
+  return priceCurrency.fractionDigits
 }
 
 const getCachedPrice = async ({

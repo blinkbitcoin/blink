@@ -727,6 +727,7 @@ const WalletOnChainPendingReceiveSchema = new Schema<WalletOnChainPendingReceive
 
     displayAmount: { type: String, required: true },
     displayFee: { type: String, required: true },
+    displayCurrencyFractionDigits: Number,
     displayPriceBase: { type: String, required: true },
     displayPriceOffset: { type: String, required: true },
     displayPriceCurrency: { type: String, required: true },

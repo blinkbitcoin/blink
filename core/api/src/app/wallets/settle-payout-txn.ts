@@ -45,6 +45,7 @@ export const settlePayout = async (
   const displayPaymentAmount = displayAmountFromNumber({
     amount: displayAmount || 0,
     currency: displayCurrency,
+    fractionDigits: ledgerTxn.displayCurrencyFractionDigits,
   })
   if (displayPaymentAmount instanceof Error) return displayPaymentAmount
 

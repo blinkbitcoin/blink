@@ -2,6 +2,7 @@ import { Prices } from "@/app"
 
 import {
   majorToMinorUnit,
+  MajorExponent,
   SAT_PRICE_PRECISION_OFFSET,
   USD_PRICE_PRECISION_OFFSET,
   UsdDisplayCurrency,
@@ -207,7 +208,7 @@ const MeSubscription = {
 
       const minorUnitPerSat = majorToMinorUnit({
         amount: source.price.pricePerSat,
-        displayCurrency: source.price.displayCurrency,
+        fractionDigits: MajorExponent.STANDARD,
       })
 
       return userPayload(null)({
@@ -232,11 +233,11 @@ const MeSubscription = {
       const { timestamp, currency, pricePerSat, pricePerUsdCent } = source.realtimePrice
       const minorUnitPerSat = majorToMinorUnit({
         amount: pricePerSat,
-        displayCurrency: currency.code,
+        fractionDigits: currency.fractionDigits,
       })
       const minorUnitPerUsdCent = majorToMinorUnit({
         amount: pricePerUsdCent,
-        displayCurrency: currency.code,
+        fractionDigits: currency.fractionDigits,
       })
       return myPayload({
         resolveType: "RealtimePrice",
