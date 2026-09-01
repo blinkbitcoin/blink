@@ -9,6 +9,74 @@ type MigrationFlowPhase =
 type MigrationLnAddressTransferStatus =
   (typeof import("./index").MigrationLnAddressTransferStatus)[keyof typeof import("./index").MigrationLnAddressTransferStatus]
 
+type PostMigrationDepositReleaseStatus =
+  (typeof import("./index").PostMigrationDepositReleaseStatus)[keyof typeof import("./index").PostMigrationDepositReleaseStatus]
+
+type PostMigrationDepositRelease = {
+  accountId: AccountId
+  walletId: WalletId
+  txHash: OnChainTxHash
+  vout: OnChainTxVout
+  address: OnChainAddress
+  receiptJournalId: LedgerJournalId
+  receiptAmountSats: Satoshis
+  payoutAmountSats: Satoshis
+  lightningAddress: LightningAddress
+  caseReference: string
+  status: PostMigrationDepositReleaseStatus
+  paymentHash?: PaymentHash
+  paymentRequest?: string
+  failureReason?: string
+  sweptAt?: Date
+  sweepJournalId?: LedgerJournalId
+  createdAt: Date
+  updatedAt: Date
+}
+
+type PreparePostMigrationDepositReleaseArgs = Omit<
+  PostMigrationDepositRelease,
+  | "status"
+  | "paymentHash"
+  | "paymentRequest"
+  | "failureReason"
+  | "sweptAt"
+  | "sweepJournalId"
+  | "createdAt"
+  | "updatedAt"
+>
+
+interface IPostMigrationDepositReleaseRepository {
+  findByOutput(args: {
+    txHash: OnChainTxHash
+    vout: OnChainTxVout
+  }): Promise<PostMigrationDepositRelease | RepositoryError>
+  upsertPrepared(
+    args: PreparePostMigrationDepositReleaseArgs,
+  ): Promise<PostMigrationDepositRelease | RepositoryError>
+  claimForRelease(args: {
+    txHash: OnChainTxHash
+    vout: OnChainTxVout
+  }): Promise<PostMigrationDepositRelease | RepositoryError | MigrationFlowError>
+  recordPayment(args: {
+    txHash: OnChainTxHash
+    vout: OnChainTxVout
+    paymentHash: PaymentHash
+    paymentRequest: string
+  }): Promise<PostMigrationDepositRelease | RepositoryError | MigrationFlowError>
+  recordSweep(args: {
+    txHash: OnChainTxHash
+    vout: OnChainTxVout
+    sweepJournalId: LedgerJournalId
+  }): Promise<PostMigrationDepositRelease | RepositoryError | MigrationFlowError>
+  updateStatus(args: {
+    txHash: OnChainTxHash
+    vout: OnChainTxVout
+    from: PostMigrationDepositReleaseStatus
+    to: PostMigrationDepositReleaseStatus
+    failureReason?: string
+  }): Promise<PostMigrationDepositRelease | RepositoryError | MigrationFlowError>
+}
+
 type MigrationLnAddressTransferResult = {
   identifier: string
   status: MigrationLnAddressTransferStatus
