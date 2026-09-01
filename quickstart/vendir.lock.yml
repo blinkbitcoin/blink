@@ -2,24 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat: add post-migration deposit release workflow (#796)...'
-      sha: a1c2b749e246727d6b562b94fd4974665d73857c
+      commitTitle: 'test(core): cover deprecated price currency guard (#809)...'
+      sha: 2d3073dc21df177f065120cb07ce5366fce3ae81
       tags:
-      - 0.22.57-1-ga1c2b749e
+      - 0.22.57-3-g2d3073dc2
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat: add post-migration deposit release workflow (#796)...'
-      sha: a1c2b749e246727d6b562b94fd4974665d73857c
+      commitTitle: 'test(core): cover deprecated price currency guard (#809)...'
+      sha: 2d3073dc21df177f065120cb07ce5366fce3ae81
       tags:
-      - 0.22.57-1-ga1c2b749e
+      - 0.22.57-3-g2d3073dc2
     path: schemas
   - git:
-      commitTitle: 'feat: add post-migration deposit release workflow (#796)...'
-      sha: a1c2b749e246727d6b562b94fd4974665d73857c
+      commitTitle: 'test(core): cover deprecated price currency guard (#809)...'
+      sha: 2d3073dc21df177f065120cb07ce5366fce3ae81
       tags:
-      - 0.22.57-1-ga1c2b749e
+      - 0.22.57-3-g2d3073dc2
     path: gql
   path: graphql
 kind: LockConfig
