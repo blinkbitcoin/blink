@@ -10,6 +10,9 @@ jest.mock("@/app/payments/update-pending-payments", () => ({
 jest.mock("@/app/wallets/get-balance-for-wallet", () => ({
   getBalanceForWallet: jest.fn(),
 }))
+jest.mock("@/app/migration-flow/complete-post-migration-deposit-release", () => ({
+  completePostMigrationDepositRelease: jest.fn(),
+}))
 jest.mock("@/config", () => ({
   LNURL_SERVER_LN_ADDRESS_DOMAIN: "wallet.example",
   NETWORK: "regtest",
@@ -86,6 +89,7 @@ import {
 import { payInvoiceByWalletId } from "@/app/payments"
 import { updatePendingPaymentByHash } from "@/app/payments/update-pending-payments"
 import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
+import { completePostMigrationDepositRelease } from "@/app/migration-flow/complete-post-migration-deposit-release"
 import { AccountLevel, AccountStatus } from "@/domain/accounts"
 import { decodeInvoice, PaymentSendStatus } from "@/domain/bitcoin/lightning"
 import { LedgerTransactionType } from "@/domain/ledger"
@@ -101,6 +105,7 @@ import {
 } from "@/domain/migration-flow"
 import { WalletCurrency } from "@/domain/shared"
 import { WalletType } from "@/domain/wallets"
+import { UnknownRepositoryError } from "@/domain/errors"
 import { checkedToOnChainAddress } from "@/domain/bitcoin/onchain"
 import { getBankOwnerWalletId } from "@/services/ledger/caching"
 import { LndService } from "@/services/lnd"
@@ -132,6 +137,7 @@ const mockUpdatePending = updatePendingPaymentByHash as jest.Mock
 const mockGetBankOwnerWalletId = getBankOwnerWalletId as jest.Mock
 const mockStateDeterminator = LnPaymentStateDeterminator as jest.Mock
 const mockCheckedToOnChainAddress = checkedToOnChainAddress as jest.Mock
+const mockCompleteRelease = completePostMigrationDepositRelease as jest.Mock
 
 describe("inspectPostMigrationDepositRelease", () => {
   const accountId = "11111111-1111-4111-8111-111111111111" as AccountId
@@ -180,7 +186,7 @@ describe("inspectPostMigrationDepositRelease", () => {
     credit: 1_000,
     ...overrides,
   })
-  const dependencyError = new MigrationStateConflictError("dependency failed")
+  const dependencyError = new UnknownRepositoryError("dependency failed")
 
   beforeEach(() => {
     jest.clearAllMocks()
@@ -219,6 +225,17 @@ describe("inspectPostMigrationDepositRelease", () => {
     mockLnurlPayService.mockReturnValue({
       fetchInvoiceFromLnAddressOrLnurl: jest.fn().mockResolvedValue("lnbc1fresh"),
     })
+    mockCompleteRelease.mockImplementation(({ txHash, vout }) =>
+      Promise.resolve(
+        processingRelease({
+          txHash,
+          vout,
+          status: PostMigrationDepositReleaseStatus.Completed,
+          sweepJournalId: "sweep-journal" as LedgerJournalId,
+          sweptAt: new Date(),
+        }),
+      ),
+    )
   })
 
   const inspect = () =>
@@ -640,6 +657,27 @@ describe("inspectPostMigrationDepositRelease", () => {
     expect(mockPayInvoice).not.toHaveBeenCalled()
   })
 
+  it("retries after an operational reinspection failure", async () => {
+    setSuccessfulRelease()
+    mongooseMocks.findAccount
+      .mockResolvedValueOnce(dependencyError)
+      .mockImplementation((id) =>
+        Promise.resolve(id === bankOwnerAccountId ? bankOwnerAccount : account),
+      )
+
+    const args = {
+      txHash: txHash as OnChainTxHash,
+      vout: 2 as OnChainTxVout,
+    }
+    expect(await releasePostMigrationDeposit(args)).toBe(dependencyError)
+    expect(mongooseMocks.releaseRepo.updateStatus).not.toHaveBeenCalled()
+
+    expect(await releasePostMigrationDeposit(args)).toMatchObject({
+      status: PostMigrationDepositReleaseStatus.Completed,
+    })
+    expect(mockPayInvoice).toHaveBeenCalledTimes(1)
+  })
+
   it("returns a status persistence failure while failing a release", async () => {
     setSuccessfulRelease()
     mongooseMocks.findAccount.mockImplementation((id) =>
@@ -693,6 +731,11 @@ describe("inspectPostMigrationDepositRelease", () => {
       senderWalletId: bankOwnerWalletId,
       senderAccount: bankOwnerAccount,
     })
+    expect(mockCompleteRelease).toHaveBeenCalledWith({
+      txHash,
+      vout: 2,
+      bankOwnerWalletId,
+    })
   })
 
   it("refuses an invoice whose destination is one of our own nodes", async () => {
@@ -730,18 +773,27 @@ describe("inspectPostMigrationDepositRelease", () => {
     expect(mongooseMocks.releaseRepo.updateStatus).not.toHaveBeenCalled()
   })
 
-  it("marks the release failed when invoice fetching fails", async () => {
+  it("leaves the release retryable when invoice fetching fails", async () => {
     setSuccessfulRelease()
+    const fetchInvoice = jest
+      .fn()
+      .mockResolvedValueOnce(dependencyError)
+      .mockResolvedValueOnce("lnbc1fresh")
     mockLnurlPayService.mockReturnValue({
-      fetchInvoiceFromLnAddressOrLnurl: jest.fn().mockResolvedValue(dependencyError),
+      fetchInvoiceFromLnAddressOrLnurl: fetchInvoice,
     })
 
-    expect(
-      await releasePostMigrationDeposit({
-        txHash: txHash as OnChainTxHash,
-        vout: 2 as OnChainTxVout,
-      }),
-    ).toBe(dependencyError)
+    const args = {
+      txHash: txHash as OnChainTxHash,
+      vout: 2 as OnChainTxVout,
+    }
+    expect(await releasePostMigrationDeposit(args)).toBe(dependencyError)
+    expect(mongooseMocks.releaseRepo.updateStatus).not.toHaveBeenCalled()
+
+    expect(await releasePostMigrationDeposit(args)).toMatchObject({
+      status: PostMigrationDepositReleaseStatus.Completed,
+    })
+    expect(fetchInvoice).toHaveBeenCalledTimes(2)
   })
 
   it("marks the release failed when invoice decoding fails", async () => {
@@ -865,12 +917,11 @@ describe("inspectPostMigrationDepositRelease", () => {
       paymentHash,
       logger: {},
     })
-    expect(mongooseMocks.releaseRepo.updateStatus).toHaveBeenCalledWith(
-      expect.objectContaining({
-        from: PostMigrationDepositReleaseStatus.Processing,
-        to: PostMigrationDepositReleaseStatus.Completed,
-      }),
-    )
+    expect(mockCompleteRelease).toHaveBeenCalledWith({
+      txHash,
+      vout: 2,
+      bankOwnerWalletId,
+    })
   })
 
   it("records a non-successful payment as pending", async () => {
@@ -978,7 +1029,15 @@ describe("inspectPostMigrationDepositRelease", () => {
     PostMigrationDepositReleaseStatus.Completed,
     PostMigrationDepositReleaseStatus.Failed,
   ])("returns an already terminal %s release", async (status) => {
-    const release = processingRelease({ status })
+    const release = processingRelease({
+      status,
+      ...(status === PostMigrationDepositReleaseStatus.Completed
+        ? {
+            sweepJournalId: "sweep-journal" as LedgerJournalId,
+            sweptAt: new Date(),
+          }
+        : {}),
+    })
     mongooseMocks.releaseRepo.findByOutput.mockResolvedValue(release)
 
     expect(
@@ -988,6 +1047,29 @@ describe("inspectPostMigrationDepositRelease", () => {
       }),
     ).toBe(release)
     expect(mockUpdatePending).not.toHaveBeenCalled()
+  })
+
+  it("repairs a completed release that predates durable sweep persistence", async () => {
+    const release = processingRelease({
+      status: PostMigrationDepositReleaseStatus.Completed,
+      paymentHash: "ef".repeat(32) as PaymentHash,
+    })
+    mongooseMocks.releaseRepo.findByOutput.mockResolvedValue(release)
+
+    expect(
+      await reconcilePostMigrationDepositRelease({
+        txHash: txHash as OnChainTxHash,
+        vout: 2 as OnChainTxVout,
+      }),
+    ).toMatchObject({
+      status: PostMigrationDepositReleaseStatus.Completed,
+      sweepJournalId: "sweep-journal",
+    })
+    expect(mockCompleteRelease).toHaveBeenCalledWith({
+      txHash,
+      vout: 2,
+      bankOwnerWalletId,
+    })
   })
 
   it("rejects reconciliation without a bound payment hash", async () => {

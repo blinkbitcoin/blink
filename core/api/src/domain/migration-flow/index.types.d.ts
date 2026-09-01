@@ -63,6 +63,11 @@ interface IPostMigrationDepositReleaseRepository {
     paymentHash: PaymentHash
     paymentRequest: string
   }): Promise<PostMigrationDepositRelease | RepositoryError | MigrationFlowError>
+  recordSweep(args: {
+    txHash: OnChainTxHash
+    vout: OnChainTxVout
+    sweepJournalId: LedgerJournalId
+  }): Promise<PostMigrationDepositRelease | RepositoryError | MigrationFlowError>
   updateStatus(args: {
     txHash: OnChainTxHash
     vout: OnChainTxVout

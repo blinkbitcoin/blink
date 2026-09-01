@@ -225,6 +225,98 @@ describe("PostMigrationDepositReleaseRepository", () => {
     ).toBeInstanceOf(UnknownRepositoryError)
   })
 
+  it("records a sweep only once for a payable release", async () => {
+    const sweepJournalId = "sweep-journal" as LedgerJournalId
+    mockFindOneAndUpdate.mockResolvedValue({
+      ...rawRelease,
+      status: PostMigrationDepositReleaseStatus.Processing,
+      sweptAt: new Date(),
+      sweepJournalId,
+    })
+
+    const result = await repo.recordSweep({ txHash, vout, sweepJournalId })
+
+    expect(result).toMatchObject({ sweepJournalId, sweptAt: expect.any(Date) })
+    expect(mockFindOneAndUpdate).toHaveBeenCalledWith(
+      {
+        txHash,
+        vout,
+        status: {
+          $in: [
+            PostMigrationDepositReleaseStatus.Processing,
+            PostMigrationDepositReleaseStatus.Pending,
+            PostMigrationDepositReleaseStatus.Completed,
+          ],
+        },
+        sweepJournalId: { $exists: false },
+      },
+      {
+        $set: {
+          sweepJournalId,
+          sweptAt: expect.any(Date),
+          updatedAt: expect.any(Date),
+        },
+      },
+      { new: true },
+    )
+  })
+
+  it("returns an already persisted matching sweep after a compare-and-set miss", async () => {
+    const sweepJournalId = "sweep-journal" as LedgerJournalId
+    mockFindOneAndUpdate.mockResolvedValue(null)
+    mockFindOne.mockResolvedValue({
+      ...rawRelease,
+      sweepJournalId,
+      sweptAt: new Date(),
+    })
+
+    expect(await repo.recordSweep({ txHash, vout, sweepJournalId })).toMatchObject({
+      sweepJournalId,
+    })
+  })
+
+  it("rejects a different persisted sweep journal", async () => {
+    mockFindOneAndUpdate.mockResolvedValue(null)
+    mockFindOne.mockResolvedValue({
+      ...rawRelease,
+      sweepJournalId: "other-journal",
+      sweptAt: new Date(),
+    })
+
+    expect(
+      await repo.recordSweep({
+        txHash,
+        vout,
+        sweepJournalId: "sweep-journal" as LedgerJournalId,
+      }),
+    ).toBeInstanceOf(MigrationStateConflictError)
+  })
+
+  it("returns a lookup failure after a sweep compare-and-set miss", async () => {
+    mockFindOneAndUpdate.mockResolvedValue(null)
+    mockFindOne.mockResolvedValue(null)
+
+    expect(
+      await repo.recordSweep({
+        txHash,
+        vout,
+        sweepJournalId: "sweep-journal" as LedgerJournalId,
+      }),
+    ).toBeInstanceOf(CouldNotFindError)
+  })
+
+  it("maps sweep persistence failures", async () => {
+    mockFindOneAndUpdate.mockRejectedValue(new Error("mongo unavailable"))
+
+    expect(
+      await repo.recordSweep({
+        txHash,
+        vout,
+        sweepJournalId: "sweep-journal" as LedgerJournalId,
+      }),
+    ).toBeInstanceOf(UnknownRepositoryError)
+  })
+
   it.each([
     [undefined, PostMigrationDepositReleaseStatus.Completed],
     ["ledger failed", PostMigrationDepositReleaseStatus.Failed],
@@ -245,7 +337,18 @@ describe("PostMigrationDepositReleaseRepository", () => {
 
     expect(result).toMatchObject({ status })
     expect(mockFindOneAndUpdate).toHaveBeenCalledWith(
-      { txHash, vout, status: PostMigrationDepositReleaseStatus.Processing },
+      {
+        txHash,
+        vout,
+        status: PostMigrationDepositReleaseStatus.Processing,
+        ...(status === PostMigrationDepositReleaseStatus.Completed
+          ? {
+              paymentHash: { $exists: true },
+              sweepJournalId: { $exists: true },
+              sweptAt: { $exists: true },
+            }
+          : {}),
+      },
       {
         $set: {
           status,

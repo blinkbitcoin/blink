@@ -261,6 +261,11 @@ interface ILedgerService {
     journalId: LedgerJournalId
   }): Promise<LedgerTransaction<WalletCurrency> | LedgerServiceError>
 
+  getTransactionForWalletByExternalId(args: {
+    walletId: WalletId
+    externalId: LedgerExternalId
+  }): Promise<LedgerTransaction<WalletCurrency> | undefined | LedgerServiceError>
+
   getTransactionsByHash(
     paymentHash: PaymentHash | OnChainTxHash,
   ): Promise<LedgerTransaction<WalletCurrency>[] | LedgerServiceError>

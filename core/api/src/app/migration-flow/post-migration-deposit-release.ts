@@ -2,6 +2,7 @@ import { getLnurlServerService } from "@/app/accounts/lnurl-server"
 import { payInvoiceByWalletId } from "@/app/payments"
 import { updatePendingPaymentByHash } from "@/app/payments/update-pending-payments"
 import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
+import { completePostMigrationDepositRelease } from "@/app/migration-flow/complete-post-migration-deposit-release"
 
 import { LNURL_SERVER_LN_ADDRESS_DOMAIN, NETWORK } from "@/config"
 
@@ -16,11 +17,16 @@ import { decodeInvoice, PaymentSendStatus } from "@/domain/bitcoin/lightning"
 import { LedgerTransactionType } from "@/domain/ledger"
 import {
   MigrationFlowPhase,
+  MigrationFlowError,
   MigrationInvalidDestinationError,
   MigrationStateConflictError,
   PostMigrationDepositReleaseStatus,
 } from "@/domain/migration-flow"
-import { checkedToBtcPaymentAmount, WalletCurrency } from "@/domain/shared"
+import {
+  checkedToBtcPaymentAmount,
+  ValidationError,
+  WalletCurrency,
+} from "@/domain/shared"
 import {
   LnPaymentState,
   LnPaymentStateDeterminator,
@@ -258,7 +264,7 @@ export const releasePostMigrationDeposit = async ({
     address: release.address,
     lightningAddress: release.lightningAddress,
   })
-  if (plan instanceof Error) return failRelease(release, plan)
+  if (plan instanceof Error) return failIfDeterministic(release, plan)
   const mismatch = releasePlanMismatch({
     release,
     plan,
@@ -280,7 +286,7 @@ export const releasePostMigrationDeposit = async ({
       amount,
       lnAddressOrLnurl: plan.lightningAddress,
     })
-    if (fetchedInvoice instanceof Error) return failRelease(release, fetchedInvoice)
+    if (fetchedInvoice instanceof Error) return fetchedInvoice
     invoice = fetchedInvoice
   }
 
@@ -330,15 +336,18 @@ export const releasePostMigrationDeposit = async ({
   // Payment errors can surface after LND succeeds. Keep the bound hash reconcilable.
   if (payment instanceof Error) return payment
 
-  const to =
-    payment.status === PaymentSendStatus.Success
-      ? PostMigrationDepositReleaseStatus.Completed
-      : PostMigrationDepositReleaseStatus.Pending
+  if (payment.status === PaymentSendStatus.Success) {
+    return completePostMigrationDepositRelease({
+      txHash,
+      vout,
+      bankOwnerWalletId,
+    })
+  }
   return repo.updateStatus({
     txHash,
     vout,
     from: PostMigrationDepositReleaseStatus.Processing,
-    to,
+    to: PostMigrationDepositReleaseStatus.Pending,
   })
 }
 
@@ -352,14 +361,22 @@ export const reconcilePostMigrationDepositRelease = async ({
   const repo = PostMigrationDepositReleaseRepository()
   const release = await repo.findByOutput({ txHash, vout })
   if (release instanceof Error) return release
+  if (release.status === PostMigrationDepositReleaseStatus.Failed) {
+    return release
+  }
   if (
-    release.status === PostMigrationDepositReleaseStatus.Completed ||
-    release.status === PostMigrationDepositReleaseStatus.Failed
+    release.status === PostMigrationDepositReleaseStatus.Completed &&
+    release.sweepJournalId
   ) {
     return release
   }
   if (!release.paymentHash) {
     return new MigrationStateConflictError("release has no bound payment hash")
+  }
+
+  if (release.status === PostMigrationDepositReleaseStatus.Completed) {
+    const bankOwnerWalletId = await getBankOwnerWalletId()
+    return completePostMigrationDepositRelease({ txHash, vout, bankOwnerWalletId })
   }
 
   const reconciled = await updatePendingPaymentByHash({
@@ -379,12 +396,8 @@ export const reconcilePostMigrationDepositRelease = async ({
     state === LnPaymentState.SuccessAfterRetry ||
     state === LnPaymentState.SuccessWithReimbursementAfterRetry
   ) {
-    return repo.updateStatus({
-      txHash,
-      vout,
-      from: release.status,
-      to: PostMigrationDepositReleaseStatus.Completed,
-    })
+    const bankOwnerWalletId = await getBankOwnerWalletId()
+    return completePostMigrationDepositRelease({ txHash, vout, bankOwnerWalletId })
   }
   if (
     state === LnPaymentState.Failed ||
@@ -452,3 +465,11 @@ const failRelease = async (
   })
   return failed instanceof Error ? failed : error
 }
+
+const failIfDeterministic = async (
+  release: PostMigrationDepositRelease,
+  error: ApplicationError,
+): Promise<ApplicationError> =>
+  error instanceof MigrationFlowError || error instanceof ValidationError
+    ? failRelease(release, error)
+    : error

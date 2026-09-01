@@ -144,6 +144,24 @@ export const LedgerService = (): ILedgerService => {
     }
   }
 
+  const getTransactionForWalletByExternalId = async ({
+    walletId,
+    externalId,
+  }: {
+    walletId: WalletId
+    externalId: LedgerExternalId
+  }): Promise<LedgerTransaction<WalletCurrency> | undefined | LedgerServiceError> => {
+    try {
+      const entry = await Transaction.findOne({
+        accounts: toLiabilitiesWalletId(walletId),
+        external_id: externalId,
+      })
+      return entry ? translateToLedgerTx(entry) : undefined
+    } catch (err) {
+      return new UnknownLedgerError(err)
+    }
+  }
+
   const getTransactionsByHash = async (
     hash: PaymentHash | OnChainTxHash,
   ): Promise<LedgerTransaction<WalletCurrency>[] | LedgerServiceError> => {
@@ -555,6 +573,7 @@ export const LedgerService = (): ILedgerService => {
       getTransactionById,
       getTransactionForWalletById,
       getTransactionForWalletByJournalId,
+      getTransactionForWalletByExternalId,
       getTransactionsByHash,
       getTransactionsForWalletByPaymentHash,
       getTransactionsByWalletId,

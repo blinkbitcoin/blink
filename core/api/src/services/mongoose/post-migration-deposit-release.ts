@@ -115,6 +115,53 @@ export const PostMigrationDepositReleaseRepository =
       }
     }
 
+    const recordSweep = async ({
+      txHash,
+      vout,
+      sweepJournalId,
+    }: {
+      txHash: OnChainTxHash
+      vout: OnChainTxVout
+      sweepJournalId: LedgerJournalId
+    }): Promise<PostMigrationDepositRelease | RepositoryError | MigrationFlowError> => {
+      try {
+        const sweptAt = new Date()
+        const result = await PostMigrationDepositReleaseModel.findOneAndUpdate(
+          {
+            txHash,
+            vout,
+            status: {
+              $in: [
+                PostMigrationDepositReleaseStatus.Processing,
+                PostMigrationDepositReleaseStatus.Pending,
+                PostMigrationDepositReleaseStatus.Completed,
+              ],
+            },
+            sweepJournalId: { $exists: false },
+          },
+          { $set: { sweepJournalId, sweptAt, updatedAt: sweptAt } },
+          { new: true },
+        )
+        if (result) return releaseFromRaw(result)
+
+        const existing = await findByOutput({ txHash, vout })
+        if (
+          !(existing instanceof Error) &&
+          existing.sweepJournalId === sweepJournalId &&
+          existing.sweptAt
+        ) {
+          return existing
+        }
+        return existing instanceof Error
+          ? existing
+          : new MigrationStateConflictError(
+              `release ${txHash}:${vout} cannot record sweep`,
+            )
+      } catch (err) {
+        return parseRepositoryError(err)
+      }
+    }
+
     const updateStatus = async ({
       txHash,
       vout,
@@ -130,7 +177,18 @@ export const PostMigrationDepositReleaseRepository =
     }): Promise<PostMigrationDepositRelease | RepositoryError | MigrationFlowError> => {
       try {
         const result = await PostMigrationDepositReleaseModel.findOneAndUpdate(
-          { txHash, vout, status: from },
+          {
+            txHash,
+            vout,
+            status: from,
+            ...(to === PostMigrationDepositReleaseStatus.Completed
+              ? {
+                  paymentHash: { $exists: true },
+                  sweepJournalId: { $exists: true },
+                  sweptAt: { $exists: true },
+                }
+              : {}),
+          },
           {
             $set: {
               status: to,
@@ -156,6 +214,7 @@ export const PostMigrationDepositReleaseRepository =
       upsertPrepared,
       claimForRelease,
       recordPayment,
+      recordSweep,
       updateStatus,
     }
   }

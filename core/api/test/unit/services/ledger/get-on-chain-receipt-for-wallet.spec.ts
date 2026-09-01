@@ -93,3 +93,53 @@ describe("getOnChainReceiptForWallet", () => {
     expect(result).toBeInstanceOf(UnknownLedgerError)
   })
 })
+
+describe("getTransactionForWalletByExternalId", () => {
+  const walletId = "wallet-id" as WalletId
+  const externalId = "post_migration_sweep" as LedgerExternalId
+  const ledgerService = LedgerService()
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it("returns the translated transaction for the wallet and external id", async () => {
+    const entry = { id: "ledger-entry" }
+    const translated = { id: "translated-entry" }
+    mockFindOne.mockResolvedValue(entry)
+    mockTranslateToLedgerTx.mockReturnValue(translated)
+
+    expect(
+      await ledgerService.getTransactionForWalletByExternalId({
+        walletId,
+        externalId,
+      }),
+    ).toBe(translated)
+    expect(mockFindOne).toHaveBeenCalledWith({
+      accounts: toLiabilitiesWalletId(walletId),
+      external_id: externalId,
+    })
+  })
+
+  it("returns undefined when the external id is absent", async () => {
+    mockFindOne.mockResolvedValue(null)
+
+    expect(
+      await ledgerService.getTransactionForWalletByExternalId({
+        walletId,
+        externalId,
+      }),
+    ).toBeUndefined()
+  })
+
+  it("returns UnknownLedgerError when the lookup fails", async () => {
+    mockFindOne.mockRejectedValue(new Error("database unavailable"))
+
+    expect(
+      await ledgerService.getTransactionForWalletByExternalId({
+        walletId,
+        externalId,
+      }),
+    ).toBeInstanceOf(UnknownLedgerError)
+  })
+})

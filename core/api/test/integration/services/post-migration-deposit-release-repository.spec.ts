@@ -110,4 +110,35 @@ describe("PostMigrationDepositReleaseRepository", () => {
       await repo.findByOutput({ txHash: args.txHash, vout: args.vout }),
     ).toMatchObject({ paymentHash: firstHash, paymentRequest: "lnbc1invoice" })
   })
+
+  it("records one immutable sweep journal across concurrent updates", async () => {
+    const args = preparedArgs()
+    const prepared = await repo.upsertPrepared(args)
+    if (prepared instanceof Error) throw prepared
+    const claimed = await repo.claimForRelease({
+      txHash: args.txHash,
+      vout: args.vout,
+    })
+    if (claimed instanceof Error) throw claimed
+
+    const sweepJournalId = randomUUID() as LedgerJournalId
+    const results = await Promise.all([
+      repo.recordSweep({
+        txHash: args.txHash,
+        vout: args.vout,
+        sweepJournalId,
+      }),
+      repo.recordSweep({
+        txHash: args.txHash,
+        vout: args.vout,
+        sweepJournalId,
+      }),
+    ])
+
+    for (const result of results) {
+      if (result instanceof Error) throw result
+      expect(result.sweepJournalId).toBe(sweepJournalId)
+      expect(result.sweptAt).toBeInstanceOf(Date)
+    }
+  })
 })
