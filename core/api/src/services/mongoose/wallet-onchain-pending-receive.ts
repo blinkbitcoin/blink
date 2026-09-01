@@ -107,6 +107,7 @@ const translateToWalletOnChainTransaction = (
     settlementCurrency: walletCurrency,
     settlementDisplayAmount: result.displayAmount as DisplayCurrencyMajorAmount,
     settlementDisplayFee: result.displayFee as DisplayCurrencyMajorAmount,
+    settlementDisplayCurrencyFractionDigits: result.displayCurrencyFractionDigits,
     settlementDisplayPrice: {
       base: BigInt(result.displayPriceBase),
       offset: BigInt(result.displayPriceOffset),
@@ -140,6 +141,7 @@ const translateToDbRecord = (
   walletCurrency: tx.settlementCurrency,
   displayAmount: tx.settlementDisplayAmount.displayInMajor,
   displayFee: tx.settlementDisplayFee.displayInMajor,
+  displayCurrencyFractionDigits: tx.settlementDisplayCurrencyFractionDigits,
   displayPriceBase: tx.settlementDisplayPrice.base.toString(),
   displayPriceOffset: tx.settlementDisplayPrice.offset.toString(),
   displayPriceCurrency: tx.settlementDisplayPrice.displayCurrency,

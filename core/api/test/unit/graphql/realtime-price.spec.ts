@@ -1,5 +1,6 @@
 import { Prices } from "@/app"
 import RealtimePriceQuery from "@/graphql/public/root/query/realtime-price"
+import RealtimePriceSubscription from "@/graphql/public/root/subscription/realtime-price"
 
 jest.mock("@/app", () => ({
   Prices: {
@@ -8,10 +9,15 @@ jest.mock("@/app", () => ({
     getCurrentUsdCentPrice: jest.fn(),
   },
 }))
-jest.mock("@/graphql/error-map", () => ({ mapError: jest.fn() }))
+jest.mock("@/graphql/error", () => ({ UnknownClientError: Error }))
+jest.mock("@/graphql/error-map", () => ({
+  mapError: jest.fn(),
+  mapAndParseErrorForGqlResponse: jest.fn(),
+}))
 jest.mock("@/graphql/index", () => ({
   GT: {
     Field: (config: unknown) => config,
+    Input: (config: unknown) => config,
     NonNull: (type: unknown) => type,
   },
 }))
@@ -23,6 +29,12 @@ jest.mock("@/graphql/shared/types/scalar/display-currency", () => ({
   __esModule: true,
   default: {},
 }))
+jest.mock("@/graphql/public/types/payload/realtime-price", () => ({
+  __esModule: true,
+  default: {},
+}))
+jest.mock("@/services/pubsub", () => ({ PubSubService: () => ({}) }))
+jest.mock("@/services/logger", () => ({ baseLogger: {} }))
 
 const getCurrency = Prices.getCurrency as jest.MockedFunction<typeof Prices.getCurrency>
 const getCurrentSatPrice = Prices.getCurrentSatPrice as jest.MockedFunction<
@@ -97,6 +109,46 @@ describe("RealtimePriceQuery", () => {
       expect(result.usdCentPrice.base / 10 ** result.usdCentPrice.offset).toBe(
         expectedUsdCentPrice,
       )
+    },
+  )
+})
+
+describe("RealtimePriceSubscription", () => {
+  const resolve = RealtimePriceSubscription.resolve
+
+  it.each([
+    { currency: "PKR", fractionDigits: 2, expectedSatPrice: 0.123 },
+    { currency: "RSD", fractionDigits: 0, expectedSatPrice: 0.00123 },
+  ])(
+    "scales $currency events using the published price metadata",
+    async ({ currency, fractionDigits, expectedSatPrice }) => {
+      const displayCurrency = currency as DisplayCurrency
+      const priceCurrency: PriceCurrency = {
+        code: displayCurrency,
+        symbol: currency,
+        name: currency,
+        flag: "",
+        fractionDigits,
+        countryCodes: [],
+      }
+
+      const result = (await resolve(
+        {
+          timestamp: new Date(),
+          pricePerSat: 0.00123,
+          pricePerUsdCent: 2.78,
+          currency: priceCurrency,
+          displayCurrency,
+        } as never,
+        { input: { currency: displayCurrency } },
+      )) as {
+        realtimePrice: { btcSatPrice: { base: number; offset: number } }
+      }
+
+      expect(
+        result.realtimePrice.btcSatPrice.base /
+          10 ** result.realtimePrice.btcSatPrice.offset,
+      ).toBe(expectedSatPrice)
     },
   )
 })

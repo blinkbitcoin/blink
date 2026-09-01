@@ -77,6 +77,8 @@ const PriceSubscription = {
       return { errors: [{ message: "No price info" }] }
     }
 
+    // This deprecated subscription rejects non-USD payloads above, and its output
+    // contract is explicitly denominated in USD cents.
     const minorUnitPerSat = majorToMinorUnit({
       amount: source.pricePerSat,
       fractionDigits: MajorExponent.STANDARD,

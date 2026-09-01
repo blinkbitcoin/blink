@@ -3,13 +3,14 @@ import { getCurrency } from "./get-currency"
 import { SECS_PER_10_MINS } from "@/config"
 
 import { CacheKeys } from "@/domain/cache"
-import { WalletCurrency } from "@/domain/shared"
+import { ErrorLevel, WalletCurrency } from "@/domain/shared"
 import { PriceNotAvailableError } from "@/domain/price"
 import { checkedToDisplayCurrency, getCurrencyMajorExponent } from "@/domain/fiat"
 import { toDisplayPriceRatio, toWalletPriceRatio } from "@/domain/payments"
 
 import { PriceService } from "@/services/price"
 import { LocalCacheService } from "@/services/cache/local-cache"
+import { recordExceptionInCurrentSpan } from "@/services/tracing"
 
 export const getCurrentSatPrice = ({
   currency,
@@ -127,7 +128,10 @@ const getCurrencyFractionDigits = async ({
   if (fractionDigits !== undefined) return fractionDigits
 
   const priceCurrency = await getCurrency({ currency })
-  if (priceCurrency instanceof Error) return priceCurrency
+  if (priceCurrency instanceof Error) {
+    recordExceptionInCurrentSpan({ error: priceCurrency, level: ErrorLevel.Warn })
+    return getCurrencyMajorExponent(currency)
+  }
 
   return priceCurrency.fractionDigits
 }

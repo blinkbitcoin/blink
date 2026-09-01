@@ -36,7 +36,6 @@ import { handleCommonNotificationErrors } from "./errors"
 import {
   getCallbackServiceConfig,
   MARKETING_NOTIFICATION_USER_BATCH_SIZE,
-  SECS_PER_10_MINS,
   USER_NOTIFICATION_SETTINGS_TIMEOUT_MS,
 } from "@/config"
 
@@ -54,30 +53,12 @@ import { CallbackEventType } from "@/domain/callback"
 import { CallbackError } from "@/domain/callback/errors"
 import { WalletInvoiceStatus } from "@/domain/wallet-invoices"
 import { customPubSubTrigger, PubSubDefaultTriggers } from "@/domain/pubsub"
-import { toCents, UsdDisplayCurrency } from "@/domain/fiat"
-import { CacheKeys } from "@/domain/cache"
-import { InvalidPriceCurrencyError } from "@/domain/price"
+import { getCurrencyMajorExponent, toCents, UsdDisplayCurrency } from "@/domain/fiat"
 
 import { PubSubService } from "@/services/pubsub"
 import { CallbackService } from "@/services/svix"
 import { wrapAsyncFunctionsToRunInSpan, wrapAsyncToRunInSpan } from "@/services/tracing"
 import { getPhoneProviderTransactionalService } from "@/services/phone-provider"
-import { PriceService } from "@/services/price"
-import { LocalCacheService } from "@/services/cache/local-cache"
-
-const getCurrencyFractionDigits = async (
-  currency: DisplayCurrency,
-): Promise<number | ApplicationError> => {
-  const currencies = await LocalCacheService().getOrSet({
-    key: CacheKeys.PriceCurrencies,
-    ttlSecs: SECS_PER_10_MINS,
-    getForCaching: () => PriceService().listCurrencies(),
-  })
-  if (currencies instanceof Error) return currencies
-
-  const priceCurrency = currencies.find((entry) => entry.code === currency)
-  return priceCurrency?.fractionDigits ?? new InvalidPriceCurrencyError()
-}
 
 export const NotificationsService = (): INotificationsService => {
   const pubsub = PubSubService()
@@ -236,12 +217,9 @@ export const NotificationsService = (): INotificationsService => {
       if (type === undefined) return true
 
       const displayCurrency = transaction.settlementDisplayPrice.displayCurrency
-      let { settlementDisplayCurrencyFractionDigits: fractionDigits } = transaction
-      if (fractionDigits === undefined) {
-        const fallbackFractionDigits = await getCurrencyFractionDigits(displayCurrency)
-        if (fallbackFractionDigits instanceof Error) throw fallbackFractionDigits
-        fractionDigits = fallbackFractionDigits
-      }
+      const fractionDigits =
+        transaction.settlementDisplayCurrencyFractionDigits ??
+        getCurrencyMajorExponent(displayCurrency)
 
       const request = walletTransactionToNotificationEventRequest({
         userId: recipient.userId,

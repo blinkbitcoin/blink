@@ -50,6 +50,7 @@ describe("WalletOnChainPendingReceiveRepository", () => {
       currency: UsdDisplayCurrency,
       displayInMajor: "0.02",
     },
+    settlementDisplayCurrencyFractionDigits: 2,
     settlementDisplayPrice: {
       base: 27454545454n,
       offset: 12n,
