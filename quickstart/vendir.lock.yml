@@ -2,24 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'test: update lnd to v0.21.2-beta (#775)...'
-      sha: bbc26e61f968446ae9563392a334439191c0bd12
+      commitTitle: 'fix(core): update majorToMinorUnit to use fractionDigits from
+        priceCurrency (#807)...'
+      sha: ca9eccfe4296c1e1a2a560d9b60eac26d23d6a5b
       tags:
-      - 0.22.56-1-gbbc26e61f
+      - 0.22.56-3-gca9eccfe4
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'test: update lnd to v0.21.2-beta (#775)...'
-      sha: bbc26e61f968446ae9563392a334439191c0bd12
+      commitTitle: 'fix(core): update majorToMinorUnit to use fractionDigits from
+        priceCurrency (#807)...'
+      sha: ca9eccfe4296c1e1a2a560d9b60eac26d23d6a5b
       tags:
-      - 0.22.56-1-gbbc26e61f
+      - 0.22.56-3-gca9eccfe4
     path: schemas
   - git:
-      commitTitle: 'test: update lnd to v0.21.2-beta (#775)...'
-      sha: bbc26e61f968446ae9563392a334439191c0bd12
+      commitTitle: 'fix(core): update majorToMinorUnit to use fractionDigits from
+        priceCurrency (#807)...'
+      sha: ca9eccfe4296c1e1a2a560d9b60eac26d23d6a5b
       tags:
-      - 0.22.56-1-gbbc26e61f
+      - 0.22.56-3-gca9eccfe4
     path: gql
   path: graphql
 kind: LockConfig
