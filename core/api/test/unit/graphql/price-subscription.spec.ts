@@ -57,4 +57,25 @@ describe("PriceSubscription", () => {
       },
     })
   })
+
+  it("rejects non-USD deprecated price events", () => {
+    const result = PriceSubscription.resolve(
+      {
+        errors: undefined as never,
+        pricePerSat: 0.2197,
+        displayCurrency: "PKR" as DisplayCurrency,
+      },
+      {
+        input: {
+          amount: 100,
+          amountCurrencyUnit: "BTCSAT",
+          priceCurrencyUnit: "USDCENT",
+        },
+      },
+    )
+
+    expect(result).toEqual({
+      errors: [{ message: "Price is deprecated, please use realtimePrice event" }],
+    })
+  })
 })

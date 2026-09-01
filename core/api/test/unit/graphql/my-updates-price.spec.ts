@@ -112,6 +112,27 @@ describe("MyUpdatesSubscription price events", () => {
     })
   })
 
+  it("rejects non-USD deprecated price events", () => {
+    const result = MyUpdatesSubscription.resolve(
+      {
+        errors: undefined as never,
+        price: {
+          timestamp: new Date(),
+          pricePerSat: 0.2197,
+          pricePerUsdCent: 0,
+          currency: priceCurrency,
+          displayCurrency: priceCurrency.code,
+        },
+      },
+      {},
+      {} as GraphQLPublicContext,
+    )
+
+    expect(result).toEqual({
+      errors: [{ message: "Price is deprecated, please use realtimePrice event" }],
+    })
+  })
+
   it("uses published currency metadata for realtime price events", () => {
     const result = MyUpdatesSubscription.resolve(
       {
