@@ -2,27 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix(core): budget migration drain reserve with group fee caps
-        (#805)'
-      sha: 8f83552c9ae56607360ec2ffe35345b7ab1e7858
+      commitTitle: 'test: update lnd to v0.21.2-beta (#775)...'
+      sha: bbc26e61f968446ae9563392a334439191c0bd12
       tags:
-      - 0.22.55-1-g8f83552c9
+      - 0.22.56-1-gbbc26e61f
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'fix(core): budget migration drain reserve with group fee caps
-        (#805)'
-      sha: 8f83552c9ae56607360ec2ffe35345b7ab1e7858
+      commitTitle: 'test: update lnd to v0.21.2-beta (#775)...'
+      sha: bbc26e61f968446ae9563392a334439191c0bd12
       tags:
-      - 0.22.55-1-g8f83552c9
+      - 0.22.56-1-gbbc26e61f
     path: schemas
   - git:
-      commitTitle: 'fix(core): budget migration drain reserve with group fee caps
-        (#805)'
-      sha: 8f83552c9ae56607360ec2ffe35345b7ab1e7858
+      commitTitle: 'test: update lnd to v0.21.2-beta (#775)...'
+      sha: bbc26e61f968446ae9563392a334439191c0bd12
       tags:
-      - 0.22.55-1-g8f83552c9
+      - 0.22.56-1-gbbc26e61f
     path: gql
   path: graphql
 kind: LockConfig

@@ -100,7 +100,7 @@ services:
     - POSTGRES_PASSWORD=secret
     - POSTGRES_DB=hydra
   galoy:
-    image: us.gcr.io/galoy-org/galoy-api@sha256:ef69464179735d2ec911ef7beff1a1dca78183f6ce3b829aed2636e8c5141b2e
+    image: us.gcr.io/galoy-org/galoy-api@sha256:9c433492eb27110a8ef5b406626523e809e726ed85d680809b0ddbbef325d932
     environment:
     - HELMREVISION=dev
     - NETWORK=regtest
@@ -159,7 +159,7 @@ services:
         aliases:
         - bats-tests
   trigger:
-    image: us.gcr.io/galoy-org/galoy-api-trigger@sha256:046a8e1b701510027cf0ab90686e1998b7b43af306889c05d023b089ad495184
+    image: us.gcr.io/galoy-org/galoy-api-trigger@sha256:f4cd8f988c42362f7f560ef7490de8965ea0df684f2e721f9857ebf8df9b75e1
     environment:
     - HELMREVISION=dev
     - NETWORK=regtest
@@ -271,7 +271,7 @@ services:
     environment:
     - MONGO_INITDB_DATABASE=galoy
   mongodb-migrate:
-    image: us.gcr.io/galoy-org/galoy-api-migrate@sha256:dbccae599f8c10a714162f161419f486ef438d1d24d70f2a4823c509fc52db96
+    image: us.gcr.io/galoy-org/galoy-api-migrate@sha256:87406d4ea471b0af64a6b95f99e0964808d1d89d75ebff55bf2400b5875e073e
     depends_on:
     - mongodb
     environment:
@@ -347,7 +347,7 @@ services:
     - |
       bitcoind -connect=bitcoind:18444
   lnd1:
-    image: lightninglabs/lnd:v0.20.3-beta
+    image: lightninglabs/lnd:v0.21.2-beta
     ports:
     - 10009:10009
     volumes:
@@ -370,7 +370,7 @@ services:
       cp /root/.lnd/admin.macaroon /root/.lnd/data/chain/bitcoin/regtest/admin.macaroon
       /bin/lnd
   lnd-outside-1:
-    image: lightninglabs/lnd:v0.20.3-beta
+    image: lightninglabs/lnd:v0.21.2-beta
     ports:
     - 10012:10009
     volumes:
