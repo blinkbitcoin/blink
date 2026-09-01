@@ -1,7 +1,8 @@
+import { resolvePaymentDisplayCurrencyFractionDigits } from "./resolve-display-currency-fraction-digits"
+
 import { FAILED_USD_MEMO } from "@/domain/ledger/ln-payment-state"
 import { CouldNotFindBtcWalletForAccountError } from "@/domain/errors"
 import { ErrorLevel, WalletCurrency } from "@/domain/shared"
-import { getCurrencyMajorExponent } from "@/domain/fiat"
 
 import { AccountsRepository, WalletsRepository } from "@/services/mongoose"
 import * as LedgerFacade from "@/services/ledger/facade"
@@ -15,10 +16,12 @@ export const reimburseFailedUsdPayment = async <
   walletId,
   paymentFlow,
   pendingPayment,
+  logger,
 }: {
   walletId: WalletId
   paymentFlow: PaymentFlow<S, R>
   pendingPayment: LedgerTransaction<S>
+  logger: Logger
 }): Promise<true | ApplicationError> => {
   const {
     journalId,
@@ -48,9 +51,14 @@ export const reimburseFailedUsdPayment = async <
     displayCurrency = account.displayCurrency
   }
 
-  const displayCurrencyFractionDigits =
-    pendingPayment.displayCurrencyFractionDigits ??
-    getCurrencyMajorExponent(displayCurrency)
+  const displayCurrencyFractionDigits = await resolvePaymentDisplayCurrencyFractionDigits(
+    {
+      displayCurrency,
+      persistedFractionDigits: pendingPayment.displayCurrencyFractionDigits,
+      timestamp: pendingPayment.timestamp,
+      logger,
+    },
+  )
 
   const paymentHash = paymentFlow.paymentHashForFlow()
   if (paymentHash instanceof Error) return paymentHash

@@ -1,4 +1,5 @@
 import { reimburseFee } from "./reimburse-fee"
+import { resolvePaymentDisplayCurrencyFractionDigits } from "./resolve-display-currency-fraction-digits"
 
 import { reimburseFailedUsdPayment } from "./reimburse-failed-usd"
 
@@ -341,12 +342,6 @@ const lockedPendingPaymentSteps = async ({
     "payment.usdFee": paymentFlow.usdProtocolAndBankFee.amount.toString(),
   })
 
-  const settled = await LedgerFacade.settlePendingLnSend(paymentHash)
-  if (settled instanceof Error) {
-    paymentLogger.error({ error: settled }, "no transaction to update")
-    return settled
-  }
-
   let roundedUpFee: Satoshis = toSats(0)
   let satsAmount: Satoshis | undefined = undefined
   if (lnPaymentLookup.status != PaymentStatus.Failed) {
@@ -354,11 +349,39 @@ const lockedPendingPaymentSteps = async ({
     satsAmount = toSats(lnPaymentLookup.roundedUpAmount - roundedUpFee)
   }
 
-  if (
+  const paymentFailed =
     lnPaymentLookup.status === PaymentStatus.Failed ||
     // pendingPayment is a different version to latest payment from lnd
     satsAmount !== toSats(paymentFlow.btcPaymentAmount.amount)
+
+  const { displayAmount, displayFee, displayCurrency } = pendingPayment
+  if (
+    !paymentFailed &&
+    !pendingPayment.feeKnownInAdvance &&
+    (displayAmount === undefined ||
+      displayFee === undefined ||
+      displayCurrency === undefined)
   ) {
+    return new MissingExpectedDisplayAmountsForTransactionError()
+  }
+
+  let reimbursementFractionDigits: number | undefined
+  if (!paymentFailed && !pendingPayment.feeKnownInAdvance) {
+    reimbursementFractionDigits = await resolvePaymentDisplayCurrencyFractionDigits({
+      displayCurrency: displayCurrency!,
+      persistedFractionDigits: pendingPayment.displayCurrencyFractionDigits,
+      timestamp: pendingPayment.timestamp,
+      logger: paymentLogger,
+    })
+  }
+
+  const settled = await LedgerFacade.settlePendingLnSend(paymentHash)
+  if (settled instanceof Error) {
+    paymentLogger.error({ error: settled }, "no transaction to update")
+    return settled
+  }
+
+  if (paymentFailed) {
     paymentLogger.warn(
       { success: false, id: paymentHash, payment: pendingPayment },
       "payment has failed. reverting transaction",
@@ -400,6 +423,7 @@ const lockedPendingPaymentSteps = async ({
       walletId,
       pendingPayment,
       paymentFlow,
+      logger: paymentLogger,
     })
     if (reimbursed instanceof Error) {
       const error = `error reimbursing usd payment entry`
@@ -454,16 +478,12 @@ const lockedPendingPaymentSteps = async ({
     return { result: finalized, paymentFailed: false }
   }
 
-  const { displayAmount, displayFee, displayCurrency } = pendingPayment
-  if (!displayAmount || !displayFee || !displayCurrency) {
-    return new MissingExpectedDisplayAmountsForTransactionError()
-  }
-
   const reimbursed = await reimburseFee({
     paymentFlow,
-    senderDisplayAmount: displayAmount,
-    senderDisplayCurrency: displayCurrency,
-    senderDisplayCurrencyFractionDigits: pendingPayment.displayCurrencyFractionDigits,
+    // These values are validated before the ledger transaction is settled.
+    senderDisplayAmount: displayAmount!,
+    senderDisplayCurrency: displayCurrency!,
+    senderDisplayCurrencyFractionDigits: reimbursementFractionDigits!,
     journalId,
     actualFee: roundedUpFee,
     revealedPreImage,
