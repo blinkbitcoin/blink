@@ -15,8 +15,11 @@ on:
   push:
     branches: [main]
   pull_request:
-    # The branches below must be a subset of the branches above
-    branches: [main]
+    branches:
+      - main
+      - fix/simplify-price-fraction-digits
+      - fix/price-fraction-digits-history
+      - fix/price-fraction-digits-notifications
   schedule:
     - cron: "24 23 * * 2"
 

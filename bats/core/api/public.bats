@@ -90,6 +90,61 @@ teardown() {
   [[ "$cents_price_offset" = 6 ]] || exit 1
 }
 
+@test "public: realtime price honors price-service fraction digits" {
+  currency="PKR"
+  variables=$(
+    jq -n \
+    --arg currency "$currency" \
+    '{currency: $currency}'
+  )
+  exec_graphql 'anon' 'real-time-price' "$variables"
+
+  errors="$(graphql_output '.errors | length')"
+  [[ "${errors}" = "0" ]] || exit 1
+
+  currency_frac_digits="$(graphql_output '.data.realtimePrice.denominatorCurrencyDetails.fractionDigits')"
+  sat_price_base="$(graphql_output '.data.realtimePrice.btcSatPrice.base')"
+  sat_price_offset="$(graphql_output '.data.realtimePrice.btcSatPrice.offset')"
+  cents_price_base="$(graphql_output '.data.realtimePrice.usdCentPrice.base')"
+  cents_price_offset="$(graphql_output '.data.realtimePrice.usdCentPrice.offset')"
+  [[ "${currency_frac_digits}" = 2 ]] || exit 1
+  [[ "${sat_price_base}" = 5600000000000 ]] || exit 1
+  [[ "${sat_price_offset}" = 12 ]] || exit 1
+  [[ "${cents_price_base}" = 280000000 ]] || exit 1
+  [[ "${cents_price_offset}" = 6 ]] || exit 1
+}
+
+@test "public: realtime price supports zero price-service fraction digits" {
+  currency="XTS"
+  variables=$(
+    jq -n \
+      --arg currency "$currency" \
+      '{currency: $currency}'
+  )
+  exec_graphql 'anon' 'real-time-price' "$variables"
+
+  errors="$(graphql_output '.errors | length')"
+  [[ "${errors}" = "0" ]] || exit 1
+
+  currency_frac_digits="$(graphql_output '.data.realtimePrice.denominatorCurrencyDetails.fractionDigits')"
+  sat_price_base="$(graphql_output '.data.realtimePrice.btcSatPrice.base')"
+  cents_price_base="$(graphql_output '.data.realtimePrice.usdCentPrice.base')"
+  [[ "${currency_frac_digits}" = 0 ]] || exit 1
+  [[ "${sat_price_base}" = 20000000000 ]] || exit 1
+  [[ "${cents_price_base}" = 1000000 ]] || exit 1
+}
+
+@test "public: currency list exposes every configured quote" {
+  exec_graphql 'anon' 'currency-list'
+
+  errors="$(graphql_output '.errors | length')"
+  [[ "${errors}" = "0" ]] || exit 1
+
+  currencies="$(graphql_output '.data.currencyList | sort_by(.id)')"
+  expected='[{"id":"EUR","fractionDigits":2},{"id":"PKR","fractionDigits":2},{"id":"USD","fractionDigits":2},{"id":"XTS","fractionDigits":0}]'
+  [[ "$(echo "${currencies}" | jq -c '[.[] | {id, fractionDigits}]')" = "${expected}" ]] || exit 1
+}
+
 @test "public: can apply idempotency key to queries" {
   fixed_idempotency_key=$(new_idempotency_key)
   original_new_idempotency_key=$(declare -f new_idempotency_key)
@@ -143,6 +198,26 @@ teardown() {
       | jq -s -r 'map(.data.realtimePrice.errors | length) | add'
   )
   [[ "$num_errors" == "0" ]] || exit 1
+}
+
+@test "public: realtime price subscription honors price-service fraction digits" {
+  subscribe_to 'anon' real-time-price-sub '{"currency": "PKR"}'
+  retry 10 1 grep 'Data.*\brealtimePrice\b.*PKR' "${SUBSCRIBER_LOG_FILE}"
+
+  subscription_events=$(
+    grep 'Data.*\brealtimePrice\b.*PKR' "${SUBSCRIBER_LOG_FILE}" \
+      | sed 's/^Data: //' \
+      | jq -s -c '.'
+  )
+  realtime_price="$(echo "$subscription_events" | jq -c 'map(.data.realtimePrice.realtimePrice) | last')"
+  num_errors="$(echo "$subscription_events" | jq -r 'map(.data.realtimePrice.errors | length) | add')"
+
+  [[ "$num_errors" == "0" ]] || exit 1
+  [[ "$(echo "$realtime_price" | jq -r '.denominatorCurrencyDetails.fractionDigits')" = 2 ]] || exit 1
+  [[ "$(echo "$realtime_price" | jq -r '.btcSatPrice.base')" = 5600000000000 ]] || exit 1
+  [[ "$(echo "$realtime_price" | jq -r '.btcSatPrice.offset')" = 12 ]] || exit 1
+  [[ "$(echo "$realtime_price" | jq -r '.usdCentPrice.base')" = 280000000 ]] || exit 1
+  [[ "$(echo "$realtime_price" | jq -r '.usdCentPrice.offset')" = 6 ]] || exit 1
 }
 
 @test "public: can query currency conversion estimation" {
