@@ -339,29 +339,41 @@ describe("translateLedgerTransactions", () => {
     expect(edges).toEqual([{ cursor, node: { id: transaction.id } }])
   })
 
-  it("falls back to ICU precision when legacy transaction metadata is unavailable", async () => {
-    const error = new PriceCurrenciesNotAvailableError()
-    mockGetCurrencyFractionDigits.mockResolvedValueOnce(error)
-    const transaction = {
-      id: "cop-1",
-      currency: WalletCurrency.Usd,
-      displayCurrency: "COP" as DisplayCurrency,
-      timestamp: new Date("2026-07-03T00:00:00Z"),
-    } as LedgerTransaction<WalletCurrency>
-
-    const result = await translateLedgerTransactionEdges([
-      { cursor: "cursor-1" as PaginatedQueryCursor, node: transaction },
-    ])
-
-    expect(result).toEqual([
-      { cursor: "cursor-1" as PaginatedQueryCursor, node: { id: transaction.id } },
-    ])
-    expect(mockFromLedger).toHaveBeenCalledWith(
-      expect.objectContaining({ displayCurrencyFractionDigits: 0 }),
+  it("uses immutable legacy precision when price metadata is unavailable", async () => {
+    const actualWalletsDomain =
+      jest.requireActual<typeof import("@/domain/wallets")>("@/domain/wallets")
+    mockFromLedger.mockImplementation(
+      actualWalletsDomain.WalletTransactionHistory.fromLedger,
     )
+    const error = new PriceCurrenciesNotAvailableError()
+    mockGetCurrencyFractionDigits.mockResolvedValue(error)
+    const transactions = ["COP", "HUF", "IDR", "PKR"].map((currency) =>
+      displayTransaction({
+        id: currency.toLowerCase(),
+        currency: currency as DisplayCurrency,
+        timestamp: "2026-07-03T14:22:08Z",
+        displayAmount: 103_900_513,
+        displayFee: 182_259,
+      }),
+    )
+
+    const result = await translateLedgerTransactions(transactions)
+
+    expect(result.map(({ settlementDisplayAmount }) => settlementDisplayAmount)).toEqual([
+      "-1039005.13",
+      "-1039005.13",
+      "-1039005.13",
+      "-1039005.13",
+    ])
+    expect(result.map(({ settlementDisplayFee }) => settlementDisplayFee)).toEqual([
+      "1822.59",
+      "1822.59",
+      "1822.59",
+      "1822.59",
+    ])
     expect(mockLoggerWarn).toHaveBeenCalledWith(
-      expect.objectContaining({ error, currency: "COP", fallbackFractionDigits: 0 }),
-      "using ICU precision for legacy transaction history",
+      expect.objectContaining({ error, currency: "COP", fallbackFractionDigits: 2 }),
+      "using fallback precision for legacy transaction history",
     )
     expect(mockRecordExceptionInCurrentSpan).toHaveBeenCalledWith({
       error,
@@ -369,25 +381,81 @@ describe("translateLedgerTransactions", () => {
     })
   })
 
-  it("falls back when a legacy currency is missing from price metadata", async () => {
+  it("uses immutable legacy precision when a legacy currency is missing from metadata", async () => {
+    const actualWalletsDomain =
+      jest.requireActual<typeof import("@/domain/wallets")>("@/domain/wallets")
+    mockFromLedger.mockImplementation(
+      actualWalletsDomain.WalletTransactionHistory.fromLedger,
+    )
     const error = new InvalidPriceCurrencyError()
-    mockGetCurrencyFractionDigits.mockResolvedValueOnce(error)
-    const transaction = {
-      id: "cop-1",
-      currency: WalletCurrency.Usd,
-      displayCurrency: "COP" as DisplayCurrency,
-      timestamp: new Date("2026-07-03T00:00:00Z"),
-    } as LedgerTransaction<WalletCurrency>
+    mockGetCurrencyFractionDigits.mockResolvedValue(error)
+    const transactions = ["COP", "HUF", "IDR", "PKR"].map((currency) =>
+      displayTransaction({
+        id: currency.toLowerCase(),
+        currency: currency as DisplayCurrency,
+        timestamp: "2026-07-03T14:22:08Z",
+        displayAmount: 103_900_513,
+        displayFee: 182_259,
+      }),
+    )
 
-    await translateLedgerTransactions([transaction])
+    const result = await translateLedgerTransactions(transactions)
 
+    expect(result.map(({ settlementDisplayAmount }) => settlementDisplayAmount)).toEqual([
+      "-1039005.13",
+      "-1039005.13",
+      "-1039005.13",
+      "-1039005.13",
+    ])
+    expect(result.map(({ settlementDisplayFee }) => settlementDisplayFee)).toEqual([
+      "1822.59",
+      "1822.59",
+      "1822.59",
+      "1822.59",
+    ])
     expect(mockLoggerWarn).toHaveBeenCalledWith(
-      expect.objectContaining({ error, currency: "COP", fallbackFractionDigits: 0 }),
-      "using ICU precision for legacy transaction history",
+      expect.objectContaining({ error, currency: "IDR", fallbackFractionDigits: 2 }),
+      "using fallback precision for legacy transaction history",
     )
     expect(mockRecordExceptionInCurrentSpan).toHaveBeenCalledWith({
       error,
       level: ErrorLevel.Warn,
     })
+  })
+
+  it("does not leak legacy precision onto a post-cutoff row in the same page", async () => {
+    const actualWalletsDomain =
+      jest.requireActual<typeof import("@/domain/wallets")>("@/domain/wallets")
+    mockFromLedger.mockImplementation(
+      actualWalletsDomain.WalletTransactionHistory.fromLedger,
+    )
+    const transactions = [
+      displayTransaction({
+        id: "eligible",
+        currency: "COP" as DisplayCurrency,
+        timestamp: "2026-07-03T14:22:08Z",
+        displayAmount: 103_900_513,
+        displayFee: 182_259,
+      }),
+      displayTransaction({
+        id: "post-cutoff",
+        currency: "COP" as DisplayCurrency,
+        timestamp: "2026-09-01T00:00:00Z",
+        displayAmount: 1_039_005,
+        displayFee: 1_822,
+      }),
+    ]
+
+    const result = await translateLedgerTransactions(transactions)
+
+    expect(mockGetCurrencyFractionDigits).toHaveBeenCalledTimes(1)
+    expect(result.map(({ settlementDisplayAmount }) => settlementDisplayAmount)).toEqual([
+      "-1039005.13",
+      "-1039005",
+    ])
+    expect(result.map(({ settlementDisplayFee }) => settlementDisplayFee)).toEqual([
+      "1822.59",
+      "1822",
+    ])
   })
 })
