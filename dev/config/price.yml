@@ -1,3 +1,34 @@
+# The price service replaces its default quotes array when this array is present.
+# Keep USD and EUR here, and exercise configured precision with PKR and XTS.
+quotes:
+  - code: "USD"
+    symbol: "$"
+    name: "US Dollar"
+    flag: "🇺🇸"
+    fractionDigits: 2
+    countryCodes: ["US"]
+  - code: "EUR"
+    symbol: "€"
+    name: "Euro"
+    flag: "🇪🇺"
+    fractionDigits: 2
+    # Representative euro-zone subset; keeps country-to-currency mapping alive in dev.
+    countryCodes: ["DE", "FR", "ES", "IT", "NL", "BE", "AT", "IE", "PT", "FI", "GR"]
+  - code: "PKR"
+    symbol: "₨"
+    name: "Pakistani Rupee"
+    flag: "🇵🇰"
+    fractionDigits: 2
+    countryCodes: ["PK"]
+  # ISO 4217 testing code; deliberately configured with non-ICU precision.
+  # Deliberately unmapped: no country should resolve to a test currency.
+  - code: "XTS"
+    symbol: "¤"
+    name: "Test Currency"
+    flag: "🧪"
+    fractionDigits: 0
+    countryCodes: []
+
 exchanges:
   - provider: "dev-mock"
     base: "BTC"
@@ -7,6 +38,8 @@ exchanges:
       devMockPrice:
         BTC:
           EUR: 17500
+          PKR: 5600000
+          XTS: 2000000
           USD: 20000
     # Following require dummy values
     name: ""
