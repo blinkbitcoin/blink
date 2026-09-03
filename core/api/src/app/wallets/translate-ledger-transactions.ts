@@ -36,10 +36,11 @@ const getTranslationContext = async (
   const displayCurrencies = [
     ...new Set(
       transactions
-        .filter(({ displayCurrencyFractionDigits, timestamp }) =>
+        .filter((transaction) =>
           needsLegacyPricePrecision({
-            fractionDigits: displayCurrencyFractionDigits,
-            timestamp,
+            currency: transaction.displayCurrency || UsdDisplayCurrency,
+            fractionDigits: transaction.displayCurrencyFractionDigits,
+            timestamp: transaction.timestamp,
           }),
         )
         .map((transaction) => transaction.displayCurrency || UsdDisplayCurrency),
