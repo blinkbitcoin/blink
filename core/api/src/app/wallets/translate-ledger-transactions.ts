@@ -1,5 +1,8 @@
 import { memoSharingConfig } from "@/config"
-import { needsLegacyPricePrecision } from "@/app/prices/legacy-display-currency-precision"
+import {
+  getLegacyPriceFractionDigits,
+  needsLegacyPricePrecision,
+} from "@/app/prices/legacy-display-currency-precision"
 import { getCurrencyMajorExponent, UsdDisplayCurrency } from "@/domain/fiat"
 import { ErrorLevel, WalletCurrency } from "@/domain/shared"
 import { WalletTransactionHistory } from "@/domain/wallets"
@@ -19,10 +22,11 @@ const resolveFractionDigits = async (
   let fractionDigits = await getCurrencyFractionDigits({ currency })
   if (fractionDigits instanceof Error) {
     const error = fractionDigits
-    fractionDigits = getCurrencyMajorExponent(currency)
+    fractionDigits =
+      getLegacyPriceFractionDigits(currency) ?? getCurrencyMajorExponent(currency)
     baseLogger.warn(
       { error, currency, fallbackFractionDigits: fractionDigits },
-      "using ICU precision for legacy transaction history",
+      "using fallback precision for legacy transaction history",
     )
     recordExceptionInCurrentSpan({ error, level: ErrorLevel.Warn })
   }
