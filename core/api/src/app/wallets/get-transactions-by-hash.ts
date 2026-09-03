@@ -1,7 +1,6 @@
-import { memoSharingConfig } from "@/config"
-import { WalletTransactionHistory } from "@/domain/wallets"
+import { translateLedgerTransactions } from "./translate-ledger-transactions"
 
-import { getNonEndUserWalletIds, LedgerService } from "@/services/ledger"
+import { LedgerService } from "@/services/ledger"
 
 export const getTransactionsForWalletByPaymentHash = async ({
   walletId,
@@ -18,15 +17,7 @@ export const getTransactionsForWalletByPaymentHash = async ({
 
   if (ledgerTransactions instanceof Error) return ledgerTransactions
 
-  const nonEndUserWalletIds = Object.values(await getNonEndUserWalletIds())
-
-  return ledgerTransactions.map((txn) =>
-    WalletTransactionHistory.fromLedger({
-      txn,
-      nonEndUserWalletIds,
-      memoSharingConfig,
-    }),
-  )
+  return translateLedgerTransactions(ledgerTransactions)
 }
 
 export const getTransactionsByHash = async (
@@ -35,13 +26,5 @@ export const getTransactionsByHash = async (
   const ledger = LedgerService()
   const ledgerTransactions = await ledger.getTransactionsByHash(hash)
   if (ledgerTransactions instanceof Error) return ledgerTransactions
-  const nonEndUserWalletIds = Object.values(await getNonEndUserWalletIds())
-
-  return ledgerTransactions.map((txn) =>
-    WalletTransactionHistory.fromLedger({
-      txn,
-      nonEndUserWalletIds,
-      memoSharingConfig,
-    }),
-  )
+  return translateLedgerTransactions(ledgerTransactions)
 }

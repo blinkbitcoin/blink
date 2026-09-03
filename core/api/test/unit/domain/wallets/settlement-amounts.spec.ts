@@ -36,6 +36,27 @@ describe("SettlementAmounts", () => {
     displayCurrency,
   }
 
+  it("uses configured COP fraction digits for historical amount and fee", () => {
+    const txn: LedgerTransaction<"BTC"> = {
+      ...txnCommon,
+      currency: WalletCurrency.Btc,
+      credit: toSats(0),
+      debit: toSats(496_532),
+      satsAmount: toSats(496_532),
+      satsFee: toSats(871),
+      centsAmount: toCents(0),
+      centsFee: toCents(0),
+      displayAmount: 103_900_513 as DisplayCurrencyBaseAmount,
+      displayFee: 182_259 as DisplayCurrencyBaseAmount,
+      displayCurrency: "COP" as DisplayCurrency,
+    }
+
+    const result = SettlementAmounts().fromTxn(txn, 2)
+
+    expect(result.settlementDisplayAmount).toBe("-1039005.13")
+    expect(result.settlementDisplayFee).toBe("1822.59")
+  })
+
   const expectedDisplayFeeObj = displayAmountFromNumber({
     amount: displayFee,
     currency: displayCurrency,
@@ -230,7 +251,7 @@ describe("SettlementAmounts", () => {
     })
   })
 
-  it("uses historical ICU precision when persisted precision is absent", () => {
+  it("uses persisted precision when no configured precision is supplied", () => {
     const settlementAmounts = SettlementAmounts().fromTxn({
       ...txnCommon,
       currency: WalletCurrency.Btc,
@@ -243,8 +264,30 @@ describe("SettlementAmounts", () => {
       displayAmount: 22 as DisplayCurrencyBaseAmount,
       displayFee: 0 as DisplayCurrencyBaseAmount,
       displayCurrency: "PKR" as DisplayCurrency,
+      displayCurrencyFractionDigits: 2,
     })
 
-    expect(settlementAmounts.settlementDisplayAmount).toBe("22")
+    expect(settlementAmounts.settlementDisplayAmount).toBe("0.22")
+  })
+
+  it("prefers persisted precision to current configuration", () => {
+    const transaction = {
+      ...txnCommon,
+      currency: WalletCurrency.Btc,
+      credit: toSats(100),
+      debit: toSats(0),
+      satsAmount: toSats(100),
+      satsFee: toSats(0),
+      centsAmount: toCents(1),
+      centsFee: toCents(0),
+      displayAmount: 22 as DisplayCurrencyBaseAmount,
+      displayFee: 0 as DisplayCurrencyBaseAmount,
+      displayCurrency: "PKR" as DisplayCurrency,
+      displayCurrencyFractionDigits: 2,
+    }
+
+    const settlementAmounts = SettlementAmounts().fromTxn(transaction, 0)
+
+    expect(settlementAmounts.settlementDisplayAmount).toBe("0.22")
   })
 })
