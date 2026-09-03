@@ -36,6 +36,10 @@ describe("majorToMinorUnit", () => {
     expect(majorToMinorUnit({ amount: 2.78, fractionDigits: 2 })).toBe(278)
     expect(majorToMinorUnit({ amount: 1.23, fractionDigits: 0 })).toBe(1.23)
   })
+
+  it("preserves exact decimal strings", () => {
+    expect(majorToMinorUnit({ amount: "1039005.13", fractionDigits: 2 })).toBe(103900513)
+  })
 })
 
 describe("getCurrencyMajorExponent", () => {

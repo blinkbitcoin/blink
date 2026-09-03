@@ -13,6 +13,8 @@ use crate::{
 pub enum ApplicationError {
     #[error("{0}")]
     UnknownCurrencyCode(String),
+    #[error("invalid fraction digits: {0}")]
+    InvalidFractionDigits(u32),
     #[error("{0}")]
     UserNotificationSettingsError(#[from] UserNotificationSettingsError),
     #[error("{0}")]

@@ -6641,7 +6641,8 @@ proto.services.notifications.v1.Money.prototype.toObject = function(opt_includeI
 proto.services.notifications.v1.Money.toObject = function(includeInstance, msg) {
   var f, obj = {
 currencyCode: jspb.Message.getFieldWithDefault(msg, 1, ""),
-minorUnits: jspb.Message.getFieldWithDefault(msg, 2, 0)
+minorUnits: jspb.Message.getFieldWithDefault(msg, 2, 0),
+fractionDigits: (f = jspb.Message.getField(msg, 3)) == null ? undefined : f
   };
 
   if (includeInstance) {
@@ -6686,6 +6687,10 @@ proto.services.notifications.v1.Money.deserializeBinaryFromReader = function(msg
       var value = /** @type {number} */ (reader.readUint64());
       msg.setMinorUnits(value);
       break;
+    case 3:
+      var value = /** @type {number} */ (reader.readUint32());
+      msg.setFractionDigits(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -6729,6 +6734,13 @@ proto.services.notifications.v1.Money.serializeBinaryToWriter = function(message
       f
     );
   }
+  f = /** @type {number} */ (jspb.Message.getField(message, 3));
+  if (f != null) {
+    writer.writeUint32(
+      3,
+      f
+    );
+  }
 };
 
 
@@ -6765,6 +6777,42 @@ proto.services.notifications.v1.Money.prototype.getMinorUnits = function() {
  */
 proto.services.notifications.v1.Money.prototype.setMinorUnits = function(value) {
   return jspb.Message.setProto3IntField(this, 2, value);
+};
+
+
+/**
+ * optional uint32 fraction_digits = 3;
+ * @return {number}
+ */
+proto.services.notifications.v1.Money.prototype.getFractionDigits = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 3, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.services.notifications.v1.Money} returns this
+ */
+proto.services.notifications.v1.Money.prototype.setFractionDigits = function(value) {
+  return jspb.Message.setField(this, 3, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.services.notifications.v1.Money} returns this
+ */
+proto.services.notifications.v1.Money.prototype.clearFractionDigits = function() {
+  return jspb.Message.setField(this, 3, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.services.notifications.v1.Money.prototype.hasFractionDigits = function() {
+  return jspb.Message.getField(this, 3) != null;
 };
 
 
