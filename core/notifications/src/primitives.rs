@@ -194,19 +194,26 @@ impl Currency {
         f: &mut std::fmt::Formatter<'_>,
         minor_units: u64,
         round_to_major: bool,
+        fraction_digits: Option<u32>,
     ) -> std::fmt::Result {
         match self {
             Currency::Iso(c) => {
-                // For currencies like HUF where ISO exponent is 0 but the system
-                // internally tracks amounts with 2 decimal places, we need to
-                // manually divide by 100 before formatting.
-                if self.uses_internal_decimal_places() && c.exponent == 0 {
-                    // System sends e.g. 366519 fillér, we need 3665.19 HUF
-                    // Since rusty_money won't divide (exponent 0), we do it manually
-                    // Format: "3665.19Ft" to match transaction history display
+                // Preserve the existing HUF representation when core explicitly
+                // confirms the internal two-decimal contract.
+                if self.uses_internal_decimal_places()
+                    && c.exponent == 0
+                    && fraction_digits.unwrap_or(2) == 2
+                {
                     let major = minor_units / 100;
                     let cents = minor_units % 100;
                     return write!(f, "{}.{:02}{}", major, cents, c.symbol);
+                }
+
+                if let Some(exponent) = fraction_digits {
+                    let configured_currency = rusty_money::iso::Currency { exponent, ..**c };
+                    let money =
+                        rusty_money::Money::from_minor(minor_units as i64, &configured_currency);
+                    return write!(f, "{money}");
                 }
                 let adjusted_units = minor_units;
 

@@ -222,6 +222,7 @@ enum TransactionType {
 message Money {
   string currency_code = 1;
   uint64 minor_units = 2;
+  optional uint32 fraction_digits = 3;
 }
 
 enum PriceChangeDirection {

@@ -15,7 +15,6 @@ export const walletTransactionToNotificationEventRequest = ({
   userId,
   transaction,
   type,
-  fractionDigits,
 }: {
   userId: UserId
   transaction: Pick<
@@ -23,27 +22,33 @@ export const walletTransactionToNotificationEventRequest = ({
     | "settlementAmount"
     | "settlementCurrency"
     | "settlementDisplayAmount"
+    | "settlementDisplayCurrencyFractionDigits"
     | "settlementDisplayPrice"
   >
   type: Grpc.TransactionType
-  fractionDigits: number
 }): Grpc.HandleNotificationEventRequest => {
   const settlementAmount = new Grpc.Money()
   settlementAmount.setMinorUnits(Math.abs(transaction.settlementAmount))
   settlementAmount.setCurrencyCode(transaction.settlementCurrency)
 
+  const displayCurrency = transaction.settlementDisplayPrice.displayCurrency
+  const fractionDigits =
+    transaction.settlementDisplayCurrencyFractionDigits ??
+    transaction.settlementDisplayAmount.split(".")[1]?.length ??
+    0
   const displayAmount = new Grpc.Money()
   displayAmount.setMinorUnits(
     Math.abs(
       Math.round(
         majorToMinorUnit({
-          amount: Number(transaction.settlementDisplayAmount),
+          amount: transaction.settlementDisplayAmount,
           fractionDigits,
         }),
       ),
     ),
   )
-  displayAmount.setCurrencyCode(transaction.settlementDisplayPrice.displayCurrency)
+  displayAmount.setCurrencyCode(displayCurrency)
+  displayAmount.setFractionDigits(fractionDigits)
 
   const transactionOccurred = new Grpc.TransactionOccurred()
   transactionOccurred.setUserId(userId)

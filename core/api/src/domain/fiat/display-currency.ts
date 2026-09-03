@@ -16,7 +16,7 @@ export const majorToMinorUnit = ({
   amount,
   fractionDigits,
 }: {
-  amount: number | bigint
+  amount: number | bigint | string
   fractionDigits: number
 }): number => {
   return BigNumber(amount.toString())

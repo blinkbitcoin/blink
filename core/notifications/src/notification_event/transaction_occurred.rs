@@ -18,12 +18,14 @@ pub enum TransactionType {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TransactionAmount {
     pub minor_units: u64,
+    pub fraction_digits: Option<u32>,
     pub currency: Currency,
 }
 
 impl std::fmt::Display for TransactionAmount {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.currency.format_minor_units(f, self.minor_units, false)
+        self.currency
+            .format_minor_units(f, self.minor_units, false, self.fraction_digits)
     }
 }
 
@@ -97,6 +99,7 @@ mod tests {
             transaction_type: TransactionType::IntraLedgerPayment,
             settlement_amount: TransactionAmount {
                 minor_units: 100,
+                fraction_digits: None,
                 currency: Currency::Iso(rusty_money::iso::USD),
             },
             display_amount: None,
@@ -112,10 +115,12 @@ mod tests {
             transaction_type: TransactionType::IntraLedgerReceipt,
             settlement_amount: TransactionAmount {
                 minor_units: 1,
+                fraction_digits: None,
                 currency: Currency::Crypto(rusty_money::crypto::BTC),
             },
             display_amount: Some(TransactionAmount {
                 minor_units: 4,
+                fraction_digits: None,
                 currency: Currency::Iso(rusty_money::iso::USD),
             }),
         };
@@ -129,22 +134,49 @@ mod tests {
         // Regression test for https://github.com/blinkbitcoin/blink-mobile/issues/3234
         // HUF has ISO exponent 0, but system tracks amounts in fillér (1/100 HUF)
         // 366519 fillér should display as 3665.19Ft, not 366519Ft
+        for fraction_digits in [None, Some(2)] {
+            let event = TransactionOccurred {
+                transaction_type: TransactionType::LightningReceipt,
+                settlement_amount: TransactionAmount {
+                    minor_units: 1,
+                    fraction_digits: None,
+                    currency: Currency::Crypto(rusty_money::crypto::BTC),
+                },
+                display_amount: Some(TransactionAmount {
+                    minor_units: 366519,
+                    fraction_digits,
+                    currency: Currency::Iso(rusty_money::iso::HUF),
+                }),
+            };
+            let localized_message =
+                event.to_localized_push_msg(&GaloyLocale::from("en".to_string()));
+            assert!(
+                localized_message.body.contains("3665.19Ft"),
+                "HUF amount should be divided by 100. Got: {}",
+                localized_message.body
+            );
+        }
+    }
+
+    #[test]
+    fn configured_fraction_digits_override_iso_exponent() {
         let event = TransactionOccurred {
             transaction_type: TransactionType::LightningReceipt,
             settlement_amount: TransactionAmount {
                 minor_units: 1,
+                fraction_digits: None,
                 currency: Currency::Crypto(rusty_money::crypto::BTC),
             },
             display_amount: Some(TransactionAmount {
-                minor_units: 366519,
-                currency: Currency::Iso(rusty_money::iso::HUF),
+                minor_units: 100,
+                fraction_digits: Some(0),
+                currency: Currency::Iso(rusty_money::iso::XTS),
             }),
         };
         let localized_message = event.to_localized_push_msg(&GaloyLocale::from("en".to_string()));
-        // Should show ~3665Ft, not ~366519Ft
         assert!(
-            localized_message.body.contains("3665.19Ft"),
-            "HUF amount should be divided by 100. Got: {}",
+            localized_message.body.contains("100"),
+            "XTS amount should use the supplied zero-digit scale. Got: {}",
             localized_message.body
         );
     }
