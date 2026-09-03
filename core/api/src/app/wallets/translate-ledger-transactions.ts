@@ -64,13 +64,20 @@ const translateLedgerTransactionWithContext = (
   { fractionDigitsByCurrency, nonEndUserWalletIds }: TranslationContext,
 ): WalletTransaction => {
   const displayCurrency = txn.displayCurrency || UsdDisplayCurrency
+  const legacyFractionDigits = needsLegacyPricePrecision({
+    currency: displayCurrency,
+    fractionDigits: txn.displayCurrencyFractionDigits,
+    timestamp: txn.timestamp,
+  })
+    ? fractionDigitsByCurrency.get(displayCurrency)
+    : undefined
 
   return WalletTransactionHistory.fromLedger({
     txn,
     nonEndUserWalletIds,
     memoSharingConfig,
     displayCurrencyFractionDigits:
-      txn.displayCurrencyFractionDigits ?? fractionDigitsByCurrency.get(displayCurrency),
+      txn.displayCurrencyFractionDigits ?? legacyFractionDigits,
   })
 }
 
