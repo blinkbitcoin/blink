@@ -1,5 +1,3 @@
-import { getCurrency } from "./get-currency"
-
 import { SECS_PER_10_MINS } from "@/config"
 
 import { CacheKeys } from "@/domain/cache"
@@ -9,6 +7,7 @@ import { checkedToDisplayCurrency, getCurrencyMajorExponent } from "@/domain/fia
 import { toDisplayPriceRatio, toWalletPriceRatio } from "@/domain/payments"
 
 import { PriceService } from "@/services/price"
+import { getCurrencyFractionDigits } from "@/services/price/get-currency-fraction-digits"
 import { LocalCacheService } from "@/services/cache/local-cache"
 import { recordExceptionInCurrentSpan } from "@/services/tracing"
 
@@ -89,7 +88,10 @@ export const getCurrentPriceAsDisplayPriceRatio = async <T extends DisplayCurren
   const price = await getCurrentSatPrice({ currency })
   if (price instanceof Error) return price
 
-  const exponent = await getCurrencyFractionDigits({ currency, fractionDigits })
+  const exponent = await getDisplayCurrencyFractionDigits({
+    currency,
+    fractionDigits,
+  })
   if (exponent instanceof Error) return exponent
 
   return toDisplayPriceRatio({
@@ -110,7 +112,10 @@ export const getCurrentUsdCentPriceAsDisplayPriceRatio = async <
   const price = await getCurrentUsdCentPrice({ currency })
   if (price instanceof Error) return price
 
-  const exponent = await getCurrencyFractionDigits({ currency, fractionDigits })
+  const exponent = await getDisplayCurrencyFractionDigits({
+    currency,
+    fractionDigits,
+  })
   if (exponent instanceof Error) return exponent
 
   return toDisplayPriceRatio({
@@ -121,19 +126,17 @@ export const getCurrentUsdCentPriceAsDisplayPriceRatio = async <
   })
 }
 
-const getCurrencyFractionDigits = async ({
+const getDisplayCurrencyFractionDigits = async ({
   currency,
   fractionDigits,
 }: GetCurrentDisplayPriceRatioArgs): Promise<number | ApplicationError> => {
-  if (fractionDigits !== undefined) return fractionDigits
+  const exponent = await getCurrencyFractionDigits({ currency, fractionDigits })
+  if (!(exponent instanceof Error)) return exponent
 
-  const priceCurrency = await getCurrency({ currency })
-  if (priceCurrency instanceof Error) {
-    recordExceptionInCurrentSpan({ error: priceCurrency, level: ErrorLevel.Warn })
-    return getCurrencyMajorExponent(currency)
-  }
+  if (fractionDigits !== undefined) return exponent
 
-  return priceCurrency.fractionDigits
+  recordExceptionInCurrentSpan({ error: exponent, level: ErrorLevel.Warn })
+  return getCurrencyMajorExponent(currency)
 }
 
 const getCachedPrice = async ({
