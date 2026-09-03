@@ -2,11 +2,6 @@ name: "Mobile Schema Compatibility"
 
 on:
   pull_request:
-    branches:
-      - main
-      - fix/simplify-price-fraction-digits
-      - fix/price-fraction-digits-history
-      - fix/price-fraction-digits-notifications
 
 jobs:
   check-secret:
