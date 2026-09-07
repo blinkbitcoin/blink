@@ -53,10 +53,7 @@ mod tests {
     fn push_msg_correctly_formatted() {
         let event = MigrationRetryReady {};
         let localized_message = event.to_localized_push_msg(&GaloyLocale::from("en".to_string()));
-        assert_eq!(
-            localized_message.title,
-            "Your migration is ready to retry"
-        );
+        assert_eq!(localized_message.title, "Your migration is ready to retry");
         assert_eq!(
             localized_message.body,
             "We've reset your migration so you can try again. Tap to continue moving your funds."
