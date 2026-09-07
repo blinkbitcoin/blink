@@ -22,6 +22,7 @@ import OnChainTxHash from "@/graphql/shared/types/scalar/onchain-tx-hash"
 import { AuthenticationError, UnknownClientError } from "@/graphql/error"
 import TxNotificationType from "@/graphql/public/types/scalar/tx-notification-type"
 import InvoicePaymentStatus from "@/graphql/shared/types/scalar/invoice-payment-status"
+import { PRICE_DEPRECATED_MESSAGE } from "@/graphql/public/root/subscription/deprecated-price"
 import { baseLogger } from "@/services/logger"
 import { PubSubService } from "@/services/pubsub"
 
@@ -155,7 +156,7 @@ type MeResolveIntraLedger = {
 }
 
 type MeResolveSource = {
-  errors: IError[]
+  errors?: IError[]
   realtimePrice?: MePayloadPrice
   price?: MePayloadPrice
   invoice?: MeResolveLn
@@ -192,7 +193,7 @@ const MeSubscription = {
       })
     }
 
-    if (source.errors) {
+    if (source.errors?.length) {
       return { errors: source.errors }
     }
 
@@ -200,9 +201,12 @@ const MeSubscription = {
 
     // This will be deprecated but while we update the app must return only USD updates
     if (source.price) {
+      // Defense in depth: both publishers of a `price` payload (`subscribe` below and
+      // NotificationsService.priceUpdate) already gate on USD, so this branch is
+      // unreachable today. It stays as a backstop if either gate is ever relaxed.
       if (source.price.displayCurrency !== UsdDisplayCurrency) {
         return {
-          errors: [{ message: "Price is deprecated, please use realtimePrice event" }],
+          errors: [{ message: PRICE_DEPRECATED_MESSAGE }],
         }
       }
 

@@ -12,3 +12,11 @@ export const MigrationLnAddressTransferStatus = {
   SkippedNotRegistered: "SKIPPED_NOT_REGISTERED",
   Failed: "FAILED",
 } as const
+
+export const PostMigrationDepositReleaseStatus = {
+  Prepared: "PREPARED",
+  Processing: "PROCESSING",
+  Pending: "PENDING",
+  Completed: "COMPLETED",
+  Failed: "FAILED",
+} as const

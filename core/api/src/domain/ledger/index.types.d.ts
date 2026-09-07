@@ -262,6 +262,11 @@ interface ILedgerService {
     journalId: LedgerJournalId
   }): Promise<LedgerTransaction<WalletCurrency> | LedgerServiceError>
 
+  getTransactionForWalletByExternalId(args: {
+    walletId: WalletId
+    externalId: LedgerExternalId
+  }): Promise<LedgerTransaction<WalletCurrency> | undefined | LedgerServiceError>
+
   getTransactionsByHash(
     paymentHash: PaymentHash | OnChainTxHash,
   ): Promise<LedgerTransaction<WalletCurrency>[] | LedgerServiceError>
@@ -321,6 +326,12 @@ interface ILedgerService {
     txHash: OnChainTxHash
     vout: OnChainTxVout
   }): Promise<IsOnChainReceiptTxRecordedForWalletResult | LedgerServiceError>
+
+  getOnChainReceiptForWallet(args: {
+    walletId: WalletId
+    txHash: OnChainTxHash
+    vout: OnChainTxVout
+  }): Promise<LedgerTransaction<WalletCurrency> | undefined | LedgerServiceError>
 
   isOnChainTxHashRecorded(txHash: OnChainTxHash): Promise<boolean | LedgerServiceError>
 

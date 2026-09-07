@@ -16,6 +16,7 @@ import { UnknownClientError } from "@/graphql/error"
 import PricePayload from "@/graphql/public/types/payload/price"
 import SatAmount from "@/graphql/shared/types/scalar/sat-amount"
 import ExchangeCurrencyUnit from "@/graphql/public/types/scalar/exchange-currency-unit"
+import { PRICE_DEPRECATED_MESSAGE } from "@/graphql/public/root/subscription/deprecated-price"
 
 import { PubSubService } from "@/services/pubsub"
 import { baseLogger } from "@/services/logger"
@@ -54,7 +55,7 @@ const PriceSubscription = {
   },
   resolve: (
     source:
-      | { errors: IError[]; pricePerSat?: number; displayCurrency?: DisplayCurrency }
+      | { errors?: IError[]; pricePerSat?: number; displayCurrency?: DisplayCurrency }
       | undefined,
     args: PriceResolveArgs,
   ) => {
@@ -67,10 +68,12 @@ const PriceSubscription = {
       })
     }
 
-    if (source.errors) return { errors: source.errors }
+    if (source.errors?.length) return { errors: source.errors }
+    // Defense in depth: `subscribe` already rejects non-USD units before attaching the
+    // recurring price trigger, so this should be unreachable for payloads we publish.
     if (source.displayCurrency !== UsdDisplayCurrency) {
       return {
-        errors: [{ message: "Price is deprecated, please use realtimePrice event" }],
+        errors: [{ message: PRICE_DEPRECATED_MESSAGE }],
       }
     }
     if (!source.pricePerSat) {
@@ -144,6 +147,14 @@ const PriceSubscription = {
       pubsub.publishDelayed({
         trigger: immediateTrigger,
         payload: { errors: [{ message: "Unsupported exchange amount" }] },
+      })
+    } else if (displayCurrency !== UsdDisplayCurrency) {
+      // This subscription is USD-only. Reject once here rather than attaching
+      // `priceUpdateTrigger`, which publishes for every listed currency every 30s
+      // (servers/trigger.ts) and would otherwise stream a deprecation error forever.
+      pubsub.publishDelayed({
+        trigger: immediateTrigger,
+        payload: { errors: [{ message: PRICE_DEPRECATED_MESSAGE }] },
       })
     } else {
       const pricePerSat = await Prices.getCurrentSatPrice({ currency: displayCurrency })
