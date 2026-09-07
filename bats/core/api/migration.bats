@@ -470,6 +470,16 @@ read_flow_for() {
   exec_graphql "$token_name" 'migration'
   [[ "$(graphql_output '.data.migration.status')" == "IN_PROGRESS" ]] || exit 1
 
+  # the grant notifies the user: a MigrationRetryReady entry lands in their history
+  local retry_ready_title
+  for i in {1..10}; do
+    exec_graphql "$token_name" 'list-stateful-notifications'
+    retry_ready_title=$(graphql_output '.data.me.statefulNotifications.nodes[] | select(.title == "Your migration is ready to retry") | .title')
+    [[ -n "$retry_ready_title" ]] && break;
+    sleep 1
+  done
+  [[ "$retry_ready_title" == "Your migration is ready to retry" ]] || exit 1
+
   # attempt #2: a fresh invoice drains the wallet for real
   invoice_response="$(lnd_outside_cli addinvoice)"
   payment_request="$(echo $invoice_response | jq -r '.payment_request')"

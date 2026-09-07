@@ -29,3 +29,6 @@ identity_verification_declined.body: "Hatukuweza kusindika nyaraka zako kwa saba
 
 identity_verification_review_started.title: "Uthibitisho wako unaendelea!"
 identity_verification_review_started.body: "Tumepokea nyaraka zako na tunazisindika."
+
+migration_retry_ready.title: "Uhamishaji wako uko tayari kujaribiwa tena"
+migration_retry_ready.body: "Tumeweka upya uhamishaji wako ili uweze kujaribu tena. Gusa ili kuendelea kuhamisha fedha zako."

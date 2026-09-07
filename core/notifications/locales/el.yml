@@ -66,3 +66,6 @@ price_changed.down.body: "Η τιμή του Bitcoin μειώθηκε %{change_p
 
 security.link_email_reminder.title: "Συνδέστε το email για την ασφάλεια του λογαριασμού σας"
 security.link_email_reminder.body: "Συνδέστε το email σας για να ασφαλίσετε το λογαριασμό σας και να λαμβάνετε σημαντικές ενημερώσεις"
+
+migration_retry_ready.title: "Η μετεγκατάστασή σας είναι έτοιμη για νέα προσπάθεια"
+migration_retry_ready.body: "Επαναφέραμε τη μετεγκατάστασή σας ώστε να προσπαθήσετε ξανά. Πατήστε για να συνεχίσετε τη μεταφορά των κεφαλαίων σας."

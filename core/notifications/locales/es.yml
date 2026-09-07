@@ -66,3 +66,6 @@ price_changed.down.body: "Bitcoin ha bajado %{change_percent}% en el ultimo dia 
 
 security.link_email_reminder.title: "Vincular correo electrónico a una cuenta segura"
 security.link_email_reminder.body: "Vincula tu correo electrónico para proteger tu cuenta y recibir actualizaciones importantes"
+
+migration_retry_ready.title: "Tu migración está lista para reintentar"
+migration_retry_ready.body: "Hemos restablecido tu migración para que puedas intentarlo de nuevo. Toca para continuar moviendo tus fondos."

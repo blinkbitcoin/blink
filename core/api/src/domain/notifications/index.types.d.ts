@@ -134,6 +134,10 @@ interface INotificationsService {
 
   removeEmailAddress(args: { userId: UserId }): Promise<true | NotificationsServiceError>
 
+  sendMigrationRetryReady(args: {
+    userId: UserId
+  }): Promise<true | NotificationsServiceError>
+
   triggerMarketingNotification(
     args: TriggerMarketingNotificationArgs,
   ): Promise<true | NotificationsServiceError>
