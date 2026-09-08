@@ -67,6 +67,13 @@ assert_transaction_history_precision() {
       '{input: {walletId: $wallet_id, paymentRequest: $payment_request}}'
   )
 
+  # Probe first so the routed fee is zero. Without a probe the fee reserve is
+  # retained (skipFeeReimbursement) and the settlement display amounts would
+  # include it.
+  exec_graphql "$token_name" 'ln-invoice-fee-probe' "$variables"
+  fee_amount="$(graphql_output '.data.lnInvoiceFeeProbe.amount')"
+  [[ "${fee_amount}" = "0" ]] || exit 1
+
   exec_graphql "$token_name" 'ln-invoice-payment-send' "$variables"
   send_status="$(graphql_output '.data.lnInvoicePaymentSend.status')"
   [[ "$send_status" = "SUCCESS" ]] || exit 1
@@ -81,11 +88,14 @@ assert_transaction_history_precision() {
       \$set: { 'timestamp': ISODate('2026-07-03T14:22:08Z') }
     });" | tr -d '[:space:]')
     mongo_cli "$mongo_command"
-    legacy_rows_count=$(mongo_cli "db.getCollection('medici_transactions').countDocuments({
+    # Collapse whitespace before mongo_cli: its unquoted $@ word-splits
+    # multiline input, which made mongosh receive a truncated script.
+    count_command=$(echo "db.getCollection('medici_transactions').countDocuments({
       'hash': '$payment_hash',
       'displayCurrencyFractionDigits': { \$exists: false },
       'timestamp': ISODate('2026-07-03T14:22:08Z')
-    })")
+    })" | tr -d '[:space:]')
+    legacy_rows_count=$(mongo_cli "$count_command")
     [[ "$legacy_rows_count" -gt 0 ]] || exit 1
   fi
 
