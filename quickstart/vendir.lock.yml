@@ -2,24 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'test(core): cover deprecated price currency guard (#809)...'
-      sha: 2d3073dc21df177f065120cb07ce5366fce3ae81
+      commitTitle: 'refactor(core): rely on explicit price precision (#810)...'
+      sha: 96323d8864883ad4f9240db5f763dc0842d572e3
       tags:
-      - 0.22.57-3-g2d3073dc2
+      - 0.22.58-1-g96323d886
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'test(core): cover deprecated price currency guard (#809)...'
-      sha: 2d3073dc21df177f065120cb07ce5366fce3ae81
+      commitTitle: 'refactor(core): rely on explicit price precision (#810)...'
+      sha: 96323d8864883ad4f9240db5f763dc0842d572e3
       tags:
-      - 0.22.57-3-g2d3073dc2
+      - 0.22.58-1-g96323d886
     path: schemas
   - git:
-      commitTitle: 'test(core): cover deprecated price currency guard (#809)...'
-      sha: 2d3073dc21df177f065120cb07ce5366fce3ae81
+      commitTitle: 'refactor(core): rely on explicit price precision (#810)...'
+      sha: 96323d8864883ad4f9240db5f763dc0842d572e3
       tags:
-      - 0.22.57-3-g2d3073dc2
+      - 0.22.58-1-g96323d886
     path: gql
   path: graphql
 kind: LockConfig
