@@ -1,3 +1,41 @@
+# Dev/test-only fixture. The price service REPLACES its default quotes array
+# with this one (custom arrays replace defaults, they are not merged), so the
+# dev catalogue is deliberately narrowed to the four currencies below.
+#
+# The consumer schema accepts only code/symbol/name/flag/fractionDigits per
+# quote and rejects unknown keys at startup (additionalProperties: false):
+# https://github.com/blinkbitcoin/price/blob/main/realtime/src/config/schema.ts
+# Country mappings are derived by the price service from its own ISO
+# country-to-currency table, so they must NOT be configured here:
+# https://github.com/blinkbitcoin/price/blob/main/realtime/src/domain/country-to-currency/index.ts
+#
+# Signups from countries whose currency is not listed here cannot resolve a
+# display currency and fall back to the default (recorded as a warning span in
+# create-account).
+quotes:
+  - code: "USD"
+    symbol: "$"
+    name: "US Dollar"
+    flag: "🇺🇸"
+    fractionDigits: 2
+  - code: "EUR"
+    symbol: "€"
+    name: "Euro"
+    flag: "🇪🇺"
+    fractionDigits: 2
+  - code: "PKR"
+    symbol: "₨"
+    name: "Pakistani Rupee"
+    flag: "🇵🇰"
+    fractionDigits: 2
+  # ISO 4217 testing code; deliberately configured with non-ICU precision.
+  # No country maps to it, so it can only be reached by explicit selection.
+  - code: "XTS"
+    symbol: "¤"
+    name: "Test Currency"
+    flag: "🧪"
+    fractionDigits: 0
+
 exchanges:
   - provider: "dev-mock"
     base: "BTC"
@@ -7,6 +45,8 @@ exchanges:
       devMockPrice:
         BTC:
           EUR: 17500
+          PKR: 5600000
+          XTS: 2000000
           USD: 20000
     # Following require dummy values
     name: ""

@@ -158,6 +158,73 @@ describe("createAccountWithPhoneIdentifier", () => {
       expect(account.displayCurrency).toEqual("EUR")
     })
 
+    it("sets displayCurrency for a country mapped to a dev-fixture currency", async () => {
+      // dev/config/price.yml deliberately narrows the catalogue to USD, EUR, PKR,
+      // and XTS. The price service derives PK -> PKR from its own country table,
+      // so this fails if the fixture drops PKR or the mapping breaks.
+      const initialWallets = [WalletCurrency.Btc]
+
+      let account: Account | RepositoryError =
+        await Accounts.createAccountWithPhoneIdentifier({
+          newAccountInfo: { phone: randomPhone(), kratosUserId: randomUserId() },
+          config: {
+            initialLevel: AccountLevel.One,
+            initialStatus: AccountStatus.Active,
+            initialWallets,
+            maxDeletions: 2,
+            allowUsernameSetup: true,
+          },
+          phoneMetadata: {
+            carrier: {
+              error_code: null,
+              mobile_country_code: null,
+              mobile_network_code: null,
+              name: null,
+              type: null,
+            },
+            countryCode: "PK", // Pakistan
+          },
+        })
+      if (account instanceof Error) throw account
+
+      account = await AccountsRepository().findById(account.id)
+      if (account instanceof Error) throw account
+      expect(account.displayCurrency).toEqual("PKR")
+    })
+
+    it("falls back to the default display currency for an unlisted country", async () => {
+      // NGN is not in the narrowed dev catalogue, so NG cannot resolve a
+      // currency; the account keeps the default display currency.
+      const initialWallets = [WalletCurrency.Btc]
+
+      let account: Account | RepositoryError =
+        await Accounts.createAccountWithPhoneIdentifier({
+          newAccountInfo: { phone: randomPhone(), kratosUserId: randomUserId() },
+          config: {
+            initialLevel: AccountLevel.One,
+            initialStatus: AccountStatus.Active,
+            initialWallets,
+            maxDeletions: 2,
+            allowUsernameSetup: true,
+          },
+          phoneMetadata: {
+            carrier: {
+              error_code: null,
+              mobile_country_code: null,
+              mobile_network_code: null,
+              name: null,
+              type: null,
+            },
+            countryCode: "NG", // Nigeria
+          },
+        })
+      if (account instanceof Error) throw account
+
+      account = await AccountsRepository().findById(account.id)
+      if (account instanceof Error) throw account
+      expect(account.displayCurrency).toEqual("USD")
+    })
+
     it("sets default display currency if price service errors", async () => {
       // Setup mocks
       const { PriceService: PriceServiceOrig } = jest.requireActual("@/services/price")

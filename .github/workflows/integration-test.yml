@@ -1,7 +1,6 @@
 name: "Integration test"
 on:
   pull_request:
-    branches: [main]
     types: [opened, synchronize, labeled, unlabeled]
 
 jobs:

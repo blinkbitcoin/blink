@@ -1,0 +1,6 @@
+query CurrencyList {
+  currencyList {
+    id
+    fractionDigits
+  }
+}

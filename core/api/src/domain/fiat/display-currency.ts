@@ -10,10 +10,6 @@ export const BTC_PRICE_PRECISION_OFFSET = 4
 
 export const MajorExponent = {
   STANDARD: 2,
-  ZERO: 0,
-  ONE: 1,
-  THREE: 3,
-  FOUR: 4,
 } as const
 
 export const majorToMinorUnit = ({
@@ -28,24 +24,13 @@ export const majorToMinorUnit = ({
     .toNumber()
 }
 
-export const getCurrencyMajorExponent = (
-  currency: DisplayCurrency,
-): CurrencyMajorExponent => {
+export const getCurrencyMajorExponent = (currency: DisplayCurrency): number => {
   try {
-    const formatter = new Intl.NumberFormat("en-US", { style: "currency", currency })
-    const { minimumFractionDigits } = formatter.resolvedOptions()
-    switch (minimumFractionDigits) {
-      case 0:
-        return MajorExponent.ZERO
-      case 1:
-        return MajorExponent.ONE
-      case 3:
-        return MajorExponent.THREE
-      case 4:
-        return MajorExponent.FOUR
-      default:
-        return MajorExponent.STANDARD
-    }
+    const formatter = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+    })
+    return formatter.resolvedOptions().maximumFractionDigits ?? MajorExponent.STANDARD
   } catch {
     // this is necessary for non-standard currencies
     return MajorExponent.STANDARD
