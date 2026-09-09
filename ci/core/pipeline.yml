@@ -291,7 +291,7 @@ jobs:
       - { put: nix-host, params: { acquire: true } }
       - task: #@ name
         attempts: 2
-        timeout: 30m
+        timeout: 45m
         tags: ["galoy-staging"]
         config:
           platform: linux
