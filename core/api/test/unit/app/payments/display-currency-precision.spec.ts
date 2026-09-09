@@ -156,8 +156,8 @@ describe("payment display-currency precision", () => {
       userId: "userId" as UserId,
       transaction,
       type: TransactionType.INTRA_LEDGER_RECEIPT,
-      fractionDigits: settlementDisplayCurrencyFractionDigits,
     })
+    if (request instanceof Error) throw request
 
     expect(
       request.getEvent()?.getTransactionOccurred()?.getDisplayAmount()?.getMinorUnits(),

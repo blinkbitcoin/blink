@@ -27,7 +27,8 @@ impl From<f64> for ChangePercentage {
 
 impl std::fmt::Display for PriceOfOneBitcoin {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.currency.format_minor_units(f, self.minor_units, true)
+        self.currency
+            .format_minor_units(f, self.minor_units, true, None)
     }
 }
 

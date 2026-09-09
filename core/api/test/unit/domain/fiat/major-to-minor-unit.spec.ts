@@ -36,6 +36,18 @@ describe("majorToMinorUnit", () => {
     expect(majorToMinorUnit({ amount: 2.78, fractionDigits: 2 })).toBe(278)
     expect(majorToMinorUnit({ amount: 1.23, fractionDigits: 0 })).toBe(1.23)
   })
+
+  it("preserves exact decimal strings", () => {
+    expect(majorToMinorUnit({ amount: "1039005.13", fractionDigits: 2 })).toBe(103900513)
+  })
+
+  it("parses scientific notation and yields NaN for non-numeric strings", () => {
+    // The helper performs no validation; callers handling untrusted strings
+    // (e.g. the notification converter) must pre-validate the format.
+    expect(majorToMinorUnit({ amount: "1e-7", fractionDigits: 2 })).toBe(0.00001)
+    expect(majorToMinorUnit({ amount: "", fractionDigits: 2 })).toBeNaN()
+    expect(majorToMinorUnit({ amount: "1,234.56", fractionDigits: 2 })).toBeNaN()
+  })
 })
 
 describe("getCurrencyMajorExponent", () => {
