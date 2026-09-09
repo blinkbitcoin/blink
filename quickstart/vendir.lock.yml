@@ -2,27 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat(migration): notify user via MigrationRetryReady event on
-        retry grant (#824)'
-      sha: 1708465f2f9b5a66839ed860db2f8fce2d8db237
+      commitTitle: 'ci(audit): GHSA-pinned waiver list for the dependency audit (#827)...'
+      sha: b4c04615cab25fe1065eaf291a478b7e9d192706
       tags:
-      - 0.22.58-3-g1708465f2
+      - 0.22.58-6-gb4c04615c
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat(migration): notify user via MigrationRetryReady event on
-        retry grant (#824)'
-      sha: 1708465f2f9b5a66839ed860db2f8fce2d8db237
+      commitTitle: 'ci(audit): GHSA-pinned waiver list for the dependency audit (#827)...'
+      sha: b4c04615cab25fe1065eaf291a478b7e9d192706
       tags:
-      - 0.22.58-3-g1708465f2
+      - 0.22.58-6-gb4c04615c
     path: schemas
   - git:
-      commitTitle: 'feat(migration): notify user via MigrationRetryReady event on
-        retry grant (#824)'
-      sha: 1708465f2f9b5a66839ed860db2f8fce2d8db237
+      commitTitle: 'ci(audit): GHSA-pinned waiver list for the dependency audit (#827)...'
+      sha: b4c04615cab25fe1065eaf291a478b7e9d192706
       tags:
-      - 0.22.58-3-g1708465f2
+      - 0.22.58-6-gb4c04615c
     path: gql
   path: graphql
 kind: LockConfig

@@ -1,6 +1,6 @@
 # Dev/test-only fixture. The price service REPLACES its default quotes array
 # with this one (custom arrays replace defaults, they are not merged), so the
-# dev catalogue is deliberately narrowed to the four currencies below.
+# dev catalogue is deliberately narrowed to the currencies below.
 #
 # The consumer schema accepts only code/symbol/name/flag/fractionDigits per
 # quote and rejects unknown keys at startup (additionalProperties: false):
@@ -35,6 +35,11 @@ quotes:
     name: "Test Currency"
     flag: "🧪"
     fractionDigits: 0
+  - code: "COP"
+    symbol: "$"
+    name: "Colombian Peso"
+    flag: "🇨🇴"
+    fractionDigits: 2
 
 exchanges:
   - provider: "dev-mock"
@@ -47,6 +52,7 @@ exchanges:
           EUR: 17500
           PKR: 5600000
           XTS: 2000000
+          COP: 200000000
           USD: 20000
     # Following require dummy values
     name: ""
