@@ -17,11 +17,28 @@ jest.mock("@/services/mongoose", () => ({
   __mocks: {
     findFlowByAccountId: jest.fn(),
     resetForRetry: jest.fn(),
+    findAccountById: jest.fn(),
   },
   MigrationFlowStateRepository: () => ({
     findByAccountId: jest.requireMock("@/services/mongoose").__mocks.findFlowByAccountId,
     resetForRetry: jest.requireMock("@/services/mongoose").__mocks.resetForRetry,
   }),
+  AccountsRepository: () => ({
+    findById: jest.requireMock("@/services/mongoose").__mocks.findAccountById,
+  }),
+}))
+
+jest.mock("@/services/notifications", () => ({
+  __mockSendMigrationRetryReady: jest.fn(),
+  NotificationsService: () => ({
+    sendMigrationRetryReady: jest.requireMock("@/services/notifications")
+      .__mockSendMigrationRetryReady,
+  }),
+}))
+
+jest.mock("@/services/tracing", () => ({
+  recordExceptionInCurrentSpan: jest.fn(),
+  wrapAsyncToRunInSpan: ({ fn }: { fn: unknown }) => fn,
 }))
 
 import { retryMigrationFlow } from "@/app/migration-flow/retry-migration-flow"
@@ -33,16 +50,23 @@ import { MigrationFlowPhase, MigrationStateConflictError } from "@/domain/migrat
 const mocks = jest.requireMock("@/services/mongoose").__mocks as {
   findFlowByAccountId: jest.Mock
   resetForRetry: jest.Mock
+  findAccountById: jest.Mock
 }
 const mockGetTransactionsByHash = jest.requireMock("@/services/ledger")
   .__mockGetTransactionsByHash as jest.Mock
 const mockLookupPayment = jest.requireMock("@/services/lnd")
   .__mockLookupPayment as jest.Mock
+const mockSendMigrationRetryReady = jest.requireMock("@/services/notifications")
+  .__mockSendMigrationRetryReady as jest.Mock
+
+// the notify hook is fire-and-forget: settle its microtasks before asserting on it
+const flushNotify = () => new Promise((resolve) => process.nextTick(resolve))
 
 describe("retryMigrationFlow", () => {
   const accountId = "account-id" as AccountId
   const paymentHash = "payment-hash" as PaymentHash
   const updatedByPrivilegedClientId = "privileged-client-id" as PrivilegedClientId
+  const kratosUserId = "kratos-user-id" as UserId
 
   const flowIn = (phase: MigrationFlowPhase, lnPaymentHash?: PaymentHash) =>
     ({
@@ -87,8 +111,10 @@ describe("retryMigrationFlow", () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mocks.resetForRetry.mockResolvedValue(resetFlow)
+    mocks.findAccountById.mockResolvedValue({ kratosUserId } as unknown as Account)
     mockGetTransactionsByHash.mockResolvedValue([])
     mockLookupPayment.mockResolvedValue({ status: PaymentStatus.Failed })
+    mockSendMigrationRetryReady.mockResolvedValue(true)
   })
 
   it("resets a FAILED flow whose hash never reached the ledger", async () => {
@@ -230,6 +256,67 @@ describe("retryMigrationFlow", () => {
 
     expect(result).toBe(notFound)
     expect(mocks.resetForRetry).not.toHaveBeenCalled()
+  })
+
+  it("notifies the account's kratos user exactly once after a successful grant", async () => {
+    mocks.findFlowByAccountId.mockResolvedValue(
+      flowIn(MigrationFlowPhase.Failed, paymentHash),
+    )
+
+    const result = await retryMigrationFlow({ accountId, updatedByPrivilegedClientId })
+    await flushNotify()
+
+    expect(result).toBe(resetFlow)
+    expect(mocks.findAccountById).toHaveBeenCalledWith(accountId)
+    expect(mockSendMigrationRetryReady).toHaveBeenCalledTimes(1)
+    expect(mockSendMigrationRetryReady).toHaveBeenCalledWith({ userId: kratosUserId })
+  })
+
+  it("sends nothing when the grant is refused", async () => {
+    mocks.findFlowByAccountId.mockResolvedValue(
+      flowIn(MigrationFlowPhase.Completed, paymentHash),
+    )
+
+    const result = await retryMigrationFlow({ accountId, updatedByPrivilegedClientId })
+    await flushNotify()
+
+    expect(result).toBeInstanceOf(MigrationStateConflictError)
+    expect(mockSendMigrationRetryReady).not.toHaveBeenCalled()
+  })
+
+  it("sends nothing when the reset itself fails", async () => {
+    mocks.findFlowByAccountId.mockResolvedValue(flowIn(MigrationFlowPhase.Failed))
+    mocks.resetForRetry.mockResolvedValue(new MigrationStateConflictError("phase moved"))
+
+    const result = await retryMigrationFlow({ accountId, updatedByPrivilegedClientId })
+    await flushNotify()
+
+    expect(result).toBeInstanceOf(MigrationStateConflictError)
+    expect(mockSendMigrationRetryReady).not.toHaveBeenCalled()
+  })
+
+  it("returns the grant unchanged when the post-reset account lookup fails", async () => {
+    mocks.findFlowByAccountId.mockResolvedValue(flowIn(MigrationFlowPhase.Failed))
+    mocks.findAccountById.mockResolvedValue(new Error("account lookup failed"))
+
+    const result = await retryMigrationFlow({ accountId, updatedByPrivilegedClientId })
+    await flushNotify()
+
+    expect(result).toBe(resetFlow)
+    expect(mockSendMigrationRetryReady).not.toHaveBeenCalled()
+  })
+
+  it("returns the grant unchanged when the notification send fails", async () => {
+    mocks.findFlowByAccountId.mockResolvedValue(flowIn(MigrationFlowPhase.Failed))
+    mockSendMigrationRetryReady.mockResolvedValue(
+      new Error("notifications service unreachable"),
+    )
+
+    const result = await retryMigrationFlow({ accountId, updatedByPrivilegedClientId })
+    await flushNotify()
+
+    expect(result).toBe(resetFlow)
+    expect(mockSendMigrationRetryReady).toHaveBeenCalledTimes(1)
   })
 
   it("propagates the CAS conflict raised by the repository", async () => {

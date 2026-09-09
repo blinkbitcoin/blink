@@ -644,6 +644,11 @@ export class NotificationEvent extends jspb.Message {
     getMarketingNotificationTriggered(): MarketingNotificationTriggered | undefined;
     setMarketingNotificationTriggered(value?: MarketingNotificationTriggered): NotificationEvent;
 
+    hasMigrationRetryReady(): boolean;
+    clearMigrationRetryReady(): void;
+    getMigrationRetryReady(): MigrationRetryReady | undefined;
+    setMigrationRetryReady(value?: MigrationRetryReady): NotificationEvent;
+
     getDataCase(): NotificationEvent.DataCase;
 
     serializeBinary(): Uint8Array;
@@ -666,6 +671,7 @@ export namespace NotificationEvent {
         transactionOccurred?: TransactionOccurred.AsObject,
         price?: PriceChanged.AsObject,
         marketingNotificationTriggered?: MarketingNotificationTriggered.AsObject,
+        migrationRetryReady?: MigrationRetryReady.AsObject,
     }
 
     export enum DataCase {
@@ -678,6 +684,7 @@ export namespace NotificationEvent {
         TRANSACTION_OCCURRED = 6,
         PRICE = 7,
         MARKETING_NOTIFICATION_TRIGGERED = 8,
+        MIGRATION_RETRY_READY = 9,
     }
 
 }
@@ -755,6 +762,26 @@ export class IdentityVerificationApproved extends jspb.Message {
 }
 
 export namespace IdentityVerificationApproved {
+    export type AsObject = {
+        userId: string,
+    }
+}
+
+export class MigrationRetryReady extends jspb.Message { 
+    getUserId(): string;
+    setUserId(value: string): MigrationRetryReady;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): MigrationRetryReady.AsObject;
+    static toObject(includeInstance: boolean, msg: MigrationRetryReady): MigrationRetryReady.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: MigrationRetryReady, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): MigrationRetryReady;
+    static deserializeBinaryFromReader(message: MigrationRetryReady, reader: jspb.BinaryReader): MigrationRetryReady;
+}
+
+export namespace MigrationRetryReady {
     export type AsObject = {
         userId: string,
     }

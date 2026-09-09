@@ -24,6 +24,7 @@ import {
   HandleNotificationEventRequest,
   NotificationEvent,
   MarketingNotificationTriggered,
+  MigrationRetryReady,
   DeepLink as ProtoDeepLink,
   HandleNotificationEventResponse,
   Action,
@@ -694,6 +695,32 @@ export const NotificationsService = (): INotificationsService => {
     }
   }
 
+  const sendMigrationRetryReady = async ({
+    userId,
+  }: {
+    userId: UserId
+  }): Promise<true | NotificationsServiceError> => {
+    try {
+      const migrationRetryReady = new MigrationRetryReady()
+      migrationRetryReady.setUserId(userId)
+
+      const event = new NotificationEvent()
+      event.setMigrationRetryReady(migrationRetryReady)
+
+      const request = new HandleNotificationEventRequest()
+      request.setEvent(event)
+
+      await notificationsGrpc.handleNotificationEvent(
+        request,
+        notificationsGrpc.notificationsMetadata,
+      )
+
+      return true
+    } catch (err) {
+      return handleCommonNotificationErrors(err)
+    }
+  }
+
   // trace everything except price update because it runs every 30 seconds
   return {
     priceUpdate,
@@ -716,6 +743,7 @@ export const NotificationsService = (): INotificationsService => {
         updateEmailAddress,
         removeEmailAddress,
         removePushDeviceToken,
+        sendMigrationRetryReady,
       },
     }),
   }
