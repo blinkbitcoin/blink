@@ -1,4 +1,4 @@
-import { reimburseFee } from "./reimburse-fee"
+import { reimburseFee, SenderDisplayAmounts } from "./reimburse-fee"
 
 import { reimburseFailedUsdPayment } from "./reimburse-failed-usd"
 
@@ -138,13 +138,7 @@ export const updatePendingPaymentByHash = wrapAsyncToRunInSpan({
 // diagnosis belongs.
 const resolveReimbursementDisplay = (
   pendingPayment: LedgerTransaction<WalletCurrency>,
-):
-  | {
-      senderDisplayAmount: DisplayCurrencyBaseAmount
-      senderDisplayCurrency: DisplayCurrency
-      senderDisplayCurrencyFractionDigits: number
-    }
-  | MissingExpectedDisplayAmountsForTransactionError => {
+): SenderDisplayAmounts | MissingExpectedDisplayAmountsForTransactionError => {
   const { displayAmount, displayFee, displayCurrency } = pendingPayment
   if (displayFee === undefined) {
     recordExceptionInCurrentSpan({
@@ -511,25 +505,19 @@ const lockedPendingPaymentSteps = async ({
   }
 
   const reimbursementDisplay = resolveReimbursementDisplay(pendingPayment)
+  let senderDisplay: SenderDisplayAmounts | undefined
   if (reimbursementDisplay instanceof Error) {
-    // Settlement already happened; a malformed display row skips only the fee
-    // reimbursement, with the reason recorded on the span.
+    // Settlement already happened; the reason is recorded and only the
+    // reimbursement's display conversion is skipped. reimburseFee still runs:
+    // in reserve-retention mode it needs no display metadata.
     recordExceptionInCurrentSpan({ error: reimbursementDisplay, level: ErrorLevel.Warn })
-
-    const finalized = await finalizePaymentUpdate({
-      result: true,
-      walletIds,
-      paymentHash,
-      journalId,
-      notificationRecipient,
-    })
-    await completeMigrationFlowForSettledPayment({ paymentHash })
-    return { result: finalized, paymentFailed: false }
+  } else {
+    senderDisplay = reimbursementDisplay
   }
 
   const reimbursed = await reimburseFee({
     paymentFlow,
-    ...reimbursementDisplay,
+    senderDisplay,
     journalId,
     actualFee: roundedUpFee,
     revealedPreImage,

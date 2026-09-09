@@ -60,9 +60,11 @@ describe("reimburseFee", () => {
     }) as unknown as PaymentFlow<WalletCurrency, WalletCurrency>
 
   const reimburseArgs = {
-    senderDisplayAmount: 50 as DisplayCurrencyBaseAmount,
-    senderDisplayCurrency: "USD" as DisplayCurrency,
-    senderDisplayCurrencyFractionDigits: 2,
+    senderDisplay: {
+      senderDisplayAmount: 50 as DisplayCurrencyBaseAmount,
+      senderDisplayCurrency: "USD" as DisplayCurrency,
+      senderDisplayCurrencyFractionDigits: 2,
+    },
     journalId: "journalId" as LedgerJournalId,
     actualFee: 20 as Satoshis,
   }
@@ -100,6 +102,44 @@ describe("reimburseFee", () => {
     expect(callArgs.metadata.type).toBe(LedgerTransactionType.LnReserveRetained)
     expect(callArgs.metadata.hash).toBe(paymentHash)
 
+    expect(recordReceiveOffChainSpy).not.toHaveBeenCalled()
+  })
+
+  it("retains the reserve without display metadata when the flag is enabled", async () => {
+    // Reserve retention computes the fee difference from wallet amounts alone;
+    // a pending row with unusable display metadata must not lose the journal.
+    mockGetSkipFeeReimbursement.mockReturnValue(true)
+    const recordReceiveOffChainSpy = jest.spyOn(LedgerFacadeImpl, "recordReceiveOffChain")
+    const recordLnFeeReserveRetainedSpy = jest
+      .spyOn(LedgerFacadeImpl, "recordLnFeeReserveRetained")
+      .mockResolvedValue(
+        true as unknown as Awaited<
+          ReturnType<typeof LedgerFacadeImpl.recordLnFeeReserveRetained>
+        >,
+      )
+
+    const result = await reimburseFee({
+      paymentFlow: buildPaymentFlow(),
+      journalId: reimburseArgs.journalId,
+      actualFee: reimburseArgs.actualFee,
+    })
+
+    expect(result).toBe(true)
+    expect(recordLnFeeReserveRetainedSpy).toHaveBeenCalledTimes(1)
+    expect(recordReceiveOffChainSpy).not.toHaveBeenCalled()
+  })
+
+  it("skips the reimbursement without display metadata when the flag is disabled", async () => {
+    mockGetSkipFeeReimbursement.mockReturnValue(false)
+    const recordReceiveOffChainSpy = jest.spyOn(LedgerFacadeImpl, "recordReceiveOffChain")
+
+    const result = await reimburseFee({
+      paymentFlow: buildPaymentFlow(),
+      journalId: reimburseArgs.journalId,
+      actualFee: reimburseArgs.actualFee,
+    })
+
+    expect(result).toBe(true)
     expect(recordReceiveOffChainSpy).not.toHaveBeenCalled()
   })
 
@@ -172,9 +212,11 @@ describe("reimburseFee", () => {
     const result = await reimburseFee({
       paymentFlow: buildPaymentFlow(),
       ...reimburseArgs,
-      senderDisplayAmount: 2197 as DisplayCurrencyBaseAmount,
-      senderDisplayCurrency: "PKR" as DisplayCurrency,
-      senderDisplayCurrencyFractionDigits: 2,
+      senderDisplay: {
+        senderDisplayAmount: 2197 as DisplayCurrencyBaseAmount,
+        senderDisplayCurrency: "PKR" as DisplayCurrency,
+        senderDisplayCurrencyFractionDigits: 2,
+      },
     })
 
     expect(result).toBe(true)
@@ -257,9 +299,11 @@ describe("reimburseFee (Model 2, finding B)", () => {
 
     const result = await reimburseFee({
       paymentFlow,
-      senderDisplayAmount: 50_000 as DisplayCurrencyBaseAmount,
-      senderDisplayCurrency: "USD" as DisplayCurrency,
-      senderDisplayCurrencyFractionDigits: 2,
+      senderDisplay: {
+        senderDisplayAmount: 50_000 as DisplayCurrencyBaseAmount,
+        senderDisplayCurrency: "USD" as DisplayCurrency,
+        senderDisplayCurrencyFractionDigits: 2,
+      },
       journalId: "journalId" as LedgerJournalId,
       actualFee: toSats(1000),
     })
@@ -292,9 +336,11 @@ describe("reimburseFee (Model 2, finding B)", () => {
 
     const result = await reimburseFee({
       paymentFlow,
-      senderDisplayAmount: 50_000 as DisplayCurrencyBaseAmount,
-      senderDisplayCurrency: "USD" as DisplayCurrency,
-      senderDisplayCurrencyFractionDigits: 2,
+      senderDisplay: {
+        senderDisplayAmount: 50_000 as DisplayCurrencyBaseAmount,
+        senderDisplayCurrency: "USD" as DisplayCurrency,
+        senderDisplayCurrencyFractionDigits: 2,
+      },
       journalId: "journalId" as LedgerJournalId,
       actualFee: toSats(0),
     })

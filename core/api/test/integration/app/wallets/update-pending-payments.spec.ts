@@ -363,6 +363,32 @@ describe("update pending payments", () => {
     )
   })
 
+  it("retains the fee reserve for a malformed display row when reimbursement is skipped", async () => {
+    // Production runs with skipFeeReimbursement: true. In that mode the
+    // reserve-retention journal needs no display metadata, so a missing
+    // display amount must not drop it.
+    const walletDescriptor = await createRandomUserAndBtcWallet()
+    const { paymentHash } = await recordSendLnPayment({
+      walletDescriptor,
+      paymentAmount: sendAmount,
+      bankFee,
+      displayAmounts: {
+        ...displaySendEurAmounts,
+        amountDisplayCurrency: undefined as unknown as DisplayCurrencyBaseAmount,
+      },
+      feeKnownInAdvance: false,
+    })
+    mockSuccessfulPayment({ paymentHash, walletDescriptor })
+    const settleSpy = jest.spyOn(LedgerFacadeImpl, "settlePendingLnSend")
+    const reserveRetainedSpy = jest.spyOn(LedgerFacadeImpl, "recordLnFeeReserveRetained")
+
+    const result = await updatePendingPaymentByHash({ paymentHash, logger: baseLogger })
+
+    expect(result).not.toBeInstanceOf(Error)
+    expect(settleSpy).toHaveBeenCalled()
+    expect(reserveRetainedSpy).toHaveBeenCalled()
+  })
+
   it("reimburses a confirmed payment with a zero display fee", async () => {
     // Regression: the previous falsy guard rejected displayFee: 0 rows and
     // skipped the reimbursement entirely; only absent fields are rejected now.

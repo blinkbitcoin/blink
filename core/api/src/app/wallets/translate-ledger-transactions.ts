@@ -21,7 +21,10 @@ const translateLedgerTransactionWithContext = (
   })
 
   return WalletTransactionHistory.fromLedger({
-    txn,
+    // Sanitize the row's persisted scale with the resolved value so a corrupt
+    // persisted field cannot win downstream: SettlementAmounts prefers
+    // txn.displayCurrencyFractionDigits over the argument.
+    txn: { ...txn, displayCurrencyFractionDigits: resolvedFractionDigits },
     nonEndUserWalletIds,
     memoSharingConfig,
     displayCurrencyFractionDigits: resolvedFractionDigits,

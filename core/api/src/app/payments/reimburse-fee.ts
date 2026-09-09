@@ -21,19 +21,24 @@ import { recordExceptionInCurrentSpan } from "@/services/tracing"
 
 const calc = AmountCalculator()
 
+// The display values the real reimbursement path needs, as one object so the
+// compiler enforces all-or-nothing. Absent only when the pending row's display
+// metadata is unusable; the caller records that case before calling.
+export type SenderDisplayAmounts = {
+  senderDisplayAmount: DisplayCurrencyBaseAmount
+  senderDisplayCurrency: DisplayCurrency
+  senderDisplayCurrencyFractionDigits: number
+}
+
 export const reimburseFee = async <S extends WalletCurrency, R extends WalletCurrency>({
   paymentFlow,
-  senderDisplayAmount,
-  senderDisplayCurrency,
-  senderDisplayCurrencyFractionDigits,
+  senderDisplay,
   journalId,
   actualFee,
   revealedPreImage,
 }: {
   paymentFlow: PaymentFlow<S, R>
-  senderDisplayAmount: DisplayCurrencyBaseAmount
-  senderDisplayCurrency: DisplayCurrency
-  senderDisplayCurrencyFractionDigits: number
+  senderDisplay?: SenderDisplayAmounts
   journalId: LedgerJournalId
   actualFee: Satoshis
   revealedPreImage?: RevealedPreImage
@@ -94,6 +99,19 @@ export const reimburseFee = async <S extends WalletCurrency, R extends WalletCur
 
     return true
   }
+
+  if (senderDisplay === undefined) {
+    // The reserve-retention branch above runs without display metadata; the
+    // real reimbursement needs it. The malformed row was already recorded by
+    // the caller, so skip the reimbursement without failing the settled
+    // payment.
+    return true
+  }
+  const {
+    senderDisplayAmount,
+    senderDisplayCurrency,
+    senderDisplayCurrencyFractionDigits,
+  } = senderDisplay
 
   const displayAmount = displayAmountFromNumber({
     amount: senderDisplayAmount,

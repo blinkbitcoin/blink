@@ -163,10 +163,38 @@ describe("translateLedgerTransactions", () => {
     expect(mockGetCurrencyFractionDigits).not.toHaveBeenCalled()
     expect(mockFromLedger).toHaveBeenCalledWith(
       expect.objectContaining({
-        txn: transaction,
+        txn: expect.objectContaining({
+          id: transaction.id,
+          // the row is sanitized: null becomes the resolved legacy scale
+          displayCurrencyFractionDigits: 2,
+        }),
         displayCurrencyFractionDigits: 2,
       }),
     )
+  })
+
+  it("sanitizes an out-of-range persisted scale on the history path", async () => {
+    const actualWalletsDomain =
+      jest.requireActual<typeof import("@/domain/wallets")>("@/domain/wallets")
+    mockFromLedger.mockImplementation(
+      actualWalletsDomain.WalletTransactionHistory.fromLedger,
+    )
+    const transaction = displayTransaction({
+      id: "cop-corrupt",
+      currency: "COP" as DisplayCurrency,
+      timestamp: "2026-07-03T14:22:08Z",
+      displayAmount: 103_900_513,
+      displayFee: 182_259,
+      fractionDigits: 20,
+    })
+
+    const result = await translateLedgerTransactions([transaction])
+
+    // The raw persisted 20 must not reach SettlementAmounts: the row renders
+    // at the legacy two-digit scale.
+    expect(result[0].settlementDisplayAmount).toBe("-1039005.13")
+    expect(result[0].settlementDisplayFee).toBe("1822.59")
+    expect(result[0].settlementDisplayCurrencyFractionDigits).toBe(2)
   })
 
   it("formats every CLDR 48 changed currency with its legacy precision", async () => {
