@@ -1,10 +1,7 @@
 import { updatePendingPaymentByHash } from "@/app/payments"
 
 import { toSats } from "@/domain/bitcoin"
-import {
-  LedgerTransactionType,
-  MissingExpectedDisplayAmountsForTransactionError,
-} from "@/domain/ledger"
+import { LedgerTransactionType } from "@/domain/ledger"
 import { FAILED_USD_MEMO } from "@/domain/ledger/ln-payment-state"
 import { PaymentStatus } from "@/domain/bitcoin/lightning"
 import { CouldNotFindLightningPaymentFlowError } from "@/domain/errors"
@@ -12,6 +9,8 @@ import { AmountCalculator, WalletCurrency, ZERO_CENTS, ZERO_SATS } from "@/domai
 import * as DisplayAmountsConverterImpl from "@/domain/fiat"
 
 import { baseLogger } from "@/services/logger"
+import * as ConfigImpl from "@/config"
+import { LedgerService } from "@/services/ledger"
 import * as LedgerFacadeImpl from "@/services/ledger/facade"
 import { Transaction } from "@/services/ledger/schema"
 import * as LndImpl from "@/services/lnd"
@@ -139,13 +138,21 @@ describe("update pending payments", () => {
       mockSuccessfulPayment({ paymentHash, walletDescriptor })
       const settleSpy = jest.spyOn(LedgerFacadeImpl, "settlePendingLnSend")
 
+      // updatePendingPaymentByHash delegates to a per-payment loop that
+      // discards inner results (returns void), so assert the observable
+      // outcome: the payment is not settled and stays pending.
       const result = await updatePendingPaymentByHash({
         paymentHash,
         logger: baseLogger,
       })
 
-      expect(result).toBeInstanceOf(MissingExpectedDisplayAmountsForTransactionError)
+      expect(result).not.toBeInstanceOf(Error)
       expect(settleSpy).not.toHaveBeenCalled()
+      const pendingCount = await LedgerService().getPendingPaymentsCount(
+        walletDescriptor.id,
+      )
+      if (pendingCount instanceof Error) throw pendingCount
+      expect(pendingCount).toBe(1)
     },
   )
 
@@ -164,6 +171,10 @@ describe("update pending payments", () => {
         feeKnownInAdvance: false,
       })
       mockSuccessfulPayment({ paymentHash, walletDescriptor })
+      // galoy.yaml sets skipFeeReimbursement: true, which routes the fee
+      // difference to the reserve-retained branch; disable it to exercise the
+      // reimbursement metadata path.
+      jest.spyOn(ConfigImpl, "getSkipFeeReimbursement").mockReturnValue(false)
       const reimbursementMetadataSpy = jest.spyOn(
         LedgerFacadeImpl,
         "LnFeeReimbursementReceiveLedgerMetadata",
@@ -202,6 +213,10 @@ describe("update pending payments", () => {
       { $set: { timestamp: new Date("2026-07-03T00:00:00Z") } },
     )
     mockSuccessfulPayment({ paymentHash, walletDescriptor })
+    // galoy.yaml sets skipFeeReimbursement: true, which routes the fee
+    // difference to the reserve-retained branch; disable it to exercise the
+    // reimbursement metadata path.
+    jest.spyOn(ConfigImpl, "getSkipFeeReimbursement").mockReturnValue(false)
     const reimbursementMetadataSpy = jest.spyOn(
       LedgerFacadeImpl,
       "LnFeeReimbursementReceiveLedgerMetadata",
@@ -230,6 +245,10 @@ describe("update pending payments", () => {
       feeKnownInAdvance: false,
     })
     mockSuccessfulPayment({ paymentHash, walletDescriptor })
+    // galoy.yaml sets skipFeeReimbursement: true, which routes the fee
+    // difference to the reserve-retained branch; disable it to exercise the
+    // reimbursement metadata path.
+    jest.spyOn(ConfigImpl, "getSkipFeeReimbursement").mockReturnValue(false)
     const reimbursementMetadataSpy = jest.spyOn(
       LedgerFacadeImpl,
       "LnFeeReimbursementReceiveLedgerMetadata",
@@ -262,6 +281,10 @@ describe("update pending payments", () => {
       feeKnownInAdvance: false,
     })
     mockSuccessfulPayment({ paymentHash, walletDescriptor })
+    // galoy.yaml sets skipFeeReimbursement: true, which routes the fee
+    // difference to the reserve-retained branch; disable it to exercise the
+    // reimbursement metadata path.
+    jest.spyOn(ConfigImpl, "getSkipFeeReimbursement").mockReturnValue(false)
     const reimbursementMetadataSpy = jest.spyOn(
       LedgerFacadeImpl,
       "LnFeeReimbursementReceiveLedgerMetadata",
