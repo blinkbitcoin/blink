@@ -769,6 +769,8 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "InvalidTotpCode":
     case "InvalidEmailAddress":
     case "NoContactForUsernameError":
+    case "NoContactForHandleError":
+    case "NoLocalUsernameForHandleError":
     case "NoWalletExistsForUserError":
     case "NoBtcWalletExistsForAccountError":
     case "CouldNotFindDefaultWalletForAccount":

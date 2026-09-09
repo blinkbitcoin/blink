@@ -1,10 +1,10 @@
-import { checkedToHandle } from "@/domain/contacts"
+import { checkedToHandle, contactToAccountContact } from "@/domain/contacts"
 import { NoContactForUsernameError } from "@/domain/errors"
 import { InvalidHandleError } from "@/domain/contacts/errors"
 
 import { ContactsRepository } from "@/services/mongoose"
 
-export const getContactByHandle = async ({
+export const getContactByUsername = async ({
   accountId,
   handle,
 }: {
@@ -22,13 +22,7 @@ export const getContactByHandle = async ({
   })
   if (contact instanceof Error) return new NoContactForUsernameError()
 
-  return {
-    id: contact.handle,
-    username: contact.handle,
-    handle: contact.handle,
-    alias: contact.displayName,
-    transactionsCount: contact.transactionsCount,
-  }
+  return contactToAccountContact(contact)
 }
 
 export const getContactsByAccountId = async ({
@@ -39,11 +33,5 @@ export const getContactsByAccountId = async ({
   const contacts = await ContactsRepository().listByAccountId({ accountId })
   if (contacts instanceof Error) return contacts
 
-  return contacts.map((contact) => ({
-    id: contact.handle,
-    username: contact.handle,
-    handle: contact.handle,
-    alias: contact.displayName,
-    transactionsCount: contact.transactionsCount,
-  }))
+  return contacts.map(contactToAccountContact)
 }

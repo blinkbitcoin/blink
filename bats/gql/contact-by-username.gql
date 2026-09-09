@@ -1,0 +1,17 @@
+query contactByUsername($username: Username!) {
+  me {
+    contactByUsername(username: $username) {
+      id
+      handle
+      alias
+      transactionsCount
+      transactions(first: 10) {
+        edges {
+          node {
+            id
+          }
+        }
+      }
+    }
+  }
+}
