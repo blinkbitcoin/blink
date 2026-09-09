@@ -2,24 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'ci(audit): GHSA-pinned waiver list for the dependency audit (#827)...'
-      sha: b4c04615cab25fe1065eaf291a478b7e9d192706
+      commitTitle: 'ci: clean up stale tilt stack before booting the bats suite (#832)'
+      sha: 2d879d0d64fd2cf5e4664f64f8dd229cf6d8461e
       tags:
-      - 0.22.58-6-gb4c04615c
+      - 0.22.58-10-g2d879d0d6
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'ci(audit): GHSA-pinned waiver list for the dependency audit (#827)...'
-      sha: b4c04615cab25fe1065eaf291a478b7e9d192706
+      commitTitle: 'ci: clean up stale tilt stack before booting the bats suite (#832)'
+      sha: 2d879d0d64fd2cf5e4664f64f8dd229cf6d8461e
       tags:
-      - 0.22.58-6-gb4c04615c
+      - 0.22.58-10-g2d879d0d6
     path: schemas
   - git:
-      commitTitle: 'ci(audit): GHSA-pinned waiver list for the dependency audit (#827)...'
-      sha: b4c04615cab25fe1065eaf291a478b7e9d192706
+      commitTitle: 'ci: clean up stale tilt stack before booting the bats suite (#832)'
+      sha: 2d879d0d64fd2cf5e4664f64f8dd229cf6d8461e
       tags:
-      - 0.22.58-6-gb4c04615c
+      - 0.22.58-10-g2d879d0d6
     path: gql
   path: graphql
 kind: LockConfig
