@@ -1,0 +1,17 @@
+query contactByHandle($handle: ContactHandle!) {
+  me {
+    contactByHandle(handle: $handle) {
+      id
+      handle
+      alias
+      transactionsCount
+      transactions(first: 10) {
+        edges {
+          node {
+            id
+          }
+        }
+      }
+    }
+  }
+}
