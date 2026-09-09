@@ -1,6 +1,5 @@
 import { getTransactionForWalletByJournalId } from "./get-transaction-by-journal-id"
 
-import { displayAmountFromNumber } from "@/domain/fiat"
 import { InvalidLedgerTransactionStateError } from "@/domain/errors"
 import { WalletCurrency, paymentAmountFromNumber } from "@/domain/shared"
 
@@ -39,15 +38,6 @@ export const settlePayout = async (
     currency: wallet.currency,
   })
   if (paymentAmount instanceof Error) return paymentAmount
-
-  const { displayAmount, displayCurrency } = ledgerTxn
-  if (displayCurrency === undefined) return new InvalidLedgerTransactionStateError()
-  const displayPaymentAmount = displayAmountFromNumber({
-    amount: displayAmount || 0,
-    currency: displayCurrency,
-    fractionDigits: ledgerTxn.displayCurrencyFractionDigits,
-  })
-  if (displayPaymentAmount instanceof Error) return displayPaymentAmount
 
   const { txHash } = ledgerTxn
   if (txHash === undefined) return new InvalidLedgerTransactionStateError()

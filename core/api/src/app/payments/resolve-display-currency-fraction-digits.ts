@@ -1,9 +1,11 @@
-import { needsLegacyPricePrecision } from "@/app/prices/legacy-display-currency-precision"
+import {
+  getLegacyPriceFractionDigits,
+  needsLegacyPricePrecision,
+} from "@/app/prices/legacy-display-currency-precision"
 import { getCurrencyMajorExponent } from "@/domain/fiat"
-import { getCurrencyFractionDigits } from "@/services/price/get-currency-fraction-digits"
 import { addAttributesToCurrentSpan } from "@/services/tracing"
 
-export const resolvePaymentDisplayCurrencyFractionDigits = async ({
+export const resolvePaymentDisplayCurrencyFractionDigits = ({
   displayCurrency,
   persistedFractionDigits,
   timestamp,
@@ -13,40 +15,36 @@ export const resolvePaymentDisplayCurrencyFractionDigits = async ({
   persistedFractionDigits?: number | null
   timestamp: Date
   logger: Logger
-}): Promise<number> => {
+}): number => {
   if (persistedFractionDigits !== undefined && persistedFractionDigits !== null) {
     return persistedFractionDigits
   }
 
-  let fractionDigits = getCurrencyMajorExponent(displayCurrency)
-  let source = "runtimeIcuFallback"
-  let error: Error | undefined
+  // persistedFractionDigits is provably missing at this point (the early return
+  // above handled a persisted value), so isMissing is always true inside the
+  // predicate. The parameter stays in the shared signature for callers that do
+  // not pre-filter, e.g. translate-ledger-transactions.
+  //
+  // Rows selected here are proven pre-cutoff members of ICU_48_CHANGED_CURRENCIES,
+  // so their write-time scale is statically known: use the immutable legacy
+  // constant. Current price metadata may already publish the post-CLDR-48 value
+  // and must never reach legacy rows, same policy as
+  // translate-ledger-transactions.
+  const legacyFractionDigits = needsLegacyPricePrecision({
+    currency: displayCurrency,
+    fractionDigits: persistedFractionDigits,
+    timestamp,
+  })
+    ? getLegacyPriceFractionDigits(displayCurrency)
+    : undefined
 
-  if (
-    needsLegacyPricePrecision({
-      currency: displayCurrency,
-      fractionDigits: persistedFractionDigits,
-      timestamp,
-    })
-  ) {
-    try {
-      const configuredFractionDigits = await getCurrencyFractionDigits({
-        currency: displayCurrency,
-      })
-      if (configuredFractionDigits instanceof Error) {
-        error = configuredFractionDigits
-      } else {
-        fractionDigits = configuredFractionDigits
-        source = "priceMetadataLegacyFallback"
-      }
-    } catch (err) {
-      error = err instanceof Error ? err : new Error(String(err))
-    }
-  }
+  const source =
+    legacyFractionDigits !== undefined ? "legacyConstantFallback" : "runtimeIcuFallback"
+  const fractionDigits = legacyFractionDigits ?? getCurrencyMajorExponent(displayCurrency)
 
   logger.warn(
-    { error, displayCurrency, fallbackFractionDigits: fractionDigits, source },
-    "using fallback precision for legacy payment",
+    { displayCurrency, fallbackFractionDigits: fractionDigits, source },
+    "using fallback display precision for payment without persisted scale",
   )
   addAttributesToCurrentSpan({
     "payment.displayCurrencyFractionDigitsSource": source,

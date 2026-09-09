@@ -4,6 +4,7 @@ import { LedgerTransactionType } from "@/domain/ledger"
 import { WalletCurrency } from "@/domain/shared"
 
 jest.mock("@/config", () => ({
+  ...jest.requireActual("@/config"),
   getSkipFeeReimbursement: jest.fn(),
 }))
 

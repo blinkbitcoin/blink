@@ -354,25 +354,39 @@ const lockedPendingPaymentSteps = async ({
     // pendingPayment is a different version to latest payment from lnd
     satsAmount !== toSats(paymentFlow.btcPaymentAmount.amount)
 
-  const { displayAmount, displayFee, displayCurrency } = pendingPayment
-  if (
-    !paymentFailed &&
-    !pendingPayment.feeKnownInAdvance &&
-    (displayAmount === undefined ||
-      displayFee === undefined ||
-      displayCurrency === undefined)
-  ) {
-    return new MissingExpectedDisplayAmountsForTransactionError()
-  }
-
-  let reimbursementFractionDigits: number | undefined
+  let reimbursementDisplay:
+    | {
+        senderDisplayAmount: DisplayCurrencyBaseAmount
+        senderDisplayCurrency: DisplayCurrency
+        senderDisplayCurrencyFractionDigits: number
+      }
+    | undefined
   if (!paymentFailed && !pendingPayment.feeKnownInAdvance) {
-    reimbursementFractionDigits = await resolvePaymentDisplayCurrencyFractionDigits({
-      displayCurrency: displayCurrency!,
-      persistedFractionDigits: pendingPayment.displayCurrencyFractionDigits,
-      timestamp: pendingPayment.timestamp,
-      logger: paymentLogger,
-    })
+    const { displayAmount, displayFee, displayCurrency } = pendingPayment
+    // displayFee is not consumed by reimburseFee, but a row missing any of the
+    // three display fields is too malformed to trust for reimbursement.
+    // Comparing against undefined (not falsy) keeps displayFee: 0 valid.
+    if (
+      displayAmount === undefined ||
+      displayFee === undefined ||
+      displayCurrency === undefined
+    ) {
+      return new MissingExpectedDisplayAmountsForTransactionError()
+    }
+
+    const senderDisplayCurrencyFractionDigits =
+      resolvePaymentDisplayCurrencyFractionDigits({
+        displayCurrency,
+        persistedFractionDigits: pendingPayment.displayCurrencyFractionDigits,
+        timestamp: pendingPayment.timestamp,
+        logger: paymentLogger,
+      })
+
+    reimbursementDisplay = {
+      senderDisplayAmount: displayAmount,
+      senderDisplayCurrency: displayCurrency,
+      senderDisplayCurrencyFractionDigits,
+    }
   }
 
   const settled = await LedgerFacade.settlePendingLnSend(paymentHash)
@@ -478,12 +492,11 @@ const lockedPendingPaymentSteps = async ({
     return { result: finalized, paymentFailed: false }
   }
 
+  if (!reimbursementDisplay) return new MissingExpectedDisplayAmountsForTransactionError()
+
   const reimbursed = await reimburseFee({
     paymentFlow,
-    // These values are validated before the ledger transaction is settled.
-    senderDisplayAmount: displayAmount!,
-    senderDisplayCurrency: displayCurrency!,
-    senderDisplayCurrencyFractionDigits: reimbursementFractionDigits!,
+    ...reimbursementDisplay,
     journalId,
     actualFee: roundedUpFee,
     revealedPreImage,

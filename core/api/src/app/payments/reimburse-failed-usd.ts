@@ -51,14 +51,12 @@ export const reimburseFailedUsdPayment = async <
     displayCurrency = account.displayCurrency
   }
 
-  const displayCurrencyFractionDigits = await resolvePaymentDisplayCurrencyFractionDigits(
-    {
-      displayCurrency,
-      persistedFractionDigits: pendingPayment.displayCurrencyFractionDigits,
-      timestamp: pendingPayment.timestamp,
-      logger,
-    },
-  )
+  const displayCurrencyFractionDigits = resolvePaymentDisplayCurrencyFractionDigits({
+    displayCurrency,
+    persistedFractionDigits: pendingPayment.displayCurrencyFractionDigits,
+    timestamp: pendingPayment.timestamp,
+    logger,
+  })
 
   const paymentHash = paymentFlow.paymentHashForFlow()
   if (paymentHash instanceof Error) return paymentHash
