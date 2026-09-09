@@ -14,3 +14,6 @@ circle_threshold_reached.inner.body: "Üdvözöltél %{threshold} embert a Blink
 
 circle_threshold_reached.outer.title: "Erősödik a Külső Kör \U0001F4AA"
 circle_threshold_reached.outer.body: "A Külső Köröd elérte a %{threshold} embert. Terjeszted a Bitcoint!"
+
+migration_retry_ready.title: "A migrációd készen áll az újrapróbálkozásra"
+migration_retry_ready.body: "Visszaállítottuk a migrációdat, hogy újra megpróbálhasd. Koppints, hogy folytasd a pénzed átmozgatását."

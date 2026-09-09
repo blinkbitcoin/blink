@@ -174,12 +174,18 @@ impl Currency {
     }
 
     /// Checks if a currency has ISO 4217 exponent 0 but the system tracks amounts
-    /// with 2 decimal places internally. These currencies need special handling
-    /// when converting from minor units.
+    /// with 2 decimal places internally. The carve-out applies only when the
+    /// sender confirms the two-decimal scale (`Some(2)`) or omits the field
+    /// entirely, which is the shape of replayed pre-`fraction_digits` payloads.
     ///
     /// Examples:
-    /// - HUF (Hungarian Forint): ISO exponent 0, but system uses fillér (1/100 HUF)
-    fn uses_internal_decimal_places(&self) -> bool {
+    /// - HUF (Hungarian Forint): ISO exponent 0, but the system tracks fillér
+    ///   (1/100 HUF), so 366519 minor units must display as 3665.19Ft, not
+    ///   366519Ft. See https://github.com/blinkbitcoin/blink-mobile/issues/3234
+    ///
+    /// TODO: once every producer sends `fraction_digits`, this carve-out is
+    /// redundant with the generic explicit-scale branch and can be deleted.
+    fn tracks_minor_units_at_two_decimals(&self) -> bool {
         match self {
             Currency::Iso(c) => {
                 // Currencies with exponent 0 where the system tracks sub-units
@@ -194,27 +200,38 @@ impl Currency {
         f: &mut std::fmt::Formatter<'_>,
         minor_units: u64,
         round_to_major: bool,
+        fraction_digits: Option<u32>,
     ) -> std::fmt::Result {
         match self {
             Currency::Iso(c) => {
-                // For currencies like HUF where ISO exponent is 0 but the system
-                // internally tracks amounts with 2 decimal places, we need to
-                // manually divide by 100 before formatting.
-                if self.uses_internal_decimal_places() && c.exponent == 0 {
-                    // System sends e.g. 366519 fillér, we need 3665.19 HUF
-                    // Since rusty_money won't divide (exponent 0), we do it manually
-                    // Format: "3665.19Ft" to match transaction history display
+                // Preserve the existing HUF representation when core explicitly
+                // confirms the internal two-decimal contract.
+                if self.tracks_minor_units_at_two_decimals()
+                    && c.exponent == 0
+                    && fraction_digits.unwrap_or(2) == 2
+                {
                     let major = minor_units / 100;
                     let cents = minor_units % 100;
                     return write!(f, "{}.{:02}{}", major, cents, c.symbol);
                 }
-                let adjusted_units = minor_units;
+
+                if let Some(exponent) = fraction_digits {
+                    let configured_currency = rusty_money::iso::Currency { exponent, ..**c };
+                    let money =
+                        rusty_money::Money::from_minor(minor_units as i64, &configured_currency);
+                    let money = if round_to_major {
+                        money.round(0, rusty_money::Round::HalfUp)
+                    } else {
+                        money
+                    };
+                    return write!(f, "{money}");
+                }
 
                 let money = if round_to_major {
-                    rusty_money::Money::from_minor(adjusted_units as i64, *c)
+                    rusty_money::Money::from_minor(minor_units as i64, *c)
                         .round(0, rusty_money::Round::HalfUp)
                 } else {
-                    rusty_money::Money::from_minor(adjusted_units as i64, *c)
+                    rusty_money::Money::from_minor(minor_units as i64, *c)
                 };
 
                 write!(f, "{money}")

@@ -316,6 +316,17 @@ impl NotificationsService for Notifications {
             }
             Some(proto::NotificationEvent {
                 data:
+                    Some(proto::notification_event::Data::MigrationRetryReady(
+                        proto::MigrationRetryReady { user_id },
+                    )),
+            }) => {
+                let user_id = GaloyUserId::from(user_id);
+                self.app
+                    .handle_single_user_event(user_id, notification_event::MigrationRetryReady {})
+                    .await?;
+            }
+            Some(proto::NotificationEvent {
+                data:
                     Some(proto::notification_event::Data::IdentityVerificationDeclined(
                         proto::IdentityVerificationDeclined {
                             user_id,

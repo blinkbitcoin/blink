@@ -66,3 +66,6 @@ price_changed.down.body: "Bitcoin is down %{change_percent}% in the last day to 
 
 security.link_email_reminder.title: "Link Email to Secure Account"
 security.link_email_reminder.body: "Link your email to secure your account and receive important updates"
+
+migration_retry_ready.title: "Your migration is ready to retry"
+migration_retry_ready.body: "We've reset your migration so you can try again. Tap to continue moving your funds."

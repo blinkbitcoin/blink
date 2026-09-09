@@ -60,3 +60,6 @@ transaction.paid_invoice.body_display_currency: "+%{displayCurrencyAmount} | %{f
 
 price_changed.up.title: "Bitcoin este în mișcare!"
 price_changed.up.body: "Bitcoin este în creștere cu %{change_percent}% în ultima zi până la %{price}!"
+
+migration_retry_ready.title: "Migrarea ta este gata pentru o nouă încercare"
+migration_retry_ready.body: "Ți-am resetat migrarea ca să poți încerca din nou. Apasă pentru a continua mutarea fondurilor tale."

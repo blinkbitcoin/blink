@@ -63,3 +63,6 @@ price_changed.up.body: "Bitcoin s'ha incrementat %{change_percent}% l'útim dia 
 
 security.link_email_reminder.title: "Enllaça el correu electrònic per assegurar el compte"
 security.link_email_reminder.body: "Enllaça el teu correu electrònic per protegir el teu compte i rebre actualitzacions importants"
+
+migration_retry_ready.title: "La teva migració està llesta per tornar-ho a provar"
+migration_retry_ready.body: "Hem restablert la teva migració perquè ho puguis tornar a intentar. Toca per continuar movent els teus fons."

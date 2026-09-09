@@ -153,6 +153,7 @@ message NotificationEvent {
     TransactionOccurred transaction_occurred = 6;
     PriceChanged price = 7;
     MarketingNotificationTriggered marketing_notification_triggered = 8;
+    MigrationRetryReady migration_retry_ready = 9;
   }
 }
 
@@ -181,6 +182,10 @@ message CircleThresholdReached {
 }
 
 message IdentityVerificationApproved {
+  string user_id = 1;
+}
+
+message MigrationRetryReady {
   string user_id = 1;
 }
 
@@ -222,6 +227,7 @@ enum TransactionType {
 message Money {
   string currency_code = 1;
   uint64 minor_units = 2;
+  optional uint32 fraction_digits = 3;
 }
 
 enum PriceChangeDirection {
