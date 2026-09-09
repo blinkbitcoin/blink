@@ -426,6 +426,28 @@ export type BlockInfo = {
   readonly blockHeight?: Maybe<Scalars['Int']['output']>;
 };
 
+export type BtcMapPlace = {
+  readonly __typename: 'BtcMapPlace';
+  readonly externalId: Scalars['String']['output'];
+  readonly id: Scalars['ID']['output'];
+  readonly origin: Scalars['String']['output'];
+};
+
+export type BtcMapPlacePayload = {
+  readonly __typename: 'BtcMapPlacePayload';
+  readonly errors: ReadonlyArray<Error>;
+  readonly place?: Maybe<BtcMapPlace>;
+};
+
+export type BtcMapPlaceSubmitInput = {
+  readonly category: Scalars['String']['input'];
+  readonly latitude: Scalars['Float']['input'];
+  readonly longitude: Scalars['Float']['input'];
+  readonly name: Scalars['String']['input'];
+  /** Client-generated UUID identifying this submission. Reuse the same value when retrying after a failed or ambiguous request so the retry does not create a duplicate place. Resubmitting with the same submissionId and different place fields updates the original submission instead. */
+  readonly submissionId: Scalars['ID']['input'];
+};
+
 export type BuildInformation = {
   readonly __typename: 'BuildInformation';
   readonly commitHash?: Maybe<Scalars['String']['output']>;
@@ -1195,6 +1217,8 @@ export type Mutation = {
   readonly apiKeyRemoveLimit: ApiKeySetLimitPayload;
   readonly apiKeyRevoke: ApiKeyRevokePayload;
   readonly apiKeySetLimit: ApiKeySetLimitPayload;
+  /** Submit a place to BTC Map. Submissions from trusted sources appear on BTC Map right away; BTC Map editors process them later for eventual inclusion in OpenStreetMap. */
+  readonly btcMapPlaceSubmit: BtcMapPlacePayload;
   readonly callbackEndpointAdd: CallbackEndpointAddPayload;
   readonly callbackEndpointDelete: SuccessPayload;
   readonly captchaCreateChallenge: CaptchaCreateChallengePayload;
@@ -1369,6 +1393,11 @@ export type MutationApiKeyRevokeArgs = {
 
 export type MutationApiKeySetLimitArgs = {
   input: ApiKeySetLimitInput;
+};
+
+
+export type MutationBtcMapPlaceSubmitArgs = {
+  input: BtcMapPlaceSubmitInput;
 };
 
 
@@ -2334,6 +2363,12 @@ export type User = {
   readonly __typename: 'User';
   readonly apiKeys: ReadonlyArray<ApiKey>;
   /**
+   * Get single contact details by its handle, which is either a
+   * username or a Lightning address.
+   * Can include the transactions associated with the contact.
+   */
+  readonly contactByHandle: UserContact;
+  /**
    * Get single contact details.
    * Can include the transactions associated with the contact.
    * @deprecated will be moved to Accounts
@@ -2369,6 +2404,11 @@ export type User = {
    * @deprecated will be moved to @Handle in Account and Wallet
    */
   readonly username?: Maybe<Scalars['Username']['output']>;
+};
+
+
+export type UserContactByHandleArgs = {
+  handle: Scalars['ContactHandle']['input'];
 };
 
 
@@ -3833,6 +3873,10 @@ export type ResolversTypes = {
   Authorization: ResolverTypeWrapper<Authorization>;
   BTCWallet: ResolverTypeWrapper<Omit<BtcWallet, 'invoiceByPaymentHash' | 'invoices' | 'pendingIncomingTransactions' | 'pendingIncomingTransactionsByAddress' | 'transactionById' | 'transactions' | 'transactionsByAddress' | 'transactionsByPaymentHash' | 'transactionsByPaymentRequest'> & { invoiceByPaymentHash: ResolversTypes['Invoice'], invoices?: Maybe<ResolversTypes['InvoiceConnection']>, pendingIncomingTransactions: ReadonlyArray<ResolversTypes['Transaction']>, pendingIncomingTransactionsByAddress: ReadonlyArray<ResolversTypes['Transaction']>, transactionById: ResolversTypes['Transaction'], transactions?: Maybe<ResolversTypes['TransactionConnection']>, transactionsByAddress?: Maybe<ResolversTypes['TransactionConnection']>, transactionsByPaymentHash: ReadonlyArray<ResolversTypes['Transaction']>, transactionsByPaymentRequest: ReadonlyArray<ResolversTypes['Transaction']> }>;
   BlockInfo: ResolverTypeWrapper<BlockInfo>;
+  BtcMapPlace: ResolverTypeWrapper<BtcMapPlace>;
+  BtcMapPlacePayload: ResolverTypeWrapper<Omit<BtcMapPlacePayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
+  BtcMapPlaceSubmitInput: BtcMapPlaceSubmitInput;
+  Float: ResolverTypeWrapper<Scalars['Float']['output']>;
   BuildInformation: ResolverTypeWrapper<BuildInformation>;
   CallbackEndpoint: ResolverTypeWrapper<CallbackEndpoint>;
   CallbackEndpointAddInput: CallbackEndpointAddInput;
@@ -3853,7 +3897,6 @@ export type ResolversTypes = {
   ContactPayload: ResolverTypeWrapper<Omit<ContactPayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
   ContactType: ContactType;
   Coordinates: ResolverTypeWrapper<Coordinates>;
-  Float: ResolverTypeWrapper<Scalars['Float']['output']>;
   Country: ResolverTypeWrapper<Country>;
   CountryCode: ResolverTypeWrapper<Scalars['CountryCode']['output']>;
   Currency: ResolverTypeWrapper<Currency>;
@@ -4021,7 +4064,7 @@ export type ResolversTypes = {
   TxStatus: TxStatus;
   UpgradePayload: ResolverTypeWrapper<Omit<UpgradePayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
   UsdWallet: ResolverTypeWrapper<Omit<UsdWallet, 'invoiceByPaymentHash' | 'invoices' | 'pendingIncomingTransactions' | 'pendingIncomingTransactionsByAddress' | 'transactionById' | 'transactions' | 'transactionsByAddress' | 'transactionsByPaymentHash' | 'transactionsByPaymentRequest'> & { invoiceByPaymentHash: ResolversTypes['Invoice'], invoices?: Maybe<ResolversTypes['InvoiceConnection']>, pendingIncomingTransactions: ReadonlyArray<ResolversTypes['Transaction']>, pendingIncomingTransactionsByAddress: ReadonlyArray<ResolversTypes['Transaction']>, transactionById: ResolversTypes['Transaction'], transactions?: Maybe<ResolversTypes['TransactionConnection']>, transactionsByAddress?: Maybe<ResolversTypes['TransactionConnection']>, transactionsByPaymentHash: ReadonlyArray<ResolversTypes['Transaction']>, transactionsByPaymentRequest: ReadonlyArray<ResolversTypes['Transaction']> }>;
-  User: ResolverTypeWrapper<Omit<User, 'contactByUsername' | 'contacts' | 'defaultAccount' | 'statefulNotifications' | 'statefulNotificationsWithoutBulletinEnabled' | 'unacknowledgedStatefulNotificationsWithBulletinEnabled'> & { contactByUsername: ResolversTypes['UserContact'], contacts: ReadonlyArray<ResolversTypes['UserContact']>, defaultAccount: ResolversTypes['Account'], statefulNotifications: ResolversTypes['StatefulNotificationConnection'], statefulNotificationsWithoutBulletinEnabled: ResolversTypes['StatefulNotificationConnection'], unacknowledgedStatefulNotificationsWithBulletinEnabled: ResolversTypes['StatefulNotificationConnection'] }>;
+  User: ResolverTypeWrapper<Omit<User, 'contactByHandle' | 'contactByUsername' | 'contacts' | 'defaultAccount' | 'statefulNotifications' | 'statefulNotificationsWithoutBulletinEnabled' | 'unacknowledgedStatefulNotificationsWithBulletinEnabled'> & { contactByHandle: ResolversTypes['UserContact'], contactByUsername: ResolversTypes['UserContact'], contacts: ReadonlyArray<ResolversTypes['UserContact']>, defaultAccount: ResolversTypes['Account'], statefulNotifications: ResolversTypes['StatefulNotificationConnection'], statefulNotificationsWithoutBulletinEnabled: ResolversTypes['StatefulNotificationConnection'], unacknowledgedStatefulNotificationsWithBulletinEnabled: ResolversTypes['StatefulNotificationConnection'] }>;
   UserContact: ResolverTypeWrapper<Omit<UserContact, 'transactions'> & { transactions?: Maybe<ResolversTypes['TransactionConnection']> }>;
   UserContactUpdateAliasInput: UserContactUpdateAliasInput;
   UserContactUpdateAliasPayload: ResolverTypeWrapper<Omit<UserContactUpdateAliasPayload, 'contact' | 'errors'> & { contact?: Maybe<ResolversTypes['UserContact']>, errors: ReadonlyArray<ResolversTypes['Error']> }>;
@@ -4095,6 +4138,10 @@ export type ResolversParentTypes = {
   Authorization: Authorization;
   BTCWallet: Omit<BtcWallet, 'invoiceByPaymentHash' | 'invoices' | 'pendingIncomingTransactions' | 'pendingIncomingTransactionsByAddress' | 'transactionById' | 'transactions' | 'transactionsByAddress' | 'transactionsByPaymentHash' | 'transactionsByPaymentRequest'> & { invoiceByPaymentHash: ResolversParentTypes['Invoice'], invoices?: Maybe<ResolversParentTypes['InvoiceConnection']>, pendingIncomingTransactions: ReadonlyArray<ResolversParentTypes['Transaction']>, pendingIncomingTransactionsByAddress: ReadonlyArray<ResolversParentTypes['Transaction']>, transactionById: ResolversParentTypes['Transaction'], transactions?: Maybe<ResolversParentTypes['TransactionConnection']>, transactionsByAddress?: Maybe<ResolversParentTypes['TransactionConnection']>, transactionsByPaymentHash: ReadonlyArray<ResolversParentTypes['Transaction']>, transactionsByPaymentRequest: ReadonlyArray<ResolversParentTypes['Transaction']> };
   BlockInfo: BlockInfo;
+  BtcMapPlace: BtcMapPlace;
+  BtcMapPlacePayload: Omit<BtcMapPlacePayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
+  BtcMapPlaceSubmitInput: BtcMapPlaceSubmitInput;
+  Float: Scalars['Float']['output'];
   BuildInformation: BuildInformation;
   CallbackEndpoint: CallbackEndpoint;
   CallbackEndpointAddInput: CallbackEndpointAddInput;
@@ -4114,7 +4161,6 @@ export type ResolversParentTypes = {
   ContactId: Scalars['ContactId']['output'];
   ContactPayload: Omit<ContactPayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
   Coordinates: Coordinates;
-  Float: Scalars['Float']['output'];
   Country: Country;
   CountryCode: Scalars['CountryCode']['output'];
   Currency: Currency;
@@ -4265,7 +4311,7 @@ export type ResolversParentTypes = {
   TxExternalId: Scalars['TxExternalId']['output'];
   UpgradePayload: Omit<UpgradePayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
   UsdWallet: Omit<UsdWallet, 'invoiceByPaymentHash' | 'invoices' | 'pendingIncomingTransactions' | 'pendingIncomingTransactionsByAddress' | 'transactionById' | 'transactions' | 'transactionsByAddress' | 'transactionsByPaymentHash' | 'transactionsByPaymentRequest'> & { invoiceByPaymentHash: ResolversParentTypes['Invoice'], invoices?: Maybe<ResolversParentTypes['InvoiceConnection']>, pendingIncomingTransactions: ReadonlyArray<ResolversParentTypes['Transaction']>, pendingIncomingTransactionsByAddress: ReadonlyArray<ResolversParentTypes['Transaction']>, transactionById: ResolversParentTypes['Transaction'], transactions?: Maybe<ResolversParentTypes['TransactionConnection']>, transactionsByAddress?: Maybe<ResolversParentTypes['TransactionConnection']>, transactionsByPaymentHash: ReadonlyArray<ResolversParentTypes['Transaction']>, transactionsByPaymentRequest: ReadonlyArray<ResolversParentTypes['Transaction']> };
-  User: Omit<User, 'contactByUsername' | 'contacts' | 'defaultAccount' | 'statefulNotifications' | 'statefulNotificationsWithoutBulletinEnabled' | 'unacknowledgedStatefulNotificationsWithBulletinEnabled'> & { contactByUsername: ResolversParentTypes['UserContact'], contacts: ReadonlyArray<ResolversParentTypes['UserContact']>, defaultAccount: ResolversParentTypes['Account'], statefulNotifications: ResolversParentTypes['StatefulNotificationConnection'], statefulNotificationsWithoutBulletinEnabled: ResolversParentTypes['StatefulNotificationConnection'], unacknowledgedStatefulNotificationsWithBulletinEnabled: ResolversParentTypes['StatefulNotificationConnection'] };
+  User: Omit<User, 'contactByHandle' | 'contactByUsername' | 'contacts' | 'defaultAccount' | 'statefulNotifications' | 'statefulNotificationsWithoutBulletinEnabled' | 'unacknowledgedStatefulNotificationsWithBulletinEnabled'> & { contactByHandle: ResolversParentTypes['UserContact'], contactByUsername: ResolversParentTypes['UserContact'], contacts: ReadonlyArray<ResolversParentTypes['UserContact']>, defaultAccount: ResolversParentTypes['Account'], statefulNotifications: ResolversParentTypes['StatefulNotificationConnection'], statefulNotificationsWithoutBulletinEnabled: ResolversParentTypes['StatefulNotificationConnection'], unacknowledgedStatefulNotificationsWithBulletinEnabled: ResolversParentTypes['StatefulNotificationConnection'] };
   UserContact: Omit<UserContact, 'transactions'> & { transactions?: Maybe<ResolversParentTypes['TransactionConnection']> };
   UserContactUpdateAliasInput: UserContactUpdateAliasInput;
   UserContactUpdateAliasPayload: Omit<UserContactUpdateAliasPayload, 'contact' | 'errors'> & { contact?: Maybe<ResolversParentTypes['UserContact']>, errors: ReadonlyArray<ResolversParentTypes['Error']> };
@@ -4526,6 +4572,19 @@ export type BtcWalletResolvers<ContextType = any, ParentType extends ResolversPa
 export type BlockInfoResolvers<ContextType = any, ParentType extends ResolversParentTypes['BlockInfo'] = ResolversParentTypes['BlockInfo']> = {
   blockHash?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   blockHeight?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
+export type BtcMapPlaceResolvers<ContextType = any, ParentType extends ResolversParentTypes['BtcMapPlace'] = ResolversParentTypes['BtcMapPlace']> = {
+  externalId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  origin?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
+export type BtcMapPlacePayloadResolvers<ContextType = any, ParentType extends ResolversParentTypes['BtcMapPlacePayload'] = ResolversParentTypes['BtcMapPlacePayload']> = {
+  errors?: Resolver<ReadonlyArray<ResolversTypes['Error']>, ParentType, ContextType>;
+  place?: Resolver<Maybe<ResolversTypes['BtcMapPlace']>, ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
@@ -4944,6 +5003,7 @@ export type MutationResolvers<ContextType = any, ParentType extends ResolversPar
   apiKeyRemoveLimit?: Resolver<ResolversTypes['ApiKeySetLimitPayload'], ParentType, ContextType, RequireFields<MutationApiKeyRemoveLimitArgs, 'input'>>;
   apiKeyRevoke?: Resolver<ResolversTypes['ApiKeyRevokePayload'], ParentType, ContextType, RequireFields<MutationApiKeyRevokeArgs, 'input'>>;
   apiKeySetLimit?: Resolver<ResolversTypes['ApiKeySetLimitPayload'], ParentType, ContextType, RequireFields<MutationApiKeySetLimitArgs, 'input'>>;
+  btcMapPlaceSubmit?: Resolver<ResolversTypes['BtcMapPlacePayload'], ParentType, ContextType, RequireFields<MutationBtcMapPlaceSubmitArgs, 'input'>>;
   callbackEndpointAdd?: Resolver<ResolversTypes['CallbackEndpointAddPayload'], ParentType, ContextType, RequireFields<MutationCallbackEndpointAddArgs, 'input'>>;
   callbackEndpointDelete?: Resolver<ResolversTypes['SuccessPayload'], ParentType, ContextType, RequireFields<MutationCallbackEndpointDeleteArgs, 'input'>>;
   captchaCreateChallenge?: Resolver<ResolversTypes['CaptchaCreateChallengePayload'], ParentType, ContextType>;
@@ -5427,6 +5487,7 @@ export type UsdWalletResolvers<ContextType = any, ParentType extends ResolversPa
 
 export type UserResolvers<ContextType = any, ParentType extends ResolversParentTypes['User'] = ResolversParentTypes['User']> = {
   apiKeys?: Resolver<ReadonlyArray<ResolversTypes['ApiKey']>, ParentType, ContextType>;
+  contactByHandle?: Resolver<ResolversTypes['UserContact'], ParentType, ContextType, RequireFields<UserContactByHandleArgs, 'handle'>>;
   contactByUsername?: Resolver<ResolversTypes['UserContact'], ParentType, ContextType, RequireFields<UserContactByUsernameArgs, 'username'>>;
   contacts?: Resolver<ReadonlyArray<ResolversTypes['UserContact']>, ParentType, ContextType>;
   createdAt?: Resolver<ResolversTypes['Timestamp'], ParentType, ContextType>;
@@ -5583,6 +5644,8 @@ export type Resolvers<ContextType = any> = {
   Authorization?: AuthorizationResolvers<ContextType>;
   BTCWallet?: BtcWalletResolvers<ContextType>;
   BlockInfo?: BlockInfoResolvers<ContextType>;
+  BtcMapPlace?: BtcMapPlaceResolvers<ContextType>;
+  BtcMapPlacePayload?: BtcMapPlacePayloadResolvers<ContextType>;
   BuildInformation?: BuildInformationResolvers<ContextType>;
   CallbackEndpoint?: CallbackEndpointResolvers<ContextType>;
   CallbackEndpointAddPayload?: CallbackEndpointAddPayloadResolvers<ContextType>;

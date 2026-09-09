@@ -357,6 +357,28 @@ export type BlockInfo = {
   readonly blockHeight?: Maybe<Scalars['Int']['output']>;
 };
 
+export type BtcMapPlace = {
+  readonly __typename: 'BtcMapPlace';
+  readonly externalId: Scalars['String']['output'];
+  readonly id: Scalars['ID']['output'];
+  readonly origin: Scalars['String']['output'];
+};
+
+export type BtcMapPlacePayload = {
+  readonly __typename: 'BtcMapPlacePayload';
+  readonly errors: ReadonlyArray<Error>;
+  readonly place?: Maybe<BtcMapPlace>;
+};
+
+export type BtcMapPlaceSubmitInput = {
+  readonly category: Scalars['String']['input'];
+  readonly latitude: Scalars['Float']['input'];
+  readonly longitude: Scalars['Float']['input'];
+  readonly name: Scalars['String']['input'];
+  /** Client-generated UUID identifying this submission. Reuse the same value when retrying after a failed or ambiguous request so the retry does not create a duplicate place. Resubmitting with the same submissionId and different place fields updates the original submission instead. */
+  readonly submissionId: Scalars['ID']['input'];
+};
+
 export type BuildInformation = {
   readonly __typename: 'BuildInformation';
   readonly commitHash?: Maybe<Scalars['String']['output']>;
@@ -1059,6 +1081,8 @@ export type Mutation = {
   readonly accountEnableNotificationChannel: AccountUpdateNotificationSettingsPayload;
   readonly accountUpdateDefaultWalletId: AccountUpdateDefaultWalletIdPayload;
   readonly accountUpdateDisplayCurrency: AccountUpdateDisplayCurrencyPayload;
+  /** Submit a place to BTC Map. Submissions from trusted sources appear on BTC Map right away; BTC Map editors process them later for eventual inclusion in OpenStreetMap. */
+  readonly btcMapPlaceSubmit: BtcMapPlacePayload;
   readonly callbackEndpointAdd: CallbackEndpointAddPayload;
   readonly callbackEndpointDelete: SuccessPayload;
   readonly captchaCreateChallenge: CaptchaCreateChallengePayload;
@@ -1212,6 +1236,11 @@ export type MutationAccountUpdateDefaultWalletIdArgs = {
 
 export type MutationAccountUpdateDisplayCurrencyArgs = {
   input: AccountUpdateDisplayCurrencyInput;
+};
+
+
+export type MutationBtcMapPlaceSubmitArgs = {
+  input: BtcMapPlaceSubmitInput;
 };
 
 
@@ -2116,6 +2145,12 @@ export type UsdWalletTransactionsByPaymentRequestArgs = {
 export type User = {
   readonly __typename: 'User';
   /**
+   * Get single contact details by its handle, which is either a
+   * username or a Lightning address.
+   * Can include the transactions associated with the contact.
+   */
+  readonly contactByHandle: UserContact;
+  /**
    * Get single contact details.
    * Can include the transactions associated with the contact.
    * @deprecated will be moved to Accounts
@@ -2147,6 +2182,11 @@ export type User = {
    * @deprecated will be moved to @Handle in Account and Wallet
    */
   readonly username?: Maybe<Scalars['Username']['output']>;
+};
+
+
+export type UserContactByHandleArgs = {
+  handle: Scalars['ContactHandle']['input'];
 };
 
 
