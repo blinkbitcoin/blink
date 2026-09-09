@@ -17,6 +17,19 @@ export const MajorExponent = {
 // within this range.
 export const MAX_FRACTION_DIGITS = 4
 
+// Returns the value when it is a valid fraction-digits scale, undefined
+// otherwise. Pure by design: callers degrade and record at their own layer.
+export const checkedFractionDigits = ({
+  fractionDigits,
+}: {
+  fractionDigits: number
+}): number | undefined =>
+  Number.isInteger(fractionDigits) &&
+  fractionDigits >= 0 &&
+  fractionDigits <= MAX_FRACTION_DIGITS
+    ? fractionDigits
+    : undefined
+
 export const majorToMinorUnit = ({
   amount,
   fractionDigits,

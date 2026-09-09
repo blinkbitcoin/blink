@@ -1,4 +1,4 @@
-import { resolvePaymentDisplayCurrencyFractionDigits } from "./resolve-display-currency-fraction-digits"
+import { resolvePaymentDisplayCurrencyFractionDigits } from "@/app/prices/legacy-display-currency-precision"
 
 import { FAILED_USD_MEMO } from "@/domain/ledger/ln-payment-state"
 import { CouldNotFindBtcWalletForAccountError } from "@/domain/errors"
@@ -16,12 +16,10 @@ export const reimburseFailedUsdPayment = async <
   walletId,
   paymentFlow,
   pendingPayment,
-  logger,
 }: {
   walletId: WalletId
   paymentFlow: PaymentFlow<S, R>
   pendingPayment: LedgerTransaction<S>
-  logger: Logger
 }): Promise<true | ApplicationError> => {
   const {
     journalId,
@@ -55,7 +53,6 @@ export const reimburseFailedUsdPayment = async <
     displayCurrency,
     persistedFractionDigits: pendingPayment.displayCurrencyFractionDigits,
     timestamp: pendingPayment.timestamp,
-    logger,
   })
 
   const paymentHash = paymentFlow.paymentHashForFlow()

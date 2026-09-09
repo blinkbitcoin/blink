@@ -15,6 +15,7 @@ import * as LedgerFacadeImpl from "@/services/ledger/facade"
 import { Transaction } from "@/services/ledger/schema"
 import * as LndImpl from "@/services/lnd"
 import * as MongooseImpl from "@/services/mongoose"
+import * as TracingImpl from "@/services/tracing"
 
 import {
   createMandatoryUsers,
@@ -111,16 +112,12 @@ describe("update pending payments", () => {
     })
   }
 
-  it.each(["amount", "fee", "currency"] as const)(
-    "validates missing display %s before settling",
+  it.each(["amount", "currency"] as const)(
+    "settles but skips the reimbursement when display %s is missing",
     async (field) => {
       const displayAmounts = { ...displaySendEurAmounts }
       if (field === "amount") {
         displayAmounts.amountDisplayCurrency =
-          undefined as unknown as DisplayCurrencyBaseAmount
-      }
-      if (field === "fee") {
-        displayAmounts.feeDisplayCurrency =
           undefined as unknown as DisplayCurrencyBaseAmount
       }
       if (field === "currency") {
@@ -136,25 +133,111 @@ describe("update pending payments", () => {
         feeKnownInAdvance: false,
       })
       mockSuccessfulPayment({ paymentHash, walletDescriptor })
+      // galoy.yaml sets skipFeeReimbursement: true, which routes the fee
+      // difference to the reserve-retained branch; disable it to exercise the
+      // reimbursement metadata path.
+      jest.spyOn(ConfigImpl, "getSkipFeeReimbursement").mockReturnValue(false)
       const settleSpy = jest.spyOn(LedgerFacadeImpl, "settlePendingLnSend")
+      const reimbursementMetadataSpy = jest.spyOn(
+        LedgerFacadeImpl,
+        "LnFeeReimbursementReceiveLedgerMetadata",
+      )
 
-      // updatePendingPaymentByHash delegates to a per-payment loop that
-      // discards inner results (returns void), so assert the observable
-      // outcome: the payment is not settled and stays pending.
       const result = await updatePendingPaymentByHash({
         paymentHash,
         logger: baseLogger,
       })
 
+      // Settlement is never gated on immutable display metadata: the row
+      // settles and only the reimbursement is skipped, recorded on the span.
       expect(result).not.toBeInstanceOf(Error)
-      expect(settleSpy).not.toHaveBeenCalled()
+      expect(settleSpy).toHaveBeenCalled()
+      expect(reimbursementMetadataSpy).not.toHaveBeenCalled()
       const pendingCount = await LedgerService().getPendingPaymentsCount(
         walletDescriptor.id,
       )
       if (pendingCount instanceof Error) throw pendingCount
-      expect(pendingCount).toBe(1)
+      expect(pendingCount).toBe(0)
+
+      // A second pass is a stable no-op rather than a retried failure.
+      const second = await updatePendingPaymentByHash({
+        paymentHash,
+        logger: baseLogger,
+      })
+      expect(second).not.toBeInstanceOf(Error)
+      expect(reimbursementMetadataSpy).not.toHaveBeenCalled()
     },
   )
+
+  it("settles and reimburses when only the unused display fee is missing", async () => {
+    // displayFee is not consumed by the reimbursement, so its absence is
+    // recorded but does not gate anything.
+    const walletDescriptor = await createRandomUserAndBtcWallet()
+    const { paymentHash } = await recordSendLnPayment({
+      walletDescriptor,
+      paymentAmount: sendAmount,
+      bankFee,
+      displayAmounts: {
+        ...displaySendEurAmounts,
+        feeDisplayCurrency: undefined as unknown as DisplayCurrencyBaseAmount,
+        displayCurrencyFractionDigits: 2,
+      },
+      feeKnownInAdvance: false,
+    })
+    mockSuccessfulPayment({ paymentHash, walletDescriptor })
+    // galoy.yaml sets skipFeeReimbursement: true, which routes the fee
+    // difference to the reserve-retained branch; disable it to exercise the
+    // reimbursement metadata path.
+    jest.spyOn(ConfigImpl, "getSkipFeeReimbursement").mockReturnValue(false)
+    const reimbursementMetadataSpy = jest.spyOn(
+      LedgerFacadeImpl,
+      "LnFeeReimbursementReceiveLedgerMetadata",
+    )
+
+    const result = await updatePendingPaymentByHash({ paymentHash, logger: baseLogger })
+
+    expect(result).not.toBeInstanceOf(Error)
+    expect(reimbursementMetadataSpy).toHaveBeenCalled()
+  })
+
+  it("settles but skips the reimbursement for a zero display amount", async () => {
+    // A zero display amount cannot form a price ratio downstream; the
+    // reimbursement is skipped with the reason recorded instead of surfacing
+    // an opaque domain error after settlement.
+    const walletDescriptor = await createRandomUserAndBtcWallet()
+    const { paymentHash } = await recordSendLnPayment({
+      walletDescriptor,
+      paymentAmount: sendAmount,
+      bankFee,
+      displayAmounts: {
+        ...displaySendEurAmounts,
+        amountDisplayCurrency: 0 as DisplayCurrencyBaseAmount,
+        displayCurrencyFractionDigits: 2,
+      },
+      feeKnownInAdvance: false,
+    })
+    mockSuccessfulPayment({ paymentHash, walletDescriptor })
+    // galoy.yaml sets skipFeeReimbursement: true, which routes the fee
+    // difference to the reserve-retained branch; disable it to exercise the
+    // reimbursement metadata path.
+    jest.spyOn(ConfigImpl, "getSkipFeeReimbursement").mockReturnValue(false)
+    const settleSpy = jest.spyOn(LedgerFacadeImpl, "settlePendingLnSend")
+    const reimbursementMetadataSpy = jest.spyOn(
+      LedgerFacadeImpl,
+      "LnFeeReimbursementReceiveLedgerMetadata",
+    )
+
+    const result = await updatePendingPaymentByHash({ paymentHash, logger: baseLogger })
+
+    expect(result).not.toBeInstanceOf(Error)
+    expect(settleSpy).toHaveBeenCalled()
+    expect(reimbursementMetadataSpy).not.toHaveBeenCalled()
+    const pendingCount = await LedgerService().getPendingPaymentsCount(
+      walletDescriptor.id,
+    )
+    if (pendingCount instanceof Error) throw pendingCount
+    expect(pendingCount).toBe(0)
+  })
 
   it.each([0, 2])(
     "reimburses a confirmed payment with persisted display precision %i",
@@ -224,12 +307,21 @@ describe("update pending payments", () => {
     jest
       .spyOn(LedgerFacadeImpl, "recordReceiveOffChain")
       .mockResolvedValue(true as unknown as LedgerJournal)
+    // Pin which resolver branch ran, not only the resolved value: under Node 24
+    // ICU reports COP at 0 digits, so a bare toBe(2) discriminates today but
+    // would go vacuous if the runtime ICU ever reports 2 again.
+    const addAttributesSpy = jest.spyOn(TracingImpl, "addAttributesToCurrentSpan")
 
     const result = await updatePendingPaymentByHash({ paymentHash, logger: baseLogger })
 
     expect(result).not.toBeInstanceOf(Error)
     expect(reimbursementMetadataSpy.mock.calls[0][0].displayCurrencyFractionDigits).toBe(
       2,
+    )
+    expect(addAttributesSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        "payment.displayCurrencyFractionDigitsSource": "legacyConstantFallback",
+      }),
     )
   })
 
@@ -256,12 +348,18 @@ describe("update pending payments", () => {
     jest
       .spyOn(LedgerFacadeImpl, "recordReceiveOffChain")
       .mockResolvedValue(true as unknown as LedgerJournal)
+    const addAttributesSpy = jest.spyOn(TracingImpl, "addAttributesToCurrentSpan")
 
     const result = await updatePendingPaymentByHash({ paymentHash, logger: baseLogger })
 
     expect(result).not.toBeInstanceOf(Error)
     expect(reimbursementMetadataSpy.mock.calls[0][0].displayCurrencyFractionDigits).toBe(
       2,
+    )
+    expect(addAttributesSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        "payment.displayCurrencyFractionDigitsSource": "runtimeIcuFallback",
+      }),
     )
   })
 
@@ -379,6 +477,79 @@ describe("update pending payments", () => {
     const args = recordRefundSpy.mock.calls[0][0]
     expect(args.metadata.type).toBe(LedgerTransactionType.Payment)
     expect(args.description).toBe(FAILED_USD_MEMO)
+  })
+
+  it("resolves failed-payment precision through the fallback when no digits are persisted", async () => {
+    // Same shape as the persisted case above, but the row carries no
+    // displayCurrencyFractionDigits: the resolver runs on the failed-USD path
+    // and reports the runtime ICU exponent (EUR: 2) with the fallback source.
+    const { LndService: LnServiceOrig } = jest.requireActual("@/services/lnd")
+    jest.spyOn(LndImpl, "LndService").mockReturnValue({
+      ...LnServiceOrig(),
+      lookupPayment: () => ({
+        status: PaymentStatus.Failed,
+      }),
+    })
+
+    const { LnPaymentsRepository: LnPaymentsRepositoryOrig } =
+      jest.requireActual("@/services/mongoose")
+    jest.spyOn(MongooseImpl, "LnPaymentsRepository").mockReturnValue({
+      ...LnPaymentsRepositoryOrig(),
+      findByPaymentHash: () => ({ paymentRequest: samplePaymentRequest }),
+    })
+
+    const lnFailedPaymentReceiveLedgerMetadataSpy = jest.spyOn(
+      LedgerFacadeImpl,
+      "LnFailedPaymentReceiveLedgerMetadata",
+    )
+    jest.spyOn(LedgerFacadeImpl, "recordLnFailedUsdSendRefund")
+    const addAttributesSpy = jest.spyOn(TracingImpl, "addAttributesToCurrentSpan")
+
+    const newWalletDescriptor = await createRandomUserAndBtcWallet()
+
+    const { paymentHash } = await recordSendLnPayment({
+      walletDescriptor: newWalletDescriptor,
+      paymentAmount: sendAmount,
+      bankFee,
+      displayAmounts: displaySendEurAmounts,
+    })
+
+    const mockedPaymentFlow = {
+      senderWalletCurrency: WalletCurrency.Usd,
+      paymentHashForFlow: () => paymentHash,
+      senderWalletDescriptor: () => newWalletDescriptor,
+
+      btcPaymentAmount: sendAmount.btc,
+      usdPaymentAmount: sendAmount.usd,
+      btcProtocolAndBankFee: bankFee.btc,
+      usdProtocolAndBankFee: bankFee.usd,
+      btcBankFee: ZERO_SATS,
+      usdBankFee: ZERO_CENTS,
+      totalAmountsForPayment: () => ({
+        btc: calc.add(sendAmount.btc, bankFee.btc),
+        usd: calc.add(sendAmount.usd, bankFee.usd),
+      }),
+    }
+
+    const { PaymentFlowStateRepository: PaymentFlowStateRepositoryOrig } =
+      jest.requireActual("@/services/mongoose")
+    jest.spyOn(MongooseImpl, "PaymentFlowStateRepository").mockReturnValue({
+      ...PaymentFlowStateRepositoryOrig(),
+      markLightningPaymentFlowNotPending: () => mockedPaymentFlow,
+    })
+
+    await updatePendingPaymentByHash({ paymentHash, logger: baseLogger })
+
+    expect(lnFailedPaymentReceiveLedgerMetadataSpy).toHaveBeenCalledTimes(1)
+    expect(
+      lnFailedPaymentReceiveLedgerMetadataSpy.mock.calls[0][0]
+        .displayCurrencyFractionDigits,
+    ).toBe(2)
+    expect(addAttributesSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        "payment.displayCurrencyFractionDigitsSource": "runtimeIcuFallback",
+      }),
+    )
   })
 
   const runUsdFailureUpdate = async ({

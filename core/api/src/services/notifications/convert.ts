@@ -1,9 +1,9 @@
 import * as Grpc from "./proto/notifications_pb"
 
 import {
+  checkedFractionDigits,
   getCurrencyMajorExponent,
   majorToMinorUnit,
-  MAX_FRACTION_DIGITS,
 } from "@/domain/fiat"
 import {
   InvalidDisplayAmountError,
@@ -24,20 +24,15 @@ const FIXED_POINT_AMOUNT_PATTERN = /^-?\d+(\.\d+)?$/
 // The wire contract rejects scales outside 0..MAX_FRACTION_DIGITS. A ledger row
 // carrying a bad value must degrade to an approximate amount, never to a
 // rejected request, because no caller retries a dropped notification.
-const checkedFractionDigits = ({
+const checkedOrFallbackFractionDigits = ({
   fractionDigits,
   displayCurrency,
 }: {
   fractionDigits: number
   displayCurrency: DisplayCurrency
 }): number => {
-  if (
-    Number.isInteger(fractionDigits) &&
-    fractionDigits >= 0 &&
-    fractionDigits <= MAX_FRACTION_DIGITS
-  ) {
-    return fractionDigits
-  }
+  const checked = checkedFractionDigits({ fractionDigits })
+  if (checked !== undefined) return checked
 
   const fallback = getCurrencyMajorExponent(displayCurrency)
   recordExceptionInCurrentSpan({
@@ -83,7 +78,7 @@ export const walletTransactionToNotificationEventRequest = ({
       `settlementDisplayAmount is not fixed-point decimal: ${transaction.settlementDisplayAmount}`,
     )
   }
-  const fractionDigits = checkedFractionDigits({
+  const fractionDigits = checkedOrFallbackFractionDigits({
     fractionDigits:
       transaction.settlementDisplayCurrencyFractionDigits ?? inferredFractionDigits,
     displayCurrency,

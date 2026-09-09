@@ -39,6 +39,9 @@ export const settlePayout = async (
   })
   if (paymentAmount instanceof Error) return paymentAmount
 
+  const { displayCurrency } = ledgerTxn
+  if (displayCurrency === undefined) return new InvalidLedgerTransactionStateError()
+
   const { txHash } = ledgerTxn
   if (txHash === undefined) return new InvalidLedgerTransactionStateError()
 
