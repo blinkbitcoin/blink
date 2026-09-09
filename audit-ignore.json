@@ -1,0 +1,15 @@
+{
+  "docs": "Pinned advisory waivers for the buck2 dependency audit (toolchains/workspace-pnpm/run_audit.py). Each entry silences exactly one GHSA; any advisory not listed here still fails the audit at its configured level. An entry suppresses the GHSA for the ENTIRE workspace: every audit() target audits the shared root pnpm-lock.yaml, so per-app scoping is impossible — justify accordingly. Remove an entry as soon as its fix ships (the audit prints a note when a waiver matches nothing). Waivers are precedent-setting: every entry requires a non-empty reason and tracking ref (schema-enforced, build fails otherwise).",
+  "ignore": [
+    {
+      "ghsa": "GHSA-p293-qw3h-jr36",
+      "reason": "next@14.x unauthenticated RCE on Windows-hosted servers only. Blink production is GKE/Linux on distroless images exclusively; no Windows-served environment exists. No 14.x patch (fix line starts at next 15.5.24).",
+      "ref": "internal upgrade ticket (Next.js 15.5.24+, tracked in the team tracker)"
+    },
+    {
+      "ghsa": "GHSA-2xp9-vwfh-vxw4",
+      "reason": "next@14.x AVIF/libheif decode RCE in the image optimizer. The vulnerable sharp->libheif path exists only in admin-panel, whose matcher-less next-auth middleware gates every path incl. /_next/image behind OAuth + email allowlist; the other apps use the bundled WASM decoder. No app sets images.remotePatterns/domains and no public endpoint echoes user-controlled bytes, so no attacker-supplied AVIF can reach a decoder. FRAGILE: adding sharp to another app, adding remotePatterns/domains, adding a middleware matcher to admin-panel/dashboard, or adding a byte-serving GET endpoint breaks this waiver — re-assess or upgrade first.",
+      "ref": "internal upgrade ticket (Next.js 15.5.24+, tracked in the team tracker)"
+    }
+  ]
+}
