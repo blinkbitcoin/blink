@@ -8,12 +8,12 @@ import Handle from "../../../shared/types/scalar/contact-handle"
 import { TransactionConnection } from "../../../shared/types/object/transaction"
 
 import { Accounts } from "@/app"
-import { checkedToUsername } from "@/domain/accounts"
+import { checkedToHandle } from "@/domain/contacts"
 import { GT } from "@/graphql/index"
 import { connectionArgs } from "@/graphql/connections"
 import { mapError } from "@/graphql/error-map"
 
-const AccountContact = GT.Object<AccountRecord, GraphQLPublicContextAuth>({
+const AccountContact = GT.Object<AccountContact, GraphQLPublicContextAuth>({
   name: "UserContact",
   fields: () => ({
     id: { type: GT.NonNull(Handle) },
@@ -25,7 +25,7 @@ const AccountContact = GT.Object<AccountRecord, GraphQLPublicContextAuth>({
       type: GT.NonNull(Username),
       description: "Actual identifier of the contact. Deprecated: use `handle` instead.",
       deprecationReason: "Use `handle` field; this will be removed in a future release.",
-      resolve: (src) => src.handle ?? src.username,
+      resolve: (src) => src.handle,
     },
     alias: {
       type: ContactAlias,
@@ -39,10 +39,7 @@ const AccountContact = GT.Object<AccountRecord, GraphQLPublicContextAuth>({
       type: TransactionConnection,
       args: connectionArgs,
       resolve: async (source, args, { domainAccount }) => {
-        if (!source.handle) {
-          throw new Error("Missing handle for contact")
-        }
-        const contactHandle = checkedToUsername(source.handle)
+        const contactHandle = checkedToHandle(source.handle)
 
         if (contactHandle instanceof Error) {
           throw mapError(contactHandle)
@@ -56,7 +53,7 @@ const AccountContact = GT.Object<AccountRecord, GraphQLPublicContextAuth>({
 
         const resp = await Accounts.getAccountTransactionsForContact({
           account,
-          contactUsername: contactHandle,
+          contactHandle,
           rawPaginationArgs: args,
         })
 

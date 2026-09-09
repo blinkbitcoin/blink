@@ -1803,6 +1803,13 @@ type UsdWallet implements Wallet {
 
 type User {
   """
+  Get single contact details by its handle, which is either a
+  username or a Lightning address.
+  Can include the transactions associated with the contact.
+  """
+  contactByHandle(handle: ContactHandle!): UserContact!
+
+  """
   Get single contact details.
   Can include the transactions associated with the contact.
   """

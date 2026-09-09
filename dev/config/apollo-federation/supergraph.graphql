@@ -2468,6 +2468,13 @@ type User
   unacknowledgedStatefulNotificationsWithBulletinEnabled(first: Int!, after: String): StatefulNotificationConnection! @join__field(graph: NOTIFICATIONS)
 
   """
+  Get single contact details by its handle, which is either a
+  username or a Lightning address.
+  Can include the transactions associated with the contact.
+  """
+  contactByHandle(handle: ContactHandle!): UserContact! @join__field(graph: PUBLIC)
+
+  """
   Get single contact details.
   Can include the transactions associated with the contact.
   """

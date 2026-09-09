@@ -18,6 +18,7 @@ import Phone from "@/graphql/shared/types/scalar/phone"
 import Language from "@/graphql/shared/types/scalar/language"
 import Username from "@/graphql/shared/types/scalar/username"
 import Timestamp from "@/graphql/shared/types/scalar/timestamp"
+import ContactHandle from "@/graphql/shared/types/scalar/contact-handle"
 import GraphQLEmail from "@/graphql/shared/types/object/email"
 
 const GraphQLUser = GT.Object<User, GraphQLPublicContextAuth>({
@@ -109,9 +110,35 @@ const GraphQLUser = GT.Object<User, GraphQLPublicContextAuth>({
         if (username instanceof Error) {
           throw username
         }
-        const contact = await Accounts.getContactByHandle({
+        const contact = await Accounts.getContactByUsername({
           accountId: domainAccount.id,
           handle: username,
+        })
+        if (contact instanceof Error) {
+          throw mapError(contact)
+        }
+
+        return contact
+      },
+    },
+
+    contactByHandle: {
+      type: GT.NonNull(AccountContact),
+      description: dedent`Get single contact details by its handle, which is either a
+        username or a Lightning address.
+        Can include the transactions associated with the contact.`,
+      args: {
+        handle: { type: GT.NonNull(ContactHandle) },
+      },
+      resolve: async (source, args, { domainAccount }) => {
+        const { handle } = args
+        if (handle instanceof Error) {
+          throw handle
+        }
+
+        const contact = await Accounts.getContactByHandle({
+          accountId: domainAccount.id,
+          handle,
         })
         if (contact instanceof Error) {
           throw mapError(contact)
