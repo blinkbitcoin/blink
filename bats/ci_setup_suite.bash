@@ -6,6 +6,14 @@ source "${REPO_ROOT}/bats/helpers/_common.bash"
 TILT_PID_FILE="${BATS_ROOT_DIR}/.tilt_pid"
 
 setup_suite() {
+  # A task killed mid-run (timeout, abort, worker crash) never reaches
+  # teardown_suite, leaving its tilt process and stack running on the host.
+  # The next build then fails on the busy tilt port while the stale stack
+  # still answers the health checks below. The pid file does not survive
+  # between builds, so kill by name and tear down before booting.
+  pkill -x tilt || true
+  buck2 run //dev:down || true
+
   background buck2 run //dev:up -- --bats=True > "${REPO_ROOT}/bats/.e2e-tilt.log"
   echo $! > "$TILT_PID_FILE"
   await_notifications_is_up
