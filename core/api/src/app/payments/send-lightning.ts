@@ -1150,9 +1150,11 @@ const lockedPaymentViaLnSteps = async ({
   if (!rawRoute) {
     const reimbursed = await reimburseFee({
       paymentFlow,
-      senderDisplayAmount: toDisplayBaseAmount(displayAmount),
-      senderDisplayCurrency,
-      senderDisplayCurrencyFractionDigits: displayPriceRatio.fractionDigits,
+      senderDisplay: {
+        senderDisplayAmount: toDisplayBaseAmount(displayAmount),
+        senderDisplayCurrency,
+        senderDisplayCurrencyFractionDigits: displayPriceRatio.fractionDigits,
+      },
       journalId,
       actualFee: payResult.roundedUpFee,
       revealedPreImage: payResult.revealedPreImage,
