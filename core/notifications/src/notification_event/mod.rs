@@ -5,6 +5,7 @@ mod identity_verification_declined;
 mod identity_verification_review_started;
 mod link_email_reminder;
 mod marketing_notification_triggered;
+mod migration_retry_ready;
 mod price_changed;
 mod transaction_occurred;
 
@@ -19,6 +20,7 @@ pub(super) use identity_verification_declined::*;
 pub(super) use identity_verification_review_started::*;
 pub(super) use link_email_reminder::*;
 pub(super) use marketing_notification_triggered::*;
+pub(super) use migration_retry_ready::*;
 pub(super) use price_changed::*;
 pub(super) use transaction_occurred::*;
 
@@ -288,6 +290,7 @@ pub enum NotificationEventPayload {
     PriceChanged(PriceChanged),
     MarketingNotificationTriggered(MarketingNotificationTriggered),
     LinkEmailReminder(LinkEmailReminder),
+    MigrationRetryReady(MigrationRetryReady),
 }
 
 impl AsRef<dyn NotificationEvent> for NotificationEventPayload {
@@ -302,6 +305,7 @@ impl AsRef<dyn NotificationEvent> for NotificationEventPayload {
             NotificationEventPayload::PriceChanged(event) => event,
             NotificationEventPayload::MarketingNotificationTriggered(event) => event,
             NotificationEventPayload::LinkEmailReminder(event) => event,
+            NotificationEventPayload::MigrationRetryReady(event) => event,
         }
     }
 }
@@ -365,6 +369,12 @@ impl From<MarketingNotificationTriggered> for NotificationEventPayload {
 impl From<LinkEmailReminder> for NotificationEventPayload {
     fn from(event: LinkEmailReminder) -> Self {
         NotificationEventPayload::LinkEmailReminder(event)
+    }
+}
+
+impl From<MigrationRetryReady> for NotificationEventPayload {
+    fn from(event: MigrationRetryReady) -> Self {
+        NotificationEventPayload::MigrationRetryReady(event)
     }
 }
 

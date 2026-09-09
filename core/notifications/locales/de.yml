@@ -14,3 +14,6 @@ circle_threshold_reached.inner.body: "Du hast%{time_frame} %{threshold} Menschen
 
 circle_threshold_reached.outer.title: "Äußerer Kreis Wachstum \U0001F4AA"
 circle_threshold_reached.outer.body: "Dein äußerer Kreis ist auf %{threshold} Menschen gewachsen. Du bringst die Bitcoin adoption voran!"
+
+migration_retry_ready.title: "Deine Migration kann erneut versucht werden"
+migration_retry_ready.body: "Wir haben deine Migration zurückgesetzt, damit du es erneut versuchen kannst. Tippe, um deine Gelder weiter zu übertragen."
