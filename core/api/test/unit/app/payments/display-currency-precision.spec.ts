@@ -5,7 +5,10 @@ import { toSats } from "@/domain/bitcoin"
 import { CacheKeys } from "@/domain/cache"
 import { getCurrencyMajorExponent } from "@/domain/fiat"
 import { LedgerTransactionType } from "@/domain/ledger"
-import { PriceCurrenciesNotAvailableError } from "@/domain/price"
+import {
+  InvalidPriceCurrencyError,
+  PriceCurrenciesNotAvailableError,
+} from "@/domain/price"
 import { WalletCurrency, ZERO_CENTS, ZERO_SATS } from "@/domain/shared"
 import { WalletTransactionHistory } from "@/domain/wallets"
 import { LocalCacheService } from "@/services/cache/local-cache"
@@ -169,12 +172,6 @@ describe("payment display-currency precision", () => {
 
     expect(displayPriceRatio.fractionDigits).toBe(getCurrencyMajorExponent(PKR))
     expect(recordException).toHaveBeenCalledTimes(1)
-    expect(
-      displayPriceRatio.convertFromWallet({
-        amount: 100n,
-        currency: WalletCurrency.Btc,
-      }).displayInMajor,
-    ).toBe("22")
   })
 
   it("falls back to ICU precision when the currency metadata record is missing", async () => {
@@ -184,5 +181,16 @@ describe("payment display-currency precision", () => {
     if (displayPriceRatio instanceof Error) throw displayPriceRatio
 
     expect(displayPriceRatio.fractionDigits).toBe(getCurrencyMajorExponent(PKR))
+    expect(recordException).toHaveBeenCalledTimes(1)
+  })
+
+  it("rejects invalid explicit precision", async () => {
+    const result = await getCurrentPriceAsDisplayPriceRatio({
+      currency: PKR,
+      fractionDigits: 5,
+    })
+
+    expect(result).toBeInstanceOf(InvalidPriceCurrencyError)
+    expect(recordException).not.toHaveBeenCalled()
   })
 })

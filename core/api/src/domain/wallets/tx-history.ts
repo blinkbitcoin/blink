@@ -15,10 +15,12 @@ const translateLedgerTxnToWalletTxn = <S extends WalletCurrency>({
   txn,
   nonEndUserWalletIds,
   memoSharingConfig,
+  displayCurrencyFractionDigits,
 }: {
   txn: LedgerTransaction<S>
   nonEndUserWalletIds: WalletId[]
   memoSharingConfig: MemoSharingConfig
+  displayCurrencyFractionDigits?: number
 }): WalletTransaction => {
   const {
     type,
@@ -44,7 +46,7 @@ const translateLedgerTxnToWalletTxn = <S extends WalletCurrency>({
   )
 
   const { settlementAmount, settlementDisplayAmount, settlementDisplayFee } =
-    SettlementAmounts().fromTxn(txn)
+    SettlementAmounts().fromTxn(txn, displayCurrencyFractionDigits)
 
   let satsAmount = satsAmountRaw || 0
   let centsAmount = centsAmountRaw || 0
@@ -82,7 +84,8 @@ const translateLedgerTxnToWalletTxn = <S extends WalletCurrency>({
     settlementCurrency: txn.currency,
     settlementDisplayAmount,
     settlementDisplayFee,
-    settlementDisplayCurrencyFractionDigits: txn.displayCurrencyFractionDigits,
+    settlementDisplayCurrencyFractionDigits:
+      txn.displayCurrencyFractionDigits ?? displayCurrencyFractionDigits,
     settlementDisplayPrice: displayCurrencyPerBaseUnitFromAmounts({
       displayAmount,
       displayCurrency,

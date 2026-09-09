@@ -141,7 +141,7 @@ teardown() {
   [[ "${errors}" = "0" ]] || exit 1
 
   currencies="$(graphql_output '.data.currencyList | sort_by(.id)')"
-  expected='[{"id":"EUR","fractionDigits":2},{"id":"PKR","fractionDigits":2},{"id":"USD","fractionDigits":2},{"id":"XTS","fractionDigits":0}]'
+  expected='[{"id":"COP","fractionDigits":2},{"id":"EUR","fractionDigits":2},{"id":"PKR","fractionDigits":2},{"id":"USD","fractionDigits":2},{"id":"XTS","fractionDigits":0}]'
   [[ "$(echo "${currencies}" | jq -c '[.[] | {id, fractionDigits}]')" = "${expected}" ]] || exit 1
 }
 
