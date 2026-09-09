@@ -18,6 +18,9 @@ import urllib.request
 
 BULK_ADVISORY_URL = "https://registry.npmjs.org/-/npm/v1/security/advisories/bulk"
 
+# Checked-in waivers, read from the workspace root like pnpm-lock.yaml.
+IGNORE_FILE = "audit-ignore.json"
+
 CHUNK_SIZE = 1000
 
 SEVERITY_ORDER = [
@@ -75,6 +78,63 @@ def decode_body(body):
     return body
 
 
+GHSA_ID = re.compile(r"^GHSA(-[a-z0-9]{4}){3}$", re.IGNORECASE)
+
+
+def load_ignored_ghsas(path=IGNORE_FILE):
+    try:
+        with open(path) as ignore_file:
+            raw = json.load(ignore_file)
+    except FileNotFoundError:
+        return {}
+    except ValueError as err:
+        # A checked-in but unparsable waiver file is a repo bug; failing loud
+        # beats silently auditing with zero waivers and confusing the reader.
+        sys.exit(f"could not parse {path}: {err!r}")
+    entries = raw.get("ignore", [])
+    if not isinstance(entries, list):
+        sys.exit(f"{path}: 'ignore' must be a list")
+    # Malformed entries fail loud rather than sit silently inert: a waiver that
+    # never matches is worse than no waiver, and this file sets precedent.
+    ignored = {}
+    for entry in entries:
+        if not isinstance(entry, dict):
+            sys.exit(f"{path}: every ignore entry must be an object")
+        ghsa = entry.get("ghsa")
+        if not isinstance(ghsa, str) or not GHSA_ID.match(ghsa):
+            sys.exit(f"{path}: missing or malformed 'ghsa': {ghsa!r}")
+        for field in ("reason", "ref"):
+            value = entry.get(field)
+            if not isinstance(value, str) or not value.strip():
+                sys.exit(f"{path}: entry {ghsa} needs a non-empty '{field}'")
+        key = ghsa.lower()
+        if key in ignored:
+            sys.exit(f"{path}: duplicate entry for {ghsa}")
+        ignored[key] = entry["reason"]
+    return ignored
+
+
+def advisory_ghsa(advisory):
+    url = advisory.get("url") or ""
+    if "/advisories/" not in url:
+        return None
+    segment = url.rstrip("/").rsplit("/", 1)[-1]
+    if not GHSA_ID.match(segment):
+        return None
+    return segment
+
+
+def partition_ignored(matching, ignored_ghsas):
+    kept, waived = [], []
+    for name, advisory in matching:
+        ghsa = advisory_ghsa(advisory)
+        if ghsa is not None and ghsa.lower() in ignored_ghsas:
+            waived.append((name, advisory, ghsa))
+            continue
+        kept.append((name, advisory))
+    return kept, waived
+
+
 def severity_meets_threshold(severity, audit_level):
     return (
         severity in SEVERITY_ORDER
@@ -130,6 +190,19 @@ if __name__ == "__main__":
         for advisory in package_advisories
         if severity_meets_threshold(advisory.get("severity"), args.audit_level)
     ]
+
+    ignored_ghsas = load_ignored_ghsas()
+    matching, waived = partition_ignored(matching, ignored_ghsas)
+    for name, advisory, ghsa in waived:
+        print(
+            f"ignored advisory {ghsa} ({advisory['severity']}: {name})"
+            f" per {IGNORE_FILE}: {ignored_ghsas[ghsa.lower()]}"
+        )
+    for unused in sorted(set(ignored_ghsas) - {g.lower() for _, _, g in waived}):
+        print(
+            f"note: waiver {unused} in {IGNORE_FILE} matched no current advisory"
+            " at this level - consider removing it"
+        )
 
     if matching:
         matching.sort(
