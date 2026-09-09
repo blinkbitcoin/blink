@@ -126,6 +126,33 @@ describe("NotificationsService", () => {
 
       expect(result).not.toBeInstanceOf(Error)
       expect(handleNotificationEvent).toHaveBeenCalledTimes(1)
+      const request = handleNotificationEvent.mock.calls[0]?.[0]
+      const displayAmount = request
+        ?.getEvent()
+        ?.getTransactionOccurred()
+        ?.getDisplayAmount()
+      expect(displayAmount?.getCurrencyCode()).toBe("ZZZ")
+      expect(displayAmount?.getMinorUnits()).toBe(100)
+      expect(displayAmount?.getFractionDigits()).toBe(2)
+    })
+
+    it("skips the push and records a malformed display amount instead of sending it", async () => {
+      const handleNotificationEvent = jest
+        .spyOn(notificationsGrpc, "handleNotificationEvent")
+        .mockResolvedValue(new HandleNotificationEventResponse())
+
+      const result = await NotificationsService().sendTransaction({
+        recipient,
+        transaction: transactionFor({
+          displayCurrency: "USD" as DisplayCurrency,
+          displayAmountInMinor: 0,
+          displayAmountInMajor: "1e-7" as DisplayCurrencyMajorAmount,
+          settlementAmount: toSats(-100),
+        }),
+      })
+
+      expect(result).not.toBeInstanceOf(Error)
+      expect(handleNotificationEvent).not.toHaveBeenCalled()
     })
   })
 })

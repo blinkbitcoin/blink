@@ -48,7 +48,7 @@ import {
 import { toSats } from "@/domain/bitcoin"
 import { AccountLevel, AccountStatus } from "@/domain/accounts"
 import { welcomeSmsTemplate } from "@/domain/sms-templates"
-import { WalletCurrency } from "@/domain/shared"
+import { ErrorLevel, WalletCurrency } from "@/domain/shared"
 import { TxStatus } from "@/domain/wallets/tx-status"
 import { CallbackEventType } from "@/domain/callback"
 import { CallbackError } from "@/domain/callback/errors"
@@ -58,7 +58,11 @@ import { toCents, UsdDisplayCurrency } from "@/domain/fiat"
 
 import { PubSubService } from "@/services/pubsub"
 import { CallbackService } from "@/services/svix"
-import { wrapAsyncFunctionsToRunInSpan, wrapAsyncToRunInSpan } from "@/services/tracing"
+import {
+  recordExceptionInCurrentSpan,
+  wrapAsyncFunctionsToRunInSpan,
+  wrapAsyncToRunInSpan,
+} from "@/services/tracing"
 import { getPhoneProviderTransactionalService } from "@/services/phone-provider"
 
 export const NotificationsService = (): INotificationsService => {
@@ -222,6 +226,12 @@ export const NotificationsService = (): INotificationsService => {
         transaction,
         type,
       })
+      if (request instanceof Error) {
+        // A malformed display amount must not ship a wrong or zero amount to a
+        // user's phone; record it and skip this one notification.
+        recordExceptionInCurrentSpan({ error: request, level: ErrorLevel.Warn })
+        return true
+      }
 
       await notificationsGrpc.handleNotificationEvent(
         request,

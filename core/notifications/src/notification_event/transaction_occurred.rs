@@ -159,25 +159,102 @@ mod tests {
     }
 
     #[test]
+    fn huf_non_two_digit_scales_bypass_the_filler_carve_out() {
+        // The internal two-decimal contract applies only when the sender
+        // confirms two digits or omits the field. Any other explicit scale goes
+        // through the generic branch with the supplied exponent.
+        // rusty_money formats HUF in its own locale: space-grouped integer part,
+        // comma decimal separator. Some(0) renders 366 519Ft, Some(3) 366,519Ft.
+        let cases: [(Option<u32>, &str); 2] = [(Some(0), "366 519Ft"), (Some(3), "366,519Ft")];
+        for (fraction_digits, expected_digits) in cases {
+            let event = TransactionOccurred {
+                transaction_type: TransactionType::LightningReceipt,
+                settlement_amount: TransactionAmount {
+                    minor_units: 1,
+                    fraction_digits: None,
+                    currency: Currency::Crypto(rusty_money::crypto::BTC),
+                },
+                display_amount: Some(TransactionAmount {
+                    minor_units: 366519,
+                    fraction_digits,
+                    currency: Currency::Iso(rusty_money::iso::HUF),
+                }),
+            };
+            let localized_message =
+                event.to_localized_push_msg(&GaloyLocale::from("en".to_string()));
+            assert!(
+                localized_message.body.contains(expected_digits),
+                "HUF at {fraction_digits:?} should render {expected_digits} digits. Got: {}",
+                localized_message.body
+            );
+            assert!(
+                !localized_message.body.contains("3665.19Ft"),
+                "the two-decimal carve-out must not apply at {fraction_digits:?}. Got: {}",
+                localized_message.body
+            );
+        }
+    }
+
+    #[test]
     fn configured_fraction_digits_override_iso_exponent() {
-        let event = TransactionOccurred {
-            transaction_type: TransactionType::LightningReceipt,
-            settlement_amount: TransactionAmount {
-                minor_units: 1,
-                fraction_digits: None,
-                currency: Currency::Crypto(rusty_money::crypto::BTC),
-            },
-            display_amount: Some(TransactionAmount {
-                minor_units: 100,
-                fraction_digits: Some(0),
-                currency: Currency::Iso(rusty_money::iso::XTS),
-            }),
-        };
-        let localized_message = event.to_localized_push_msg(&GaloyLocale::from("en".to_string()));
-        assert!(
-            localized_message.body.contains("100"),
-            "XTS amount should use the supplied zero-digit scale. Got: {}",
-            localized_message.body
-        );
+        // Each case must discriminate the override branch from the ISO fallback:
+        // the supplied digits differ from the currency's native ISO exponent.
+        let cases: [(
+            &'static rusty_money::iso::Currency,
+            Option<u32>,
+            &str,
+            Option<&str>,
+        ); 4] = [
+            // USD native exponent 2: an explicit zero-digit scale must render
+            // whole dollars, never 1.00.
+            (rusty_money::iso::USD, Some(0), "$100", Some("$1.00")),
+            // Control: without the field the ISO exponent formats 1.00.
+            (rusty_money::iso::USD, None, "$1.00", None),
+            // JPY native exponent 0: an explicit two-digit scale must render 1.00.
+            (rusty_money::iso::JPY, Some(2), "1.00", None),
+            // Zero-digit scale on a zero-exponent ISO currency.
+            (rusty_money::iso::XTS, Some(0), "100", None),
+        ];
+        for (currency, fraction_digits, expected, unexpected) in cases {
+            let event = TransactionOccurred {
+                transaction_type: TransactionType::LightningReceipt,
+                settlement_amount: TransactionAmount {
+                    minor_units: 1,
+                    fraction_digits: None,
+                    currency: Currency::Crypto(rusty_money::crypto::BTC),
+                },
+                display_amount: Some(TransactionAmount {
+                    minor_units: 100,
+                    fraction_digits,
+                    currency: Currency::Iso(currency),
+                }),
+            };
+            let localized_message =
+                event.to_localized_push_msg(&GaloyLocale::from("en".to_string()));
+            assert!(
+                localized_message.body.contains(expected),
+                "{} at {fraction_digits:?} should contain {expected}. Got: {}",
+                currency.iso_alpha_code,
+                localized_message.body
+            );
+            if let Some(unexpected) = unexpected {
+                assert!(
+                    !localized_message.body.contains(unexpected),
+                    "{} at {fraction_digits:?} must not contain {unexpected}. Got: {}",
+                    currency.iso_alpha_code,
+                    localized_message.body
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn persisted_payload_without_fraction_digits_defaults_to_none() {
+        // mq_payloads rows written before fraction_digits existed must keep
+        // deserialising, with the field defaulting to None.
+        let payload = r#"{"minor_units":100,"currency":"USD"}"#;
+        let amount: TransactionAmount = serde_json::from_str(payload).expect("legacy payload");
+        assert_eq!(amount.minor_units, 100);
+        assert_eq!(amount.fraction_digits, None);
     }
 }

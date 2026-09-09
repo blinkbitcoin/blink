@@ -1,9 +1,7 @@
 import { listCachedPriceCurrencies } from "./list-currencies"
 
+import { MAX_FRACTION_DIGITS } from "@/domain/fiat"
 import { InvalidPriceCurrencyError } from "@/domain/price"
-
-// Price service schema limit; all ISO 4217 currencies fit within this range.
-const MAX_FRACTION_DIGITS = 4
 
 const checkedFractionDigits = (
   fractionDigits: number,

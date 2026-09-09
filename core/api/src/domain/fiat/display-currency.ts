@@ -12,6 +12,11 @@ export const MajorExponent = {
   STANDARD: 2,
 } as const
 
+// Shared protocol bound with the notifications service; mirrored in
+// core/notifications/src/grpc/server/convert.rs. All ISO 4217 exponents fit
+// within this range.
+export const MAX_FRACTION_DIGITS = 4
+
 export const majorToMinorUnit = ({
   amount,
   fractionDigits,

@@ -157,6 +157,7 @@ describe("payment display-currency precision", () => {
       transaction,
       type: TransactionType.INTRA_LEDGER_RECEIPT,
     })
+    if (request instanceof Error) throw request
 
     expect(
       request.getEvent()?.getTransactionOccurred()?.getDisplayAmount()?.getMinorUnits(),

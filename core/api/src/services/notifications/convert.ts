@@ -1,7 +1,12 @@
 import * as Grpc from "./proto/notifications_pb"
 
-import { majorToMinorUnit } from "@/domain/fiat"
 import {
+  getCurrencyMajorExponent,
+  majorToMinorUnit,
+  MAX_FRACTION_DIGITS,
+} from "@/domain/fiat"
+import {
+  InvalidDisplayAmountError,
   InvalidNotificationCategoryError,
   InvalidPushNotificationSettingError,
   NotificationCategory,
@@ -10,6 +15,46 @@ import {
   DeepLinkAction,
   Icon,
 } from "@/domain/notifications"
+import { ErrorLevel } from "@/domain/shared"
+
+import { recordExceptionInCurrentSpan } from "@/services/tracing"
+
+const FIXED_POINT_AMOUNT_PATTERN = /^-?\d+(\.\d+)?$/
+
+// The wire contract rejects scales outside 0..MAX_FRACTION_DIGITS. A ledger row
+// carrying a bad value must degrade to an approximate amount, never to a
+// rejected request, because no caller retries a dropped notification.
+const checkedFractionDigits = ({
+  fractionDigits,
+  displayCurrency,
+}: {
+  fractionDigits: number
+  displayCurrency: DisplayCurrency
+}): number => {
+  if (
+    Number.isInteger(fractionDigits) &&
+    fractionDigits >= 0 &&
+    fractionDigits <= MAX_FRACTION_DIGITS
+  ) {
+    return fractionDigits
+  }
+
+  const fallback = getCurrencyMajorExponent(displayCurrency)
+  recordExceptionInCurrentSpan({
+    error: new InvalidDisplayAmountError(
+      `fraction digits ${fractionDigits} out of range for ${displayCurrency}, using ICU fallback ${fallback}`,
+    ),
+    level: ErrorLevel.Warn,
+  })
+  return fallback
+}
+
+const inferFractionDigits = (
+  displayAmountMajor: DisplayCurrencyMajorAmount,
+): number | undefined => {
+  if (!FIXED_POINT_AMOUNT_PATTERN.test(displayAmountMajor)) return undefined
+  return displayAmountMajor.split(".")[1]?.length ?? 0
+}
 
 export const walletTransactionToNotificationEventRequest = ({
   userId,
@@ -26,27 +71,40 @@ export const walletTransactionToNotificationEventRequest = ({
     | "settlementDisplayPrice"
   >
   type: Grpc.TransactionType
-}): Grpc.HandleNotificationEventRequest => {
+}): Grpc.HandleNotificationEventRequest | InvalidDisplayAmountError => {
   const settlementAmount = new Grpc.Money()
   settlementAmount.setMinorUnits(Math.abs(transaction.settlementAmount))
   settlementAmount.setCurrencyCode(transaction.settlementCurrency)
 
   const displayCurrency = transaction.settlementDisplayPrice.displayCurrency
-  const fractionDigits =
-    transaction.settlementDisplayCurrencyFractionDigits ??
-    transaction.settlementDisplayAmount.split(".")[1]?.length ??
-    0
-  const displayAmount = new Grpc.Money()
-  displayAmount.setMinorUnits(
-    Math.abs(
-      Math.round(
-        majorToMinorUnit({
-          amount: transaction.settlementDisplayAmount,
-          fractionDigits,
-        }),
-      ),
+  const inferredFractionDigits = inferFractionDigits(transaction.settlementDisplayAmount)
+  if (inferredFractionDigits === undefined) {
+    return new InvalidDisplayAmountError(
+      `settlementDisplayAmount is not fixed-point decimal: ${transaction.settlementDisplayAmount}`,
+    )
+  }
+  const fractionDigits = checkedFractionDigits({
+    fractionDigits:
+      transaction.settlementDisplayCurrencyFractionDigits ?? inferredFractionDigits,
+    displayCurrency,
+  })
+
+  const displayMinorUnits = Math.abs(
+    Math.round(
+      majorToMinorUnit({
+        amount: transaction.settlementDisplayAmount,
+        fractionDigits,
+      }),
     ),
   )
+  if (!Number.isFinite(displayMinorUnits)) {
+    return new InvalidDisplayAmountError(
+      `settlementDisplayAmount did not convert to finite minor units: ${transaction.settlementDisplayAmount}`,
+    )
+  }
+
+  const displayAmount = new Grpc.Money()
+  displayAmount.setMinorUnits(displayMinorUnits)
   displayAmount.setCurrencyCode(displayCurrency)
   displayAmount.setFractionDigits(fractionDigits)
 
