@@ -2,24 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'refactor(core): rely on explicit price precision (#810)...'
-      sha: 96323d8864883ad4f9240db5f763dc0842d572e3
+      commitTitle: 'feat(migration): notify user via MigrationRetryReady event on
+        retry grant (#824)'
+      sha: 1708465f2f9b5a66839ed860db2f8fce2d8db237
       tags:
-      - 0.22.58-1-g96323d886
+      - 0.22.58-3-g1708465f2
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'refactor(core): rely on explicit price precision (#810)...'
-      sha: 96323d8864883ad4f9240db5f763dc0842d572e3
+      commitTitle: 'feat(migration): notify user via MigrationRetryReady event on
+        retry grant (#824)'
+      sha: 1708465f2f9b5a66839ed860db2f8fce2d8db237
       tags:
-      - 0.22.58-1-g96323d886
+      - 0.22.58-3-g1708465f2
     path: schemas
   - git:
-      commitTitle: 'refactor(core): rely on explicit price precision (#810)...'
-      sha: 96323d8864883ad4f9240db5f763dc0842d572e3
+      commitTitle: 'feat(migration): notify user via MigrationRetryReady event on
+        retry grant (#824)'
+      sha: 1708465f2f9b5a66839ed860db2f8fce2d8db237
       tags:
-      - 0.22.58-1-g96323d886
+      - 0.22.58-3-g1708465f2
     path: gql
   path: graphql
 kind: LockConfig
