@@ -131,8 +131,8 @@ export const updatePendingPaymentByHash = wrapAsyncToRunInSpan({
 // Resolves reimbursement display values without mutating the ledger row, and
 // reports unusable metadata and precision provenance on the current span.
 // displayFee is unused by reimburseFee, so its absence only warns. Missing
-// amount/currency or a non-positive amount skips display conversion, not
-// settlement or reserve retention.
+// amount/currency, blank currency, or a non-finite/non-positive amount skips
+// display conversion, not settlement or reserve retention.
 const resolveReimbursementDisplay = (
   pendingPayment: LedgerTransaction<WalletCurrency>,
 ): SenderDisplayAmounts | undefined => {
@@ -145,19 +145,23 @@ const resolveReimbursementDisplay = (
       level: ErrorLevel.Warn,
     })
   }
-  if (displayAmount === undefined || displayCurrency === undefined) {
+  if (
+    displayAmount === undefined ||
+    displayCurrency === undefined ||
+    displayCurrency.trim().length === 0
+  ) {
     recordExceptionInCurrentSpan({
       error: new MissingExpectedDisplayAmountsForTransactionError(
-        "display amount or currency missing from pending payment",
+        "display amount missing or currency missing/blank from pending payment",
       ),
       level: ErrorLevel.Warn,
     })
     return undefined
   }
-  if (displayAmount <= 0) {
+  if (!Number.isFinite(displayAmount) || displayAmount <= 0) {
     recordExceptionInCurrentSpan({
       error: new MissingExpectedDisplayAmountsForTransactionError(
-        "non-positive display amount on pending payment",
+        "non-finite or non-positive display amount on pending payment",
       ),
       level: ErrorLevel.Warn,
     })

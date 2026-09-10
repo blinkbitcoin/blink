@@ -20,14 +20,9 @@ const ICU_48_LEGACY_FRACTION_DIGITS = 2
 // runtime row can never be rescaled as legacy.
 const ICU_48_PRODUCTION_FIRST_SERVED_AT = Date.parse("2026-08-31T14:11:14Z")
 
-export const getLegacyPriceFractionDigits = (
-  currency: DisplayCurrency,
-): number | undefined =>
-  ICU_48_CHANGED_CURRENCIES.has(currency) ? ICU_48_LEGACY_FRACTION_DIGITS : undefined
-
 // A row provably written by a pre-CLDR-48 runtime: its currency's digits
 // changed in CLDR 48 and it predates the first ICU 48 pod.
-export const isPreIcu48Row = ({
+const isPreIcu48Row = ({
   currency,
   timestamp,
 }: {
@@ -36,19 +31,6 @@ export const isPreIcu48Row = ({
 }): boolean =>
   ICU_48_CHANGED_CURRENCIES.has(currency) &&
   timestamp.getTime() < ICU_48_PRODUCTION_FIRST_SERVED_AT
-
-export const needsLegacyPricePrecision = ({
-  currency,
-  fractionDigits,
-  timestamp,
-}: {
-  currency: DisplayCurrency
-  fractionDigits?: number | null
-  timestamp: Date
-}): boolean => {
-  const isMissing = fractionDigits === undefined || fractionDigits === null
-  return isMissing && isPreIcu48Row({ currency, timestamp })
-}
 
 // The one resolution policy for a ledger row's display scale, shared by the
 // history translation and payment reimbursement paths so the two can never

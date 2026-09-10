@@ -112,6 +112,65 @@ describe("update pending payments", () => {
     })
   }
 
+  describe.each([false, true])(
+    "persisted blank currency, skipFeeReimbursement: %s",
+    (skip) => {
+      it.each(["", " \t\n"])(
+        "finalizes without malformed reimbursement metadata for %j",
+        async (displayCurrency) => {
+          const walletDescriptor = await createRandomUserAndBtcWallet()
+          const { paymentHash } = await recordSendLnPayment({
+            walletDescriptor,
+            paymentAmount: sendAmount,
+            bankFee,
+            displayAmounts: {
+              ...displaySendEurAmounts,
+              displayCurrencyFractionDigits: 2,
+            },
+            feeKnownInAdvance: false,
+          })
+          const raw = await Transaction.collection.findOne({
+            hash: paymentHash,
+            type: LedgerTransactionType.Payment,
+            debit: { $gt: 0 },
+          })
+          if (!raw) throw new Error("pending sender row missing")
+          const mutation = await Transaction.collection.updateOne(
+            { _id: raw._id },
+            { $set: { displayCurrency } },
+          )
+          expect(mutation.modifiedCount).toBe(1)
+          expect(
+            (await Transaction.collection.findOne({ _id: raw._id }))?.displayCurrency,
+          ).toBe(displayCurrency)
+
+          mockSuccessfulPayment({ paymentHash, walletDescriptor })
+          jest.spyOn(ConfigImpl, "getSkipFeeReimbursement").mockReturnValue(skip)
+          const reimbursementSpy = jest.spyOn(LedgerFacadeImpl, "recordReceiveOffChain")
+          const retainedSpy = jest.spyOn(LedgerFacadeImpl, "recordLnFeeReserveRetained")
+          const finalizedSpy = jest.spyOn(LedgerFacadeImpl, "updateLnPaymentState")
+
+          expect(
+            await updatePendingPaymentByHash({ paymentHash, logger: baseLogger }),
+          ).toBeUndefined()
+          expect(await LedgerService().getPendingPaymentsCount(walletDescriptor.id)).toBe(
+            0,
+          )
+          expect(reimbursementSpy).not.toHaveBeenCalled()
+          expect(retainedSpy).toHaveBeenCalledTimes(skip ? 1 : 0)
+          expect(finalizedSpy).toHaveBeenCalledTimes(1)
+
+          expect(
+            await updatePendingPaymentByHash({ paymentHash, logger: baseLogger }),
+          ).toBeUndefined()
+          expect(reimbursementSpy).not.toHaveBeenCalled()
+          expect(retainedSpy).toHaveBeenCalledTimes(skip ? 1 : 0)
+          expect(finalizedSpy).toHaveBeenCalledTimes(1)
+        },
+      )
+    },
+  )
+
   describe("with fee reimbursement enabled", () => {
     beforeEach(() => {
       // The shipped configuration retains the reserve instead of reimbursing.

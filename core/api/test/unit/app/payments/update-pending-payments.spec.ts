@@ -1,4 +1,5 @@
 import { updatePendingPaymentByHash } from "@/app/payments/update-pending-payments"
+import { completeMigrationFlowForSettledPayment } from "@/app/migration-flow/settle-migration-flow"
 
 import { getSkipFeeReimbursement } from "@/config"
 import { PaymentStatus } from "@/domain/bitcoin/lightning"
@@ -161,10 +162,15 @@ describe("pending payment display validation", () => {
     })
 
     it.each([
+      ["NaN amount", { displayAmount: NaN }],
+      ["positive infinite amount", { displayAmount: Infinity }],
+      ["negative infinite amount", { displayAmount: -Infinity }],
       ["negative amount", { displayAmount: -24 }],
       ["zero amount", { displayAmount: 0 }],
       ["missing amount", { displayAmount: undefined }],
       ["missing currency", { displayCurrency: undefined }],
+      ["empty currency", { displayCurrency: "" }],
+      ["blank currency", { displayCurrency: " \t\n" }],
     ] as const)("settles a row with %s without reimbursing", async (_name, display) => {
       pendingPayment = {
         ...pendingPayment,
@@ -177,12 +183,14 @@ describe("pending payment display validation", () => {
       expect(LedgerFacade.settlePendingLnSend).toHaveBeenCalledWith(paymentHash)
       expect(pending).toBe(false)
       expect(LedgerFacade.recordReceiveOffChain).not.toHaveBeenCalled()
+      expect(LedgerFacade.updateLnPaymentState).toHaveBeenCalledTimes(1)
+      expect(completeMigrationFlowForSettledPayment).toHaveBeenCalledTimes(1)
+      expect(completeMigrationFlowForSettledPayment).toHaveBeenCalledWith({ paymentHash })
       expect(recordExceptionInCurrentSpan).toHaveBeenCalledTimes(1)
       expect(recordExceptionInCurrentSpan).toHaveBeenCalledWith({
         error: expect.any(MissingExpectedDisplayAmountsForTransactionError),
         level: ErrorLevel.Warn,
       })
-      expect(LedgerFacade.updateLnPaymentState).toHaveBeenCalledTimes(1)
       const retainedCall = [
         {
           paymentAmount: { amount: 10n, currency: WalletCurrency.Btc },
@@ -203,6 +211,8 @@ describe("pending payment display validation", () => {
 
       const second = await updatePendingPaymentByHash({ paymentHash, logger: baseLogger })
       expect(second).toBeUndefined()
+      expect(LedgerFacade.updateLnPaymentState).toHaveBeenCalledTimes(1)
+      expect(completeMigrationFlowForSettledPayment).toHaveBeenCalledTimes(1)
       expect(LedgerFacade.settlePendingLnSend).toHaveBeenCalledTimes(1)
       expect(LedgerFacade.recordReceiveOffChain).not.toHaveBeenCalled()
       expect(LedgerFacade.recordLnFeeReserveRetained).toHaveBeenCalledTimes(

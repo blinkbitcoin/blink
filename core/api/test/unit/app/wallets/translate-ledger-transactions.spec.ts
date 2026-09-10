@@ -203,6 +203,32 @@ describe("translateLedgerTransactions", () => {
     expect(recordExceptionInCurrentSpan).not.toHaveBeenCalled()
   })
 
+  it("sanitizes a corrupt scale in an unchanged currency before real history conversion", async () => {
+    const actualWalletsDomain =
+      jest.requireActual<typeof import("@/domain/wallets")>("@/domain/wallets")
+    mockFromLedger.mockImplementation(
+      actualWalletsDomain.WalletTransactionHistory.fromLedger,
+    )
+    const transaction = displayTransaction({
+      id: "eur-corrupt",
+      currency: "EUR" as DisplayCurrency,
+      timestamp: "2026-07-03T14:22:08Z",
+      displayAmount: 2197,
+      displayFee: 20,
+      fractionDigits: 20,
+    })
+
+    const result = await translateLedgerTransaction(transaction)
+
+    expect(result.settlementDisplayAmount).toBe("-21.97")
+    expect(result.settlementDisplayFee).toBe("0.20")
+    expect(result.settlementDisplayCurrencyFractionDigits).toBeUndefined()
+    expect(
+      mockFromLedger.mock.calls[0][0].txn.displayCurrencyFractionDigits,
+    ).toBeUndefined()
+    expect(recordExceptionInCurrentSpan).not.toHaveBeenCalled()
+  })
+
   it("sanitizes corrupt rows on every history entry point without per-row exceptions", async () => {
     const transactions = Array.from({ length: 100 }, (_, index) =>
       displayTransaction({
