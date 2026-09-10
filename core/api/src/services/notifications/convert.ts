@@ -265,6 +265,12 @@ export const deepLinkScreenToGrpcDeepLinkScreen = (
       return Grpc.DeepLinkScreen.CARDONBOARDINGAPPROVED
     case DeepLinkScreen.AccountMigration:
       return Grpc.DeepLinkScreen.ACCOUNTMIGRATION
+    case DeepLinkScreen.CardOnboardingInvestment:
+      return Grpc.DeepLinkScreen.CARDONBOARDINGINVESTMENT
+    case DeepLinkScreen.CardOnboardingInvestmentTransfer:
+      return Grpc.DeepLinkScreen.CARDONBOARDINGINVESTMENTTRANSFER
+    case DeepLinkScreen.CardOnboardingInvestmentDepositPending:
+      return Grpc.DeepLinkScreen.CARDONBOARDINGINVESTMENTDEPOSITPENDING
   }
 }
 
