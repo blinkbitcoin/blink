@@ -38,7 +38,7 @@ export const reimburseFee = async <S extends WalletCurrency, R extends WalletCur
   revealedPreImage,
 }: {
   paymentFlow: PaymentFlow<S, R>
-  senderDisplay?: SenderDisplayAmounts
+  senderDisplay: SenderDisplayAmounts | undefined
   journalId: LedgerJournalId
   actualFee: Satoshis
   revealedPreImage?: RevealedPreImage

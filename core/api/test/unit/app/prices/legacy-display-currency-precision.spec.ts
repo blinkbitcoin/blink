@@ -23,6 +23,40 @@ const POST_CUTOFF = new Date("2026-09-01T00:00:00Z")
 afterEach(() => jest.clearAllMocks())
 
 describe("resolveRowFractionDigits", () => {
+  it("returns the resolution source with the value", () => {
+    expect(
+      resolveRowFractionDigits({
+        currency: COP,
+        fractionDigits: 2,
+        timestamp: PRE_CUTOFF,
+      }),
+    ).toEqual({ value: 2, source: "persisted" })
+  })
+
+  it.each([20, -1, 1.5, NaN, Infinity])(
+    "discards corrupt legacy scale %s without read-path diagnostics",
+    (fractionDigits) => {
+      expect(
+        resolveRowFractionDigits({
+          currency: COP,
+          fractionDigits,
+          timestamp: PRE_CUTOFF,
+        }),
+      ).toEqual({ value: 2, source: "legacyConstantFallback" })
+      expect(mockRecordException).not.toHaveBeenCalled()
+    },
+  )
+
+  it("preserves the maximum supported persisted scale", () => {
+    expect(
+      resolveRowFractionDigits({
+        currency: COP,
+        fractionDigits: 4,
+        timestamp: PRE_CUTOFF,
+      }),
+    ).toEqual({ value: 4, source: "persisted" })
+  })
+
   it("returns a valid persisted scale", () => {
     expect(
       resolveRowFractionDigits({
@@ -30,7 +64,7 @@ describe("resolveRowFractionDigits", () => {
         fractionDigits: 2,
         timestamp: PRE_CUTOFF,
       }),
-    ).toBe(2)
+    ).toEqual({ value: 2, source: "persisted" })
     expect(mockRecordException).not.toHaveBeenCalled()
   })
 
@@ -41,7 +75,7 @@ describe("resolveRowFractionDigits", () => {
         fractionDigits: 0,
         timestamp: POST_CUTOFF,
       }),
-    ).toBe(0)
+    ).toEqual({ value: 0, source: "persisted" })
     expect(mockRecordException).not.toHaveBeenCalled()
   })
 
@@ -52,30 +86,32 @@ describe("resolveRowFractionDigits", () => {
         fractionDigits: null,
         timestamp: PRE_CUTOFF,
       }),
-    ).toBe(2)
+    ).toEqual({ value: 2, source: "legacyConstantFallback" })
   })
 
-  it("records and discards an out-of-range persisted scale", () => {
+  it("discards an out-of-range persisted scale without recording on the read path", () => {
     const result = resolveRowFractionDigits({
       currency: COP,
       fractionDigits: 20,
       timestamp: POST_CUTOFF,
     })
 
-    expect(result).toBeUndefined()
-    expect(mockRecordException).toHaveBeenCalledWith(
-      expect.objectContaining({ level: "warn" }),
-    )
+    expect(result).toEqual({ value: undefined, source: "runtimeIcuFallback" })
+    expect(mockRecordException).not.toHaveBeenCalled()
   })
 
   it("returns the immutable legacy constant for a pre-cutoff row without persisted digits", () => {
-    expect(resolveRowFractionDigits({ currency: COP, timestamp: PRE_CUTOFF })).toBe(2)
+    expect(resolveRowFractionDigits({ currency: COP, timestamp: PRE_CUTOFF })).toEqual({
+      value: 2,
+      source: "legacyConstantFallback",
+    })
   })
 
   it("returns undefined for a post-cutoff row without persisted digits", () => {
-    expect(
-      resolveRowFractionDigits({ currency: COP, timestamp: POST_CUTOFF }),
-    ).toBeUndefined()
+    expect(resolveRowFractionDigits({ currency: COP, timestamp: POST_CUTOFF })).toEqual({
+      value: undefined,
+      source: "runtimeIcuFallback",
+    })
   })
 
   it("returns undefined for a pre-cutoff row in a currency CLDR 48 did not change", () => {
@@ -84,11 +120,47 @@ describe("resolveRowFractionDigits", () => {
         currency: "EUR" as DisplayCurrency,
         timestamp: PRE_CUTOFF,
       }),
-    ).toBeUndefined()
+    ).toEqual({ value: undefined, source: "runtimeIcuFallback" })
   })
 })
 
 describe("resolvePaymentDisplayCurrencyFractionDigits", () => {
+  it("discards corrupt legacy precision and records only the payment fallback", () => {
+    const result = resolvePaymentDisplayCurrencyFractionDigits({
+      displayCurrency: COP,
+      persistedFractionDigits: 20,
+      timestamp: PRE_CUTOFF,
+    })
+
+    expect(result).toBe(2)
+    expect(mockRecordException).toHaveBeenCalledTimes(1)
+    expect(mockRecordException).toHaveBeenCalledWith({
+      error: new Error(
+        "resolved legacy display precision for COP from the immutable constant",
+      ),
+      level: "warn",
+    })
+    expect(mockAddAttributes).toHaveBeenCalledWith({
+      "payment.displayCurrencyFractionDigitsSource": "legacyConstantFallback",
+      "payment.displayCurrencyFractionDigits": 2,
+    })
+  })
+
+  it("discards corrupt post-cutoff precision without a legacy warning", () => {
+    expect(
+      resolvePaymentDisplayCurrencyFractionDigits({
+        displayCurrency: COP,
+        persistedFractionDigits: 20,
+        timestamp: POST_CUTOFF,
+      }),
+    ).toBe(getCurrencyMajorExponent(COP))
+    expect(mockRecordException).not.toHaveBeenCalled()
+    expect(mockAddAttributes).toHaveBeenCalledWith({
+      "payment.displayCurrencyFractionDigitsSource": "runtimeIcuFallback",
+      "payment.displayCurrencyFractionDigits": getCurrencyMajorExponent(COP),
+    })
+  })
+
   it("uses persisted precision and reports the persisted source", () => {
     const result = resolvePaymentDisplayCurrencyFractionDigits({
       displayCurrency: COP,

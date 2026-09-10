@@ -128,17 +128,14 @@ export const updatePendingPaymentByHash = wrapAsyncToRunInSpan({
   },
 })
 
-// Resolves the display values a fee reimbursement needs from the pending
-// ledger row. Pure with respect to the ledger: it only reads the row.
-//
-// displayFee is not consumed by reimburseFee (its signature takes no fee
-// display parameter), so its absence is recorded but does not gate the
-// reimbursement. A zero displayAmount cannot form a price ratio downstream
-// (InvalidZeroAmountPriceRatioInputError), so it is rejected here where the
-// diagnosis belongs.
+// Resolves reimbursement display values without mutating the ledger row, and
+// reports unusable metadata and precision provenance on the current span.
+// displayFee is unused by reimburseFee, so its absence only warns. Missing
+// amount/currency or a non-positive amount skips display conversion, not
+// settlement or reserve retention.
 const resolveReimbursementDisplay = (
   pendingPayment: LedgerTransaction<WalletCurrency>,
-): SenderDisplayAmounts | MissingExpectedDisplayAmountsForTransactionError => {
+): SenderDisplayAmounts | undefined => {
   const { displayAmount, displayFee, displayCurrency } = pendingPayment
   if (displayFee === undefined) {
     recordExceptionInCurrentSpan({
@@ -149,14 +146,22 @@ const resolveReimbursementDisplay = (
     })
   }
   if (displayAmount === undefined || displayCurrency === undefined) {
-    return new MissingExpectedDisplayAmountsForTransactionError(
-      "display amount or currency missing from pending payment",
-    )
+    recordExceptionInCurrentSpan({
+      error: new MissingExpectedDisplayAmountsForTransactionError(
+        "display amount or currency missing from pending payment",
+      ),
+      level: ErrorLevel.Warn,
+    })
+    return undefined
   }
-  if (displayAmount === 0) {
-    return new MissingExpectedDisplayAmountsForTransactionError(
-      "zero display amount on pending payment",
-    )
+  if (displayAmount <= 0) {
+    recordExceptionInCurrentSpan({
+      error: new MissingExpectedDisplayAmountsForTransactionError(
+        "non-positive display amount on pending payment",
+      ),
+      level: ErrorLevel.Warn,
+    })
+    return undefined
   }
 
   return {
@@ -504,16 +509,9 @@ const lockedPendingPaymentSteps = async ({
     return { result: finalized, paymentFailed: false }
   }
 
-  const reimbursementDisplay = resolveReimbursementDisplay(pendingPayment)
-  let senderDisplay: SenderDisplayAmounts | undefined
-  if (reimbursementDisplay instanceof Error) {
-    // Settlement already happened; the reason is recorded and only the
-    // reimbursement's display conversion is skipped. reimburseFee still runs:
-    // in reserve-retention mode it needs no display metadata.
-    recordExceptionInCurrentSpan({ error: reimbursementDisplay, level: ErrorLevel.Warn })
-  } else {
-    senderDisplay = reimbursementDisplay
-  }
+  // Settlement already happened. Invalid display metadata is reported by the
+  // resolver, but reimburseFee still runs to retain the reserve when configured.
+  const senderDisplay = resolveReimbursementDisplay(pendingPayment)
 
   const reimbursed = await reimburseFee({
     paymentFlow,

@@ -29,6 +29,14 @@ import { reimburseFee } from "@/app/payments/reimburse-fee"
 import * as LedgerFacadeImpl from "@/services/ledger/facade"
 
 describe("reimburseFee", () => {
+  it("requires callers to explicitly provide the senderDisplay key", () => {
+    type Args = Parameters<typeof reimburseFee>[0]
+    const senderDisplayIsRequired: Omit<Args, "senderDisplay"> extends Args
+      ? false
+      : true = true
+    expect(senderDisplayIsRequired).toBe(true)
+  })
+
   const maxFee = {
     btc: { amount: 100n, currency: WalletCurrency.Btc },
     usd: { amount: 5n, currency: WalletCurrency.Usd },
@@ -120,6 +128,7 @@ describe("reimburseFee", () => {
 
     const result = await reimburseFee({
       paymentFlow: buildPaymentFlow(),
+      senderDisplay: undefined,
       journalId: reimburseArgs.journalId,
       actualFee: reimburseArgs.actualFee,
     })
@@ -135,6 +144,7 @@ describe("reimburseFee", () => {
 
     const result = await reimburseFee({
       paymentFlow: buildPaymentFlow(),
+      senderDisplay: undefined,
       journalId: reimburseArgs.journalId,
       actualFee: reimburseArgs.actualFee,
     })

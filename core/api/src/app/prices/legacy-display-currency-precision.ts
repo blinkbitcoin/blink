@@ -53,12 +53,17 @@ export const needsLegacyPricePrecision = ({
 // The one resolution policy for a ledger row's display scale, shared by the
 // history translation and payment reimbursement paths so the two can never
 // drift: a valid persisted write-time value wins; a proven pre-ICU-48 row falls
-// back to the immutable legacy constant; anything else returns undefined and is
-// the caller's fallback concern.
+// back to the immutable legacy constant; anything else leaves value undefined
+// for the caller's runtime fallback. The source travels with the value.
 //
 // A persisted value outside the shared 0..MAX_FRACTION_DIGITS bound is corrupt;
-// it is recorded and treated as missing rather than written into a malformed
-// display amount downstream.
+// it is treated as missing rather than written into a malformed display amount.
+// This read-path policy has no tracing side effects. Payment callers report at
+// their bounded send/settlement edge instead of recording per history row.
+type RowFractionDigitsResolution =
+  | { value: number; source: "persisted" | "legacyConstantFallback" }
+  | { value: undefined; source: "runtimeIcuFallback" }
+
 export const resolveRowFractionDigits = ({
   currency,
   fractionDigits,
@@ -67,21 +72,15 @@ export const resolveRowFractionDigits = ({
   currency: DisplayCurrency
   fractionDigits?: number | null
   timestamp: Date
-}): number | undefined => {
+}): RowFractionDigitsResolution => {
   if (fractionDigits !== undefined && fractionDigits !== null) {
     const checked = checkedFractionDigits({ fractionDigits })
-    if (checked !== undefined) return checked
-    recordExceptionInCurrentSpan({
-      error: new Error(
-        `persisted fractionDigits ${fractionDigits} out of range for ${currency}`,
-      ),
-      level: ErrorLevel.Warn,
-    })
+    if (checked !== undefined) return { value: checked, source: "persisted" }
   }
 
   return isPreIcu48Row({ currency, timestamp })
-    ? getLegacyPriceFractionDigits(currency)
-    : undefined
+    ? { value: ICU_48_LEGACY_FRACTION_DIGITS, source: "legacyConstantFallback" }
+    : { value: undefined, source: "runtimeIcuFallback" }
 }
 
 // Payment-path wrapper around resolveRowFractionDigits: resolves to a concrete
@@ -99,20 +98,11 @@ export const resolvePaymentDisplayCurrencyFractionDigits = ({
   persistedFractionDigits?: number | null
   timestamp: Date
 }): number => {
-  const rowFractionDigits = resolveRowFractionDigits({
+  const { value: rowFractionDigits, source } = resolveRowFractionDigits({
     currency: displayCurrency,
     fractionDigits: persistedFractionDigits,
     timestamp,
   })
-
-  const source =
-    persistedFractionDigits !== undefined &&
-    persistedFractionDigits !== null &&
-    rowFractionDigits === persistedFractionDigits
-      ? "persisted"
-      : rowFractionDigits !== undefined
-        ? "legacyConstantFallback"
-        : "runtimeIcuFallback"
 
   const fractionDigits = rowFractionDigits ?? getCurrencyMajorExponent(displayCurrency)
 

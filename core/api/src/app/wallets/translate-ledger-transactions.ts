@@ -14,7 +14,7 @@ const translateLedgerTransactionWithContext = (
   // write-time digits win; proven pre-ICU-48 rows use the immutable legacy
   // constant; anything else is left undefined and SettlementAmounts falls back
   // to the runtime ICU exponent.
-  const resolvedFractionDigits = resolveRowFractionDigits({
+  const { value: resolvedFractionDigits } = resolveRowFractionDigits({
     currency: displayCurrency,
     fractionDigits: txn.displayCurrencyFractionDigits,
     timestamp: txn.timestamp,
