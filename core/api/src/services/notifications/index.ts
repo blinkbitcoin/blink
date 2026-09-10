@@ -24,6 +24,7 @@ import {
   HandleNotificationEventRequest,
   NotificationEvent,
   MarketingNotificationTriggered,
+  MigrationRetryReady,
   DeepLink as ProtoDeepLink,
   HandleNotificationEventResponse,
   Action,
@@ -47,17 +48,21 @@ import {
 import { toSats } from "@/domain/bitcoin"
 import { AccountLevel, AccountStatus } from "@/domain/accounts"
 import { welcomeSmsTemplate } from "@/domain/sms-templates"
-import { WalletCurrency } from "@/domain/shared"
+import { ErrorLevel, WalletCurrency } from "@/domain/shared"
 import { TxStatus } from "@/domain/wallets/tx-status"
 import { CallbackEventType } from "@/domain/callback"
 import { CallbackError } from "@/domain/callback/errors"
 import { WalletInvoiceStatus } from "@/domain/wallet-invoices"
 import { customPubSubTrigger, PubSubDefaultTriggers } from "@/domain/pubsub"
-import { getCurrencyMajorExponent, toCents, UsdDisplayCurrency } from "@/domain/fiat"
+import { toCents, UsdDisplayCurrency } from "@/domain/fiat"
 
 import { PubSubService } from "@/services/pubsub"
 import { CallbackService } from "@/services/svix"
-import { wrapAsyncFunctionsToRunInSpan, wrapAsyncToRunInSpan } from "@/services/tracing"
+import {
+  recordExceptionInCurrentSpan,
+  wrapAsyncFunctionsToRunInSpan,
+  wrapAsyncToRunInSpan,
+} from "@/services/tracing"
 import { getPhoneProviderTransactionalService } from "@/services/phone-provider"
 
 export const NotificationsService = (): INotificationsService => {
@@ -216,17 +221,17 @@ export const NotificationsService = (): INotificationsService => {
       const type = getPushNotificationEventType(transaction)
       if (type === undefined) return true
 
-      const displayCurrency = transaction.settlementDisplayPrice.displayCurrency
-      const fractionDigits =
-        transaction.settlementDisplayCurrencyFractionDigits ??
-        getCurrencyMajorExponent(displayCurrency)
-
       const request = walletTransactionToNotificationEventRequest({
         userId: recipient.userId,
         transaction,
         type,
-        fractionDigits,
       })
+      if (request instanceof Error) {
+        // A malformed display amount must not ship a wrong or zero amount to a
+        // user's phone; record it and skip this one notification.
+        recordExceptionInCurrentSpan({ error: request, level: ErrorLevel.Warn })
+        return true
+      }
 
       await notificationsGrpc.handleNotificationEvent(
         request,
@@ -694,6 +699,32 @@ export const NotificationsService = (): INotificationsService => {
     }
   }
 
+  const sendMigrationRetryReady = async ({
+    userId,
+  }: {
+    userId: UserId
+  }): Promise<true | NotificationsServiceError> => {
+    try {
+      const migrationRetryReady = new MigrationRetryReady()
+      migrationRetryReady.setUserId(userId)
+
+      const event = new NotificationEvent()
+      event.setMigrationRetryReady(migrationRetryReady)
+
+      const request = new HandleNotificationEventRequest()
+      request.setEvent(event)
+
+      await notificationsGrpc.handleNotificationEvent(
+        request,
+        notificationsGrpc.notificationsMetadata,
+      )
+
+      return true
+    } catch (err) {
+      return handleCommonNotificationErrors(err)
+    }
+  }
+
   // trace everything except price update because it runs every 30 seconds
   return {
     priceUpdate,
@@ -716,6 +747,7 @@ export const NotificationsService = (): INotificationsService => {
         updateEmailAddress,
         removeEmailAddress,
         removePushDeviceToken,
+        sendMigrationRetryReady,
       },
     }),
   }

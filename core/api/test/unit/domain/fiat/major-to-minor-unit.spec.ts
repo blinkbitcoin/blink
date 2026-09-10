@@ -1,4 +1,4 @@
-import { majorToMinorUnit } from "@/domain/fiat"
+import { getCurrencyMajorExponent, majorToMinorUnit } from "@/domain/fiat"
 
 describe("majorToMinorUnit", () => {
   it("should handle float correctly", () => {
@@ -35,5 +35,32 @@ describe("majorToMinorUnit", () => {
   it("uses price-service fraction digits instead of runtime ICU data", () => {
     expect(majorToMinorUnit({ amount: 2.78, fractionDigits: 2 })).toBe(278)
     expect(majorToMinorUnit({ amount: 1.23, fractionDigits: 0 })).toBe(1.23)
+  })
+
+  it("preserves exact decimal strings", () => {
+    expect(majorToMinorUnit({ amount: "1039005.13", fractionDigits: 2 })).toBe(103900513)
+  })
+
+  it("parses scientific notation and yields NaN for non-numeric strings", () => {
+    // The helper performs no validation; callers handling untrusted strings
+    // (e.g. the notification converter) must pre-validate the format.
+    expect(majorToMinorUnit({ amount: "1e-7", fractionDigits: 2 })).toBe(0.00001)
+    expect(majorToMinorUnit({ amount: "", fractionDigits: 2 })).toBeNaN()
+    expect(majorToMinorUnit({ amount: "1,234.56", fractionDigits: 2 })).toBeNaN()
+  })
+})
+
+describe("getCurrencyMajorExponent", () => {
+  it.each([
+    ["USD", 2],
+    ["JPY", 0],
+    ["BHD", 3],
+    ["CLF", 4],
+  ])("returns the runtime ICU precision for %s", (currency, expected) => {
+    expect(getCurrencyMajorExponent(currency as DisplayCurrency)).toBe(expected)
+  })
+
+  it("uses standard precision for non-standard currencies", () => {
+    expect(getCurrencyMajorExponent("INVALID" as DisplayCurrency)).toBe(2)
   })
 })

@@ -4,10 +4,13 @@ import {
   LnPaymentStateDeterminator,
 } from "@/domain/ledger/ln-payment-state"
 import { MigrationFlowPhase, MigrationStateConflictError } from "@/domain/migration-flow"
+import { ErrorLevel } from "@/domain/shared"
 
 import { LedgerService } from "@/services/ledger"
 import { LndService } from "@/services/lnd"
-import { MigrationFlowStateRepository } from "@/services/mongoose"
+import { AccountsRepository, MigrationFlowStateRepository } from "@/services/mongoose"
+import { NotificationsService } from "@/services/notifications"
+import { recordExceptionInCurrentSpan, wrapAsyncToRunInSpan } from "@/services/tracing"
 
 const checkAttemptMovedNoMoney = async (
   lnPaymentHash: PaymentHash,
@@ -48,6 +51,25 @@ const checkAttemptMovedNoMoney = async (
   return true
 }
 
+const notifyRetryReady = wrapAsyncToRunInSpan({
+  namespace: "app.migrationflow",
+  fnName: "notifyRetryReady",
+  fn: async (accountId: AccountId): Promise<void> => {
+    const account = await AccountsRepository().findById(accountId)
+    if (account instanceof Error) {
+      recordExceptionInCurrentSpan({ error: account, level: ErrorLevel.Warn })
+      return
+    }
+
+    const sent = await NotificationsService().sendMigrationRetryReady({
+      userId: account.kratosUserId,
+    })
+    if (sent instanceof Error) {
+      recordExceptionInCurrentSpan({ error: sent, level: ErrorLevel.Warn })
+    }
+  },
+})
+
 export const retryMigrationFlow = async ({
   accountId,
   updatedByPrivilegedClientId,
@@ -73,9 +95,14 @@ export const retryMigrationFlow = async ({
     if (guard instanceof Error) return guard
   }
 
-  return migrationFlowRepo.resetForRetry({
+  const granted = await migrationFlowRepo.resetForRetry({
     accountId,
     fromPhase: flow.phase,
     grantedBy: updatedByPrivilegedClientId,
   })
+  if (granted instanceof Error) return granted
+
+  notifyRetryReady(accountId)
+
+  return granted
 }

@@ -10,6 +10,7 @@ import { AccountLevel, AccountStatus } from "@/domain/accounts"
 import { WalletType } from "@/domain/wallets"
 import { displayCurrencyFromCountryCode } from "@/domain/price"
 import { CouldNotFindAccountFromKratosIdError } from "@/domain/errors"
+import { ErrorLevel } from "@/domain/shared"
 
 import {
   AccountsRepository,
@@ -18,6 +19,7 @@ import {
 } from "@/services/mongoose"
 import { PriceService } from "@/services/price"
 import { getPhoneProviderVerifyService } from "@/services/phone-provider"
+import { recordExceptionInCurrentSpan } from "@/services/tracing"
 
 const { phoneMetadataValidationSettings } = getAccountsOnboardConfig()
 
@@ -69,13 +71,20 @@ const initializeCreatedAccount = async ({
 
   if (countryCode) {
     const currencies = await PriceService().listCurrencies()
-    if (!(currencies instanceof Error)) {
+    if (currencies instanceof Error) {
+      recordExceptionInCurrentSpan({ error: currencies, level: ErrorLevel.Warn })
+    } else {
       const displayCurrency = displayCurrencyFromCountryCode({
         countryCode,
         currencies,
       })
-      account.displayCurrency =
-        displayCurrency instanceof Error ? account.displayCurrency : displayCurrency
+      if (displayCurrency instanceof Error) {
+        // Unmapped country codes keep the default display currency; record the
+        // miss so a misconfigured price catalogue is observable instead of silent.
+        recordExceptionInCurrentSpan({ error: displayCurrency, level: ErrorLevel.Warn })
+      } else {
+        account.displayCurrency = displayCurrency
+      }
     }
   }
 

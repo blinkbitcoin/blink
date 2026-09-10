@@ -2,9 +2,6 @@ type UsdCents = number & { readonly brand: unique symbol }
 type CentsPerSatsRatio = number & { readonly brand: unique symbol }
 type DisplayCurrencyBaseAmount = number & { readonly brand: unique symbol }
 type DisplayCurrency = string & { readonly brand: unique symbol }
-type CurrencyMajorExponent =
-  (typeof import("./index").MajorExponent)[keyof typeof import("./index").MajorExponent]
-
 type DisplayTxnAmounts = {
   displayAmount: DisplayCurrencyBaseAmount
   displayFee: DisplayCurrencyBaseAmount

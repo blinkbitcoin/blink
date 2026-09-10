@@ -401,6 +401,10 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       message = error.message
       return new ValidationInternalError({ message, logger: baseLogger })
 
+    case "InvalidDisplayAmountError":
+      message = error.message
+      return new ValidationInternalError({ message, logger: baseLogger })
+
     case "QuizAlreadyPresentError":
       message = "Quiz question was already claimed."
       return new ValidationInternalError({ message, logger: baseLogger })
