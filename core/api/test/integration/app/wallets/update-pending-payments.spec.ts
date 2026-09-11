@@ -1,5 +1,6 @@
 import { updatePendingPaymentByHash } from "@/app/payments"
 
+import { toSats } from "@/domain/bitcoin"
 import { LedgerTransactionType } from "@/domain/ledger"
 import { FAILED_USD_MEMO } from "@/domain/ledger/ln-payment-state"
 import { PaymentStatus } from "@/domain/bitcoin/lightning"
@@ -8,9 +9,13 @@ import { AmountCalculator, WalletCurrency, ZERO_CENTS, ZERO_SATS } from "@/domai
 import * as DisplayAmountsConverterImpl from "@/domain/fiat"
 
 import { baseLogger } from "@/services/logger"
+import * as ConfigImpl from "@/config"
+import { LedgerService } from "@/services/ledger"
 import * as LedgerFacadeImpl from "@/services/ledger/facade"
+import { Transaction } from "@/services/ledger/schema"
 import * as LndImpl from "@/services/lnd"
 import * as MongooseImpl from "@/services/mongoose"
+import * as TracingImpl from "@/services/tracing"
 
 import {
   createMandatoryUsers,
@@ -49,6 +54,431 @@ describe("update pending payments", () => {
     displayCurrency: "EUR" as DisplayCurrency,
   }
 
+  const mockSuccessfulPayment = ({
+    paymentHash,
+    walletDescriptor,
+  }: {
+    paymentHash: PaymentHash
+    walletDescriptor: WalletDescriptor<WalletCurrency>
+  }) => {
+    const { LndService: LndServiceOrig } = jest.requireActual("@/services/lnd")
+    jest.spyOn(LndImpl, "LndService").mockReturnValue({
+      ...LndServiceOrig(),
+      lookupPayment: () =>
+        ({
+          createdAt: new Date(),
+          status: PaymentStatus.Settled,
+          paymentHash,
+          paymentRequest: samplePaymentRequest,
+          milliSatsAmount: 60_000 as MilliSatoshis,
+          roundedUpAmount: toSats(80),
+          confirmedDetails: {
+            confirmedAt: new Date(),
+            destination: "02".padEnd(66, "0") as Pubkey,
+            revealedPreImage: "00".repeat(32) as RevealedPreImage,
+            roundedUpFee: toSats(20),
+            milliSatsFee: 20_000 as MilliSatoshis,
+            hopPubkeys: undefined,
+          },
+          attempts: undefined,
+        }) as LnPaymentLookup,
+    })
+
+    const { LnPaymentsRepository: LnPaymentsRepositoryOrig } =
+      jest.requireActual("@/services/mongoose")
+    jest.spyOn(MongooseImpl, "LnPaymentsRepository").mockReturnValue({
+      ...LnPaymentsRepositoryOrig(),
+      findByPaymentHash: () => ({ paymentRequest: samplePaymentRequest }),
+    })
+
+    const paymentFlow = {
+      senderWalletCurrency: WalletCurrency.Btc,
+      btcPaymentAmount: sendAmount.btc,
+      usdPaymentAmount: sendAmount.usd,
+      btcProtocolAndBankFee: bankFee.btc,
+      usdProtocolAndBankFee: bankFee.usd,
+      btcBankFee: ZERO_SATS,
+      usdBankFee: ZERO_CENTS,
+      paymentAmounts: () => sendAmount,
+      paymentHashForFlow: () => paymentHash,
+      senderWalletDescriptor: () => walletDescriptor,
+    } as unknown as PaymentFlow<WalletCurrency, WalletCurrency>
+
+    const { PaymentFlowStateRepository: PaymentFlowStateRepositoryOrig } =
+      jest.requireActual("@/services/mongoose")
+    jest.spyOn(MongooseImpl, "PaymentFlowStateRepository").mockReturnValue({
+      ...PaymentFlowStateRepositoryOrig(),
+      markLightningPaymentFlowNotPending: () => paymentFlow,
+    })
+  }
+
+  describe.each([false, true])(
+    "persisted blank currency, skipFeeReimbursement: %s",
+    (skip) => {
+      it.each(["", " \t\n"])(
+        "finalizes without malformed reimbursement metadata for %j",
+        async (displayCurrency) => {
+          const walletDescriptor = await createRandomUserAndBtcWallet()
+          const { paymentHash } = await recordSendLnPayment({
+            walletDescriptor,
+            paymentAmount: sendAmount,
+            bankFee,
+            displayAmounts: {
+              ...displaySendEurAmounts,
+              displayCurrencyFractionDigits: 2,
+            },
+            feeKnownInAdvance: false,
+          })
+          const raw = await Transaction.collection.findOne({
+            hash: paymentHash,
+            type: LedgerTransactionType.Payment,
+            debit: { $gt: 0 },
+          })
+          if (!raw) throw new Error("pending sender row missing")
+          const mutation = await Transaction.collection.updateOne(
+            { _id: raw._id },
+            { $set: { displayCurrency } },
+          )
+          expect(mutation.modifiedCount).toBe(1)
+          expect(
+            (await Transaction.collection.findOne({ _id: raw._id }))?.displayCurrency,
+          ).toBe(displayCurrency)
+
+          mockSuccessfulPayment({ paymentHash, walletDescriptor })
+          jest.spyOn(ConfigImpl, "getSkipFeeReimbursement").mockReturnValue(skip)
+          const reimbursementSpy = jest.spyOn(LedgerFacadeImpl, "recordReceiveOffChain")
+          const retainedSpy = jest.spyOn(LedgerFacadeImpl, "recordLnFeeReserveRetained")
+          const finalizedSpy = jest.spyOn(LedgerFacadeImpl, "updateLnPaymentState")
+
+          expect(
+            await updatePendingPaymentByHash({ paymentHash, logger: baseLogger }),
+          ).toBeUndefined()
+          expect(await LedgerService().getPendingPaymentsCount(walletDescriptor.id)).toBe(
+            0,
+          )
+          expect(reimbursementSpy).not.toHaveBeenCalled()
+          expect(retainedSpy).toHaveBeenCalledTimes(skip ? 1 : 0)
+          expect(finalizedSpy).toHaveBeenCalledTimes(1)
+
+          expect(
+            await updatePendingPaymentByHash({ paymentHash, logger: baseLogger }),
+          ).toBeUndefined()
+          expect(reimbursementSpy).not.toHaveBeenCalled()
+          expect(retainedSpy).toHaveBeenCalledTimes(skip ? 1 : 0)
+          expect(finalizedSpy).toHaveBeenCalledTimes(1)
+        },
+      )
+    },
+  )
+
+  describe("with fee reimbursement enabled", () => {
+    beforeEach(() => {
+      // The shipped configuration retains the reserve instead of reimbursing.
+      jest.spyOn(ConfigImpl, "getSkipFeeReimbursement").mockReturnValue(false)
+    })
+
+    it.each(["amount", "currency"] as const)(
+      "settles but skips the reimbursement when display %s is missing",
+      async (field) => {
+        const displayAmounts = { ...displaySendEurAmounts }
+        if (field === "amount") {
+          displayAmounts.amountDisplayCurrency =
+            undefined as unknown as DisplayCurrencyBaseAmount
+        }
+        if (field === "currency") {
+          displayAmounts.displayCurrency = undefined as unknown as DisplayCurrency
+        }
+
+        const walletDescriptor = await createRandomUserAndBtcWallet()
+        const { paymentHash } = await recordSendLnPayment({
+          walletDescriptor,
+          paymentAmount: sendAmount,
+          bankFee,
+          displayAmounts,
+          feeKnownInAdvance: false,
+        })
+        mockSuccessfulPayment({ paymentHash, walletDescriptor })
+        const settleSpy = jest.spyOn(LedgerFacadeImpl, "settlePendingLnSend")
+        const reimbursementMetadataSpy = jest.spyOn(
+          LedgerFacadeImpl,
+          "LnFeeReimbursementReceiveLedgerMetadata",
+        )
+
+        const result = await updatePendingPaymentByHash({
+          paymentHash,
+          logger: baseLogger,
+        })
+
+        // Settlement is never gated on immutable display metadata: the row
+        // settles and only the reimbursement is skipped, recorded on the span.
+        expect(result).toBeUndefined()
+        expect(settleSpy).toHaveBeenCalled()
+        expect(reimbursementMetadataSpy).not.toHaveBeenCalled()
+        const pendingCount = await LedgerService().getPendingPaymentsCount(
+          walletDescriptor.id,
+        )
+        if (pendingCount instanceof Error) throw pendingCount
+        expect(pendingCount).toBe(0)
+
+        // A second pass is a stable no-op rather than a retried failure.
+        const second = await updatePendingPaymentByHash({
+          paymentHash,
+          logger: baseLogger,
+        })
+        expect(second).toBeUndefined()
+        expect(settleSpy).toHaveBeenCalledTimes(1)
+        expect(reimbursementMetadataSpy).not.toHaveBeenCalled()
+      },
+    )
+
+    it("settles and reimburses when only the unused display fee is missing", async () => {
+      // displayFee is not consumed by the reimbursement, so its absence is
+      // recorded but does not gate anything.
+      const walletDescriptor = await createRandomUserAndBtcWallet()
+      const { paymentHash } = await recordSendLnPayment({
+        walletDescriptor,
+        paymentAmount: sendAmount,
+        bankFee,
+        displayAmounts: {
+          ...displaySendEurAmounts,
+          feeDisplayCurrency: undefined as unknown as DisplayCurrencyBaseAmount,
+          displayCurrencyFractionDigits: 2,
+        },
+        feeKnownInAdvance: false,
+      })
+      mockSuccessfulPayment({ paymentHash, walletDescriptor })
+      const reimbursementMetadataSpy = jest.spyOn(
+        LedgerFacadeImpl,
+        "LnFeeReimbursementReceiveLedgerMetadata",
+      )
+
+      const result = await updatePendingPaymentByHash({ paymentHash, logger: baseLogger })
+
+      expect(result).toBeUndefined()
+      expect(reimbursementMetadataSpy).toHaveBeenCalled()
+    })
+
+    it.each([0, -24])(
+      "settles but skips reimbursement for display amount %i",
+      async (displayAmount) => {
+        // A non-positive display amount cannot form a valid display price; the
+        // reimbursement is skipped with the reason recorded instead of surfacing
+        // an opaque domain error after settlement.
+        const walletDescriptor = await createRandomUserAndBtcWallet()
+        const { paymentHash } = await recordSendLnPayment({
+          walletDescriptor,
+          paymentAmount: sendAmount,
+          bankFee,
+          displayAmounts: {
+            ...displaySendEurAmounts,
+            amountDisplayCurrency: displayAmount as DisplayCurrencyBaseAmount,
+            displayCurrencyFractionDigits: 2,
+          },
+          feeKnownInAdvance: false,
+        })
+        mockSuccessfulPayment({ paymentHash, walletDescriptor })
+        const settleSpy = jest.spyOn(LedgerFacadeImpl, "settlePendingLnSend")
+        const reimbursementMetadataSpy = jest.spyOn(
+          LedgerFacadeImpl,
+          "LnFeeReimbursementReceiveLedgerMetadata",
+        )
+
+        const result = await updatePendingPaymentByHash({
+          paymentHash,
+          logger: baseLogger,
+        })
+
+        expect(result).toBeUndefined()
+        expect(settleSpy).toHaveBeenCalled()
+        expect(reimbursementMetadataSpy).not.toHaveBeenCalled()
+        const pendingCount = await LedgerService().getPendingPaymentsCount(
+          walletDescriptor.id,
+        )
+        if (pendingCount instanceof Error) throw pendingCount
+        expect(pendingCount).toBe(0)
+      },
+    )
+
+    it.each([0, 2])(
+      "reimburses a confirmed payment with persisted display precision %i",
+      async (displayCurrencyFractionDigits) => {
+        const walletDescriptor = await createRandomUserAndBtcWallet()
+        const { paymentHash } = await recordSendLnPayment({
+          walletDescriptor,
+          paymentAmount: sendAmount,
+          bankFee,
+          displayAmounts: {
+            ...displaySendEurAmounts,
+            displayCurrencyFractionDigits,
+          },
+          feeKnownInAdvance: false,
+        })
+        mockSuccessfulPayment({ paymentHash, walletDescriptor })
+        const reimbursementMetadataSpy = jest.spyOn(
+          LedgerFacadeImpl,
+          "LnFeeReimbursementReceiveLedgerMetadata",
+        )
+        jest
+          .spyOn(LedgerFacadeImpl, "recordReceiveOffChain")
+          .mockResolvedValue(true as unknown as LedgerJournal)
+
+        const result = await updatePendingPaymentByHash({
+          paymentHash,
+          logger: baseLogger,
+        })
+
+        expect(result).toBeUndefined()
+        expect(
+          reimbursementMetadataSpy.mock.calls[0][0].displayCurrencyFractionDigits,
+        ).toBe(displayCurrencyFractionDigits)
+      },
+    )
+
+    it("reimburses a pre-cutoff legacy payment without persisted precision via the legacy constant", async () => {
+      // The resolver must run inside the payment path with the row's currency and
+      // timestamp. A pre-cutoff COP row takes the legacy branch, so its scale is
+      // the immutable two-digit constant regardless of current metadata.
+      const walletDescriptor = await createRandomUserAndBtcWallet()
+      const { paymentHash } = await recordSendLnPayment({
+        walletDescriptor,
+        paymentAmount: sendAmount,
+        bankFee,
+        displayAmounts: {
+          amountDisplayCurrency: 2197 as DisplayCurrencyBaseAmount,
+          feeDisplayCurrency: 12 as DisplayCurrencyBaseAmount,
+          displayCurrency: "COP" as DisplayCurrency,
+        },
+        feeKnownInAdvance: false,
+      })
+      await Transaction.updateMany(
+        { hash: paymentHash },
+        { $set: { timestamp: new Date("2026-07-03T00:00:00Z") } },
+      )
+      mockSuccessfulPayment({ paymentHash, walletDescriptor })
+      const reimbursementMetadataSpy = jest.spyOn(
+        LedgerFacadeImpl,
+        "LnFeeReimbursementReceiveLedgerMetadata",
+      )
+      jest
+        .spyOn(LedgerFacadeImpl, "recordReceiveOffChain")
+        .mockResolvedValue(true as unknown as LedgerJournal)
+      // Pin which resolver branch ran, not only the resolved value: under Node 24
+      // ICU reports COP at 0 digits, so a bare toBe(2) discriminates today but
+      // would go vacuous if the runtime ICU ever reports 2 again.
+      const addAttributesSpy = jest.spyOn(TracingImpl, "addAttributesToCurrentSpan")
+
+      const result = await updatePendingPaymentByHash({ paymentHash, logger: baseLogger })
+
+      expect(result).toBeUndefined()
+      expect(
+        reimbursementMetadataSpy.mock.calls[0][0].displayCurrencyFractionDigits,
+      ).toBe(2)
+      expect(addAttributesSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          "payment.displayCurrencyFractionDigitsSource": "legacyConstantFallback",
+        }),
+      )
+    })
+
+    it("resolves precision through the ICU fallback for a post-cutoff row without persisted digits", async () => {
+      // EUR is not a CLDR 48 changed currency and the row is written now, so the
+      // resolver falls through to the runtime ICU exponent (always 2 for EUR).
+      const walletDescriptor = await createRandomUserAndBtcWallet()
+      const { paymentHash } = await recordSendLnPayment({
+        walletDescriptor,
+        paymentAmount: sendAmount,
+        bankFee,
+        displayAmounts: displaySendEurAmounts,
+        feeKnownInAdvance: false,
+      })
+      mockSuccessfulPayment({ paymentHash, walletDescriptor })
+      const reimbursementMetadataSpy = jest.spyOn(
+        LedgerFacadeImpl,
+        "LnFeeReimbursementReceiveLedgerMetadata",
+      )
+      jest
+        .spyOn(LedgerFacadeImpl, "recordReceiveOffChain")
+        .mockResolvedValue(true as unknown as LedgerJournal)
+      const addAttributesSpy = jest.spyOn(TracingImpl, "addAttributesToCurrentSpan")
+
+      const result = await updatePendingPaymentByHash({ paymentHash, logger: baseLogger })
+
+      expect(result).toBeUndefined()
+      expect(
+        reimbursementMetadataSpy.mock.calls[0][0].displayCurrencyFractionDigits,
+      ).toBe(2)
+      expect(addAttributesSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          "payment.displayCurrencyFractionDigitsSource": "runtimeIcuFallback",
+        }),
+      )
+    })
+
+    it("reimburses a confirmed payment with a zero display fee", async () => {
+      // A zero displayFee is valid: reimbursement only needs display amount,
+      // currency, and precision, not the original displayed fee.
+      const walletDescriptor = await createRandomUserAndBtcWallet()
+      const { paymentHash } = await recordSendLnPayment({
+        walletDescriptor,
+        paymentAmount: sendAmount,
+        bankFee,
+        displayAmounts: {
+          ...displaySendEurAmounts,
+          feeDisplayCurrency: 0 as DisplayCurrencyBaseAmount,
+          displayCurrencyFractionDigits: 2,
+        },
+        feeKnownInAdvance: false,
+      })
+      mockSuccessfulPayment({ paymentHash, walletDescriptor })
+      const reimbursementMetadataSpy = jest.spyOn(
+        LedgerFacadeImpl,
+        "LnFeeReimbursementReceiveLedgerMetadata",
+      )
+      jest
+        .spyOn(LedgerFacadeImpl, "recordReceiveOffChain")
+        .mockResolvedValue(true as unknown as LedgerJournal)
+
+      const result = await updatePendingPaymentByHash({ paymentHash, logger: baseLogger })
+
+      expect(result).toBeUndefined()
+      expect(reimbursementMetadataSpy).toHaveBeenCalled()
+    })
+  })
+
+  it("retains the fee reserve for a malformed display row when reimbursement is skipped", async () => {
+    // Production runs with skipFeeReimbursement: true. In that mode the
+    // reserve-retention journal needs no display metadata, so a missing
+    // display amount must not drop it.
+    const walletDescriptor = await createRandomUserAndBtcWallet()
+    const { paymentHash } = await recordSendLnPayment({
+      walletDescriptor,
+      paymentAmount: sendAmount,
+      bankFee,
+      displayAmounts: {
+        ...displaySendEurAmounts,
+        amountDisplayCurrency: undefined as unknown as DisplayCurrencyBaseAmount,
+      },
+      feeKnownInAdvance: false,
+    })
+    mockSuccessfulPayment({ paymentHash, walletDescriptor })
+    const settleSpy = jest.spyOn(LedgerFacadeImpl, "settlePendingLnSend")
+    const reserveRetainedSpy = jest.spyOn(LedgerFacadeImpl, "recordLnFeeReserveRetained")
+
+    const result = await updatePendingPaymentByHash({ paymentHash, logger: baseLogger })
+
+    expect(result).toBeUndefined()
+    expect(settleSpy).toHaveBeenCalled()
+    expect(reserveRetainedSpy).toHaveBeenCalledTimes(1)
+    expect(reserveRetainedSpy).toHaveBeenCalledWith({
+      paymentAmount: { amount: 10n, currency: WalletCurrency.Btc },
+      metadata: expect.objectContaining({
+        hash: paymentHash,
+        type: LedgerTransactionType.LnReserveRetained,
+      }),
+    })
+    expect(await LedgerService().getPendingPaymentsCount(walletDescriptor.id)).toBe(0)
+  })
+
   it("records transaction with ln-failed-payment metadata on ln update", async () => {
     // Setup mocks
     const { LndService: LnServiceOrig } = jest.requireActual("@/services/lnd")
@@ -85,7 +515,10 @@ describe("update pending payments", () => {
       walletDescriptor: newWalletDescriptor,
       paymentAmount: sendAmount,
       bankFee,
-      displayAmounts: displaySendEurAmounts,
+      displayAmounts: {
+        ...displaySendEurAmounts,
+        displayCurrencyFractionDigits: 3,
+      },
     })
 
     // Setup payment-flow mock
@@ -119,9 +552,86 @@ describe("update pending payments", () => {
     // Check record function was called with right metadata
     expect(displayAmountsConverterSpy).toHaveBeenCalledTimes(0)
     expect(lnFailedPaymentReceiveLedgerMetadataSpy).toHaveBeenCalledTimes(1)
+    expect(
+      lnFailedPaymentReceiveLedgerMetadataSpy.mock.calls[0][0]
+        .displayCurrencyFractionDigits,
+    ).toBe(3)
     const args = recordRefundSpy.mock.calls[0][0]
     expect(args.metadata.type).toBe(LedgerTransactionType.Payment)
     expect(args.description).toBe(FAILED_USD_MEMO)
+  })
+
+  it("resolves failed-payment precision through the fallback when no digits are persisted", async () => {
+    // Same shape as the persisted case above, but the row carries no
+    // displayCurrencyFractionDigits: the resolver runs on the failed-USD path
+    // and reports the runtime ICU exponent (EUR: 2) with the fallback source.
+    const { LndService: LnServiceOrig } = jest.requireActual("@/services/lnd")
+    jest.spyOn(LndImpl, "LndService").mockReturnValue({
+      ...LnServiceOrig(),
+      lookupPayment: () => ({
+        status: PaymentStatus.Failed,
+      }),
+    })
+
+    const { LnPaymentsRepository: LnPaymentsRepositoryOrig } =
+      jest.requireActual("@/services/mongoose")
+    jest.spyOn(MongooseImpl, "LnPaymentsRepository").mockReturnValue({
+      ...LnPaymentsRepositoryOrig(),
+      findByPaymentHash: () => ({ paymentRequest: samplePaymentRequest }),
+    })
+
+    const lnFailedPaymentReceiveLedgerMetadataSpy = jest.spyOn(
+      LedgerFacadeImpl,
+      "LnFailedPaymentReceiveLedgerMetadata",
+    )
+    jest.spyOn(LedgerFacadeImpl, "recordLnFailedUsdSendRefund")
+    const addAttributesSpy = jest.spyOn(TracingImpl, "addAttributesToCurrentSpan")
+
+    const newWalletDescriptor = await createRandomUserAndBtcWallet()
+
+    const { paymentHash } = await recordSendLnPayment({
+      walletDescriptor: newWalletDescriptor,
+      paymentAmount: sendAmount,
+      bankFee,
+      displayAmounts: displaySendEurAmounts,
+    })
+
+    const mockedPaymentFlow = {
+      senderWalletCurrency: WalletCurrency.Usd,
+      paymentHashForFlow: () => paymentHash,
+      senderWalletDescriptor: () => newWalletDescriptor,
+
+      btcPaymentAmount: sendAmount.btc,
+      usdPaymentAmount: sendAmount.usd,
+      btcProtocolAndBankFee: bankFee.btc,
+      usdProtocolAndBankFee: bankFee.usd,
+      btcBankFee: ZERO_SATS,
+      usdBankFee: ZERO_CENTS,
+      totalAmountsForPayment: () => ({
+        btc: calc.add(sendAmount.btc, bankFee.btc),
+        usd: calc.add(sendAmount.usd, bankFee.usd),
+      }),
+    }
+
+    const { PaymentFlowStateRepository: PaymentFlowStateRepositoryOrig } =
+      jest.requireActual("@/services/mongoose")
+    jest.spyOn(MongooseImpl, "PaymentFlowStateRepository").mockReturnValue({
+      ...PaymentFlowStateRepositoryOrig(),
+      markLightningPaymentFlowNotPending: () => mockedPaymentFlow,
+    })
+
+    await updatePendingPaymentByHash({ paymentHash, logger: baseLogger })
+
+    expect(lnFailedPaymentReceiveLedgerMetadataSpy).toHaveBeenCalledTimes(1)
+    expect(
+      lnFailedPaymentReceiveLedgerMetadataSpy.mock.calls[0][0]
+        .displayCurrencyFractionDigits,
+    ).toBe(2)
+    expect(addAttributesSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        "payment.displayCurrencyFractionDigitsSource": "runtimeIcuFallback",
+      }),
+    )
   })
 
   const runUsdFailureUpdate = async ({
@@ -302,7 +812,7 @@ describe("update pending payments", () => {
     })
 
     const result = await updatePendingPaymentByHash({ paymentHash, logger: baseLogger })
-    expect(result).not.toBeInstanceOf(Error)
+    expect(result).toBeUndefined()
 
     expect(refundSpy).toHaveBeenCalledTimes(1)
     expect(refundSpy).toHaveBeenCalledWith(

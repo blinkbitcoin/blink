@@ -30,6 +30,7 @@ jest.mock("@/services/mongoose", () => ({
 
 jest.mock("@/services/tracing", () => ({
   recordExceptionInCurrentSpan: jest.fn(),
+  addAttributesToCurrentSpan: jest.fn(),
 }))
 
 import { resumeMigrationFlow } from "@/app/migration-flow/resume-migration-flow"
@@ -40,6 +41,7 @@ import {
 import { updatePendingPaymentByHash } from "@/app/payments/update-pending-payments"
 import { CouldNotFindMigrationFlowStateError } from "@/domain/errors"
 import { LedgerTransactionType } from "@/domain/ledger"
+import { LnPaymentState } from "@/domain/ledger/ln-payment-state"
 import { MigrationFlowPhase } from "@/domain/migration-flow"
 import { recordExceptionInCurrentSpan } from "@/services/tracing"
 
@@ -69,11 +71,13 @@ describe("resumeMigrationFlow", () => {
     debit = 1000,
     credit = 0,
     at = new Date("2026-01-01T00:00:00Z"),
+    lnPaymentState,
   }: {
     pending: boolean
     debit?: number
     credit?: number
     at?: Date
+    lnPaymentState?: LnPaymentState
   }) =>
     ({
       type: LedgerTransactionType.Payment,
@@ -81,6 +85,7 @@ describe("resumeMigrationFlow", () => {
       debit,
       credit,
       timestamp: at,
+      lnPaymentState,
     }) as LedgerTransaction<WalletCurrency>
 
   beforeEach(() => {
@@ -182,7 +187,9 @@ describe("resumeMigrationFlow", () => {
       .mockResolvedValueOnce(transferringFlow)
       .mockResolvedValueOnce(transferringFlow)
       .mockResolvedValueOnce(completedFlow)
-    mockGetTransactionsByHash.mockResolvedValue([paymentTxn({ pending: false })])
+    mockGetTransactionsByHash.mockResolvedValue([
+      paymentTxn({ pending: false, lnPaymentState: LnPaymentState.Success }),
+    ])
 
     const result = await resumeMigrationFlow({ accountId })
 
@@ -190,6 +197,22 @@ describe("resumeMigrationFlow", () => {
     expect(mockCompleteFlow).toHaveBeenCalledWith({ paymentHash })
     expect(mockFailFlow).not.toHaveBeenCalled()
     expect(result).toBe(completedFlow)
+  })
+
+  it("does not complete a stuck TRANSFERRING flow while settlement is still recording its verdict", async () => {
+    // Between settlePendingLnSend flipping pending to false and the finalize
+    // step recording lnPaymentState, a concurrent migration read must not
+    // mistake the interim single-debit ledger for a settled payment.
+    mocks.findFlowByAccountId.mockResolvedValue(transferringFlow)
+    mockGetTransactionsByHash.mockResolvedValue([
+      paymentTxn({ pending: false, lnPaymentState: LnPaymentState.Pending }),
+    ])
+
+    const result = await resumeMigrationFlow({ accountId })
+
+    expect(mockCompleteFlow).not.toHaveBeenCalled()
+    expect(mockFailFlow).not.toHaveBeenCalled()
+    expect(result).toBe(transferringFlow)
   })
 
   it("fails a stuck TRANSFERRING flow when the payment is persisted as voided", async () => {
@@ -202,11 +225,16 @@ describe("resumeMigrationFlow", () => {
       .mockResolvedValueOnce(transferringFlow)
       .mockResolvedValueOnce(failedFlow)
     mockGetTransactionsByHash.mockResolvedValue([
-      paymentTxn({ pending: false, at: new Date("2026-01-01T00:01:00Z") }),
+      paymentTxn({
+        pending: false,
+        lnPaymentState: LnPaymentState.Failed,
+        at: new Date("2026-01-01T00:01:00Z"),
+      }),
       paymentTxn({
         pending: false,
         debit: 0,
         credit: 1000,
+        lnPaymentState: LnPaymentState.Failed,
         at: new Date("2026-01-01T00:02:00Z"),
       }),
     ])
