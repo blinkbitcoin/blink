@@ -2,24 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'ci: clean up stale tilt stack before booting the bats suite (#832)'
-      sha: 2d879d0d64fd2cf5e4664f64f8dd229cf6d8461e
+      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1649
+        (#837)...'
+      sha: 4d2a6c135362ebcd739db3a9b4e1e86aa0ce4f70
       tags:
-      - 0.22.58-10-g2d879d0d6
+      - 0.22.60
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'ci: clean up stale tilt stack before booting the bats suite (#832)'
-      sha: 2d879d0d64fd2cf5e4664f64f8dd229cf6d8461e
+      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1649
+        (#837)...'
+      sha: 4d2a6c135362ebcd739db3a9b4e1e86aa0ce4f70
       tags:
-      - 0.22.58-10-g2d879d0d6
+      - 0.22.60
     path: schemas
   - git:
-      commitTitle: 'ci: clean up stale tilt stack before booting the bats suite (#832)'
-      sha: 2d879d0d64fd2cf5e4664f64f8dd229cf6d8461e
+      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1649
+        (#837)...'
+      sha: 4d2a6c135362ebcd739db3a9b4e1e86aa0ce4f70
       tags:
-      - 0.22.58-10-g2d879d0d6
+      - 0.22.60
     path: gql
   path: graphql
 kind: LockConfig
