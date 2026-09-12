@@ -5,7 +5,7 @@ import { unwrapResolverError } from "@apollo/server/errors"
 import { expressMiddleware } from "@apollo/server/express4"
 import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer"
 import cors from "cors"
-import express, { NextFunction, Request, Response } from "express"
+import express, { NextFunction, Request, Response, Router } from "express"
 import { GetVerificationKey, expressjwt } from "express-jwt"
 import { GraphQLError, GraphQLSchema, separateOperations } from "graphql"
 import {
@@ -38,11 +38,13 @@ export const startApolloServer = async ({
   port,
   type,
   setGqlContext,
+  unauthenticatedRouters,
 }: {
   schema: GraphQLSchema
   port: string | number
   type: string
   setGqlContext: (req: Request, res: Response, next: NextFunction) => Promise<void>
+  unauthenticatedRouters: Router[]
 }): Promise<Record<string, unknown>> => {
   const app = express()
   const httpServer = createServer(app)
@@ -84,6 +86,7 @@ export const startApolloServer = async ({
   })
 
   app.use("/auth", authRouter)
+  unauthenticatedRouters.forEach((router) => app.use(router))
 
   // Health check
   app.get(
