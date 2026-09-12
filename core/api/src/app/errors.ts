@@ -29,6 +29,8 @@ import * as OathkeeperError from "@/domain/oathkeeper/errors"
 import * as KratosErrors from "@/domain/kratos/errors"
 import * as ApiKeysErrors from "@/domain/api-keys/errors"
 import * as BtcMapErrors from "@/domain/btcmap/errors"
+import * as ESignErrors from "@/domain/esign/errors"
+import * as InvestmentAgreementErrors from "@/domain/investment-agreement/errors"
 
 import * as LedgerFacadeErrors from "@/services/ledger/domain/errors"
 import * as BriaEventErrors from "@/services/bria/errors"
@@ -66,6 +68,8 @@ export const ApplicationErrors = {
   ...KratosErrors,
   ...ApiKeysErrors,
   ...BtcMapErrors,
+  ...ESignErrors,
+  ...InvestmentAgreementErrors,
 
   ...LedgerFacadeErrors,
   ...BriaEventErrors,
