@@ -9,6 +9,14 @@ export const secondsToMinutes = (seconds: number): Minutes => {
   return (seconds / SECS_PER_MIN) as Minutes
 }
 
+export const toMinutes = (minutes: number): Minutes => {
+  return minutes as Minutes
+}
+
+export const toHours = (hours: number): Hours => {
+  return hours as Hours
+}
+
 export const toDays = (days: number): Days => {
   return days as Days
 }
