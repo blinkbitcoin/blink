@@ -282,4 +282,14 @@ type YamlSchema = {
   }
   windDown: WindDownYamlConfig
   regionRestrictions: RegionRestrictionsYamlConfig
+  investmentAgreement: {
+    pricePerUnitUsdCents: number
+    preMoneyValuationUsdCents: number
+    minUnits: number
+    maxUnits: number
+    signingReuseWindowMinutes: number
+    paymentWindowHours: number
+    rateTimeZone: string
+    placeholderValues: InvestmentAgreementPlaceholderValues
+  }
 }
