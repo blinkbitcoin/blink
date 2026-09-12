@@ -68,6 +68,7 @@ import QuizClaimMutation from "@/graphql/public/root/mutation/quiz-claim"
 import MigrationStartMutation from "@/graphql/public/root/mutation/migration-start"
 import MigrationCommitMutation from "@/graphql/public/root/mutation/migration-commit"
 import MigrationLnAddressTransferMutation from "@/graphql/public/root/mutation/migration-ln-address-transfer"
+import InvestmentAgreementCreateMutation from "@/graphql/public/root/mutation/investment-agreement-create"
 import MerchantMapSuggestMutation from "@/graphql/public/root/mutation/merchant-map-suggest"
 import BtcMapPlaceSubmitMutation from "@/graphql/public/root/mutation/btc-map-place-submit"
 import SupportChatMessageAddMutation from "@/graphql/public/root/mutation/support-chat-message-add"
@@ -129,6 +130,8 @@ export const mutationFields = {
       migrationStart: MigrationStartMutation,
       migrationCommit: MigrationCommitMutation,
       migrationLnAddressTransfer: MigrationLnAddressTransferMutation,
+
+      investmentAgreementCreate: InvestmentAgreementCreateMutation,
 
       callbackEndpointAdd: CallbackEndpointAddMutation,
       callbackEndpointDelete: CallbackEndpointDeleteMutation,
