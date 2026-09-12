@@ -8,7 +8,7 @@
     "whichnode": "which node"
   },
   "engines": {
-    "node": "20",
+    "node": "24",
     "pnpm": "8"
   },
   "resolutions": {
