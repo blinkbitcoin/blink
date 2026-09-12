@@ -1104,6 +1104,9 @@ importers:
       '@aws-sdk/client-s3':
         specifier: ^3.995.0
         version: 3.995.0
+      '@blinkbitcoin/esign-node':
+        specifier: 0.5.0
+        version: 0.5.0(express@4.21.2)(knex@3.1.0)
       '@galoy/gt3-server-node-express-sdk':
         specifier: workspace:^
         version: link:../../lib/gt3-server-node-express-sdk
@@ -4824,6 +4827,17 @@ packages:
   /@bcoe/v8-coverage@0.2.3:
     resolution: {integrity: sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==}
     dev: true
+
+  /@blinkbitcoin/esign-node@0.5.0(express@4.21.2)(knex@3.1.0):
+    resolution: {integrity: sha512-VlRf8VuRbNAthoNA3BslwSTHevGWMlS9mWsLoyccQ+QqMUoLrUWv/2bK593pddWeePJf7GBEIDt+dzeqzXQvoA==, tarball: https://npm.pkg.github.com/download/@blinkbitcoin/esign-node/0.5.0/836c55eec025aa2b532c2f518c050f505051e418}
+    engines: {node: '>= 18'}
+    peerDependencies:
+      express: '>=4.18.0'
+      knex: '>=3.0.0'
+    dependencies:
+      express: 4.21.2
+      knex: 3.1.0(pg@8.16.3)
+    dev: false
 
   /@colors/colors@1.5.0:
     resolution: {integrity: sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==}
