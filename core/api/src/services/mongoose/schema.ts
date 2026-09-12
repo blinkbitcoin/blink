@@ -9,6 +9,10 @@ import {
   PostMigrationDepositReleaseStatus,
 } from "@/domain/migration-flow"
 import { BtcMapPlaceSubmissionStatus } from "@/domain/btcmap"
+import {
+  InvestmentAgreementPaymentStatus,
+  InvestmentAgreementSigningStatus,
+} from "@/domain/investment-agreement"
 import { WindDownCohortRule } from "@/domain/wind-down"
 import { WalletIdRegex, WalletType } from "@/domain/wallets"
 import { WalletCurrency } from "@/domain/shared"
@@ -452,6 +456,93 @@ BtcMapPlaceSubmissionSchema.index({ accountId: 1, submissionId: 1 }, { unique: t
 export const BtcMapPlaceSubmission = mongoose.model<BtcMapPlaceSubmissionRecord>(
   "BtcMapPlaceSubmission",
   BtcMapPlaceSubmissionSchema,
+)
+
+const investmentAgreementSchema = new Schema<InvestmentAgreementRecord>(
+  {
+    id: {
+      type: String,
+      index: true,
+      unique: true,
+      required: true,
+      default: () => crypto.randomUUID(),
+    },
+    accountId: {
+      type: String,
+      ref: "Account",
+      required: true,
+    },
+    envelopeId: {
+      type: String,
+      index: true,
+      unique: true,
+      required: true,
+    },
+    signingStatus: {
+      type: String,
+      enum: Object.values(InvestmentAgreementSigningStatus),
+      required: true,
+    },
+    paymentStatus: {
+      type: String,
+      enum: Object.values(InvestmentAgreementPaymentStatus),
+      required: true,
+      default: InvestmentAgreementPaymentStatus.Unpaid,
+    },
+    units: { type: Number, required: true },
+    pricePerUnitUsdCents: { type: Number, required: true },
+    totalUsdCents: { type: Number, required: true },
+    preMoneyValuationUsdCents: { type: Number, required: true },
+    btcUsdRateCents: { type: Number, required: true },
+    settlementSats: { type: Number, required: true },
+    quotedAt: { type: Date, required: true },
+    signingReuseUntil: { type: Date, required: true },
+    paymentWindowHours: { type: Number, required: true },
+    paymentDeadline: Date,
+    signingSteps: {
+      type: [
+        {
+          status: {
+            type: String,
+            enum: Object.values(InvestmentAgreementSigningStatus),
+            required: true,
+          },
+          recordedAt: { type: Date, required: true, default: Date.now },
+        },
+      ],
+      default: [],
+    },
+    paymentSteps: {
+      type: [
+        {
+          status: {
+            type: String,
+            enum: Object.values(InvestmentAgreementPaymentStatus),
+            required: true,
+          },
+          recordedAt: { type: Date, required: true, default: Date.now },
+        },
+      ],
+      default: [],
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now,
+      required: true,
+    },
+  },
+  { id: false },
+)
+
+investmentAgreementSchema.index({ accountId: 1, createdAt: -1 })
+
+export const InvestmentAgreement = mongoose.model<InvestmentAgreementRecord>(
+  "InvestmentAgreement",
+  investmentAgreementSchema,
 )
 
 const AccountIpsSchema = new Schema<AccountIpsRecord>({
