@@ -6,6 +6,7 @@ import * as CommMod from "./comm"
 import * as BtcMapMod from "./btcmap"
 import * as QuizMod from "./quiz"
 import * as LightningMod from "./lightning"
+import * as InvestmentAgreementMod from "./investment-agreement"
 import * as MigrationFlowMod from "./migration-flow"
 import * as OnChainMod from "./on-chain"
 import * as PricesMod from "./prices"
@@ -28,6 +29,7 @@ const allFunctions = {
   BtcMap: { ...BtcMapMod },
   Quiz: { ...QuizMod },
   Lightning: { ...LightningMod },
+  InvestmentAgreement: { ...InvestmentAgreementMod },
   MigrationFlow: { ...MigrationFlowMod },
   OnChain: { ...OnChainMod },
   Prices: { ...PricesMod },
@@ -62,6 +64,7 @@ export const {
   BtcMap,
   Quiz,
   Lightning,
+  InvestmentAgreement,
   MigrationFlow,
   OnChain,
   Prices,

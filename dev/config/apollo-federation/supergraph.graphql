@@ -935,6 +935,91 @@ input IntraLedgerUsdPaymentSendInput
   walletId: WalletId!
 }
 
+"""Terms and progress of an investment agreement."""
+type InvestmentAgreement
+  @join__type(graph: PUBLIC)
+{
+  """Price of one bitcoin in USD cents used for the settlement."""
+  btcUsdRateCents: CentAmount!
+  id: ID!
+
+  """Deadline to pay the settlement, set once every party signed."""
+  paymentDeadline: Timestamp
+  paymentStatus: InvestmentAgreementPaymentStatus!
+
+  """Pre-money valuation in USD cents stated in the agreement."""
+  preMoneyValuationUsdCents: CentAmount!
+
+  """Price of one unit in USD cents."""
+  pricePerUnitUsdCents: CentAmount!
+
+  """When the bitcoin price used for the settlement was quoted."""
+  quotedAt: Timestamp!
+
+  """Amount to pay in satoshis to settle the subscription."""
+  settlementSats: SatAmount!
+  signingStatus: InvestmentAgreementSigningStatus!
+
+  """Total subscription amount in USD cents."""
+  totalUsdCents: CentAmount!
+
+  """Number of units subscribed."""
+  units: Int!
+}
+
+input InvestmentAgreementCreateInput
+  @join__type(graph: PUBLIC)
+{
+  """Number of units to subscribe."""
+  units: Int!
+}
+
+type InvestmentAgreementCreatePayload
+  @join__type(graph: PUBLIC)
+{
+  errors: [Error!]!
+  investmentAgreement: InvestmentAgreement
+
+  """
+  Short-lived URL to sign the agreement. Request a new one if it expires before signing.
+  """
+  signingUrl: String
+}
+
+"""Payment progress of an investment agreement."""
+enum InvestmentAgreementPaymentStatus
+  @join__type(graph: PUBLIC)
+{
+  """The payment deadline passed before the settlement was paid."""
+  EXPIRED @join__enumValue(graph: PUBLIC)
+
+  """The settlement was paid."""
+  PAID @join__enumValue(graph: PUBLIC)
+
+  """The settlement has not been paid yet."""
+  UNPAID @join__enumValue(graph: PUBLIC)
+}
+
+"""Signing progress of an investment agreement."""
+enum InvestmentAgreementSigningStatus
+  @join__type(graph: PUBLIC)
+{
+  """Every party signed the agreement."""
+  COMPLETED @join__enumValue(graph: PUBLIC)
+
+  """The investor declined to sign the agreement."""
+  DECLINED @join__enumValue(graph: PUBLIC)
+
+  """The agreement was replaced before the investor signed it."""
+  EXPIRED @join__enumValue(graph: PUBLIC)
+
+  """The agreement is ready to be signed."""
+  SIGNING_STARTED @join__enumValue(graph: PUBLIC)
+
+  """The agreement was voided before every party signed it."""
+  VOIDED @join__enumValue(graph: PUBLIC)
+}
+
 """A lightning invoice."""
 interface Invoice
   @join__type(graph: PUBLIC)
@@ -1530,6 +1615,11 @@ type Mutation
   """
   intraLedgerUsdPaymentSend(input: IntraLedgerUsdPaymentSendInput!): PaymentSendPayload! @join__field(graph: PUBLIC)
 
+  """
+  Prepares the investment agreement for the given units and returns a URL to sign it. Calling it again for the same units while the agreement is still being signed returns the same agreement with a new URL.
+  """
+  investmentAgreementCreate(input: InvestmentAgreementCreateInput!): InvestmentAgreementCreatePayload! @join__field(graph: PUBLIC)
+
   """Sends a payment to a lightning address."""
   lnAddressPaymentSend(input: LnAddressPaymentSendInput!): PaymentSendPayload! @join__field(graph: PUBLIC)
 
@@ -2008,6 +2098,9 @@ type Query
   currencyList: [Currency!]! @join__field(graph: PUBLIC)
   custodialRestrictions: CustodialRestrictions! @join__field(graph: PUBLIC)
   globals: Globals @join__field(graph: PUBLIC)
+
+  """Latest investment agreement of the account, or null when it has none."""
+  investmentAgreement: InvestmentAgreement @join__field(graph: PUBLIC)
   lnInvoicePaymentStatus(input: LnInvoicePaymentStatusInput!): LnInvoicePaymentStatusPayload! @join__field(graph: PUBLIC) @deprecated(reason: "Deprecated in favor of lnInvoicePaymentStatusByPaymentRequest")
   lnInvoicePaymentStatusByHash(input: LnInvoicePaymentStatusByHashInput!): LnInvoicePaymentStatus! @join__field(graph: PUBLIC)
   lnInvoicePaymentStatusByPaymentRequest(input: LnInvoicePaymentStatusByPaymentRequestInput!): LnInvoicePaymentStatus! @join__field(graph: PUBLIC)

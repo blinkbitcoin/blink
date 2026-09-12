@@ -12,6 +12,7 @@ export * from "./yaml"
 export * from "./schema"
 
 import { ConfigError } from "./error"
+import { resolveESignConfig } from "./resolve-esign-config"
 
 import { toDays } from "@/domain/primitives"
 import { QuizzesValue } from "@/domain/quiz"
@@ -218,3 +219,8 @@ export const BTCMAP_HMAC_SECRET = env.BTCMAP_HMAC_SECRET
 export const PROXY_CHECK_APIKEY = env.PROXY_CHECK_APIKEY
 export const EXPORTER_ASSETS_LIABILITIES_DELAY_SECS =
   env.EXPORTER_ASSETS_LIABILITIES_DELAY_SECS
+export const INVESTMENT_AGREEMENT_ENABLED = env.INVESTMENT_AGREEMENT_ENABLED
+
+const esignConfig = INVESTMENT_AGREEMENT_ENABLED ? resolveESignConfig(env) : undefined
+
+export const getESignConfig = (): ESignConfig | undefined => esignConfig

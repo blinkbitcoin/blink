@@ -1,0 +1,21 @@
+mutation investmentAgreementCreate($input: InvestmentAgreementCreateInput!) {
+  investmentAgreementCreate(input: $input) {
+    errors {
+      message
+    }
+    signingUrl
+    investmentAgreement {
+      id
+      signingStatus
+      paymentStatus
+      units
+      pricePerUnitUsdCents
+      totalUsdCents
+      preMoneyValuationUsdCents
+      btcUsdRateCents
+      settlementSats
+      quotedAt
+      paymentDeadline
+    }
+  }
+}

@@ -4,6 +4,7 @@ import MeQuery from "@/graphql/public/root/query/me"
 import GlobalsQuery from "@/graphql/public/root/query/globals"
 import WindDownQuery from "@/graphql/public/root/query/wind-down"
 import MigrationQuery from "@/graphql/public/root/query/migration"
+import InvestmentAgreementQuery from "@/graphql/public/root/query/investment-agreement"
 import RegionCheckQuery from "@/graphql/public/root/query/region-check"
 import CustodialRestrictionsQuery from "@/graphql/public/root/query/custodial-restrictions"
 import CurrencyListQuery from "@/graphql/public/root/query/currency-list"
@@ -48,6 +49,7 @@ export const queryFields = {
       me: MeQuery,
       windDown: WindDownQuery,
       migration: MigrationQuery,
+      investmentAgreement: InvestmentAgreementQuery,
       custodialRestrictions: CustodialRestrictionsQuery,
     },
     atWalletLevel: {
