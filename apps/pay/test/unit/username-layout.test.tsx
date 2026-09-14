@@ -100,6 +100,20 @@ describe("UsernameLayout error branch", () => {
     )
   })
 
+  it("forwards the query string on the bare route (no subpath)", async () => {
+    mockHeadersGet.mockImplementation((name: string) =>
+      name === "x-pathname" ? "/alice" : name === "x-search" ? "?display=EUR" : null,
+    )
+    mockMigratedTerminalUrl.mockResolvedValue(
+      "https://terminal.blinkbtc.com/alice?display=EUR",
+    )
+
+    await expect(renderLayout("alice")).rejects.toThrow(
+      "NEXT_REDIRECT https://terminal.blinkbtc.com/alice?display=EUR",
+    )
+    expect(mockMigratedTerminalUrl).toHaveBeenCalledWith("alice", "", "?display=EUR")
+  })
+
   it("collapses /transaction to the profile root (no Terminal equivalent)", async () => {
     mockHeadersGet.mockImplementation((name: string) =>
       name === "x-pathname" ? "/alice/transaction" : null,
