@@ -324,6 +324,10 @@ ln_address_transfer_input() {
   [[ "$(graphql_output '.data.migrationCommit.errors | length')" == "0" ]] || exit 1
   [[ "$(graphql_output '.data.migrationCommit.migration.status')" == "TRANSFERRING" ]] || exit 1
 
+  # TRANSFERRING can be visible before the HTLC reaches the receiver. Wait
+  # until the hold invoice is accepted so cancellation reliably fails the
+  # in-flight drain instead of racing with a successful payment.
+  retry 15 1 check_lnd_invoice_accepted "$payment_hash" lnd_outside_cli
   lnd_outside_cli cancelinvoice "$payment_hash"
 
   migration_failed() {
@@ -445,6 +449,10 @@ read_flow_for() {
   exec_graphql "$token_name" 'migration-commit' "$variables"
   [[ "$(graphql_output '.data.migrationCommit.migration.status')" == "TRANSFERRING" ]] || exit 1
 
+  # TRANSFERRING can be visible before the HTLC reaches the receiver. Wait
+  # until the hold invoice is accepted so cancellation reliably fails the
+  # in-flight drain instead of racing with a successful payment.
+  retry 15 1 check_lnd_invoice_accepted "$payment_hash" lnd_outside_cli
   lnd_outside_cli cancelinvoice "$payment_hash"
 
   migration_failed() {
