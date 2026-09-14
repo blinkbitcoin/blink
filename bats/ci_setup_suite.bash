@@ -12,7 +12,7 @@ setup_suite() {
   # still answers the health checks below. The pid file does not survive
   # between builds, so kill by name and tear down before booting.
   pkill -x tilt || true
-  buck2 run //dev:down || true
+  timeout --kill-after=30 300 buck2 run //dev:down || true
 
   background buck2 run //dev:up -- --bats=True > "${REPO_ROOT}/bats/.e2e-tilt.log"
   echo $! > "$TILT_PID_FILE"
@@ -27,7 +27,17 @@ teardown_suite() {
     kill "$(cat "$TILT_PID_FILE")" > /dev/null || true
   fi
 
-  buck2 run //dev:down
+  # Bounded: on a cold host dev:down can outlive the task timeout and turn a
+  # green suite into a failed build. The next run's cleanup step in
+  # ci/core/tasks/run-on-nix-host.sh leaves the host clean regardless.
+  if ! timeout --kill-after=30 300 buck2 run //dev:down; then
+    rc=$?
+    if [[ "$rc" -eq 124 || "$rc" -eq 137 ]]; then
+      echo "teardown_suite: dev:down timed out after 5 minutes, ignoring"
+    else
+      echo "teardown_suite: dev:down exited with ${rc}, ignoring"
+    fi
+  fi
 }
 
 await_api_is_up() {
