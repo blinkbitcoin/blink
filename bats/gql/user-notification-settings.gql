@@ -1,9 +1,12 @@
 query userNotificationSettings {
   me {
     id
-    notificationSettings {
-      push {
-        enabled
+    defaultAccount {
+      notificationSettings {
+        push {
+          enabled
+          disabledCategories
+        }
       }
     }
   }
