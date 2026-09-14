@@ -10,12 +10,8 @@ jest.mock("@/app/wallets/get-balance-for-wallet", () => ({
   getBalanceForWallet: jest.fn(),
 }))
 
-jest.mock("@/services/ledger", () => ({
-  __mockGetTransactionsByHash: jest.fn(),
-  LedgerService: () => ({
-    getTransactionsByHash:
-      jest.requireMock("@/services/ledger").__mockGetTransactionsByHash,
-  }),
+jest.mock("@/services/ledger/facade", () => ({
+  getTransactionsForWalletsByPaymentHash: jest.fn(),
 }))
 
 jest.mock("@/services/lnd", () => ({
@@ -65,6 +61,7 @@ import { CouldNotFindMigrationFlowStateError } from "@/domain/errors"
 import { LedgerTransactionType } from "@/domain/ledger"
 import { MigrationFlowPhase, MigrationStateConflictError } from "@/domain/migration-flow"
 import { ErrorLevel } from "@/domain/shared"
+import { getTransactionsForWalletsByPaymentHash } from "@/services/ledger/facade"
 import { recordExceptionInCurrentSpan } from "@/services/tracing"
 
 const mocks = jest.requireMock("@/services/mongoose").__mocks as {
@@ -73,8 +70,7 @@ const mocks = jest.requireMock("@/services/mongoose").__mocks as {
   findAccountWalletsByAccountId: jest.Mock
   findAccountById: jest.Mock
 }
-const mockGetTransactionsByHash = jest.requireMock("@/services/ledger")
-  .__mockGetTransactionsByHash as jest.Mock
+const mockGetTransactionsByHash = getTransactionsForWalletsByPaymentHash as jest.Mock
 const mockLookupPayment = jest.requireMock("@/services/lnd")
   .__mockLookupPayment as jest.Mock
 const mockUpdateAccountStatus = updateAccountStatus as jest.Mock

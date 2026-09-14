@@ -14,7 +14,7 @@ import { ResourceExpiredLockServiceError } from "@/domain/lock"
 import { MigrationFlowPhase, MigrationStateConflictError } from "@/domain/migration-flow"
 import { ErrorLevel } from "@/domain/shared"
 
-import { LedgerService } from "@/services/ledger"
+import { getTransactionsForWalletsByPaymentHash } from "@/services/ledger/facade"
 import { LndService } from "@/services/lnd"
 import { LockService } from "@/services/lock"
 import { baseLogger } from "@/services/logger"
@@ -71,10 +71,11 @@ export const resumeMigrationFlow = async ({
     return updated
   }
 
+  const walletIds = [accountWallets.BTC.id, accountWallets.USD.id]
   const resolved = await LockService().lockWalletId(
     accountWallets.BTC.id,
     async (signal) => {
-      const verdict = await resolveLedgerVerdict({ accountId, lnPaymentHash })
+      const verdict = await resolveLedgerVerdict({ accountId, walletIds, lnPaymentHash })
       if (signal.aborted) {
         return new ResourceExpiredLockServiceError(signal.error?.message)
       }
@@ -96,16 +97,23 @@ export const resumeMigrationFlow = async ({
 // the flow has moved on, the ledger is not conclusive, or lnd does not agree.
 const resolveLedgerVerdict = async ({
   accountId,
+  walletIds,
   lnPaymentHash,
 }: {
   accountId: AccountId
+  walletIds: WalletId[]
   lnPaymentHash: PaymentHash
 }): Promise<Verdict | undefined | ApplicationError> => {
   const current = await MigrationFlowStateRepository().findByAccountId(accountId)
   if (current instanceof Error) return current
   if (current.phase !== MigrationFlowPhase.Transferring) return undefined
 
-  const ledgerTxns = await LedgerService().getTransactionsByHash(lnPaymentHash)
+  // scoped to the account's wallets: the by-hash bundle also carries the bank
+  // owner's fee-reserve entries, which the determinator does not classify
+  const ledgerTxns = await getTransactionsForWalletsByPaymentHash({
+    walletIds,
+    paymentHash: lnPaymentHash,
+  })
   if (ledgerTxns instanceof Error) {
     recordExceptionInCurrentSpan({ error: ledgerTxns, level: ErrorLevel.Warn })
     return undefined

@@ -51,6 +51,7 @@ describe("LedgerService", () => {
       currency: "BTC",
       timestamp,
       pendingConfirmation: false,
+      voided: false,
       journalId: "62c7e689f846db3305b3b534",
       lnMemo: "memo",
       username: "username",

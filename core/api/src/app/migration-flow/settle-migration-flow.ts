@@ -13,7 +13,7 @@ import {
 import { MigrationFlowPhase, MigrationStateConflictError } from "@/domain/migration-flow"
 import { ErrorLevel } from "@/domain/shared"
 
-import { LedgerService } from "@/services/ledger"
+import { getTransactionsForWalletsByPaymentHash } from "@/services/ledger/facade"
 import { LndService } from "@/services/lnd"
 import {
   AccountsRepository,
@@ -94,7 +94,21 @@ const paymentSettled = async (
       `refusing to complete migration for account ${flow.accountId} (${paymentHash}): ${detail}`,
     )
 
-  const ledgerTxns = await LedgerService().getTransactionsByHash(paymentHash)
+  const accountWallets = await WalletsRepository().findAccountWalletsByAccountId(
+    flow.accountId,
+  )
+  if (accountWallets instanceof Error) {
+    return conflict(
+      `wallet lookup failed: ${accountWallets.name}: ${accountWallets.message}`,
+    )
+  }
+
+  // scoped to the account's wallets: the by-hash bundle also carries the bank
+  // owner's fee-reserve entries, which the determinator does not classify
+  const ledgerTxns = await getTransactionsForWalletsByPaymentHash({
+    walletIds: [accountWallets.BTC.id, accountWallets.USD.id],
+    paymentHash,
+  })
   if (ledgerTxns instanceof Error) {
     return conflict(`ledger lookup failed: ${ledgerTxns.name}: ${ledgerTxns.message}`)
   }

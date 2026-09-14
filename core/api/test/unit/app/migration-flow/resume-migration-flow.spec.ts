@@ -7,12 +7,8 @@ jest.mock("@/app/payments/update-pending-payments", () => ({
   updatePendingPaymentByHash: jest.fn(),
 }))
 
-jest.mock("@/services/ledger", () => ({
-  __mockGetTransactionsByHash: jest.fn(),
-  LedgerService: () => ({
-    getTransactionsByHash:
-      jest.requireMock("@/services/ledger").__mockGetTransactionsByHash,
-  }),
+jest.mock("@/services/ledger/facade", () => ({
+  getTransactionsForWalletsByPaymentHash: jest.fn(),
 }))
 
 jest.mock("@/services/lnd", () => ({
@@ -62,6 +58,7 @@ import { CouldNotFindMigrationFlowStateError } from "@/domain/errors"
 import { LedgerTransactionType } from "@/domain/ledger"
 import { ResourceExpiredLockServiceError } from "@/domain/lock"
 import { MigrationFlowPhase, MigrationStateConflictError } from "@/domain/migration-flow"
+import { getTransactionsForWalletsByPaymentHash } from "@/services/ledger/facade"
 import { recordExceptionInCurrentSpan } from "@/services/tracing"
 
 const mocks = jest.requireMock("@/services/mongoose").__mocks as {
@@ -73,8 +70,7 @@ const mockLookupPayment = jest.requireMock("@/services/lnd")
 const mockLockWalletId = jest.requireMock("@/services/lock")
   .__mockLockWalletId as jest.Mock
 const mockUpdatePendingPaymentByHash = updatePendingPaymentByHash as jest.Mock
-const mockGetTransactionsByHash = jest.requireMock("@/services/ledger")
-  .__mockGetTransactionsByHash as jest.Mock
+const mockGetTransactionsByHash = getTransactionsForWalletsByPaymentHash as jest.Mock
 const mockCompleteFlow = completeMigrationFlowForSettledPayment as jest.Mock
 const mockFailFlow = failMigrationFlowForFailedPayment as jest.Mock
 const mockRecordException = recordExceptionInCurrentSpan as jest.Mock
@@ -243,6 +239,10 @@ describe("resumeMigrationFlow", () => {
 
     expect(mockLockWalletId).toHaveBeenCalledTimes(1)
     expect(mockLockWalletId.mock.calls[0][0]).toBe(btcWalletId)
+    expect(mockGetTransactionsByHash).toHaveBeenCalledWith({
+      walletIds: [btcWalletId, "usd-wallet-id"],
+      paymentHash,
+    })
     expect(mockCompleteFlow).toHaveBeenCalledTimes(1)
     expect(mockCompleteFlow).toHaveBeenCalledWith({ paymentHash })
     expect(hooksCalledUnderLock).toBe(0)
