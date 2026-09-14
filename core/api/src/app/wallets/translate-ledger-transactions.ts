@@ -1,8 +1,5 @@
 import { memoSharingConfig } from "@/config"
-import {
-  getLegacyPriceFractionDigits,
-  needsLegacyPricePrecision,
-} from "@/app/prices/legacy-display-currency-precision"
+import { resolveRowFractionDigits } from "@/app/prices/legacy-display-currency-precision"
 import { UsdDisplayCurrency } from "@/domain/fiat"
 import { WalletCurrency } from "@/domain/shared"
 import { WalletTransactionHistory } from "@/domain/wallets"
@@ -13,24 +10,24 @@ const translateLedgerTransactionWithContext = (
   nonEndUserWalletIds: WalletId[],
 ): WalletTransaction => {
   const displayCurrency = txn.displayCurrency || UsdDisplayCurrency
-  // Rows selected here are proven pre-cutoff members of ICU_48_CHANGED_CURRENCIES,
-  // so their write-time scale is statically known. Use the immutable legacy
-  // constant directly; current price metadata may already publish the post-CLDR-48
-  // value and must never reach historical rows.
-  const legacyFractionDigits = needsLegacyPricePrecision({
+  // The row's scale comes from the single shared policy: valid persisted
+  // write-time digits win; proven pre-ICU-48 rows use the immutable legacy
+  // constant; anything else is left undefined and SettlementAmounts falls back
+  // to the runtime ICU exponent.
+  const { value: resolvedFractionDigits } = resolveRowFractionDigits({
     currency: displayCurrency,
     fractionDigits: txn.displayCurrencyFractionDigits,
     timestamp: txn.timestamp,
   })
-    ? getLegacyPriceFractionDigits(displayCurrency)
-    : undefined
 
   return WalletTransactionHistory.fromLedger({
-    txn,
+    // Sanitize the row's persisted scale with the resolved value so a corrupt
+    // persisted field cannot win downstream: SettlementAmounts prefers
+    // txn.displayCurrencyFractionDigits over the argument.
+    txn: { ...txn, displayCurrencyFractionDigits: resolvedFractionDigits },
     nonEndUserWalletIds,
     memoSharingConfig,
-    displayCurrencyFractionDigits:
-      txn.displayCurrencyFractionDigits ?? legacyFractionDigits,
+    displayCurrencyFractionDigits: resolvedFractionDigits,
   })
 }
 

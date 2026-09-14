@@ -1,5 +1,5 @@
 import { toSats } from "@/domain/bitcoin"
-import { getCurrencyMajorExponent, toCents } from "@/domain/fiat"
+import { toCents } from "@/domain/fiat"
 import { LedgerTransactionType } from "@/domain/ledger"
 import { WalletCurrency } from "@/domain/shared"
 
@@ -29,6 +29,14 @@ import { reimburseFee } from "@/app/payments/reimburse-fee"
 import * as LedgerFacadeImpl from "@/services/ledger/facade"
 
 describe("reimburseFee", () => {
+  it("requires callers to explicitly provide the senderDisplay key", () => {
+    type Args = Parameters<typeof reimburseFee>[0]
+    const senderDisplayIsRequired: Omit<Args, "senderDisplay"> extends Args
+      ? false
+      : true = true
+    expect(senderDisplayIsRequired).toBe(true)
+  })
+
   const maxFee = {
     btc: { amount: 100n, currency: WalletCurrency.Btc },
     usd: { amount: 5n, currency: WalletCurrency.Usd },
@@ -60,8 +68,11 @@ describe("reimburseFee", () => {
     }) as unknown as PaymentFlow<WalletCurrency, WalletCurrency>
 
   const reimburseArgs = {
-    senderDisplayAmount: 50 as DisplayCurrencyBaseAmount,
-    senderDisplayCurrency: "USD" as DisplayCurrency,
+    senderDisplay: {
+      senderDisplayAmount: 50 as DisplayCurrencyBaseAmount,
+      senderDisplayCurrency: "USD" as DisplayCurrency,
+      senderDisplayCurrencyFractionDigits: 2,
+    },
     journalId: "journalId" as LedgerJournalId,
     actualFee: 20 as Satoshis,
   }
@@ -99,6 +110,46 @@ describe("reimburseFee", () => {
     expect(callArgs.metadata.type).toBe(LedgerTransactionType.LnReserveRetained)
     expect(callArgs.metadata.hash).toBe(paymentHash)
 
+    expect(recordReceiveOffChainSpy).not.toHaveBeenCalled()
+  })
+
+  it("retains the reserve without display metadata when the flag is enabled", async () => {
+    // Reserve retention computes the fee difference from wallet amounts alone;
+    // a pending row with unusable display metadata must not lose the journal.
+    mockGetSkipFeeReimbursement.mockReturnValue(true)
+    const recordReceiveOffChainSpy = jest.spyOn(LedgerFacadeImpl, "recordReceiveOffChain")
+    const recordLnFeeReserveRetainedSpy = jest
+      .spyOn(LedgerFacadeImpl, "recordLnFeeReserveRetained")
+      .mockResolvedValue(
+        true as unknown as Awaited<
+          ReturnType<typeof LedgerFacadeImpl.recordLnFeeReserveRetained>
+        >,
+      )
+
+    const result = await reimburseFee({
+      paymentFlow: buildPaymentFlow(),
+      senderDisplay: undefined,
+      journalId: reimburseArgs.journalId,
+      actualFee: reimburseArgs.actualFee,
+    })
+
+    expect(result).toBe(true)
+    expect(recordLnFeeReserveRetainedSpy).toHaveBeenCalledTimes(1)
+    expect(recordReceiveOffChainSpy).not.toHaveBeenCalled()
+  })
+
+  it("skips the reimbursement without display metadata when the flag is disabled", async () => {
+    mockGetSkipFeeReimbursement.mockReturnValue(false)
+    const recordReceiveOffChainSpy = jest.spyOn(LedgerFacadeImpl, "recordReceiveOffChain")
+
+    const result = await reimburseFee({
+      paymentFlow: buildPaymentFlow(),
+      senderDisplay: undefined,
+      journalId: reimburseArgs.journalId,
+      actualFee: reimburseArgs.actualFee,
+    })
+
+    expect(result).toBe(true)
     expect(recordReceiveOffChainSpy).not.toHaveBeenCalled()
   })
 
@@ -154,47 +205,33 @@ describe("reimburseFee", () => {
     )
   })
 
-  it.each([
-    {
-      description: "persisted precision",
-      fractionDigits: 2,
-      expectedFractionDigits: 2,
-    },
-    {
-      description: "historical ICU precision",
-      fractionDigits: undefined,
-      expectedFractionDigits: getCurrencyMajorExponent("PKR" as DisplayCurrency),
-    },
-  ])(
-    "reconstructs the display ratio with $description",
-    async ({ fractionDigits, expectedFractionDigits }) => {
-      mockGetSkipFeeReimbursement.mockReturnValue(false)
-      jest
-        .spyOn(LedgerFacadeImpl, "recordReceiveOffChain")
-        .mockResolvedValue(
-          true as unknown as Awaited<
-            ReturnType<typeof LedgerFacadeImpl.recordReceiveOffChain>
-          >,
-        )
-      const metadataSpy = jest.spyOn(
-        LedgerFacadeImpl,
-        "LnFeeReimbursementReceiveLedgerMetadata",
+  it("reconstructs the display ratio with the supplied precision", async () => {
+    mockGetSkipFeeReimbursement.mockReturnValue(false)
+    jest
+      .spyOn(LedgerFacadeImpl, "recordReceiveOffChain")
+      .mockResolvedValue(
+        true as unknown as Awaited<
+          ReturnType<typeof LedgerFacadeImpl.recordReceiveOffChain>
+        >,
       )
+    const metadataSpy = jest.spyOn(
+      LedgerFacadeImpl,
+      "LnFeeReimbursementReceiveLedgerMetadata",
+    )
 
-      const result = await reimburseFee({
-        paymentFlow: buildPaymentFlow(),
-        ...reimburseArgs,
+    const result = await reimburseFee({
+      paymentFlow: buildPaymentFlow(),
+      ...reimburseArgs,
+      senderDisplay: {
         senderDisplayAmount: 2197 as DisplayCurrencyBaseAmount,
         senderDisplayCurrency: "PKR" as DisplayCurrency,
-        senderDisplayCurrencyFractionDigits: fractionDigits,
-      })
+        senderDisplayCurrencyFractionDigits: 2,
+      },
+    })
 
-      expect(result).toBe(true)
-      expect(metadataSpy.mock.calls[0][0].displayCurrencyFractionDigits).toBe(
-        expectedFractionDigits,
-      )
-    },
-  )
+    expect(result).toBe(true)
+    expect(metadataSpy.mock.calls[0][0].displayCurrencyFractionDigits).toBe(2)
+  })
 
   it("returns true without crediting when the fee difference is zero (short-circuits the retention flag)", async () => {
     mockGetSkipFeeReimbursement.mockReturnValue(true)
@@ -272,8 +309,11 @@ describe("reimburseFee (Model 2, finding B)", () => {
 
     const result = await reimburseFee({
       paymentFlow,
-      senderDisplayAmount: 50_000 as DisplayCurrencyBaseAmount,
-      senderDisplayCurrency: "USD" as DisplayCurrency,
+      senderDisplay: {
+        senderDisplayAmount: 50_000 as DisplayCurrencyBaseAmount,
+        senderDisplayCurrency: "USD" as DisplayCurrency,
+        senderDisplayCurrencyFractionDigits: 2,
+      },
       journalId: "journalId" as LedgerJournalId,
       actualFee: toSats(1000),
     })
@@ -306,8 +346,11 @@ describe("reimburseFee (Model 2, finding B)", () => {
 
     const result = await reimburseFee({
       paymentFlow,
-      senderDisplayAmount: 50_000 as DisplayCurrencyBaseAmount,
-      senderDisplayCurrency: "USD" as DisplayCurrency,
+      senderDisplay: {
+        senderDisplayAmount: 50_000 as DisplayCurrencyBaseAmount,
+        senderDisplayCurrency: "USD" as DisplayCurrency,
+        senderDisplayCurrencyFractionDigits: 2,
+      },
       journalId: "journalId" as LedgerJournalId,
       actualFee: toSats(0),
     })

@@ -9,13 +9,32 @@ import {
   LnPaymentState,
   LnPaymentStateDeterminator,
 } from "@/domain/ledger/ln-payment-state"
+
+// Every terminal bundle_completion_state; a flow may only be completed or
+// failed off a ledger whose recorded state is one of these. ln_payment.pending
+// and ln_payment.pending_after_retry mean the settle/void path has not yet
+// recorded its final verdict.
+const TERMINAL_LN_PAYMENT_STATES: LnPaymentState[] = [
+  LnPaymentState.Success,
+  LnPaymentState.SuccessWithReimbursement,
+  LnPaymentState.SuccessAfterRetry,
+  LnPaymentState.SuccessWithReimbursementAfterRetry,
+  LnPaymentState.Failed,
+  LnPaymentState.FailedAfterRetry,
+  LnPaymentState.FailedAfterSuccess,
+  LnPaymentState.FailedAfterSuccessWithReimbursement,
+]
+
 import { MigrationFlowPhase } from "@/domain/migration-flow"
 import { ErrorLevel } from "@/domain/shared"
 
 import { LedgerService } from "@/services/ledger"
 import { baseLogger } from "@/services/logger"
 import { MigrationFlowStateRepository } from "@/services/mongoose"
-import { recordExceptionInCurrentSpan } from "@/services/tracing"
+import {
+  addAttributesToCurrentSpan,
+  recordExceptionInCurrentSpan,
+} from "@/services/tracing"
 
 export const resumeMigrationFlow = async ({
   accountId,
@@ -57,6 +76,25 @@ export const resumeMigrationFlow = async ({
   const paymentState = LnPaymentStateDeterminator(ledgerTxns).determine()
   if (paymentState instanceof Error) {
     recordExceptionInCurrentSpan({ error: paymentState, level: ErrorLevel.Warn })
+    return updated
+  }
+
+  // A settle/void in flight flips pendingConfirmation before its finalize step
+  // records the terminal bundle_completion_state. During that window the bundle
+  // below still shows its last recorded state, which is Pending for a payment
+  // being settled, so re-determining it would read "Success" off the interim
+  // single-debit shape. Only a state already recorded as terminal is safe to
+  // act on here; anything else keeps waiting for the settle path to finish.
+  const recordedStates = new Set(
+    ledgerTxns.map((txn) => txn.lnPaymentState).filter((state) => !!state),
+  )
+  const stateIsRecordedAsTerminal = [...recordedStates].some((state) =>
+    TERMINAL_LN_PAYMENT_STATES.includes(state),
+  )
+  if (!stateIsRecordedAsTerminal) {
+    addAttributesToCurrentSpan({
+      "migrationFlow.awaitingRecordedVerdict": paymentState,
+    })
     return updated
   }
 

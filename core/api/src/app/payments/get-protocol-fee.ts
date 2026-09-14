@@ -223,9 +223,19 @@ const estimateLightningFee = async ({
         return PartialResult.err(paymentFlow)
       }
 
-      PaymentFlowStateRepository(defaultTimeToExpiryInSeconds).persistNew(paymentFlow)
+      // Awaited so the flow is durably persisted before the estimation returns:
+      // the payer's next step looks this record up by hash and amount, and a
+      // fire-and-forget write races that lookup.
+      const persistedPayment = await PaymentFlowStateRepository(
+        defaultTimeToExpiryInSeconds,
+      ).persistNew(paymentFlow)
       return routeResult instanceof SkipProbeForPubkeyError
-        ? PartialResult.ok(paymentFlow.protocolAndBankFeeInSenderWalletCurrency())
+        ? persistedPayment instanceof Error
+          ? PartialResult.partial(
+              paymentFlow.protocolAndBankFeeInSenderWalletCurrency(),
+              persistedPayment,
+            )
+          : PartialResult.ok(paymentFlow.protocolAndBankFeeInSenderWalletCurrency())
         : PartialResult.partial(
             paymentFlow.protocolAndBankFeeInSenderWalletCurrency(),
             routeResult,

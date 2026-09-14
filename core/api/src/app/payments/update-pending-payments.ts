@@ -1,4 +1,4 @@
-import { reimburseFee } from "./reimburse-fee"
+import { reimburseFee, SenderDisplayAmounts } from "./reimburse-fee"
 
 import { reimburseFailedUsdPayment } from "./reimburse-failed-usd"
 
@@ -8,6 +8,7 @@ import {
   completeMigrationFlowForSettledPayment,
   failMigrationFlowForFailedPayment,
 } from "@/app/migration-flow/settle-migration-flow"
+import { resolvePaymentDisplayCurrencyFractionDigits } from "@/app/prices/legacy-display-currency-precision"
 import { getTransactionForWalletByJournalId } from "@/app/wallets"
 
 import { toSats } from "@/domain/bitcoin"
@@ -26,7 +27,7 @@ import {
   MultiplePendingPaymentsForHashError,
 } from "@/domain/ledger"
 import { MissingPropsInTransactionForPaymentFlowError } from "@/domain/payments"
-import { setErrorCritical, WalletCurrency } from "@/domain/shared"
+import { ErrorLevel, setErrorCritical, WalletCurrency } from "@/domain/shared"
 
 import { ApiKeysService } from "@/services/api-keys"
 import { LedgerService, getNonEndUserWalletIds } from "@/services/ledger"
@@ -126,6 +127,57 @@ export const updatePendingPaymentByHash = wrapAsyncToRunInSpan({
     })
   },
 })
+
+// Resolves reimbursement display values without mutating the ledger row, and
+// reports unusable metadata and precision provenance on the current span.
+// displayFee is unused by reimburseFee, so its absence only warns. Missing
+// amount/currency, blank currency, or a non-finite/non-positive amount skips
+// display conversion, not settlement or reserve retention.
+const resolveReimbursementDisplay = (
+  pendingPayment: LedgerTransaction<WalletCurrency>,
+): SenderDisplayAmounts | undefined => {
+  const { displayAmount, displayFee, displayCurrency } = pendingPayment
+  if (displayFee === undefined) {
+    recordExceptionInCurrentSpan({
+      error: new MissingExpectedDisplayAmountsForTransactionError(
+        "displayFee missing from pending payment",
+      ),
+      level: ErrorLevel.Warn,
+    })
+  }
+  if (
+    displayAmount === undefined ||
+    displayCurrency === undefined ||
+    displayCurrency.trim().length === 0
+  ) {
+    recordExceptionInCurrentSpan({
+      error: new MissingExpectedDisplayAmountsForTransactionError(
+        "display amount missing or currency missing/blank from pending payment",
+      ),
+      level: ErrorLevel.Warn,
+    })
+    return undefined
+  }
+  if (!Number.isFinite(displayAmount) || displayAmount <= 0) {
+    recordExceptionInCurrentSpan({
+      error: new MissingExpectedDisplayAmountsForTransactionError(
+        "non-finite or non-positive display amount on pending payment",
+      ),
+      level: ErrorLevel.Warn,
+    })
+    return undefined
+  }
+
+  return {
+    senderDisplayAmount: displayAmount,
+    senderDisplayCurrency: displayCurrency,
+    senderDisplayCurrencyFractionDigits: resolvePaymentDisplayCurrencyFractionDigits({
+      displayCurrency,
+      persistedFractionDigits: pendingPayment.displayCurrencyFractionDigits,
+      timestamp: pendingPayment.timestamp,
+    }),
+  }
+}
 
 const updatePendingPayment = wrapAsyncToRunInSpan({
   namespace: "app.payments",
@@ -341,12 +393,6 @@ const lockedPendingPaymentSteps = async ({
     "payment.usdFee": paymentFlow.usdProtocolAndBankFee.amount.toString(),
   })
 
-  const settled = await LedgerFacade.settlePendingLnSend(paymentHash)
-  if (settled instanceof Error) {
-    paymentLogger.error({ error: settled }, "no transaction to update")
-    return settled
-  }
-
   let roundedUpFee: Satoshis = toSats(0)
   let satsAmount: Satoshis | undefined = undefined
   if (lnPaymentLookup.status != PaymentStatus.Failed) {
@@ -354,11 +400,24 @@ const lockedPendingPaymentSteps = async ({
     satsAmount = toSats(lnPaymentLookup.roundedUpAmount - roundedUpFee)
   }
 
-  if (
+  const paymentFailed =
     lnPaymentLookup.status === PaymentStatus.Failed ||
     // pendingPayment is a different version to latest payment from lnd
     satsAmount !== toSats(paymentFlow.btcPaymentAmount.amount)
-  ) {
+
+  // Settlement runs before the display-field checks on purpose: the guard's
+  // inputs are immutable persisted fields, so a malformed row can never become
+  // retryable, and blocking settlement behind it would replay the identical
+  // deterministic failure forever while the sats have already left the node.
+  // The resolution below reads the in-memory pendingPayment, so settling first
+  // does not change its inputs.
+  const settled = await LedgerFacade.settlePendingLnSend(paymentHash)
+  if (settled instanceof Error) {
+    paymentLogger.error({ error: settled }, "no transaction to update")
+    return settled
+  }
+
+  if (paymentFailed) {
     paymentLogger.warn(
       { success: false, id: paymentHash, payment: pendingPayment },
       "payment has failed. reverting transaction",
@@ -454,16 +513,13 @@ const lockedPendingPaymentSteps = async ({
     return { result: finalized, paymentFailed: false }
   }
 
-  const { displayAmount, displayFee, displayCurrency } = pendingPayment
-  if (!displayAmount || !displayFee || !displayCurrency) {
-    return new MissingExpectedDisplayAmountsForTransactionError()
-  }
+  // Settlement already happened. Invalid display metadata is reported by the
+  // resolver, but reimburseFee still runs to retain the reserve when configured.
+  const senderDisplay = resolveReimbursementDisplay(pendingPayment)
 
   const reimbursed = await reimburseFee({
     paymentFlow,
-    senderDisplayAmount: displayAmount,
-    senderDisplayCurrency: displayCurrency,
-    senderDisplayCurrencyFractionDigits: pendingPayment.displayCurrencyFractionDigits,
+    senderDisplay,
     journalId,
     actualFee: roundedUpFee,
     revealedPreImage,

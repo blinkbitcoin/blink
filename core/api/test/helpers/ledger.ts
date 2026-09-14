@@ -102,13 +102,14 @@ export const recordSendLnPayment = async <S extends WalletCurrency>({
   bankFee,
   displayAmounts,
   paymentHash: paymentHashInitial,
+  feeKnownInAdvance = true,
 }: RecordExternalTxTestArgs<S>) => {
   const paymentHash = paymentHashInitial || (crypto.randomUUID() as PaymentHash)
   const { metadata, debitAccountAdditionalMetadata, internalAccountsAdditionalMetadata } =
     LedgerFacade.LnSendLedgerMetadata({
       paymentHash,
       pubkey: crypto.randomUUID() as Pubkey,
-      feeKnownInAdvance: true,
+      feeKnownInAdvance,
       paymentAmounts: {
         btcPaymentAmount: paymentAmount.btc,
         usdPaymentAmount: paymentAmount.usd,

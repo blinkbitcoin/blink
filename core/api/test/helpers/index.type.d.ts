@@ -6,9 +6,11 @@ type RecordExternalTxTestArgs<S extends WalletCurrency> = {
     amountDisplayCurrency: DisplayCurrencyBaseAmount
     feeDisplayCurrency: DisplayCurrencyBaseAmount
     displayCurrency: DisplayCurrency
+    displayCurrencyFractionDigits?: number
   }
   memo?: string
   paymentHash?: PaymentHash
+  feeKnownInAdvance?: boolean
 }
 
 type RecordExternalTxTestFn = <S extends WalletCurrency>({

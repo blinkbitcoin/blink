@@ -9,6 +9,11 @@ import { toCents } from "@/domain/fiat"
 import { WalletCurrency } from "@/domain/shared"
 import { WalletTransactionHistory } from "@/domain/wallets"
 import { getNonEndUserWalletIds } from "@/services/ledger"
+import { recordExceptionInCurrentSpan } from "@/services/tracing"
+
+jest.mock("@/services/tracing", () => ({
+  recordExceptionInCurrentSpan: jest.fn(),
+}))
 
 jest.mock("@/config", () => ({ memoSharingConfig: {} }))
 
@@ -163,9 +168,94 @@ describe("translateLedgerTransactions", () => {
     expect(mockGetCurrencyFractionDigits).not.toHaveBeenCalled()
     expect(mockFromLedger).toHaveBeenCalledWith(
       expect.objectContaining({
-        txn: transaction,
+        txn: expect.objectContaining({
+          id: transaction.id,
+          // the row is sanitized: null becomes the resolved legacy scale
+          displayCurrencyFractionDigits: 2,
+        }),
         displayCurrencyFractionDigits: 2,
       }),
+    )
+  })
+
+  it("sanitizes an out-of-range persisted scale on the history path", async () => {
+    const actualWalletsDomain =
+      jest.requireActual<typeof import("@/domain/wallets")>("@/domain/wallets")
+    mockFromLedger.mockImplementation(
+      actualWalletsDomain.WalletTransactionHistory.fromLedger,
+    )
+    const transaction = displayTransaction({
+      id: "cop-corrupt",
+      currency: "COP" as DisplayCurrency,
+      timestamp: "2026-07-03T14:22:08Z",
+      displayAmount: 103_900_513,
+      displayFee: 182_259,
+      fractionDigits: 20,
+    })
+
+    const result = await translateLedgerTransactions([transaction])
+
+    // The raw persisted 20 must not reach SettlementAmounts: the row renders
+    // at the legacy two-digit scale.
+    expect(result[0].settlementDisplayAmount).toBe("-1039005.13")
+    expect(result[0].settlementDisplayFee).toBe("1822.59")
+    expect(result[0].settlementDisplayCurrencyFractionDigits).toBe(2)
+    expect(recordExceptionInCurrentSpan).not.toHaveBeenCalled()
+  })
+
+  it("sanitizes a corrupt scale in an unchanged currency before real history conversion", async () => {
+    const actualWalletsDomain =
+      jest.requireActual<typeof import("@/domain/wallets")>("@/domain/wallets")
+    mockFromLedger.mockImplementation(
+      actualWalletsDomain.WalletTransactionHistory.fromLedger,
+    )
+    const transaction = displayTransaction({
+      id: "eur-corrupt",
+      currency: "EUR" as DisplayCurrency,
+      timestamp: "2026-07-03T14:22:08Z",
+      displayAmount: 2197,
+      displayFee: 20,
+      fractionDigits: 20,
+    })
+
+    const result = await translateLedgerTransaction(transaction)
+
+    expect(result.settlementDisplayAmount).toBe("-21.97")
+    expect(result.settlementDisplayFee).toBe("0.20")
+    expect(result.settlementDisplayCurrencyFractionDigits).toBeUndefined()
+    expect(
+      mockFromLedger.mock.calls[0][0].txn.displayCurrencyFractionDigits,
+    ).toBeUndefined()
+    expect(recordExceptionInCurrentSpan).not.toHaveBeenCalled()
+  })
+
+  it("sanitizes corrupt rows on every history entry point without per-row exceptions", async () => {
+    const transactions = Array.from({ length: 100 }, (_, index) =>
+      displayTransaction({
+        id: `corrupt-${index}`,
+        currency: "COP" as DisplayCurrency,
+        timestamp: "2026-07-03T14:22:08Z",
+        displayAmount: 103_900_513,
+        displayFee: 182_259,
+        fractionDigits: 20,
+      }),
+    )
+    await translateLedgerTransactions(transactions)
+    await translateLedgerTransaction(transactions[0])
+    await translateLedgerTransactionEdges(
+      transactions.map((node, index) => ({
+        cursor: `cursor-${index}` as PaginatedQueryCursor,
+        node,
+      })),
+    )
+
+    expect(mockFromLedger).toHaveBeenCalledTimes(201)
+    for (const [args] of mockFromLedger.mock.calls) {
+      expect(args.txn.displayCurrencyFractionDigits).toBe(2)
+    }
+    expect(recordExceptionInCurrentSpan).not.toHaveBeenCalled()
+    expect(transactions.every((txn) => txn.displayCurrencyFractionDigits === 20)).toBe(
+      true,
     )
   })
 
