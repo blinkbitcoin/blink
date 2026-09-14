@@ -2,27 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1649
-        (#837)...'
-      sha: 4d2a6c135362ebcd739db3a9b4e1e86aa0ce4f70
+      commitTitle: 'test: wait for chain sync on both peers before opening channels
+        (#839)'
+      sha: 00a780cc9e7630ba6df59add83cc8ba07f7604d0
       tags:
-      - 0.22.60
+      - 0.22.60-2-g00a780cc9
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1649
-        (#837)...'
-      sha: 4d2a6c135362ebcd739db3a9b4e1e86aa0ce4f70
+      commitTitle: 'test: wait for chain sync on both peers before opening channels
+        (#839)'
+      sha: 00a780cc9e7630ba6df59add83cc8ba07f7604d0
       tags:
-      - 0.22.60
+      - 0.22.60-2-g00a780cc9
     path: schemas
   - git:
-      commitTitle: 'chore(deps): update @ip1sms/disposable-phone-numbers to v2.1.1649
-        (#837)...'
-      sha: 4d2a6c135362ebcd739db3a9b4e1e86aa0ce4f70
+      commitTitle: 'test: wait for chain sync on both peers before opening channels
+        (#839)'
+      sha: 00a780cc9e7630ba6df59add83cc8ba07f7604d0
       tags:
-      - 0.22.60
+      - 0.22.60-2-g00a780cc9
     path: gql
   path: graphql
 kind: LockConfig
