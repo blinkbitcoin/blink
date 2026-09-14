@@ -4,10 +4,17 @@ import { updateAccountStatus } from "@/app/accounts/update-account-status"
 import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
 
 import { AccountStatus } from "@/domain/accounts"
+import { PaymentStatus } from "@/domain/bitcoin/lightning"
 import { CouldNotFindError } from "@/domain/errors"
+import {
+  LnPaymentState,
+  LnPaymentStateDeterminator,
+} from "@/domain/ledger/ln-payment-state"
 import { MigrationFlowPhase, MigrationStateConflictError } from "@/domain/migration-flow"
 import { ErrorLevel } from "@/domain/shared"
 
+import { LedgerService } from "@/services/ledger"
+import { LndService } from "@/services/lnd"
 import {
   AccountsRepository,
   MigrationFlowStateRepository,
@@ -62,6 +69,64 @@ const softCloseMigratedAccount = async (accountId: AccountId): Promise<void> => 
   }
 }
 
+const settledLedgerStates: ReadonlySet<LnPaymentState> = new Set([
+  LnPaymentState.Success,
+  LnPaymentState.SuccessWithReimbursement,
+  LnPaymentState.SuccessAfterRetry,
+  LnPaymentState.SuccessWithReimbursementAfterRetry,
+])
+
+// Completing a flow soft-closes the account, so require both the ledger and lnd
+// to agree the drain settled. A ledger read taken while the trigger is reverting
+// a failed payment (journal voided, reversal not yet written) looks settled on
+// its own; lnd never does. Flows that skipped the transfer (zero balance) have
+// no payment to check.
+const TRANSFER_SKIPPED_STEP = "transfer-skipped"
+
+const paymentSettled = async (
+  flow: MigrationFlow,
+  paymentHash: PaymentHash,
+): Promise<true | MigrationStateConflictError> => {
+  if (flow.steps.some((step) => step.step === TRANSFER_SKIPPED_STEP)) return true
+
+  const conflict = (detail: string) =>
+    new MigrationStateConflictError(
+      `refusing to complete migration for account ${flow.accountId} (${paymentHash}): ${detail}`,
+    )
+
+  const ledgerTxns = await LedgerService().getTransactionsByHash(paymentHash)
+  if (ledgerTxns instanceof Error) {
+    return conflict(`ledger lookup failed: ${ledgerTxns.name}: ${ledgerTxns.message}`)
+  }
+  if (ledgerTxns.length === 0) return conflict("no ledger entries")
+
+  const newest = [...ledgerTxns].sort(
+    (a, b) => b.timestamp.getTime() - a.timestamp.getTime(),
+  )[0]
+  if (newest.voided) return conflict("latest ledger entry is voided")
+
+  const paymentState = LnPaymentStateDeterminator(ledgerTxns).determine()
+  if (paymentState instanceof Error) return conflict(paymentState.message)
+  if (!settledLedgerStates.has(paymentState)) {
+    return conflict(`ledger state is ${paymentState}`)
+  }
+
+  const lndService = LndService()
+  if (lndService instanceof Error) {
+    return conflict(`lnd unavailable: ${lndService.name}: ${lndService.message}`)
+  }
+  const pubkey = ledgerTxns.find((tx) => tx.pubkey)?.pubkey
+  const lnPayment = await lndService.lookupPayment({ pubkey, paymentHash })
+  if (lnPayment instanceof Error) {
+    return conflict(`lnd lookup failed: ${lnPayment.name}: ${lnPayment.message}`)
+  }
+  if (lnPayment.status !== PaymentStatus.Settled) {
+    return conflict(`lnd status is ${lnPayment.status}`)
+  }
+
+  return true
+}
+
 const residualBalanceDetail = async (accountId: AccountId): Promise<string> => {
   const accountWallets =
     await WalletsRepository().findAccountWalletsByAccountId(accountId)
@@ -92,6 +157,12 @@ export const completeMigrationFlowForSettledPayment = wrapAsyncToRunInSpan({
         flow.phase !== MigrationFlowPhase.Transferring &&
         flow.phase !== MigrationFlowPhase.Failed
       ) {
+        return
+      }
+
+      const settled = await paymentSettled(flow, paymentHash)
+      if (settled instanceof Error) {
+        recordExceptionInCurrentSpan({ error: settled, level: ErrorLevel.Warn })
         return
       }
 

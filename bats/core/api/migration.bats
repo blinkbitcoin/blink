@@ -328,7 +328,10 @@ ln_address_transfer_input() {
 
   migration_failed() {
     exec_graphql "$token_name" 'migration'
-    [[ "$(graphql_output '.data.migration.status')" == "FAILED" ]] || exit 1
+    local status
+    status="$(graphql_output '.data.migration.status')"
+    echo "migration status: ${status}"
+    [[ "${status}" == "FAILED" ]] || exit 1
   }
   retry 30 1 migration_failed
 
@@ -449,7 +452,10 @@ read_flow_for() {
 
   migration_failed() {
     exec_graphql "$token_name" 'migration'
-    [[ "$(graphql_output '.data.migration.status')" == "FAILED" ]] || exit 1
+    local status
+    status="$(graphql_output '.data.migration.status')"
+    echo "migration status: ${status}"
+    [[ "${status}" == "FAILED" ]] || exit 1
   }
   retry 30 1 migration_failed
 

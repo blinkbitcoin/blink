@@ -37,6 +37,7 @@ type LedgerTransaction<S extends WalletCurrency> = {
   readonly currency: S
   readonly timestamp: Date
   readonly pendingConfirmation: boolean
+  readonly voided?: boolean
   readonly journalId: LedgerJournalId
   readonly externalId?: LedgerExternalId
 
