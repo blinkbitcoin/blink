@@ -58,6 +58,12 @@ synced_to_graph() {
   [[ "$is_synced" == "true" ]] || return 1
 }
 
+synced_to_chain() {
+  lnd_cli_value="$1"
+  is_synced="$(run_with_lnd $lnd_cli_value getinfo | jq -r '.synced_to_chain')"
+  [[ "$is_synced" == "true" ]] || return 1
+}
+
 @test "cron: should remove only inactive merchants" {
   exec_graphql 'anon' 'business-map-markers'
   local initial_merchants="$(graphql_output)"
@@ -196,6 +202,9 @@ synced_to_graph() {
   local local_amount="500000"
   lnd2_local_pubkey="$(lnd2_cli getinfo | jq -r '.identity_pubkey')"
   lnd_cli connect "${lnd2_local_pubkey}@${COMPOSE_PROJECT_NAME}-lnd2-1:9735" || true
+  # lnd refuses to open a channel while either wallet is behind the chain tip.
+  retry 30 1 synced_to_chain lnd_cli
+  retry 30 1 synced_to_chain lnd2_cli
   retry 10 1 synced_to_graph lnd_cli
   retry 5 1 synced_to_graph lnd2_cli
   opened=$(

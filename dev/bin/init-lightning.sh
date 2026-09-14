@@ -80,7 +80,8 @@ synced_to_graph() {
 }
 
 synced_to_chain() {
-  is_synced="$(lnd_outside_cli getinfo | jq -r '.synced_to_chain')"
+  local lnd_cli_cmd="${1:-lnd_outside_cli}"
+  is_synced="$(run_with_lnd "$lnd_cli_cmd" getinfo | jq -r '.synced_to_chain')"
   [[ "$is_synced" == "true" ]] || return 1
 }
 
@@ -108,6 +109,8 @@ pubkey_lnd1="$(lnd_cli getinfo | jq -r '.identity_pubkey')"
 endpoint_lnd1="${COMPOSE_PROJECT_NAME}-lnd1-1:9735"
 retry 10 1 lnd_outside_connect_with_retry "${pubkey_lnd1}@${endpoint_lnd1}"
 retry 30 1 synced_to_chain
+# The responder must be synced too, not only the initiator.
+retry 30 1 synced_to_chain lnd_cli
 retry 10 1 synced_to_graph
 funding_txid=$(lnd_outside_cli openchannel \
   --node_key "$pubkey_lnd1" \
@@ -131,6 +134,7 @@ pubkey_lnd_outside_2="$(lnd_outside_2_cli getinfo | jq -r '.identity_pubkey')"
 endpoint_lnd_outside_2="${COMPOSE_PROJECT_NAME}-lnd-outside-2-1:9735"
 retry 10 1 lnd_outside_connect_with_retry "${pubkey_lnd_outside_2}@${endpoint_lnd_outside_2}"
 retry 30 1 synced_to_chain
+retry 30 1 synced_to_chain lnd_outside_2_cli
 retry 10 1 synced_to_graph
 funding_txid=$(lnd_outside_cli openchannel \
   --node_key "$pubkey_lnd_outside_2" \
