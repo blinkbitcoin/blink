@@ -24,9 +24,11 @@ teardown_suite() {
   fi
 
   # A hung dev:down must not turn a green suite into a timed-out build; any other failure still fails teardown.
+  # 137 counts as a timeout only after the deadline: an early SIGKILL is a real failure.
   rc=0
+  started=$SECONDS
   timeout --kill-after=30 300 buck2 run //dev:down || rc=$?
-  if [[ "$rc" -eq 124 || "$rc" -eq 137 ]]; then
+  if [[ "$rc" -eq 124 || ( "$rc" -eq 137 && $((SECONDS - started)) -ge 300 ) ]]; then
     echo "teardown_suite: dev:down timed out after 5 minutes, ignoring"
   elif [[ "$rc" -ne 0 ]]; then
     echo "teardown_suite: dev:down exited with ${rc}"

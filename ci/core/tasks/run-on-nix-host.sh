@@ -77,8 +77,10 @@ kill "${tunnel_pid}"
 
 # Run detached: children left behind by tilt must not hold the ssh session open after the command exits.
 # Each attempt gets its own directory, so a timed-out attempt still running cannot overwrite this one's status.
+# Only the newest five attempts are kept on the host.
 gcloud_ssh "
   mkdir -p \$HOME/.ci-run
+  ls -dt \$HOME/.ci-run/run.* 2>/dev/null | tail -n +5 | xargs -r rm -rf
   run_dir=\$(mktemp -d \$HOME/.ci-run/run.XXXXXX)
   ln -sfn \$run_dir \$HOME/.ci-run/latest
   touch \$run_dir/log
