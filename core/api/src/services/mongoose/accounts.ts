@@ -98,9 +98,52 @@ export const AccountsRepository = (): IAccountsRepository => {
   const persistNew = async (kratosUserId: UserId): Promise<Account | RepositoryError> => {
     try {
       const account = new Account()
+      account.last_activity_at = new Date()
       account.kratosUserId = kratosUserId
       await account.save()
       return translateToAccount(account)
+    } catch (err) {
+      return parseRepositoryError(err)
+    }
+  }
+
+  // One atomic update that also returns the value it replaced. With onlyIfOlderThan set, the age
+  // check is part of the filter: a value that is still fresh matches nothing and nothing is
+  // written. `lean` returns the raw document, so an account that has not been backfilled yet
+  // comes back with previousActivityAt undefined.
+  const recordActivity = async ({
+    id,
+    now,
+    onlyIfOlderThan,
+  }: RecordAccountActivityArgs): Promise<
+    RecordAccountActivityResult | RepositoryError
+  > => {
+    try {
+      const filter =
+        onlyIfOlderThan === undefined
+          ? { id }
+          : {
+              id,
+              $or: [
+                { last_activity_at: null }, // missing or null
+                { last_activity_at: { $lt: onlyIfOlderThan } },
+              ],
+            }
+      const previous = await Account.findOneAndUpdate(
+        filter,
+        { $set: { last_activity_at: now } },
+        { returnDocument: "before", projection: { last_activity_at: 1 }, lean: true },
+      )
+      if (!previous) {
+        if (onlyIfOlderThan !== undefined) return { written: false }
+        return new CouldNotFindAccountFromIdError(id)
+      }
+      return {
+        written: true,
+        previousActivityAt: previous.last_activity_at
+          ? new Date(previous.last_activity_at)
+          : undefined,
+      }
     } catch (err) {
       return parseRepositoryError(err)
     }
@@ -130,6 +173,7 @@ export const AccountsRepository = (): IAccountsRepository => {
     findById,
     findByUsername,
     update,
+    recordActivity,
   }
 }
 
@@ -145,4 +189,5 @@ const translateToAccount = (result: AccountRecord): Account => ({
   withdrawFee: result.withdrawFee as Satoshis,
   kratosUserId: result.kratosUserId as UserId,
   displayCurrency: (result.displayCurrency || UsdDisplayCurrency) as DisplayCurrency,
+  lastActivityAt: result.last_activity_at ? new Date(result.last_activity_at) : undefined,
 })

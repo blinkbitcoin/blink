@@ -9,6 +9,7 @@ jest.mock("@/services/mongoose", () => ({
     findAccountWalletsByAccountId: jest.fn(),
     findAccountById: jest.fn(),
     findUserById: jest.fn(),
+    recordActivity: jest.fn(),
   },
   WalletsRepository: () => ({
     findById: jest.requireMock("@/services/mongoose").__mocks.findWalletById,
@@ -17,6 +18,7 @@ jest.mock("@/services/mongoose", () => ({
   }),
   AccountsRepository: () => ({
     findById: jest.requireMock("@/services/mongoose").__mocks.findAccountById,
+    recordActivity: jest.requireMock("@/services/mongoose").__mocks.recordActivity,
   }),
   UsersRepository: () => ({
     findById: jest.requireMock("@/services/mongoose").__mocks.findUserById,
@@ -141,6 +143,7 @@ const mocks = jest.requireMock("@/services/mongoose").__mocks as {
   findAccountWalletsByAccountId: jest.Mock
   findAccountById: jest.Mock
   findUserById: jest.Mock
+  recordActivity: jest.Mock
 }
 const ipMocks = jest.requireMock("@/services/mongoose/accounts-ips").__mocks as {
   findEarliestByAccountId: jest.Mock
@@ -321,6 +324,10 @@ describe("intraledger mid-price conversion", () => {
     mocks.findAccountWalletsByAccountId.mockImplementation(
       async (accountId: AccountId) => walletDescriptorsByAccount[accountId],
     )
+    mocks.recordActivity.mockResolvedValue({
+      written: true,
+      previousActivityAt: undefined,
+    })
     ipMocks.findEarliestByAccountId.mockResolvedValue(new CouldNotFindAccountIpError())
     mockGetBankOwnerWalletId.mockResolvedValue(bankOwnerWalletId)
     mockBtcFromUsdMidPriceFn.mockResolvedValue(PRICED_VIA_MID)

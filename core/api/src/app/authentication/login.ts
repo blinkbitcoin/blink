@@ -13,6 +13,7 @@ import {
   createAccountForDeviceAccount,
   createAccountWithPhoneIdentifier,
 } from "@/app/accounts/create-account"
+import { recordActivity } from "@/app/inactivity-fee"
 import {
   checkedToEmailCode,
   telegramPassportLoginKey,
@@ -29,6 +30,7 @@ import {
   InvalidNonceTelegramPassportError,
   WaitingDataTelegramPassportError,
 } from "@/domain/authentication/errors"
+import { ActivityKind } from "@/domain/inactivity-fee"
 import { ChannelType, checkedToChannel } from "@/domain/phone-provider"
 import {
   checkedToDeviceId,
@@ -49,6 +51,7 @@ import {
 import { isPhoneCodeValid } from "@/services/phone-provider"
 import { consumeLimiter } from "@/services/rate-limit"
 import { RedisCacheService } from "@/services/cache"
+import { AccountsRepository } from "@/services/mongoose"
 
 import { IPMetadataAuthorizer } from "@/domain/accounts-ips/ip-metadata-authorizer"
 
@@ -150,6 +153,8 @@ export const loginWithPhoneToken = async ({
   const totpRequired = !kratosResult.kratosUserId
   const id = kratosResult.kratosUserId as UserId
 
+  if (!totpRequired) await recordLoginActivity({ userId })
+
   return {
     authToken: kratosResult.authToken,
     totpRequired,
@@ -193,6 +198,10 @@ export const loginWithEmailToken = async ({
 
   const res = await authServiceEmail.loginToken({ email })
   if (res instanceof Error) return res
+
+  // kratosUserId is only returned when totp is not required; the totp step is a session request
+  if (res.kratosUserId) await recordLoginActivity({ userId: res.kratosUserId })
+
   return { authToken: res.authToken, totpRequired, id: res.kratosUserId }
 }
 
@@ -244,6 +253,9 @@ export const loginDeviceUpgradeWithPhone = async ({
       phoneMetadata,
     })
     if (res instanceof Error) return res
+
+    await recordLoginActivity({ accountId: account.id })
+
     return { success }
   }
 
@@ -351,6 +363,8 @@ export const loginTelegramPassportNonceWithPhone = async ({
   const totpRequired = !kratosResult.kratosUserId
   const id = kratosResult.kratosUserId as UserId
 
+  if (!totpRequired) await recordLoginActivity({ userId })
+
   return {
     authToken: kratosResult.authToken,
     totpRequired,
@@ -427,6 +441,8 @@ export const loginDeviceUpgradeWithTelegramPassportNonce = async ({
       phoneMetadata,
     })
     if (res instanceof Error) return res
+
+    await recordLoginActivity({ accountId: account.id })
 
     return { success: true }
   }
@@ -508,9 +524,38 @@ export const loginWithDevice = async ({
       deviceId,
     })
     if (account instanceof Error) return account
+  } else {
+    await recordLoginActivity({ userId: res.kratosUserId })
   }
 
   return res.authToken
+}
+
+// Login is unauthenticated (sub = "anon"), so the session middleware never sees it: record the
+// activity here, only once the login is complete. When TOTP is still required the login is not
+// done yet; the TOTP step is itself a session request and records the activity. New accounts
+// rely on the insert default. Never fails the login.
+const recordLoginActivity = async (
+  args: { userId: UserId } | { accountId: AccountId },
+): Promise<void> => {
+  const accountId =
+    "accountId" in args
+      ? args.accountId
+      : await AccountsRepository()
+          .findByUserId(args.userId)
+          .then((account) => (account instanceof Error ? account : account.id))
+
+  const result =
+    accountId instanceof Error
+      ? accountId
+      : await recordActivity({ accountId, kind: ActivityKind.Login })
+  if (result instanceof Error) {
+    recordExceptionInCurrentSpan({
+      error: result,
+      level: ErrorLevel.Warn,
+      fallbackMsg: "error recording login activity",
+    })
+  }
 }
 
 const isAllowedToOnboard = async ({

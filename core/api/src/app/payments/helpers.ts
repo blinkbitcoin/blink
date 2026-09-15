@@ -1,15 +1,21 @@
+import { recordActivity } from "@/app/inactivity-fee"
 import { btcFromUsdMidPriceFn, usdFromBtcMidPriceFn } from "@/app/prices"
 import { getValuesToSkipProbe, MIN_SATS_FOR_PRICE_RATIO_PRECISION } from "@/config"
 import { AlreadyPaidError } from "@/domain/errors"
 import { LightningPaymentFlowBuilder, WalletPriceRatio } from "@/domain/payments"
-import { WalletCurrency } from "@/domain/shared"
+import { ActivityKind } from "@/domain/inactivity-fee"
+import { ErrorLevel, WalletCurrency } from "@/domain/shared"
 import { LndService } from "@/services/lnd"
 import {
   AccountsRepository,
   WalletInvoicesRepository,
   WalletsRepository,
 } from "@/services/mongoose"
-import { addAttributesToCurrentSpan, wrapAsyncToRunInSpan } from "@/services/tracing"
+import {
+  addAttributesToCurrentSpan,
+  recordExceptionInCurrentSpan,
+  wrapAsyncToRunInSpan,
+} from "@/services/tracing"
 
 export const constructPaymentFlowBuilder = async <
   S extends WalletCurrency,
@@ -151,3 +157,20 @@ export const getPriceRatioForLimits = wrapAsyncToRunInSpan({
     return WalletPriceRatio(paymentAmounts)
   },
 })
+
+// Records a settled send or transfer as account activity. Called once the journal write
+// has succeeded; an error is noted on the span and never fails the payment.
+export const recordSendActivity = async ({
+  accountId,
+}: {
+  accountId: AccountId
+}): Promise<void> => {
+  const result = await recordActivity({ accountId, kind: ActivityKind.Send })
+  if (result instanceof Error) {
+    recordExceptionInCurrentSpan({
+      error: result,
+      level: ErrorLevel.Warn,
+      fallbackMsg: "error recording send activity",
+    })
+  }
+}
