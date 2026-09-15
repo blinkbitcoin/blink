@@ -2,12 +2,13 @@ import DataLoader from "dataloader"
 
 import jsonwebtoken from "jsonwebtoken"
 
-import { Accounts, Transactions } from "@/app"
+import { Accounts, InactivityFee, Transactions } from "@/app"
 import { recordExceptionInCurrentSpan } from "@/services/tracing"
 
 import { maybeExtendSession } from "@/app/authentication"
 import { checkedToUserId } from "@/domain/accounts"
-import { ValidationError } from "@/domain/shared"
+import { ActivityKind } from "@/domain/inactivity-fee"
+import { ErrorLevel, ValidationError } from "@/domain/shared"
 import { baseLogger } from "@/services/logger"
 import { UsersRepository } from "@/services/mongoose"
 
@@ -58,6 +59,21 @@ export const sessionPublicContext = async ({
     }
 
     domainAccount = account
+
+    // last user activity: refreshed at most once per activityRefreshIntervalSec; one Mongo
+    // round-trip, never fails the request
+    const activity = await InactivityFee.recordActivity({
+      accountId: account.id,
+      kind: ActivityKind.Session,
+    })
+    if (activity instanceof Error) {
+      recordExceptionInCurrentSpan({
+        level: ErrorLevel.Warn,
+        error: activity,
+        fallbackMsg: "error recording session activity",
+      })
+    }
+
     // not awaiting on purpose. just updating metadata
     // TODO: look if this can be a source of memory leaks
     Accounts.updateAccountIPsInfo({

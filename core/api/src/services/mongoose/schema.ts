@@ -281,6 +281,13 @@ const AccountSchema = new Schema<AccountRecord>(
     },
 
     displayCurrency: String, // FIXME: should be an enum
+
+    // Last user-initiated activity (login, send/transfer, authenticated request).
+    // Set once by AccountsRepository().persistNew (account creation is a user action), then
+    // written only by app/inactivity-fee/record-activity via AccountsRepository().recordActivity
+    // and by the one-off backfill script. No schema default: mongoose would also apply one on
+    // hydration and fake a present value for accounts that have not been backfilled yet.
+    last_activity_at: Date,
   },
   { id: false },
 )
@@ -289,6 +296,8 @@ AccountSchema.index({
   title: 1,
   coordinates: 1,
 })
+
+AccountSchema.index({ last_activity_at: 1 })
 
 export const Account = mongoose.model<AccountRecord>("Account", AccountSchema)
 

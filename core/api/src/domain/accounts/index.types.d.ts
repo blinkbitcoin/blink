@@ -109,9 +109,22 @@ type Account = {
   contactEnabled: boolean
   kratosUserId: UserId
   displayCurrency: DisplayCurrency
+  // last user-initiated activity; undefined until backfilled (legacy accounts)
+  lastActivityAt?: Date
   // temp
   role?: string
 }
+
+type RecordAccountActivityArgs = {
+  id: AccountId
+  now: Date
+  // when set, the write only happens if the stored value is missing or older than this
+  onlyIfOlderThan?: Date
+}
+
+type RecordAccountActivityResult =
+  | { written: false }
+  | { written: true; previousActivityAt: Date | undefined }
 
 type AccountWithContacts = Account & {
   contacts: AccountContact[]
@@ -158,6 +171,9 @@ interface IAccountsRepository {
 
   findByUsername(username: Username): Promise<Account | RepositoryError>
   update(account: Account): Promise<Account | RepositoryError>
+  recordActivity(
+    args: RecordAccountActivityArgs,
+  ): Promise<RecordAccountActivityResult | RepositoryError>
 }
 
 type AdminRole = "dealer" | "funder" | "bankowner"

@@ -355,6 +355,8 @@ windDown:
       gateArmsAt: "2026-08-31T22:00:00Z"
       receiveDisabled: false
       gateClosed: false
+inactivityFee:
+  activityRefreshIntervalSec: 3600
 regionRestrictions:
   restrictedCountries: []
   custodialDollarBalanceBlockedCountries:

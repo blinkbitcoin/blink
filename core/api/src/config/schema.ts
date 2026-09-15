@@ -1269,6 +1269,22 @@ export const configSchema = {
         ],
       },
     },
+    inactivityFee: {
+      type: "object",
+      properties: {
+        // app-open / API requests refresh the account's last-activity timestamp at most once per
+        // this many seconds; login and sends always refresh it
+        activityRefreshIntervalSec: {
+          type: "integer",
+          minimum: 0,
+          maximum: 86400,
+          default: 3600,
+        },
+      },
+      required: ["activityRefreshIntervalSec"],
+      additionalProperties: false,
+      default: { activityRefreshIntervalSec: 3600 },
+    },
     regionRestrictions: {
       type: "object",
       properties: {
@@ -1329,6 +1345,7 @@ export const configSchema = {
     "telegramAuthUnsupportedCountries",
     "phoneProvider",
     "windDown",
+    "inactivityFee",
     "regionRestrictions",
   ],
   additionalProperties: false,

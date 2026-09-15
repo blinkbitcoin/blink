@@ -1,4 +1,4 @@
-import { getPriceRatioForLimits } from "./helpers"
+import { getPriceRatioForLimits, recordSendActivity } from "./helpers"
 import {
   recordSettlement,
   reverseSettlement,
@@ -338,6 +338,8 @@ const executePaymentViaIntraledger = async <
       if (journalId instanceof Error) {
         return reverseSettlement({ result: journalId })
       }
+
+      await recordSendActivity({ accountId: senderAccount.id })
 
       const recipientWalletTransaction = await getTransactionForWalletByJournalId({
         walletId: recipientWalletDescriptor.id,

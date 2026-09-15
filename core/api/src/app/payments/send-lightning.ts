@@ -1,4 +1,8 @@
-import { constructPaymentFlowBuilder, getPriceRatioForLimits } from "./helpers"
+import {
+  constructPaymentFlowBuilder,
+  getPriceRatioForLimits,
+  recordSendActivity,
+} from "./helpers"
 
 import {
   IntraLedgerSendAttemptResult,
@@ -576,6 +580,8 @@ const executePaymentViaIntraledger = async <
 
       const { journalId } = paymentSendAttemptResult
 
+      await recordSendActivity({ accountId: senderAccount.id })
+
       const recipientWalletTransaction = await getTransactionForWalletByJournalId({
         walletId: recipientWalletDescriptor.id,
         journalId,
@@ -873,6 +879,13 @@ const executePaymentViaLn = async ({
           paymentHash,
         })
         return reverseSettlement({ result })
+      }
+
+      // the journal write succeeded (settled or HTLC in flight): the user sent
+      if (
+        paymentSendAttemptResult.type !== PaymentSendAttemptResultType.ErrorWithJournal
+      ) {
+        await recordSendActivity({ accountId: senderAccount.id })
       }
 
       const walletTransaction = await getTransactionForWalletByJournalId({

@@ -95,6 +95,7 @@ interface AccountRecord {
   onchain: OnChainObjectForUser[]
   defaultWalletId: WalletId
   displayCurrency?: string
+  last_activity_at?: Date
 
   // mongoose in-built functions
   save: () => Promise<AccountRecord>
