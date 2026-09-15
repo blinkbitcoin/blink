@@ -1,0 +1,14 @@
+mutation LnAddressInvoiceCreate($input: LnAddressInvoiceCreateInput!) {
+  lnAddressInvoiceCreate(input: $input) {
+    errors {
+      code
+      message
+      path
+    }
+    invoice {
+      paymentRequest
+      paymentHash
+      verify
+    }
+  }
+}
