@@ -23,7 +23,7 @@ teardown_suite() {
     kill "$(cat "$TILT_PID_FILE")" > /dev/null || true
   fi
 
-  # A slow dev:down must not turn a green suite into a timed-out build; the next run cleans the host anyway.
+  # A slow dev:down must not turn a green suite into a timed-out build; the next run purges containers and re-runs dev:down before booting.
   rc=0
   timeout --kill-after=30 300 buck2 run //dev:down || rc=$?
   if [[ "$rc" -eq 124 || "$rc" -eq 137 ]]; then
