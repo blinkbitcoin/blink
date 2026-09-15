@@ -10,17 +10,8 @@ echo "Running on host: ${host_name}"
 host_zone=$(cat nix-host/metadata | jq -r '.docker_host_zone')
 gcp_project=$(cat nix-host/metadata | jq -r '.docker_host_project')
 
+# stderr is kept on purpose: the host-side output is the evidence when a run misbehaves.
 gcloud_ssh() {
-  gcloud compute ssh "${host_name}" \
-    --zone="${host_zone}" \
-    --project="${gcp_project}" \
-    --ssh-key-file="${CI_ROOT}/login.ssh" \
-    --tunnel-through-iap \
-    --command "$@" 2> /dev/null
-}
-
-# Same as gcloud_ssh but keeps stderr: used where the output is the evidence.
-gcloud_ssh_verbose() {
   gcloud compute ssh "${host_name}" \
     --zone="${host_zone}" \
     --project="${gcp_project}" \
@@ -32,9 +23,9 @@ gcloud_ssh_verbose() {
 # Report what the host looks like and remove leftover containers, stderr kept.
 cleanup_host() {
   echo "Cleaning up ${host_name} before the run"
-  gcloud_ssh_verbose "
+  gcloud_ssh "
     echo '--- previous run on this host, last 40 lines (if any)'
-    tail -n 40 \$HOME/.ci-run.log 2>/dev/null || true
+    tail -n 40 \$HOME/.ci-run/latest/log 2>/dev/null || true
     echo '--- containers before cleanup'
     docker ps -a
     echo '--- leftover processes (reported only)'
@@ -85,16 +76,19 @@ fi
 kill "${tunnel_pid}"
 
 # Run detached: children left behind by tilt must not hold the ssh session open after the command exits.
-gcloud_ssh_verbose "
-  rm -f \$HOME/.ci-run.log \$HOME/.ci-run.status
-  touch \$HOME/.ci-run.log
+# Each attempt gets its own directory, so a timed-out attempt still running cannot overwrite this one's status.
+gcloud_ssh "
+  mkdir -p \$HOME/.ci-run
+  run_dir=\$(mktemp -d \$HOME/.ci-run/run.XXXXXX)
+  ln -sfn \$run_dir \$HOME/.ci-run/latest
+  touch \$run_dir/log
   setsid -w bash -c '
     cd ${REPO_PATH} && cd ${PACKAGE_DIR} && nix develop -c ${CMD}
-    echo \$? > \$HOME/.ci-run.status
-  ' > \$HOME/.ci-run.log 2>&1 < /dev/null &
+    echo \$? > '\$run_dir'/status
+  ' > \$run_dir/log 2>&1 < /dev/null &
   runner=\$!
-  tail -n +1 -f --pid=\$runner \$HOME/.ci-run.log
+  tail -n +1 -f --pid=\$runner \$run_dir/log
   wait \$runner || true
-  status=\$(cat \$HOME/.ci-run.status 2>/dev/null)
+  status=\$(cat \$run_dir/status 2>/dev/null)
   exit \${status:-1}
 "
