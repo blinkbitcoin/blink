@@ -2,27 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'test: wait for chain sync on both peers before opening channels
-        (#839)'
-      sha: 00a780cc9e7630ba6df59add83cc8ba07f7604d0
+      commitTitle: 'ci: surface docker-host output in Concourse and stop hung sessions
+        from failing green runs (#842)'
+      sha: 2765bd2df653be0d92a9c81ff9c1e1c93e666d97
       tags:
-      - 0.22.60-2-g00a780cc9
+      - 0.22.61-1-g2765bd2df
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'test: wait for chain sync on both peers before opening channels
-        (#839)'
-      sha: 00a780cc9e7630ba6df59add83cc8ba07f7604d0
+      commitTitle: 'ci: surface docker-host output in Concourse and stop hung sessions
+        from failing green runs (#842)'
+      sha: 2765bd2df653be0d92a9c81ff9c1e1c93e666d97
       tags:
-      - 0.22.60-2-g00a780cc9
+      - 0.22.61-1-g2765bd2df
     path: schemas
   - git:
-      commitTitle: 'test: wait for chain sync on both peers before opening channels
-        (#839)'
-      sha: 00a780cc9e7630ba6df59add83cc8ba07f7604d0
+      commitTitle: 'ci: surface docker-host output in Concourse and stop hung sessions
+        from failing green runs (#842)'
+      sha: 2765bd2df653be0d92a9c81ff9c1e1c93e666d97
       tags:
-      - 0.22.60-2-g00a780cc9
+      - 0.22.61-1-g2765bd2df
     path: gql
   path: graphql
 kind: LockConfig
