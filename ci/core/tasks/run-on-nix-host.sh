@@ -10,13 +10,28 @@ echo "Running on host: ${host_name}"
 host_zone=$(cat nix-host/metadata | jq -r '.docker_host_zone')
 gcp_project=$(cat nix-host/metadata | jq -r '.docker_host_project')
 
+# stderr is kept on purpose: the host-side output is the evidence when a run misbehaves.
 gcloud_ssh() {
   gcloud compute ssh "${host_name}" \
     --zone="${host_zone}" \
     --project="${gcp_project}" \
     --ssh-key-file="${CI_ROOT}/login.ssh" \
     --tunnel-through-iap \
-    --command "$@" 2> /dev/null
+    --command "$@"
+}
+
+# Report what the host looks like and remove leftover containers, stderr kept.
+cleanup_host() {
+  echo "Cleaning up ${host_name} before the run"
+  gcloud_ssh "
+    echo '--- previous run on this host, last 40 lines (if any)'
+    tail -n 40 \$HOME/.ci-run/latest/log 2>/dev/null || true
+    echo '--- containers before cleanup'
+    docker ps -a
+    echo '--- leftover processes (reported only)'
+    pgrep -af '[t]ilt|[/]buck-out/v2/gen/|[r]un-stoppable-trigger|[b]ats-exec|[c]i_run.sh' || true
+    docker ps -aq | xargs -r docker rm -fv || true
+  "
 }
 
 cat <<EOF > "${CI_ROOT}/gcloud-creds.json"
@@ -31,7 +46,7 @@ ${SSH_PUB_KEY}
 EOF
 gcloud auth activate-service-account --key-file "${CI_ROOT}/gcloud-creds.json" 2> /dev/null
 
-gcloud_ssh "docker ps -qa | xargs docker rm -fv || true;"
+cleanup_host
 
 login_user="sa_$(cat "${CI_ROOT}/gcloud-creds.json" | jq -r '.client_id')"
 
@@ -60,4 +75,22 @@ fi
 
 kill "${tunnel_pid}"
 
-gcloud_ssh "cd ${REPO_PATH}; cd ${PACKAGE_DIR}; nix develop -c ${CMD} 2>&1"
+# Run detached: children left behind by tilt must not hold the ssh session open after the command exits.
+# Each attempt gets its own directory, so a timed-out attempt still running cannot overwrite this one's status.
+# Only the newest five attempts are kept on the host.
+gcloud_ssh "
+  mkdir -p \$HOME/.ci-run
+  ls -dt \$HOME/.ci-run/run.* 2>/dev/null | tail -n +5 | xargs -r rm -rf
+  run_dir=\$(mktemp -d \$HOME/.ci-run/run.XXXXXX)
+  ln -sfn \$run_dir \$HOME/.ci-run/latest
+  touch \$run_dir/log
+  setsid -w bash -c '
+    cd ${REPO_PATH} && cd ${PACKAGE_DIR} && nix develop -c ${CMD}
+    echo \$? > '\$run_dir'/status
+  ' > \$run_dir/log 2>&1 < /dev/null &
+  runner=\$!
+  tail -n +1 -f --pid=\$runner \$run_dir/log
+  wait \$runner || true
+  status=\$(cat \$run_dir/status 2>/dev/null)
+  exit \${status:-1}
+"

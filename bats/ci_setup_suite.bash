@@ -6,13 +6,9 @@ source "${REPO_ROOT}/bats/helpers/_common.bash"
 TILT_PID_FILE="${BATS_ROOT_DIR}/.tilt_pid"
 
 setup_suite() {
-  # A task killed mid-run (timeout, abort, worker crash) never reaches
-  # teardown_suite, leaving its tilt process and stack running on the host.
-  # The next build then fails on the busy tilt port while the stale stack
-  # still answers the health checks below. The pid file does not survive
-  # between builds, so kill by name and tear down before booting.
+  # A killed task leaves tilt and its stack running on the host; clear them before booting.
   pkill -x tilt || true
-  buck2 run //dev:down || true
+  timeout --kill-after=30 300 buck2 run //dev:down || true
 
   background buck2 run //dev:up -- --bats=True > "${REPO_ROOT}/bats/.e2e-tilt.log"
   echo $! > "$TILT_PID_FILE"
@@ -27,7 +23,17 @@ teardown_suite() {
     kill "$(cat "$TILT_PID_FILE")" > /dev/null || true
   fi
 
-  buck2 run //dev:down
+  # A hung dev:down must not turn a green suite into a timed-out build; any other failure still fails teardown.
+  # 137 counts as a timeout only after the deadline: an early SIGKILL is a real failure.
+  rc=0
+  started=$SECONDS
+  timeout --kill-after=30 300 buck2 run //dev:down || rc=$?
+  if [[ "$rc" -eq 124 || ( "$rc" -eq 137 && $((SECONDS - started)) -ge 300 ) ]]; then
+    echo "teardown_suite: dev:down timed out after 5 minutes, ignoring"
+  elif [[ "$rc" -ne 0 ]]; then
+    echo "teardown_suite: dev:down exited with ${rc}"
+    return "$rc"
+  fi
 }
 
 await_api_is_up() {
