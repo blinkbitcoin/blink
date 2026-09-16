@@ -649,6 +649,16 @@ export class NotificationEvent extends jspb.Message {
     getMigrationRetryReady(): MigrationRetryReady | undefined;
     setMigrationRetryReady(value?: MigrationRetryReady): NotificationEvent;
 
+    hasInactivityFeeNotice(): boolean;
+    clearInactivityFeeNotice(): void;
+    getInactivityFeeNotice(): InactivityFeeNotice | undefined;
+    setInactivityFeeNotice(value?: InactivityFeeNotice): NotificationEvent;
+
+    hasInactivityFeeWelcomeBack(): boolean;
+    clearInactivityFeeWelcomeBack(): void;
+    getInactivityFeeWelcomeBack(): InactivityFeeWelcomeBack | undefined;
+    setInactivityFeeWelcomeBack(value?: InactivityFeeWelcomeBack): NotificationEvent;
+
     getDataCase(): NotificationEvent.DataCase;
 
     serializeBinary(): Uint8Array;
@@ -672,6 +682,8 @@ export namespace NotificationEvent {
         price?: PriceChanged.AsObject,
         marketingNotificationTriggered?: MarketingNotificationTriggered.AsObject,
         migrationRetryReady?: MigrationRetryReady.AsObject,
+        inactivityFeeNotice?: InactivityFeeNotice.AsObject,
+        inactivityFeeWelcomeBack?: InactivityFeeWelcomeBack.AsObject,
     }
 
     export enum DataCase {
@@ -685,6 +697,8 @@ export namespace NotificationEvent {
         PRICE = 7,
         MARKETING_NOTIFICATION_TRIGGERED = 8,
         MIGRATION_RETRY_READY = 9,
+        INACTIVITY_FEE_NOTICE = 10,
+        INACTIVITY_FEE_WELCOME_BACK = 11,
     }
 
 }
@@ -784,6 +798,61 @@ export class MigrationRetryReady extends jspb.Message {
 export namespace MigrationRetryReady {
     export type AsObject = {
         userId: string,
+    }
+}
+
+export class InactivityFeeNotice extends jspb.Message { 
+    getUserId(): string;
+    setUserId(value: string): InactivityFeeNotice;
+    getEffectiveDate(): string;
+    setEffectiveDate(value: string): InactivityFeeNotice;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): InactivityFeeNotice.AsObject;
+    static toObject(includeInstance: boolean, msg: InactivityFeeNotice): InactivityFeeNotice.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: InactivityFeeNotice, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): InactivityFeeNotice;
+    static deserializeBinaryFromReader(message: InactivityFeeNotice, reader: jspb.BinaryReader): InactivityFeeNotice;
+}
+
+export namespace InactivityFeeNotice {
+    export type AsObject = {
+        userId: string,
+        effectiveDate: string,
+    }
+}
+
+export class InactivityFeeWelcomeBack extends jspb.Message { 
+    getUserId(): string;
+    setUserId(value: string): InactivityFeeWelcomeBack;
+
+    hasRefundedSats(): boolean;
+    clearRefundedSats(): void;
+    getRefundedSats(): number | undefined;
+    setRefundedSats(value: number): InactivityFeeWelcomeBack;
+
+    hasRefundedCents(): boolean;
+    clearRefundedCents(): void;
+    getRefundedCents(): number | undefined;
+    setRefundedCents(value: number): InactivityFeeWelcomeBack;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): InactivityFeeWelcomeBack.AsObject;
+    static toObject(includeInstance: boolean, msg: InactivityFeeWelcomeBack): InactivityFeeWelcomeBack.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: InactivityFeeWelcomeBack, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): InactivityFeeWelcomeBack;
+    static deserializeBinaryFromReader(message: InactivityFeeWelcomeBack, reader: jspb.BinaryReader): InactivityFeeWelcomeBack;
+}
+
+export namespace InactivityFeeWelcomeBack {
+    export type AsObject = {
+        userId: string,
+        refundedSats?: number,
+        refundedCents?: number,
     }
 }
 

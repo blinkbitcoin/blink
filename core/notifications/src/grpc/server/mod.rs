@@ -327,6 +327,52 @@ impl NotificationsService for Notifications {
             }
             Some(proto::NotificationEvent {
                 data:
+                    Some(proto::notification_event::Data::InactivityFeeNotice(
+                        proto::InactivityFeeNotice {
+                            user_id,
+                            effective_date,
+                        },
+                    )),
+            }) => {
+                if !is_iso_date(&effective_date) {
+                    return Err(Status::invalid_argument(
+                        "effective_date must be YYYY-MM-DD",
+                    ));
+                }
+                let user_id = GaloyUserId::from(user_id);
+                self.app
+                    .handle_single_user_event(
+                        user_id,
+                        notification_event::InactivityFeeNotice { effective_date },
+                    )
+                    .await?;
+            }
+            Some(proto::NotificationEvent {
+                data:
+                    Some(proto::notification_event::Data::InactivityFeeWelcomeBack(
+                        proto::InactivityFeeWelcomeBack {
+                            user_id,
+                            refunded_sats,
+                            refunded_cents,
+                        },
+                    )),
+            }) => {
+                if refunded_sats.unwrap_or(0) == 0 && refunded_cents.unwrap_or(0) == 0 {
+                    return Err(Status::invalid_argument("a refunded amount is required"));
+                }
+                let user_id = GaloyUserId::from(user_id);
+                self.app
+                    .handle_single_user_event(
+                        user_id,
+                        notification_event::InactivityFeeWelcomeBack {
+                            refunded_sats,
+                            refunded_cents,
+                        },
+                    )
+                    .await?;
+            }
+            Some(proto::NotificationEvent {
+                data:
                     Some(proto::notification_event::Data::IdentityVerificationDeclined(
                         proto::IdentityVerificationDeclined {
                             user_id,
@@ -482,6 +528,19 @@ impl NotificationsService for Notifications {
 
         Ok(Response::new(HandleNotificationEventResponse {}))
     }
+}
+
+/// `YYYY-MM-DD`: the only date shape core sends and the templates render verbatim.
+fn is_iso_date(value: &str) -> bool {
+    let bytes = value.as_bytes();
+    bytes.len() == 10
+        && bytes.iter().enumerate().all(|(i, b)| {
+            if i == 4 || i == 7 {
+                *b == b'-'
+            } else {
+                b.is_ascii_digit()
+            }
+        })
 }
 
 pub(crate) async fn start(
