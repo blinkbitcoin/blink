@@ -1,9 +1,8 @@
 #!/usr/bin/env bats
 
-# accounts.last_activity_at end-to-end. The "leaves it" cases rely on
-# inactivityFee.activityRefreshIntervalSec (default 3600) being longer than this test run: every
-# authenticated call after the login falls inside that interval and does not write, so only login, sends and back-dated /
-# unset values can move the clock here.
+# The "leaves it" cases rely on inactivityFee.activityRefreshIntervalSec (default 3600) being
+# longer than this test run: every authenticated call after the login falls inside that interval
+# and does not write.
 
 load "../../helpers/_common.bash"
 load "../../helpers/cli.bash"
@@ -31,7 +30,6 @@ teardown() {
   assert_balance_for_check
 }
 
-# accounts.last_activity_at as epoch millis, read straight from Mongo.
 # mongo_cli word-splits its argument, so the command must not contain whitespace.
 last_activity_ms() {
   local account_id=$1

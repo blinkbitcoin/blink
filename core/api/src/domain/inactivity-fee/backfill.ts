@@ -6,7 +6,6 @@ export const BackfillActivitySource = {
   Floor: "floor",
 } as const
 
-// value = max(existing, createdAt, ledgerLast, max(ipsLast, ipsFloor)); source = the winner.
 // The floor means "absence of accountips history cannot be proven before this date", so it is a
 // minimum for the accountips candidate whether a row exists or not: an ipsLast before the floor
 // counts as `floor`, only an ipsLast strictly after it counts as `accountips`.

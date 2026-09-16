@@ -531,10 +531,10 @@ export const loginWithDevice = async ({
   return res.authToken
 }
 
-// Login is unauthenticated (sub = "anon"), so the session middleware never sees it: record the
-// activity here, only once the login is complete. When TOTP is still required the login is not
-// done yet; the TOTP step is itself a session request and records the activity. New accounts
-// rely on the insert default. Never fails the login.
+// Login is unauthenticated (sub = "anon"), so the session middleware never sees it and the
+// activity has to be recorded here, once the login is complete. While TOTP is still pending the
+// login is not done; that step is itself a session request and records the activity. New
+// accounts get their value when the account row is created.
 const recordLoginActivity = async (
   args: { userId: UserId } | { accountId: AccountId },
 ): Promise<void> => {

@@ -107,10 +107,8 @@ export const AccountsRepository = (): IAccountsRepository => {
     }
   }
 
-  // One atomic update that also returns the value it replaced. With onlyIfOlderThan set, the age
-  // check is part of the filter: a value that is still fresh matches nothing and nothing is
-  // written. `lean` returns the raw document, so an account that has not been backfilled yet
-  // comes back with previousActivityAt undefined.
+  // `lean` is required: mongoose would otherwise hydrate the document and could hand back a
+  // defaulted value, hiding the fact that an account has never had this field set.
   const recordActivity = async ({
     id,
     now,

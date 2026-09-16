@@ -15,10 +15,9 @@ type IsDormantAtArgs = {
 }
 
 type ResolveBackfillActivityArgs = {
-  // value already stored on the account (live instrumentation or an earlier run)
   existing: Date | undefined
   createdAt: Date
-  // last user-initiated ledger entry (sender leg); undefined when there is none
+  // newest ledger entry the account paid out; receives do not count
   ledgerLast: Date | undefined
   // max accountips.lastConnection across both id spaces; undefined when there is no row
   ipsLast: Date | undefined
