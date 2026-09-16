@@ -1,3 +1,6 @@
+import CentAmount from "../scalar/cent-amount"
+
+import Timestamp from "@/graphql/shared/types/scalar/timestamp"
 import { GT } from "@/graphql/index"
 
 const DepositFeeTier = GT.Object({
@@ -31,10 +34,26 @@ const DepositFeesInformation = GT.Object({
   }),
 })
 
+const InactivityFeeInformation = GT.Object({
+  name: "InactivityFeeInformation",
+  fields: () => ({
+    usdCentsPerMonth: {
+      description:
+        "monthly fee per balance for an account with no activity for 12 months, in USD cents",
+      type: GT.NonNull(CentAmount),
+    },
+    effectiveFrom: {
+      description: "first date the inactivity fee applies",
+      type: GT.NonNull(Timestamp),
+    },
+  }),
+})
+
 const FeesInformation = GT.Object({
   name: "FeesInformation",
   fields: () => ({
     deposit: { type: GT.NonNull(DepositFeesInformation) },
+    inactivityFee: { type: GT.NonNull(InactivityFeeInformation) },
   }),
 })
 

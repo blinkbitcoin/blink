@@ -4,6 +4,7 @@ import {
   getLightningAddressDomain,
   getLightningAddressDomainAliases,
   getOnchainNetworkConfig,
+  getInactivityFeeConfig,
 } from "@/config"
 
 import { Lightning } from "@/app"
@@ -40,6 +41,8 @@ const GlobalsQuery = GT.Field({
     const minBankFeeThreshold = tiers[0]?.maxAmount ?? "0"
     const ratio = "0"
 
+    const inactivityFeeConfig = getInactivityFeeConfig()
+
     return {
       nodesIds,
       network: NETWORK,
@@ -54,6 +57,10 @@ const GlobalsQuery = GT.Field({
           minBankFeeThreshold,
           tiers,
           ratio,
+        },
+        inactivityFee: {
+          usdCentsPerMonth: inactivityFeeConfig.feeAmountUsdCents,
+          effectiveFrom: inactivityFeeConfig.effectiveFrom,
         },
       },
     }
