@@ -198,6 +198,8 @@ const main = async () => {
   }
 }
 
+// Importing `@/app` opens Redis, LND and pub-sub handles that keep the event loop alive after
+// main() returns, so the process exits explicitly (as servers/cron.ts does) instead of hanging.
 if (require.main === module) {
   setupMongoConnection()
     .then(async (mongoose) => {
@@ -209,9 +211,10 @@ if (require.main === module) {
       } finally {
         if (mongoose) await mongoose.connection.close()
       }
+      process.exit(process.exitCode ?? 0)
     })
     .catch((err) => {
       console.error(err)
-      process.exitCode = 1
+      process.exit(1)
     })
 }
