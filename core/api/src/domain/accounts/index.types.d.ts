@@ -109,7 +109,7 @@ type Account = {
   contactEnabled: boolean
   kratosUserId: UserId
   displayCurrency: DisplayCurrency
-  // last user-initiated activity; undefined until backfilled (legacy accounts)
+  // undefined on accounts that predate the field and have not been seeded yet
   lastActivityAt?: Date
   // temp
   role?: string
@@ -118,7 +118,6 @@ type Account = {
 type RecordAccountActivityArgs = {
   id: AccountId
   now: Date
-  // when set, the write only happens if the stored value is missing or older than this
   onlyIfOlderThan?: Date
 }
 

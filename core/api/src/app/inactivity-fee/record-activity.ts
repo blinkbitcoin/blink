@@ -17,13 +17,10 @@ const hasLiveNotice = async ({
   return false
 }
 
-// The only code that updates an account's last-activity timestamp.
-// - login and send always set it to now
-// - session (app open, API request) sets it only if the stored value is older than
-//   activityRefreshIntervalSec, so a busy user costs one write per interval rather than
-//   one per request. That age check is part of the Mongo update itself: no separate read,
-//   no cache.
-// Errors are returned, never thrown: call sites record them on the span and carry on.
+// The only code that updates an account's last-activity timestamp. Session writes are
+// rate-limited so a busy user costs one write per interval rather than one per request;
+// the age check is part of the Mongo update itself, so two concurrent requests cannot both
+// see the same stale value.
 export const recordActivity = async ({
   accountId,
   kind,
@@ -58,7 +55,8 @@ export const recordActivity = async ({
   addAttributesToCurrentSpan({
     "inactivityFee.previousActivityAt": previousActivityAt?.toISOString() ?? "none",
   })
-  // no previous value: legacy account not backfilled yet, nothing to compare against
+  // undefined means the account predates the field and has not been seeded yet, so there is
+  // no earlier activity to compare against
   if (previousActivityAt === undefined) return { written: true, previousActivityAt }
 
   const dormant = isDormantAt({ lastActivityAt: previousActivityAt, asOf: now })

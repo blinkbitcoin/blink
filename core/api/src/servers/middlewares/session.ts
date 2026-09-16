@@ -60,8 +60,8 @@ export const sessionPublicContext = async ({
 
     domainAccount = account
 
-    // last user activity: refreshed at most once per activityRefreshIntervalSec; one Mongo
-    // round-trip, never fails the request
+    // awaited, unlike the IP write below: a returning user's account has to be woken up
+    // before the request is served. It never fails the request.
     const activity = await InactivityFee.recordActivity({
       accountId: account.id,
       kind: ActivityKind.Session,

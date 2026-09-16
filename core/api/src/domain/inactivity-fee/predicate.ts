@@ -26,6 +26,5 @@ export const calendarMonthsBefore = ({
 export const dormancyCutoffAt = (asOf: Date): Date =>
   calendarMonthsBefore({ date: asOf, months: DORMANCY_MONTHS })
 
-// dormant when the last activity is at or before the cutoff (12 calendar months before asOf)
 export const isDormantAt = ({ lastActivityAt, asOf }: IsDormantAtArgs): boolean =>
   lastActivityAt.getTime() <= dormancyCutoffAt(asOf).getTime()

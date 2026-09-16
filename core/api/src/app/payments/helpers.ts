@@ -158,8 +158,6 @@ export const getPriceRatioForLimits = wrapAsyncToRunInSpan({
   },
 })
 
-// Records a settled send or transfer as account activity. Called once the journal write
-// has succeeded; an error is noted on the span and never fails the payment.
 export const recordSendActivity = async ({
   accountId,
 }: {
