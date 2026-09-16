@@ -38,9 +38,10 @@ today_utc() {
   date -u +%Y-%m-%d
 }
 
+# bounded: a runner that never exits must fail this test, not the job's 40-minute timeout
 run_notice_job_live() {
   local out="${BATS_TEST_TMPDIR}/notice-$(date +%s%N).csv"
-  buck2 run //core/api:dev-inactivity-fee-job -- notice --as-of "$(today_utc)" --live --out "$out" > .e2e-inactivity-fee-job.log
+  timeout 600 buck2 run //core/api:dev-inactivity-fee-job -- notice --as-of "$(today_utc)" --live --out "$out" > .e2e-inactivity-fee-job.log
   echo "$out"
 }
 
