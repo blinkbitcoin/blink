@@ -19,7 +19,7 @@ import { baseLogger } from "@/services/logger"
 import { MigrationFlowStateRepository, WalletsRepository } from "@/services/mongoose"
 import { recordExceptionInCurrentSpan } from "@/services/tracing"
 
-type MigrationHook = (args: { paymentHash: PaymentHash }) => Promise<void>
+type SettleMigrationFlow = (args: { paymentHash: PaymentHash }) => Promise<void>
 
 export const resumeMigrationFlow = async ({
   accountId,
@@ -60,31 +60,34 @@ export const resumeMigrationFlow = async ({
   }
 
   // The trigger reverts a failed payment in several ledger writes while holding
-  // the wallet lock, so read the ledger under the same lock. The hook runs after
-  // the lock is released because the fail hook takes it again.
-  const hook = await LockService().lockWalletId(accountWallets.BTC.id, async (signal) => {
-    const hook = await hookFromLedger({
-      accountId,
-      walletIds: [accountWallets.BTC.id, accountWallets.USD.id],
-      lnPaymentHash,
-    })
-    if (signal.aborted) {
-      return new ResourceExpiredLockServiceError(signal.error?.message)
-    }
-    return hook
-  })
-  if (hook instanceof Error) {
-    recordExceptionInCurrentSpan({ error: hook, level: ErrorLevel.Warn })
+  // the wallet lock, so read the ledger under the same lock. The flow is settled
+  // after the lock is released because the fail path takes the lock again.
+  const settle = await LockService().lockWalletId(
+    accountWallets.BTC.id,
+    async (signal) => {
+      const settle = await settleFromLedger({
+        accountId,
+        walletIds: [accountWallets.BTC.id, accountWallets.USD.id],
+        lnPaymentHash,
+      })
+      if (signal.aborted) {
+        return new ResourceExpiredLockServiceError(signal.error?.message)
+      }
+      return settle
+    },
+  )
+  if (settle instanceof Error) {
+    recordExceptionInCurrentSpan({ error: settle, level: ErrorLevel.Warn })
     return updated
   }
-  if (hook !== undefined) {
-    await hook({ paymentHash: lnPaymentHash })
+  if (settle !== undefined) {
+    await settle({ paymentHash: lnPaymentHash })
   }
 
   return migrationFlowRepo.findByAccountId(accountId)
 }
 
-const hookFromLedger = async ({
+const settleFromLedger = async ({
   accountId,
   walletIds,
   lnPaymentHash,
@@ -92,7 +95,7 @@ const hookFromLedger = async ({
   accountId: AccountId
   walletIds: WalletId[]
   lnPaymentHash: PaymentHash
-}): Promise<MigrationHook | undefined | ApplicationError> => {
+}): Promise<SettleMigrationFlow | undefined | ApplicationError> => {
   const current = await MigrationFlowStateRepository().findByAccountId(accountId)
   if (current instanceof Error) return current
   if (current.phase !== MigrationFlowPhase.Transferring) return undefined
@@ -112,10 +115,10 @@ const hookFromLedger = async ({
     return undefined
   }
 
-  return hookFor(paymentState)
+  return settleFor(paymentState)
 }
 
-const hookFor = (paymentState: LnPaymentState): MigrationHook | undefined => {
+const settleFor = (paymentState: LnPaymentState): SettleMigrationFlow | undefined => {
   switch (paymentState) {
     case LnPaymentState.Success:
     case LnPaymentState.SuccessWithReimbursement:

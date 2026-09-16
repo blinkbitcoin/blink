@@ -97,7 +97,7 @@ describe("resumeMigrationFlow", () => {
 
   const btcWalletId = "btc-wallet-id" as WalletId
   let lockHeld = false
-  let hooksCalledUnderLock = 0
+  let settledUnderLock = 0
 
   beforeEach(() => {
     jest.clearAllMocks()
@@ -110,7 +110,7 @@ describe("resumeMigrationFlow", () => {
       USD: { id: "usd-wallet-id" as WalletId },
     })
     lockHeld = false
-    hooksCalledUnderLock = 0
+    settledUnderLock = 0
     mockLockWalletId.mockImplementation(
       async (_walletId: WalletId, fn: (signal: unknown) => Promise<unknown>) => {
         lockHeld = true
@@ -122,10 +122,10 @@ describe("resumeMigrationFlow", () => {
       },
     )
     mockCompleteFlow.mockImplementation(async () => {
-      if (lockHeld) hooksCalledUnderLock += 1
+      if (lockHeld) settledUnderLock += 1
     })
     mockFailFlow.mockImplementation(async () => {
-      if (lockHeld) hooksCalledUnderLock += 1
+      if (lockHeld) settledUnderLock += 1
     })
   })
 
@@ -233,7 +233,7 @@ describe("resumeMigrationFlow", () => {
     })
     expect(mockCompleteFlow).toHaveBeenCalledTimes(1)
     expect(mockCompleteFlow).toHaveBeenCalledWith({ paymentHash })
-    expect(hooksCalledUnderLock).toBe(0)
+    expect(settledUnderLock).toBe(0)
     expect(mockFailFlow).not.toHaveBeenCalled()
     expect(result).toBe(completedFlow)
   })
@@ -314,7 +314,7 @@ describe("resumeMigrationFlow", () => {
 
     expect(mockFailFlow).toHaveBeenCalledTimes(1)
     expect(mockFailFlow).toHaveBeenCalledWith({ paymentHash })
-    expect(hooksCalledUnderLock).toBe(0)
+    expect(settledUnderLock).toBe(0)
     expect(mockCompleteFlow).not.toHaveBeenCalled()
     expect(result).toBe(failedFlow)
   })
