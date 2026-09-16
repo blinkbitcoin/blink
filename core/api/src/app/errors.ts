@@ -15,6 +15,7 @@ import * as IpFetcherErrors from "@/domain/ipfetcher/errors"
 import * as AccountErrors from "@/domain/accounts/errors"
 import * as MigrationFlowErrors from "@/domain/migration-flow/errors"
 import * as WindDownErrors from "@/domain/wind-down/errors"
+import * as InactivityFeeErrors from "@/domain/inactivity-fee/errors"
 import * as NotificationsErrors from "@/domain/notifications/errors"
 import * as CacheErrors from "@/domain/cache/errors"
 import * as PhoneProviderServiceErrors from "@/domain/phone-provider/errors"
@@ -52,6 +53,7 @@ export const ApplicationErrors = {
   ...AccountErrors,
   ...MigrationFlowErrors,
   ...WindDownErrors,
+  ...InactivityFeeErrors,
   ...NotificationsErrors,
   ...CacheErrors,
   ...PhoneProviderServiceErrors,

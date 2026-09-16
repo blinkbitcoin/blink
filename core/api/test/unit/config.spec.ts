@@ -13,6 +13,8 @@ import { toCents } from "@/domain/fiat"
 import {
   configSchema,
   getAccountLimits,
+  getCronConfig,
+  getInactivityFeeConfig,
   yamlConfig,
   getOnchainNetworkConfig,
 } from "@/config"
@@ -86,6 +88,58 @@ describe("config.ts", () => {
       const contentNew = fs.readFileSync("./galoy.yaml", "utf8")
 
       expect(contentOrg).toEqual(contentNew)
+    })
+
+    it("ships the inactivity fee inert: jobs off, no live charging, documented defaults", () => {
+      expect(getCronConfig().inactivityFeeJobsEnabled).toBe(false)
+      expect(getInactivityFeeConfig()).toEqual({
+        activityRefreshIntervalSec: 3600,
+        liveCharging: false,
+        feeAmountUsdCents: 100,
+        effectiveFrom: new Date("2026-10-15T00:00:00Z"),
+        configVersion: "dev",
+        skipAccountIds: [],
+        notPermittedCountries: [],
+        level0Deadline: new Date("2026-10-31T22:59:59Z"),
+      })
+    })
+
+    it("refuses an inactivity fee above 500 cents at startup", () => {
+      expect(() =>
+        withCustomYaml({ inactivityFee: { feeAmountUsdCents: 600 } }, () => {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const loaded = require("@/config")
+          expect(loaded).toBeDefined()
+        }),
+      ).toThrow("Invalid yaml configuration")
+    })
+
+    it("normalises inactivity fee ids and countries and coerces its dates", () => {
+      withCustomYaml(
+        {
+          inactivityFee: {
+            skipAccountIds: ["1C2B5A6E-1A2B-4C3D-8E9F-0A1B2C3D4E5F"],
+            notPermittedCountries: ["nl", "de"],
+            effectiveFrom: "2026-11-01T00:00:00Z",
+            level0Deadline: "2026-12-31T22:59:59Z",
+            configVersion: "prod-2026-10",
+          },
+        },
+        () => {
+          const {
+            getInactivityFeeConfig: getConfiguredInactivityFeeConfig,
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+          } = require("@/config")
+          const configured = getConfiguredInactivityFeeConfig()
+          expect(configured.skipAccountIds).toEqual([
+            "1c2b5a6e-1a2b-4c3d-8e9f-0a1b2c3d4e5f",
+          ])
+          expect(configured.notPermittedCountries).toEqual(["NL", "DE"])
+          expect(configured.effectiveFrom).toEqual(new Date("2026-11-01T00:00:00Z"))
+          expect(configured.level0Deadline).toEqual(new Date("2026-12-31T22:59:59Z"))
+          expect(configured.configVersion).toBe("prod-2026-10")
+        },
+      )
     })
 
     it("loads fee caps for probe-excluded node groups", () => {

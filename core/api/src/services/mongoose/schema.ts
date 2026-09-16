@@ -10,6 +10,14 @@ import {
 } from "@/domain/migration-flow"
 import { BtcMapPlaceSubmissionStatus } from "@/domain/btcmap"
 import { WindDownCohortRule } from "@/domain/wind-down"
+import {
+  InactivityFeeNoticeSource,
+  InactivityFeeNoticeStatus,
+  InactivityFeeRunKind,
+  InactivityFeeRunMode,
+  InactivityFeeSupersededReason,
+  InactivityFeeTemplateVersion,
+} from "@/domain/inactivity-fee"
 import { WalletIdRegex, WalletType } from "@/domain/wallets"
 import { WalletCurrency } from "@/domain/shared"
 import { WalletInvoiceWebhookStatus } from "@/domain/wallet-invoices"
@@ -760,6 +768,104 @@ windDownCohortAssessmentSchema.index({ accountId: 1 }, { unique: true })
 export const WindDownCohortAssessment = mongoose.model<WindDownCohortAssessmentRecord>(
   "WindDownCohortAssessment",
   windDownCohortAssessmentSchema,
+)
+
+// One row per inactivity-fee warning. The partial unique index is the "no notice on file"
+// rule: at most one `active` row per account, whatever else the code does. Written by the
+// monthly notice job, the one-time 2026-09-03 import and (later) the reactivation hook only.
+const inactivityFeeNoticeSchema = new Schema<InactivityFeeNoticeRecord>(
+  {
+    accountId: {
+      type: String,
+      ref: "Account",
+      required: true,
+    },
+    issuedAt: { type: Date, required: true },
+    templateVersion: {
+      type: String,
+      required: true,
+      enum: Object.values(InactivityFeeTemplateVersion),
+    },
+    bulletinIssued: { type: Boolean, required: true, default: false },
+    pushSent: { type: Boolean, required: true, default: false },
+    status: {
+      type: String,
+      required: true,
+      enum: Object.values(InactivityFeeNoticeStatus),
+    },
+    supersededAt: Date,
+    supersededReason: {
+      type: String,
+      enum: Object.values(InactivityFeeSupersededReason),
+    },
+    source: {
+      type: String,
+      required: true,
+      enum: Object.values(InactivityFeeNoticeSource),
+    },
+    sourceHash: String,
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now,
+      required: true,
+    },
+  },
+  { id: false },
+)
+
+inactivityFeeNoticeSchema.index(
+  { accountId: 1 },
+  { unique: true, partialFilterExpression: { status: InactivityFeeNoticeStatus.Active } },
+)
+inactivityFeeNoticeSchema.index({ status: 1, issuedAt: 1 })
+
+export const InactivityFeeNotice = mongoose.model<InactivityFeeNoticeRecord>(
+  "InactivityFeeNotice",
+  inactivityFeeNoticeSchema,
+)
+
+// one informational summary per inactivity-fee run (notice now, fee later)
+const inactivityFeeRunSchema = new Schema<InactivityFeeRunRecord>(
+  {
+    runId: { type: String, required: true },
+    kind: {
+      type: String,
+      required: true,
+      enum: Object.values(InactivityFeeRunKind),
+    },
+    asOf: { type: Date, required: true },
+    mode: {
+      type: String,
+      required: true,
+      enum: Object.values(InactivityFeeRunMode),
+    },
+    forcedDry: { type: Boolean, required: true, default: false },
+    startedAt: { type: Date, required: true },
+    finishedAt: { type: Date, required: true },
+    configVersion: { type: String, required: true },
+    skipListHash: { type: String, required: true },
+    scanned: { type: Number, required: true },
+    accountsWithoutClock: { type: Number, required: true },
+    countsByOutcome: { type: Schema.Types.Mixed, required: true },
+    countsBySkipReason: { type: Schema.Types.Mixed, required: true },
+    error: String,
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { id: false },
+)
+
+inactivityFeeRunSchema.index({ runId: 1 }, { unique: true })
+
+export const InactivityFeeRun = mongoose.model<InactivityFeeRunRecord>(
+  "InactivityFeeRun",
+  inactivityFeeRunSchema,
 )
 
 const WalletOnChainPendingReceiveSchema = new Schema<WalletOnChainPendingReceiveRecord>(
