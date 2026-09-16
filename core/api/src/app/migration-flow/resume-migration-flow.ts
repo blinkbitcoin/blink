@@ -22,7 +22,8 @@ import { MigrationFlowStateRepository, WalletsRepository } from "@/services/mong
 import { recordExceptionInCurrentSpan } from "@/services/tracing"
 
 type Verdict = {
-  lndStatus: PaymentStatus
+  // set when the verdict must be confirmed by lnd before it is applied
+  lndStatus?: PaymentStatus
   apply: (args: { paymentHash: PaymentHash }) => Promise<void>
 }
 
@@ -94,7 +95,8 @@ export const resumeMigrationFlow = async ({
 }
 
 // Runs under the wallet lock. Returns the verdict to apply, or undefined when
-// the flow has moved on, the ledger is not conclusive, or lnd does not agree.
+// the flow has moved on, the ledger is not conclusive, or lnd does not confirm
+// a settled-looking ledger.
 const resolveLedgerVerdict = async ({
   accountId,
   walletIds,
@@ -127,6 +129,13 @@ const resolveLedgerVerdict = async ({
 
   const verdict = verdictFor(paymentState)
   if (verdict === undefined) return undefined
+
+  // A reversal is only ever written by the trigger after lnd reported the
+  // failure, so a failed ledger verdict needs no corroboration and must not be
+  // held back by an lnd outage: failing is recoverable, the user retries.
+  // Completing soft-closes the account, so a settled-looking ledger is
+  // confirmed with lnd first.
+  if (verdict.lndStatus === undefined) return verdict
 
   const lndService = LndService()
   if (lndService instanceof Error) {
@@ -166,10 +175,7 @@ const verdictFor = (paymentState: LnPaymentState): Verdict | undefined => {
     case LnPaymentState.FailedAfterRetry:
     case LnPaymentState.FailedAfterSuccess:
     case LnPaymentState.FailedAfterSuccessWithReimbursement:
-      return {
-        lndStatus: PaymentStatus.Failed,
-        apply: failMigrationFlowForFailedPayment,
-      }
+      return { apply: failMigrationFlowForFailedPayment }
     default:
       return undefined
   }

@@ -250,8 +250,16 @@ describe("resumeMigrationFlow", () => {
     expect(result).toBe(completedFlow)
   })
 
-  it("does not fail a flow when lnd reports the payment settled despite a reverted ledger", async () => {
-    mocks.findFlowByAccountId.mockResolvedValue(transferringFlow)
+  it("fails a flow from a reverted ledger without consulting lnd", async () => {
+    const failedFlow = {
+      ...transferringFlow,
+      phase: MigrationFlowPhase.Failed,
+    } as MigrationFlow
+    mocks.findFlowByAccountId
+      .mockResolvedValueOnce(transferringFlow)
+      .mockResolvedValueOnce(transferringFlow)
+      .mockResolvedValueOnce(transferringFlow)
+      .mockResolvedValueOnce(failedFlow)
     mockGetTransactionsByHash.mockResolvedValue([
       paymentTxn({ pending: false, at: new Date("2026-01-01T00:01:00Z") }),
       paymentTxn({
@@ -261,13 +269,16 @@ describe("resumeMigrationFlow", () => {
         at: new Date("2026-01-01T00:02:00Z"),
       }),
     ])
-    mockLookupPayment.mockResolvedValue({ status: PaymentStatus.Settled })
+    // lnd unavailable: a reversal is only written after lnd reported the failure
+    mockLookupPayment.mockResolvedValue(new Error("lnd down"))
 
     const result = await resumeMigrationFlow({ accountId })
 
-    expect(mockFailFlow).not.toHaveBeenCalled()
+    expect(mockLookupPayment).not.toHaveBeenCalled()
+    expect(mockFailFlow).toHaveBeenCalledTimes(1)
+    expect(mockFailFlow).toHaveBeenCalledWith({ paymentHash })
     expect(mockCompleteFlow).not.toHaveBeenCalled()
-    expect(result).toBe(transferringFlow)
+    expect(result).toBe(failedFlow)
   })
 
   it("does not act when the lnd lookup errors", async () => {
@@ -391,10 +402,10 @@ describe("resumeMigrationFlow", () => {
         at: new Date("2026-01-01T00:02:00Z"),
       }),
     ])
-    mockLookupPayment.mockResolvedValue({ status: PaymentStatus.Failed })
 
     const result = await resumeMigrationFlow({ accountId })
 
+    expect(mockLookupPayment).not.toHaveBeenCalled()
     expect(mockFailFlow).toHaveBeenCalledTimes(1)
     expect(mockFailFlow).toHaveBeenCalledWith({ paymentHash })
     expect(hooksCalledUnderLock).toBe(0)
