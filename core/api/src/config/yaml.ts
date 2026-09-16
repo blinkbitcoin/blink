@@ -17,6 +17,7 @@ import { checkedToScanDepth } from "@/domain/bitcoin/onchain"
 import { toCents } from "@/domain/fiat"
 
 import { toSeconds } from "@/domain/primitives"
+import { checkedToInvestmentAgreementTimeZone } from "@/domain/investment-agreement"
 
 import {
   AccountLevel,
@@ -166,6 +167,32 @@ export const getCustodialMigrationFlowConfig = (): CustodialMigrationFlowConfig 
     yamlConfig.custodialMigrationFlow.recentDepositThresholdUsdCents,
   recentDepositWindowDays: yamlConfig.custodialMigrationFlow.recentDepositWindowDays,
 })
+
+const investmentAgreementRateTimeZone = (value: string): InvestmentAgreementTimeZone => {
+  const timeZone = checkedToInvestmentAgreementTimeZone(value)
+  if (timeZone instanceof Error) {
+    throw new ConfigError("Invalid investmentAgreement rateTimeZone", value)
+  }
+  return timeZone
+}
+
+const investmentAgreementConfig: InvestmentAgreementConfig = {
+  pricePerUnitUsdCents: toCents(yamlConfig.investmentAgreement.pricePerUnitUsdCents),
+  preMoneyValuationUsdCents: toCents(
+    yamlConfig.investmentAgreement.preMoneyValuationUsdCents,
+  ),
+  minUnits: yamlConfig.investmentAgreement.minUnits as InvestmentUnits,
+  maxUnits: yamlConfig.investmentAgreement.maxUnits as InvestmentUnits,
+  signingReuseWindowMinutes: yamlConfig.investmentAgreement.signingReuseWindowMinutes,
+  paymentWindowHours: yamlConfig.investmentAgreement.paymentWindowHours,
+  rateTimeZone: investmentAgreementRateTimeZone(
+    yamlConfig.investmentAgreement.rateTimeZone,
+  ),
+  placeholderValues: yamlConfig.investmentAgreement.placeholderValues,
+}
+
+export const getInvestmentAgreementConfig = (): InvestmentAgreementConfig =>
+  investmentAgreementConfig
 
 export const getDisplayCurrencyConfig = (): {
   code: DisplayCurrency

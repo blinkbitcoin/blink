@@ -48,6 +48,7 @@ import {
 } from "@/graphql/error"
 
 import { BtcMapError } from "@/domain/btcmap/errors"
+import { ESignError } from "@/domain/esign/errors"
 import { baseLogger } from "@/services/logger"
 
 const assertUnreachable = (x: never): never => {
@@ -67,6 +68,15 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     return new UnknownClientError({
       message:
         "Could not submit the place to the map, please try again later or contact support if it persists.",
+      logger: baseLogger,
+    })
+  }
+
+  // same family-level mapping: provider failures never leak details to the client
+  if (error instanceof ESignError) {
+    return new UnknownClientError({
+      message:
+        "Could not prepare the investment agreement signing, please try again later or contact support if it persists.",
       logger: baseLogger,
     })
   }
@@ -725,6 +735,31 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       message = "Migration is not available via API key. Please use a session."
       return new MigrationApiKeyForbiddenError({ message, logger: baseLogger })
 
+    case "InvestmentAgreementDisabledError":
+      message = "Investment agreements are not available."
+      return new OperationRestrictedError({ message, logger: baseLogger })
+
+    case "InvestmentAgreementApiKeyForbiddenError":
+      message =
+        "Investment agreements are not available via API key. Please use a session."
+      return new OperationRestrictedError({ message, logger: baseLogger })
+
+    case "InvestmentAgreementInProgressError":
+      message = "An investment agreement is already in progress for this account."
+      return new OperationRestrictedError({ message, logger: baseLogger })
+
+    case "InvestmentAgreementStateConflictError":
+      message = "The investment agreement changed, please try again."
+      return new OperationRestrictedError({ message, logger: baseLogger })
+
+    case "InvestmentAgreementEmailRequiredError":
+      message = "An email address is required to sign the investment agreement."
+      return new ValidationInternalError({ message, logger: baseLogger })
+
+    case "InvalidInvestmentUnitsError":
+      message = `Invalid number of units: ${error.message}`
+      return new ValidationInternalError({ message, logger: baseLogger })
+
     case "ReceiveDisabledError":
       message =
         "This account can no longer receive payments. If this is your account, please update the Blink app to migrate your funds."
@@ -1016,6 +1051,20 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "UnknownApiKeysServiceError":
     case "CouldNotFindAccountError":
     case "CouldNotFindMigrationFlowStateError":
+    case "CouldNotFindInvestmentAgreementError":
+    case "InvestmentAgreementError":
+    case "InvestmentAgreementTabConflictError":
+    case "InvalidInvestmentAgreementTemplateIdsError":
+    case "InvalidInvestmentAgreementTimeZoneError":
+    case "InvalidInvestmentAgreementBtcPriceError":
+    case "ESignError":
+    case "ESignServiceError":
+    case "ESignNotConfiguredError":
+    case "ESignEnvelopeNotFoundError":
+    case "ESignRecipientStatusNotSupportedError":
+    case "ESignProviderUnavailableError":
+    case "ESignEnvelopeCreationError":
+    case "UnknownESignServiceError":
     case "CouldNotFindWindDownCohortAssessmentError":
     case "OathkeeperError":
     case "OathkeeperUnauthorizedServiceError":

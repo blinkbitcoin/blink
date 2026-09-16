@@ -77,6 +77,8 @@ const getOnChainTxHashAndVoutLockResource = ({
 }) => `locks:onchaintxhash:${txHash}:${vout}`
 const getIdempotencyKeyLockResource = (path: IdempotencyKey) =>
   `locks:idempotencykey:${path}`
+const getInvestmentAgreementLockResource = (path: AccountId) =>
+  `locks:investmentagreement:${path}`
 const getBtcMapPlaceSubmissionLockResource = ({
   accountId,
   submissionId,
@@ -189,6 +191,15 @@ export const LockService = (): ILockService => {
     return redlock({ path, asyncFn })
   }
 
+  const lockInvestmentAgreementCreation = async <Res>(
+    accountId: AccountId,
+    asyncFn: (signal: InvestmentAgreementAbortSignal) => Promise<Res>,
+  ): Promise<Res | LockServiceError> => {
+    const path = getInvestmentAgreementLockResource(accountId)
+
+    return redlock({ path, asyncFn })
+  }
+
   return wrapAsyncFunctionsToRunInSpan({
     namespace: "services.lock",
     fns: {
@@ -198,6 +209,7 @@ export const LockService = (): ILockService => {
       lockOnChainTxHashAndVout,
       lockIdempotencyKey,
       lockBtcMapPlaceSubmission,
+      lockInvestmentAgreementCreation,
     },
   })
 }

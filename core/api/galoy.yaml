@@ -360,3 +360,16 @@ regionRestrictions:
   custodialDollarBalanceBlockedCountries:
     - NL
   custodialTransferBlockedCountries: []
+investmentAgreement:
+  pricePerUnitUsdCents: 100
+  preMoneyValuationUsdCents: 1000000000
+  minUnits: 1
+  maxUnits: 100000
+  signingReuseWindowMinutes: 15
+  paymentWindowHours: 24
+  rateTimeZone: America/Tegucigalpa
+  placeholderValues:
+    fullLegalName: TEST Investor Name
+    countryOfResidence: TEST Country
+    subMembershipTier: TEST Tier
+    subMembershipTerm: TEST Term

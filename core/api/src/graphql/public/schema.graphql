@@ -638,6 +638,81 @@ input IntraLedgerUsdPaymentSendInput {
   walletId: WalletId!
 }
 
+"""Terms and progress of an investment agreement."""
+type InvestmentAgreement {
+  """Price of one bitcoin in USD cents used for the settlement."""
+  btcUsdRateCents: CentAmount!
+  id: ID!
+
+  """Deadline to pay the settlement, set once every party signed."""
+  paymentDeadline: Timestamp
+  paymentStatus: InvestmentAgreementPaymentStatus!
+
+  """Pre-money valuation in USD cents stated in the agreement."""
+  preMoneyValuationUsdCents: CentAmount!
+
+  """Price of one unit in USD cents."""
+  pricePerUnitUsdCents: CentAmount!
+
+  """When the bitcoin price used for the settlement was quoted."""
+  quotedAt: Timestamp!
+
+  """Amount to pay in satoshis to settle the subscription."""
+  settlementSats: SatAmount!
+  signingStatus: InvestmentAgreementSigningStatus!
+
+  """Total subscription amount in USD cents."""
+  totalUsdCents: CentAmount!
+
+  """Number of units subscribed."""
+  units: Int!
+}
+
+input InvestmentAgreementCreateInput {
+  """Number of units to subscribe."""
+  units: Int!
+}
+
+type InvestmentAgreementCreatePayload {
+  errors: [Error!]!
+  investmentAgreement: InvestmentAgreement
+
+  """
+  Short-lived URL to sign the agreement. Request a new one if it expires before signing.
+  """
+  signingUrl: String
+}
+
+"""Payment progress of an investment agreement."""
+enum InvestmentAgreementPaymentStatus {
+  """The payment deadline passed before the settlement was paid."""
+  EXPIRED
+
+  """The settlement was paid."""
+  PAID
+
+  """The settlement has not been paid yet."""
+  UNPAID
+}
+
+"""Signing progress of an investment agreement."""
+enum InvestmentAgreementSigningStatus {
+  """Every party signed the agreement."""
+  COMPLETED
+
+  """The investor declined to sign the agreement."""
+  DECLINED
+
+  """The agreement was replaced before the investor signed it."""
+  EXPIRED
+
+  """The agreement is ready to be signed."""
+  SIGNING_STARTED
+
+  """The agreement was voided before every party signed it."""
+  VOIDED
+}
+
 """A lightning invoice."""
 interface Invoice {
   createdAt: Timestamp!
@@ -1097,6 +1172,11 @@ type Mutation {
   """
   intraLedgerUsdPaymentSend(input: IntraLedgerUsdPaymentSendInput!): PaymentSendPayload!
 
+  """
+  Prepares the investment agreement for the given units and returns a URL to sign it. Calling it again for the same units while the agreement is still being signed returns the same agreement with a new URL.
+  """
+  investmentAgreementCreate(input: InvestmentAgreementCreateInput!): InvestmentAgreementCreatePayload!
+
   """Sends a payment to a lightning address."""
   lnAddressPaymentSend(input: LnAddressPaymentSendInput!): PaymentSendPayload!
 
@@ -1476,6 +1556,9 @@ type Query {
   currencyList: [Currency!]!
   custodialRestrictions: CustodialRestrictions!
   globals: Globals
+
+  """Latest investment agreement of the account, or null when it has none."""
+  investmentAgreement: InvestmentAgreement
   lnInvoicePaymentStatus(input: LnInvoicePaymentStatusInput!): LnInvoicePaymentStatusPayload! @deprecated(reason: "Deprecated in favor of lnInvoicePaymentStatusByPaymentRequest")
   lnInvoicePaymentStatusByHash(input: LnInvoicePaymentStatusByHashInput!): LnInvoicePaymentStatus!
   lnInvoicePaymentStatusByPaymentRequest(input: LnInvoicePaymentStatusByPaymentRequestInput!): LnInvoicePaymentStatus!

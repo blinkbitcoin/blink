@@ -25,6 +25,19 @@
         headers:
           X-Appcheck-Jti: "{{ print .Extra.jti }}"
 
+- id: esign-signing-return
+  upstream:
+    url: "http://bats-tests:4012"
+  match:
+    url: "<(http|https)>://<[a-zA-Z0-9-.:]+>/signing/return<.*>"
+    methods: ["GET"]
+  authenticators:
+    - handler: noop
+  authorizer:
+    handler: allow
+  mutators:
+    - handler: noop
+
 - id: galoy-ws
   upstream:
     url: "http://bats-tests:4000/graphql"

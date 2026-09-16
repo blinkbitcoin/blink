@@ -94,5 +94,6 @@ export async function startApolloServerForAdminSchema() {
     port: GALOY_ADMIN_PORT,
     type: "admin",
     setGqlContext: setGqlAdminContext,
+    unauthenticatedRouters: [],
   })
 }

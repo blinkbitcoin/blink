@@ -27,6 +27,9 @@
   "UNSECURE_DEFAULT_LOGIN_CODE": "000000",
   "GEETEST_ID": "geetest_id",
   "GEETEST_KEY": "geetest_key",
+  "INVESTMENT_AGREEMENT_ENABLED": "true",
+  "ESIGN_PROVIDER": "mock",
+  "DOCUSIGN_RETURN_URL": "http://localhost:4455/signing/return",
 
   "OTEL_TRACES_SAMPLER": "always_on",
 

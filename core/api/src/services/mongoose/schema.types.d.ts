@@ -238,6 +238,33 @@ interface MigrationFlowStateRecord {
   updatedAt: Date
 }
 
+type InvestmentAgreementStepRecord = {
+  status: string
+  recordedAt: Date
+}
+
+interface InvestmentAgreementRecord {
+  id: string
+  accountId: string
+  envelopeId: string
+  signingStatus: string
+  paymentStatus: string
+  units: number
+  pricePerUnitUsdCents: number
+  totalUsdCents: number
+  preMoneyValuationUsdCents: number
+  btcUsdRateCents: number
+  settlementSats: number
+  quotedAt: Date
+  signingReuseUntil: Date
+  paymentWindowHours: number
+  paymentDeadline?: Date
+  signingSteps: InvestmentAgreementStepRecord[]
+  paymentSteps: InvestmentAgreementStepRecord[]
+  createdAt: Date
+  updatedAt: Date
+}
+
 interface PostMigrationDepositReleaseRecord {
   accountId: string
   walletId: string

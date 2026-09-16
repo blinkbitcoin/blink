@@ -149,6 +149,24 @@ export const env = createEnv({
     SVIX_SECRET: z.string().optional(),
     SVIX_ENDPOINT: z.union([z.string().url().nullish(), z.literal("")]), // optional url
 
+    INVESTMENT_AGREEMENT_ENABLED: z
+      .enum(["true", "false"])
+      .default("false")
+      .transform((value) => value === "true"),
+    ESIGN_PROVIDER: z.enum(["docusign", "mock"]).optional(),
+    ESIGN_ENV: z.string().min(1).optional(),
+    ESIGN_ALLOW_DEMO: z.enum(["true", "false"]).optional(),
+    DOCUSIGN_ACCOUNT_ID: z.string().min(1).optional(),
+    DOCUSIGN_INTEGRATION_KEY: z.string().min(1).optional(),
+    DOCUSIGN_USER_ID: z.string().min(1).optional(),
+    DOCUSIGN_PRIVATE_KEY_BASE64: z.string().min(1).optional(),
+    DOCUSIGN_PRIVATE_KEY_FILE: z.string().min(1).optional(),
+    DOCUSIGN_BASE_URL: z.string().url().optional(),
+    DOCUSIGN_OAUTH_URL: z.string().url().optional(),
+    DOCUSIGN_TEMPLATE_ID: z.string().min(1).optional(),
+    DOCUSIGN_SIGNER_ROLE: z.string().min(1).optional(),
+    DOCUSIGN_RETURN_URL: z.string().url().optional(),
+
     OPENAI_API_KEY: z.string().min(1).optional(),
     OPENAI_ASSISTANT_ID: z.string().min(1).optional(),
     PINECONE_API_KEY: z.string().min(1).optional(),
@@ -271,6 +289,21 @@ export const env = createEnv({
 
     SVIX_SECRET: process.env.SVIX_SECRET,
     SVIX_ENDPOINT: process.env.SVIX_ENDPOINT,
+
+    INVESTMENT_AGREEMENT_ENABLED: process.env.INVESTMENT_AGREEMENT_ENABLED,
+    ESIGN_PROVIDER: process.env.ESIGN_PROVIDER,
+    ESIGN_ENV: process.env.ESIGN_ENV,
+    ESIGN_ALLOW_DEMO: process.env.ESIGN_ALLOW_DEMO,
+    DOCUSIGN_ACCOUNT_ID: process.env.DOCUSIGN_ACCOUNT_ID,
+    DOCUSIGN_INTEGRATION_KEY: process.env.DOCUSIGN_INTEGRATION_KEY,
+    DOCUSIGN_USER_ID: process.env.DOCUSIGN_USER_ID,
+    DOCUSIGN_PRIVATE_KEY_BASE64: process.env.DOCUSIGN_PRIVATE_KEY_BASE64,
+    DOCUSIGN_PRIVATE_KEY_FILE: process.env.DOCUSIGN_PRIVATE_KEY_FILE,
+    DOCUSIGN_BASE_URL: process.env.DOCUSIGN_BASE_URL,
+    DOCUSIGN_OAUTH_URL: process.env.DOCUSIGN_OAUTH_URL,
+    DOCUSIGN_TEMPLATE_ID: process.env.DOCUSIGN_TEMPLATE_ID,
+    DOCUSIGN_SIGNER_ROLE: process.env.DOCUSIGN_SIGNER_ROLE,
+    DOCUSIGN_RETURN_URL: process.env.DOCUSIGN_RETURN_URL,
 
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     OPENAI_ASSISTANT_ID: process.env.OPENAI_ASSISTANT_ID,

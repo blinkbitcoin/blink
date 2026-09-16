@@ -8,13 +8,19 @@ import { NextFunction, Request, Response } from "express"
 
 import { startApolloServer } from "./graphql-server"
 
+import { signingReturnRouter } from "./esign/signing-return-router"
+
 import { walletIdMiddleware } from "./middlewares/wallet-id"
 
 import { sessionPublicContext } from "./middlewares/session"
 
 import { scopeMiddleware } from "./middlewares/scope"
 
-import { GALOY_API_PORT, UNSECURE_IP_FROM_REQUEST_OBJECT } from "@/config"
+import {
+  GALOY_API_PORT,
+  INVESTMENT_AGREEMENT_ENABLED,
+  UNSECURE_IP_FROM_REQUEST_OBJECT,
+} from "@/config"
 
 import { AuthorizationError } from "@/graphql/error"
 import { gqlPublicSchema, mutationFields, queryFields } from "@/graphql/public"
@@ -136,10 +142,13 @@ export async function startApolloServerForCoreSchema() {
     scopeMiddleware,
   )
 
+  const unauthenticatedRouters = INVESTMENT_AGREEMENT_ENABLED ? [signingReturnRouter] : []
+
   return startApolloServer({
     schema,
     port: GALOY_API_PORT,
     type: "main",
     setGqlContext,
+    unauthenticatedRouters,
   })
 }
