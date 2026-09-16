@@ -89,6 +89,13 @@ describe("inactivity-fee-run-job CLI", () => {
         parse(["/var/yaml/custom.yaml", "notice", "--as-of", today]).configPath,
       ).toBe("/var/yaml/custom.yaml")
     })
+
+    it("ignores the -- separator that pnpm run and the buck2 task wrapper forward", () => {
+      const args = parse(["--", "notice", "--as-of", today, "--live"])
+      expect(args.configPath).toBeUndefined()
+      expect(args.live).toBe(true)
+      expect(args.asOfDate).toBe(today)
+    })
   })
 
   describe("run", () => {
