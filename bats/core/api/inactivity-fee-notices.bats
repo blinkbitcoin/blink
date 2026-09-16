@@ -63,6 +63,17 @@ back_date_clock_13_months() {
   mongo_cli "db.accounts.updateOne({id:'${account_id}'},{\$set:{last_activity_at:ISODate('${thirteen_months_ago}')}})"
 }
 
+# bats shows a test's output only when it fails: the runner's stdout, the account's CSV row and
+# the run summary are the only way to see *why* an outcome was not the expected one in CI
+dump_run_diagnostics() {
+  local csv=$1
+  local account_id=$2
+  echo "--- runner log"; cat .e2e-inactivity-fee-job.log
+  echo "--- csv row for ${account_id}"; grep "^${account_id}," "$csv" || echo "(no row)"
+  echo "--- summary"; cat "${csv}.summary.json"
+  echo "--- notice rows"; mongo_cli "db.inactivityfeenotices.find({accountId:'${account_id}'}).toArray()"
+}
+
 csv_outcome_for() {
   local csv=$1
   local account_id=$2
@@ -85,6 +96,7 @@ csv_outcome_for() {
   back_date_clock_13_months "$account_id"
 
   csv="$(run_notice_job_live)"
+  dump_run_diagnostics "$csv" "$account_id"
   [[ "$(csv_outcome_for "$csv" "$account_id")" = "noticed" ]] || exit 1
   [[ "$(live_notice_count "$account_id")" -eq 1 ]] || exit 1
 
