@@ -97,7 +97,6 @@ const hookFromLedger = async ({
   if (current instanceof Error) return current
   if (current.phase !== MigrationFlowPhase.Transferring) return undefined
 
-  // only the account's wallets: the bank owner's fee entries share the hash
   const ledgerTxns = await getTransactionsForWalletsByPaymentHash({
     walletIds,
     paymentHash: lnPaymentHash,
