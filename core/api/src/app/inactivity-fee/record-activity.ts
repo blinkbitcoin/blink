@@ -7,7 +7,7 @@ import { ActivityKind, isDormantAt } from "@/domain/inactivity-fee"
 import { AccountsRepository } from "@/services/mongoose"
 import { addAttributesToCurrentSpan } from "@/services/tracing"
 
-// notices are not stored yet; asOf is the replaced timestamp, not the stored one
+// stays false until Epic 3 wires the lookup; asOf is the replaced timestamp, not the stored one
 const hasLiveNotice = async ({
   accountId,
   asOf,

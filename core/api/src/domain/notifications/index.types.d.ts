@@ -138,6 +138,17 @@ interface INotificationsService {
     userId: UserId
   }): Promise<true | NotificationsServiceError>
 
+  sendInactivityFeeNotice(args: {
+    userId: UserId
+    effectiveDate: Date
+  }): Promise<true | NotificationsServiceError>
+
+  sendInactivityFeeWelcomeBack(args: {
+    userId: UserId
+    refundedSats?: Satoshis
+    refundedCents?: UsdCents
+  }): Promise<true | NotificationsServiceError>
+
   triggerMarketingNotification(
     args: TriggerMarketingNotificationArgs,
   ): Promise<true | NotificationsServiceError>

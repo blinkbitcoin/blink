@@ -300,6 +300,15 @@ dev_pnpm_task_binary(
 )
 
 dev_pnpm_task_binary(
+  name = "dev-inactivity-fee-job",
+  command = "dev:inactivity-fee-job",
+  srcs = [":src"],
+  deps = ["//:node_modules"],
+  visibility = ["PUBLIC"],
+  env_json = "//dev:serve_env",
+)
+
+dev_pnpm_task_binary(
   name = "watch-compile",
   command = "watch:compile",
   srcs = [":src"] + [":test_src"],

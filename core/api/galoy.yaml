@@ -323,6 +323,7 @@ userActivenessMonthlyVolumeThreshold: 100
 cronConfig:
   rebalanceEnabled: true
   removeInactiveMerchantsEnabled: true
+  inactivityFeeJobsEnabled: false
 captcha:
   mandatory: false
 custodialMigrationFlow:
@@ -357,6 +358,13 @@ windDown:
       gateClosed: false
 inactivityFee:
   activityRefreshIntervalSec: 3600
+  liveCharging: false
+  feeAmountUsdCents: 100
+  effectiveFrom: "2026-10-15T00:00:00Z"
+  configVersion: dev
+  skipAccountIds: []
+  notPermittedCountries: []
+  level0Deadline: "2026-10-31T22:59:59Z"
 regionRestrictions:
   restrictedCountries: []
   custodialDollarBalanceBlockedCountries:

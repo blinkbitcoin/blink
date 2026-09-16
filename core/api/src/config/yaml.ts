@@ -292,10 +292,10 @@ export const getCronConfig = (config = yamlConfig): CronConfig => config.cronCon
 
 export const getCaptcha = (config = yamlConfig): CaptchaConfig => config.captcha
 
-const windDownOperativeDate = (value: string): Date => {
+const operativeDate = (key: string, value: string): Date => {
   const date = new Date(value)
   if (isNaN(date.getTime())) {
-    throw new ConfigError("Invalid windDown operative date", value)
+    throw new ConfigError(`Invalid ${key} operative date`, value)
   }
   return date
 }
@@ -308,20 +308,22 @@ const windDownConfig: WindDownConfig = {
   receiveBlockedAccountIds: yamlConfig.windDown.receiveBlockedAccountIds.map((id) =>
     id.toLowerCase(),
   ),
-  ipEvidenceCutoff: windDownOperativeDate(yamlConfig.windDown.ipEvidenceCutoff),
+  ipEvidenceCutoff: operativeDate(
+    "windDown.ipEvidenceCutoff",
+    yamlConfig.windDown.ipEvidenceCutoff,
+  ),
   regions: yamlConfig.windDown.regions.map((region) => ({
     ...region,
-    receiveDisabledAt: windDownOperativeDate(region.receiveDisabledAt),
-    finalDeadline: windDownOperativeDate(region.finalDeadline),
-    gateArmsAt: windDownOperativeDate(region.gateArmsAt),
+    receiveDisabledAt: operativeDate(
+      "windDown.regions.receiveDisabledAt",
+      region.receiveDisabledAt,
+    ),
+    finalDeadline: operativeDate("windDown.regions.finalDeadline", region.finalDeadline),
+    gateArmsAt: operativeDate("windDown.regions.gateArmsAt", region.gateArmsAt),
   })),
 }
 
 export const getWindDownConfig = (): WindDownConfig => windDownConfig
-
-export const getInactivityFeeConfig = (config = yamlConfig): InactivityFeeConfig => ({
-  activityRefreshIntervalSec: toSeconds(config.inactivityFee.activityRefreshIntervalSec),
-})
 
 const alpha2Pattern = /^[A-Z]{2}$/
 
@@ -344,6 +346,32 @@ const toRegistrationDeny = (config = yamlConfig) =>
       .map(checkedToRestrictedCountry)
       .filter((c): c is RestrictedCountry => c !== undefined),
   })
+
+const toInactivityFeeConfig = (config: YamlSchema): InactivityFeeConfig => ({
+  activityRefreshIntervalSec: toSeconds(config.inactivityFee.activityRefreshIntervalSec),
+  liveCharging: config.inactivityFee.liveCharging,
+  feeAmountUsdCents: toCents(config.inactivityFee.feeAmountUsdCents),
+  effectiveFrom: operativeDate(
+    "inactivityFee.effectiveFrom",
+    config.inactivityFee.effectiveFrom,
+  ),
+  configVersion: config.inactivityFee.configVersion,
+  skipAccountIds: config.inactivityFee.skipAccountIds.map((id) => id.toLowerCase()),
+  notPermittedCountries: toRestrictedCountries(
+    "notPermittedCountries",
+    config.inactivityFee.notPermittedCountries,
+  ),
+  level0Deadline: operativeDate(
+    "inactivityFee.level0Deadline",
+    config.inactivityFee.level0Deadline,
+  ),
+})
+
+// resolved once at startup so an invalid value fails the process, not a request
+const inactivityFeeConfig = toInactivityFeeConfig(yamlConfig)
+
+export const getInactivityFeeConfig = (config = yamlConfig): InactivityFeeConfig =>
+  config === yamlConfig ? inactivityFeeConfig : toInactivityFeeConfig(config)
 
 const regionRestrictionsConfig: RegionRestrictionsConfig = {
   restrictedCountries: toRestrictedCountries(

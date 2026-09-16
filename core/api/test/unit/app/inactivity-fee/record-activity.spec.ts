@@ -22,10 +22,11 @@ jest.mock("@/app/inactivity-fee/reactivate-account", () => ({
 import { readdirSync, readFileSync, statSync } from "fs"
 import path from "path"
 
-import { recordActivity } from "@/app/inactivity-fee"
+import { recordActivity } from "@/app/inactivity-fee/record-activity"
 import { reactivateAccount } from "@/app/inactivity-fee/reactivate-account"
 import { getInactivityFeeConfig } from "@/config"
 import { UnknownRepositoryError } from "@/domain/errors"
+import { toCents } from "@/domain/fiat"
 import { ActivityKind } from "@/domain/inactivity-fee"
 import { toSeconds } from "@/domain/primitives"
 
@@ -48,6 +49,13 @@ describe("recordActivity", () => {
     jest.useFakeTimers().setSystemTime(now)
     mockGetInactivityFeeConfig.mockReturnValue({
       activityRefreshIntervalSec: toSeconds(refreshIntervalSec),
+      liveCharging: false,
+      feeAmountUsdCents: toCents(100),
+      effectiveFrom: new Date("2026-10-15T00:00:00Z"),
+      configVersion: "test",
+      skipAccountIds: [],
+      notPermittedCountries: [],
+      level0Deadline: new Date("2026-10-31T22:59:59Z"),
     })
     mockReactivateAccount.mockResolvedValue(true)
   })

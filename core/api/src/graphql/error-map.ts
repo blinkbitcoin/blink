@@ -1017,6 +1017,10 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "CouldNotFindAccountError":
     case "CouldNotFindMigrationFlowStateError":
     case "CouldNotFindWindDownCohortAssessmentError":
+    case "InactivityFeeError":
+    case "InactivityFeeNoticeNotFoundError":
+    case "InactivityFeeNoticeSentButUnflaggedError":
+    case "InactivityFeeRunAbortedError":
     case "OathkeeperError":
     case "OathkeeperUnauthorizedServiceError":
     case "OathkeeperMissingAuthorizationHeaderError":
