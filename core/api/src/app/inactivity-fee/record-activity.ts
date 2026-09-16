@@ -8,12 +8,20 @@ import { AccountsRepository } from "@/services/mongoose"
 import { addAttributesToCurrentSpan } from "@/services/tracing"
 
 // Inactivity notices are not stored anywhere yet, so no account has an outstanding one.
+// `asOf` is the timestamp this action replaced, and the question has to be asked as of that
+// moment: a notice only counts while it was issued after the account's last activity, and the
+// stored timestamp has already been moved to now by the update above.
 const hasLiveNotice = async ({
   accountId,
+  asOf,
 }: {
   accountId: AccountId
+  asOf: Date
 }): Promise<boolean | ApplicationError> => {
-  addAttributesToCurrentSpan({ "inactivityFee.liveNotice.accountId": accountId })
+  addAttributesToCurrentSpan({
+    "inactivityFee.liveNotice.accountId": accountId,
+    "inactivityFee.liveNotice.asOf": asOf.toISOString(),
+  })
   return false
 }
 
@@ -60,7 +68,8 @@ export const recordActivity = async ({
   if (previousActivityAt === undefined) return { written: true, previousActivityAt }
 
   const dormant = isDormantAt({ lastActivityAt: previousActivityAt, asOf: now })
-  const shouldReactivate = dormant || (await hasLiveNotice({ accountId }))
+  const shouldReactivate =
+    dormant || (await hasLiveNotice({ accountId, asOf: previousActivityAt }))
   if (shouldReactivate instanceof Error) return shouldReactivate
   addAttributesToCurrentSpan({
     "inactivityFee.dormant": dormant,
