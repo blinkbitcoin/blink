@@ -2,27 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'ci: surface docker-host output in Concourse and stop hung sessions
-        from failing green runs (#842)'
-      sha: 2765bd2df653be0d92a9c81ff9c1e1c93e666d97
+      commitTitle: 'fix(core): stop resumeMigrationFlow completing a failing drain
+        (#840)'
+      sha: aa113a51eb21cd4fdda3eb98dacafdb70fecc84a
       tags:
-      - 0.22.61-1-g2765bd2df
+      - 0.22.63
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'ci: surface docker-host output in Concourse and stop hung sessions
-        from failing green runs (#842)'
-      sha: 2765bd2df653be0d92a9c81ff9c1e1c93e666d97
+      commitTitle: 'fix(core): stop resumeMigrationFlow completing a failing drain
+        (#840)'
+      sha: aa113a51eb21cd4fdda3eb98dacafdb70fecc84a
       tags:
-      - 0.22.61-1-g2765bd2df
+      - 0.22.63
     path: schemas
   - git:
-      commitTitle: 'ci: surface docker-host output in Concourse and stop hung sessions
-        from failing green runs (#842)'
-      sha: 2765bd2df653be0d92a9c81ff9c1e1c93e666d97
+      commitTitle: 'fix(core): stop resumeMigrationFlow completing a failing drain
+        (#840)'
+      sha: aa113a51eb21cd4fdda3eb98dacafdb70fecc84a
       tags:
-      - 0.22.61-1-g2765bd2df
+      - 0.22.63
     path: gql
   path: graphql
 kind: LockConfig
