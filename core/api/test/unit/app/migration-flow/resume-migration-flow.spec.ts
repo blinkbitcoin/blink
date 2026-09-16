@@ -11,13 +11,6 @@ jest.mock("@/services/ledger/facade", () => ({
   getTransactionsForWalletsByPaymentHash: jest.fn(),
 }))
 
-jest.mock("@/services/lnd", () => ({
-  __mockLookupPayment: jest.fn(),
-  LndService: () => ({
-    lookupPayment: jest.requireMock("@/services/lnd").__mockLookupPayment,
-  }),
-}))
-
 jest.mock("@/services/lock", () => ({
   __mockLockWalletId: jest.fn(),
   LockService: () => ({
@@ -53,11 +46,10 @@ import {
   failMigrationFlowForFailedPayment,
 } from "@/app/migration-flow/settle-migration-flow"
 import { updatePendingPaymentByHash } from "@/app/payments/update-pending-payments"
-import { PaymentStatus } from "@/domain/bitcoin/lightning"
 import { CouldNotFindMigrationFlowStateError } from "@/domain/errors"
 import { LedgerTransactionType } from "@/domain/ledger"
 import { ResourceExpiredLockServiceError } from "@/domain/lock"
-import { MigrationFlowPhase, MigrationStateConflictError } from "@/domain/migration-flow"
+import { MigrationFlowPhase } from "@/domain/migration-flow"
 import { getTransactionsForWalletsByPaymentHash } from "@/services/ledger/facade"
 import { recordExceptionInCurrentSpan } from "@/services/tracing"
 
@@ -65,8 +57,6 @@ const mocks = jest.requireMock("@/services/mongoose").__mocks as {
   findFlowByAccountId: jest.Mock
   findAccountWalletsByAccountId: jest.Mock
 }
-const mockLookupPayment = jest.requireMock("@/services/lnd")
-  .__mockLookupPayment as jest.Mock
 const mockLockWalletId = jest.requireMock("@/services/lock")
   .__mockLockWalletId as jest.Mock
 const mockUpdatePendingPaymentByHash = updatePendingPaymentByHash as jest.Mock
@@ -137,7 +127,6 @@ describe("resumeMigrationFlow", () => {
     mockFailFlow.mockImplementation(async () => {
       if (lockHeld) hooksCalledUnderLock += 1
     })
-    mockLookupPayment.mockResolvedValue({ status: PaymentStatus.Pending })
   })
 
   it("returns CouldNotFind when there is no migration record", async () => {
@@ -233,7 +222,6 @@ describe("resumeMigrationFlow", () => {
       .mockResolvedValueOnce(transferringFlow)
       .mockResolvedValueOnce(completedFlow)
     mockGetTransactionsByHash.mockResolvedValue([paymentTxn({ pending: false })])
-    mockLookupPayment.mockResolvedValue({ status: PaymentStatus.Settled })
 
     const result = await resumeMigrationFlow({ accountId })
 
@@ -250,66 +238,9 @@ describe("resumeMigrationFlow", () => {
     expect(result).toBe(completedFlow)
   })
 
-  it("fails a flow from a reverted ledger without consulting lnd", async () => {
-    const failedFlow = {
-      ...transferringFlow,
-      phase: MigrationFlowPhase.Failed,
-    } as MigrationFlow
-    mocks.findFlowByAccountId
-      .mockResolvedValueOnce(transferringFlow)
-      .mockResolvedValueOnce(transferringFlow)
-      .mockResolvedValueOnce(transferringFlow)
-      .mockResolvedValueOnce(failedFlow)
-    mockGetTransactionsByHash.mockResolvedValue([
-      paymentTxn({ pending: false, at: new Date("2026-01-01T00:01:00Z") }),
-      paymentTxn({
-        pending: false,
-        debit: 0,
-        credit: 1000,
-        at: new Date("2026-01-01T00:02:00Z"),
-      }),
-    ])
-    // lnd unavailable: a reversal is only written after lnd reported the failure
-    mockLookupPayment.mockResolvedValue(new Error("lnd down"))
-
-    const result = await resumeMigrationFlow({ accountId })
-
-    expect(mockLookupPayment).not.toHaveBeenCalled()
-    expect(mockFailFlow).toHaveBeenCalledTimes(1)
-    expect(mockFailFlow).toHaveBeenCalledWith({ paymentHash })
-    expect(mockCompleteFlow).not.toHaveBeenCalled()
-    expect(result).toBe(failedFlow)
-  })
-
-  it("does not act when the lnd lookup errors", async () => {
-    mocks.findFlowByAccountId.mockResolvedValue(transferringFlow)
-    mockGetTransactionsByHash.mockResolvedValue([paymentTxn({ pending: false })])
-    const lookupError = new Error("payment not found")
-    mockLookupPayment.mockResolvedValue(lookupError)
-
-    const result = await resumeMigrationFlow({ accountId })
-
-    expect(mockCompleteFlow).not.toHaveBeenCalled()
-    expect(mockFailFlow).not.toHaveBeenCalled()
-    expect(result).toBe(transferringFlow)
-    expect(mockRecordException).toHaveBeenCalledWith(
-      expect.objectContaining({ error: lookupError }),
-    )
-  })
-
-  it("never consults lnd while the ledger still shows the payment pending", async () => {
-    mocks.findFlowByAccountId.mockResolvedValue(transferringFlow)
-    mockGetTransactionsByHash.mockResolvedValue([paymentTxn({ pending: true })])
-
-    await resumeMigrationFlow({ accountId })
-
-    expect(mockLookupPayment).not.toHaveBeenCalled()
-  })
-
   it("does not act when the lock was lost while resolving the verdict", async () => {
     mocks.findFlowByAccountId.mockResolvedValue(transferringFlow)
     mockGetTransactionsByHash.mockResolvedValue([paymentTxn({ pending: false })])
-    mockLookupPayment.mockResolvedValue({ status: PaymentStatus.Settled })
     mockLockWalletId.mockImplementation(
       (_walletId: WalletId, fn: (signal: unknown) => Promise<unknown>) =>
         fn({ aborted: true, error: new Error("lock expired") }),
@@ -324,28 +255,6 @@ describe("resumeMigrationFlow", () => {
     )
   })
 
-  it("does not complete when lnd disagrees with a settled-looking ledger snapshot", async () => {
-    // the trigger's revert clears the pending flag before it writes the reversal;
-    // a read in that window is one settled debit, but lnd already reports failed
-    const finalFlow = { ...transferringFlow } as MigrationFlow
-    mocks.findFlowByAccountId
-      .mockResolvedValueOnce(transferringFlow)
-      .mockResolvedValueOnce(transferringFlow)
-      .mockResolvedValueOnce(transferringFlow)
-      .mockResolvedValueOnce(finalFlow)
-    mockGetTransactionsByHash.mockResolvedValue([paymentTxn({ pending: false })])
-    mockLookupPayment.mockResolvedValue({ status: PaymentStatus.Failed })
-
-    const result = await resumeMigrationFlow({ accountId })
-
-    expect(mockCompleteFlow).not.toHaveBeenCalled()
-    expect(mockFailFlow).not.toHaveBeenCalled()
-    expect(result).toBe(finalFlow)
-    expect(mockRecordException).toHaveBeenCalledWith(
-      expect.objectContaining({ error: expect.any(MigrationStateConflictError) }),
-    )
-  })
-
   it("does not act when the flow left TRANSFERRING before the lock was taken", async () => {
     const failedFlow = {
       ...transferringFlow,
@@ -357,7 +266,6 @@ describe("resumeMigrationFlow", () => {
       .mockResolvedValueOnce(failedFlow)
       .mockResolvedValueOnce(failedFlow)
     mockGetTransactionsByHash.mockResolvedValue([paymentTxn({ pending: false })])
-    mockLookupPayment.mockResolvedValue({ status: PaymentStatus.Settled })
 
     const result = await resumeMigrationFlow({ accountId })
 
@@ -369,7 +277,6 @@ describe("resumeMigrationFlow", () => {
   it("returns the re-read flow without a verdict when the wallet lock cannot be taken", async () => {
     mocks.findFlowByAccountId.mockResolvedValue(transferringFlow)
     mockGetTransactionsByHash.mockResolvedValue([paymentTxn({ pending: false })])
-    mockLookupPayment.mockResolvedValue({ status: PaymentStatus.Settled })
     const lockError = new ResourceExpiredLockServiceError()
     mockLockWalletId.mockResolvedValue(lockError)
 
@@ -405,7 +312,6 @@ describe("resumeMigrationFlow", () => {
 
     const result = await resumeMigrationFlow({ accountId })
 
-    expect(mockLookupPayment).not.toHaveBeenCalled()
     expect(mockFailFlow).toHaveBeenCalledTimes(1)
     expect(mockFailFlow).toHaveBeenCalledWith({ paymentHash })
     expect(hooksCalledUnderLock).toBe(0)

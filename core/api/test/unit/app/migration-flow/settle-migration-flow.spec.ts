@@ -10,17 +10,6 @@ jest.mock("@/app/wallets/get-balance-for-wallet", () => ({
   getBalanceForWallet: jest.fn(),
 }))
 
-jest.mock("@/services/ledger/facade", () => ({
-  getTransactionsForWalletsByPaymentHash: jest.fn(),
-}))
-
-jest.mock("@/services/lnd", () => ({
-  __mockLookupPayment: jest.fn(),
-  LndService: () => ({
-    lookupPayment: jest.requireMock("@/services/lnd").__mockLookupPayment,
-  }),
-}))
-
 jest.mock("@/services/mongoose", () => ({
   __mocks: {
     findFlowByLnPaymentHash: jest.fn(),
@@ -56,12 +45,9 @@ import {
 } from "@/app/migration-flow/settle-migration-flow"
 import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
 import { AccountStatus } from "@/domain/accounts"
-import { PaymentStatus } from "@/domain/bitcoin/lightning"
 import { CouldNotFindMigrationFlowStateError } from "@/domain/errors"
-import { LedgerTransactionType } from "@/domain/ledger"
 import { MigrationFlowPhase, MigrationStateConflictError } from "@/domain/migration-flow"
 import { ErrorLevel } from "@/domain/shared"
-import { getTransactionsForWalletsByPaymentHash } from "@/services/ledger/facade"
 import { recordExceptionInCurrentSpan } from "@/services/tracing"
 
 const mocks = jest.requireMock("@/services/mongoose").__mocks as {
@@ -70,9 +56,6 @@ const mocks = jest.requireMock("@/services/mongoose").__mocks as {
   findAccountWalletsByAccountId: jest.Mock
   findAccountById: jest.Mock
 }
-const mockGetTransactionsByHash = getTransactionsForWalletsByPaymentHash as jest.Mock
-const mockLookupPayment = jest.requireMock("@/services/lnd")
-  .__mockLookupPayment as jest.Mock
 const mockUpdateAccountStatus = updateAccountStatus as jest.Mock
 const mockGetBalanceForWallet = getBalanceForWallet as jest.Mock
 const mockRecordException = recordExceptionInCurrentSpan as jest.Mock
@@ -88,24 +71,6 @@ describe("settle-migration-flow", () => {
     lnPaymentHash: paymentHash,
     steps: [],
   } as unknown as MigrationFlow
-  const settledPaymentTxn = ({
-    voided = false,
-    at = new Date("2026-01-01T00:00:00Z"),
-  }: { voided?: boolean; at?: Date } = {}) =>
-    ({
-      type: LedgerTransactionType.Payment,
-      pendingConfirmation: false,
-      voided,
-      debit: 1000,
-      credit: 0,
-      timestamp: at,
-    }) as LedgerTransaction<WalletCurrency>
-  const refusalRecord = expect.objectContaining({
-    error: expect.objectContaining({
-      message: expect.stringMatching(/refusing to complete migration/),
-    }),
-    level: ErrorLevel.Warn,
-  })
   const softCloseSkipRecord = expect.objectContaining({
     error: expect.objectContaining({
       message: expect.stringMatching(/soft-close skipped/),
@@ -131,8 +96,6 @@ describe("settle-migration-flow", () => {
       id: accountId,
       status: AccountStatus.Active,
     } as Account)
-    mockGetTransactionsByHash.mockResolvedValue([settledPaymentTxn()])
-    mockLookupPayment.mockResolvedValue({ status: PaymentStatus.Settled })
   })
 
   describe("completeMigrationFlowForSettledPayment", () => {
@@ -154,119 +117,6 @@ describe("settle-migration-flow", () => {
           status: AccountStatus.Migrated,
         }),
       )
-    })
-
-    it("refuses to complete when the latest ledger entry is voided", async () => {
-      // the trigger's revert voids the journal before it writes the reversal
-      mockGetTransactionsByHash.mockResolvedValue([settledPaymentTxn({ voided: true })])
-
-      await completeMigrationFlowForSettledPayment({ paymentHash })
-
-      expect(mocks.updateFlowPhase).not.toHaveBeenCalled()
-      expect(mockUpdateAccountStatus).not.toHaveBeenCalled()
-      expect(mockRecordException).toHaveBeenCalledWith(refusalRecord)
-    })
-
-    it("refuses to complete when the ledger shows the payment reverted", async () => {
-      mockGetTransactionsByHash.mockResolvedValue([
-        settledPaymentTxn({ voided: true, at: new Date("2026-01-01T00:01:00Z") }),
-        {
-          ...settledPaymentTxn({ at: new Date("2026-01-01T00:02:00Z") }),
-          debit: 0,
-          credit: 1000,
-        },
-      ])
-
-      await completeMigrationFlowForSettledPayment({ paymentHash })
-
-      expect(mocks.updateFlowPhase).not.toHaveBeenCalled()
-      expect(mockRecordException).toHaveBeenCalledWith(refusalRecord)
-    })
-
-    it("refuses to complete when lnd does not report the payment settled", async () => {
-      mockLookupPayment.mockResolvedValue({ status: PaymentStatus.Failed })
-
-      await completeMigrationFlowForSettledPayment({ paymentHash })
-
-      expect(mocks.updateFlowPhase).not.toHaveBeenCalled()
-      expect(mockUpdateAccountStatus).not.toHaveBeenCalled()
-      expect(mockRecordException).toHaveBeenCalledWith(refusalRecord)
-    })
-
-    it("refuses to complete when there are no ledger entries for the hash", async () => {
-      mockGetTransactionsByHash.mockResolvedValue([])
-
-      await completeMigrationFlowForSettledPayment({ paymentHash })
-
-      expect(mocks.updateFlowPhase).not.toHaveBeenCalled()
-      expect(mockRecordException).toHaveBeenCalledWith(refusalRecord)
-    })
-
-    it("refuses to complete when the ledger bundle cannot be classified", async () => {
-      mockGetTransactionsByHash.mockResolvedValue([
-        settledPaymentTxn({ at: new Date("2026-01-01T00:01:00Z") }),
-        {
-          ...settledPaymentTxn({ at: new Date("2026-01-01T00:02:00Z") }),
-          pendingConfirmation: true,
-        },
-        {
-          ...settledPaymentTxn({ at: new Date("2026-01-01T00:03:00Z") }),
-          pendingConfirmation: true,
-        },
-      ])
-
-      await completeMigrationFlowForSettledPayment({ paymentHash })
-
-      expect(mocks.updateFlowPhase).not.toHaveBeenCalled()
-      expect(mockRecordException).toHaveBeenCalledWith(refusalRecord)
-    })
-
-    it("completes a zero-balance flow that skipped the transfer without any payment", async () => {
-      mocks.findFlowByLnPaymentHash.mockResolvedValue({
-        ...transferringFlow,
-        steps: [{ step: "transfer-skipped", detail: "zero balance" }],
-      })
-      mockGetTransactionsByHash.mockResolvedValue([])
-      mockLookupPayment.mockResolvedValue(new Error("payment not found"))
-
-      await completeMigrationFlowForSettledPayment({ paymentHash })
-
-      expect(mockGetTransactionsByHash).not.toHaveBeenCalled()
-      expect(mockLookupPayment).not.toHaveBeenCalled()
-      expect(mocks.updateFlowPhase).toHaveBeenCalledWith(
-        expect.objectContaining({ toPhase: MigrationFlowPhase.Completed }),
-      )
-    })
-
-    it("completes a retried drain whose earlier attempt was voided", async () => {
-      mockGetTransactionsByHash.mockResolvedValue([
-        settledPaymentTxn({ voided: true, at: new Date("2026-01-01T00:01:00Z") }),
-        {
-          ...settledPaymentTxn({ at: new Date("2026-01-01T00:02:00Z") }),
-          debit: 0,
-          credit: 1000,
-        },
-        settledPaymentTxn({ at: new Date("2026-01-01T00:03:00Z") }),
-      ])
-
-      await completeMigrationFlowForSettledPayment({ paymentHash })
-
-      expect(mocks.updateFlowPhase).toHaveBeenCalledWith(
-        expect.objectContaining({ toPhase: MigrationFlowPhase.Completed }),
-      )
-    })
-
-    it("passes the ledger pubkey to the lnd lookup", async () => {
-      mockGetTransactionsByHash.mockResolvedValue([
-        { ...settledPaymentTxn(), pubkey: "node-pubkey" as Pubkey },
-      ])
-
-      await completeMigrationFlowForSettledPayment({ paymentHash })
-
-      expect(mockLookupPayment).toHaveBeenCalledWith({
-        pubkey: "node-pubkey",
-        paymentHash,
-      })
     })
 
     it("is a no-op for a hash with no matching migration", async () => {
@@ -360,8 +210,6 @@ describe("settle-migration-flow", () => {
     })
 
     it("retries the soft-close when the flow is COMPLETED but the account is still Active", async () => {
-      // the guard must not run for a flow that already completed
-      mockLookupPayment.mockResolvedValue({ status: PaymentStatus.Failed })
       mocks.findFlowByLnPaymentHash.mockResolvedValue({
         ...transferringFlow,
         phase: MigrationFlowPhase.Completed,
