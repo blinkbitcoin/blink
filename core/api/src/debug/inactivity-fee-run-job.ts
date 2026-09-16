@@ -62,7 +62,8 @@ const parseIsoDay = (value: string | undefined): Date | undefined => {
 }
 
 export const parseCliArgs = (argv: string[], now: Date): CliArgs | Error => {
-  const rest = [...argv]
+  // `pnpm run` / buck2's task wrapper forward the "--" separator to the script
+  const rest = argv.filter((arg) => arg !== "--")
   let configPath: string | undefined
   if (rest[0] !== undefined && rest[0] !== "notice" && !rest[0].startsWith("-")) {
     configPath = rest.shift()
