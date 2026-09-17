@@ -124,6 +124,80 @@ describe("recordActivity", () => {
     })
   })
 
+  describe("known value from the caller", () => {
+    it("session skips the repository when the known value is inside the interval", async () => {
+      const result = await recordActivity({
+        accountId,
+        kind: ActivityKind.Session,
+        knownLastActivityAt: new Date(now.getTime() - 10 * 60 * 1000),
+      })
+
+      expect(result).toEqual({ written: false })
+      expect(mockRepoRecordActivity).not.toHaveBeenCalled()
+      expect(mockReactivateAccount).not.toHaveBeenCalled()
+    })
+
+    it("session skips at exactly the interval boundary, where the update could not match", async () => {
+      const result = await recordActivity({
+        accountId,
+        kind: ActivityKind.Session,
+        knownLastActivityAt: new Date(now.getTime() - refreshIntervalSec * 1000),
+      })
+
+      expect(result).toEqual({ written: false })
+      expect(mockRepoRecordActivity).not.toHaveBeenCalled()
+    })
+
+    it("session goes to the repository when the known value is older than the interval", async () => {
+      const previous = new Date(now.getTime() - 2 * 60 * 60 * 1000)
+      mockRepoRecordActivity.mockResolvedValue({
+        written: true,
+        previousActivityAt: previous,
+      })
+
+      const result = await recordActivity({
+        accountId,
+        kind: ActivityKind.Session,
+        knownLastActivityAt: previous,
+      })
+
+      expect(result).toEqual({ written: true, previousActivityAt: previous })
+      expect(mockRepoRecordActivity).toHaveBeenCalledTimes(1)
+    })
+
+    it("session goes to the repository when the caller knows no value", async () => {
+      mockRepoRecordActivity.mockResolvedValue({
+        written: true,
+        previousActivityAt: undefined,
+      })
+
+      await recordActivity({
+        accountId,
+        kind: ActivityKind.Session,
+        knownLastActivityAt: undefined,
+      })
+
+      expect(mockRepoRecordActivity).toHaveBeenCalledTimes(1)
+    })
+
+    it("login and send always write, however fresh the known value is", async () => {
+      mockRepoRecordActivity.mockResolvedValue({
+        written: true,
+        previousActivityAt: new Date(now.getTime() - 1000),
+      })
+
+      for (const kind of [ActivityKind.Login, ActivityKind.Send]) {
+        await recordActivity({
+          accountId,
+          kind,
+          knownLastActivityAt: new Date(now.getTime() - 1000),
+        })
+      }
+
+      expect(mockRepoRecordActivity).toHaveBeenCalledTimes(2)
+    })
+  })
+
   describe("reactivation trigger", () => {
     it("invokes the hook when the previous value is 13 months old", async () => {
       const previousActivityAt = new Date("2025-08-15T12:00:00.000Z")
