@@ -2,27 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix(core): stop resumeMigrationFlow completing a failing drain
-        (#840)'
-      sha: aa113a51eb21cd4fdda3eb98dacafdb70fecc84a
+      commitTitle: 'fix(core): await payment flow persist in skip-probe fee estimate
+        (#849)...'
+      sha: cb6ad016520b22a15ef631539121cb148f4f74c8
       tags:
-      - 0.22.63
+      - 0.22.63-2-gcb6ad0165
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'fix(core): stop resumeMigrationFlow completing a failing drain
-        (#840)'
-      sha: aa113a51eb21cd4fdda3eb98dacafdb70fecc84a
+      commitTitle: 'fix(core): await payment flow persist in skip-probe fee estimate
+        (#849)...'
+      sha: cb6ad016520b22a15ef631539121cb148f4f74c8
       tags:
-      - 0.22.63
+      - 0.22.63-2-gcb6ad0165
     path: schemas
   - git:
-      commitTitle: 'fix(core): stop resumeMigrationFlow completing a failing drain
-        (#840)'
-      sha: aa113a51eb21cd4fdda3eb98dacafdb70fecc84a
+      commitTitle: 'fix(core): await payment flow persist in skip-probe fee estimate
+        (#849)...'
+      sha: cb6ad016520b22a15ef631539121cb148f4f74c8
       tags:
-      - 0.22.63
+      - 0.22.63-2-gcb6ad0165
     path: gql
   path: graphql
 kind: LockConfig
