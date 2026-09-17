@@ -283,8 +283,11 @@ const AccountSchema = new Schema<AccountRecord>(
     displayCurrency: String, // FIXME: should be an enum
 
     // Written only by AccountsRepository().persistNew and .recordActivity, plus the one-off
-    // script that seeds it for existing accounts. Deliberately no default: mongoose applies
-    // defaults on hydration too, which would fake a value for accounts that never had one.
+    // script that seeds it for existing accounts. Two properties are relied on by callers that
+    // skip a write when the value they hold is still fresh:
+    // - it never decreases, so nothing may ever set it to an earlier time
+    // - it has no default, because mongoose applies defaults on hydration too and would hand
+    //   those callers a fake fresh value for accounts that never had one
     last_activity_at: Date,
   },
   { id: false },
