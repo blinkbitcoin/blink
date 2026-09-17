@@ -7,10 +7,7 @@ import { ActivityKind, isDormantAt } from "@/domain/inactivity-fee"
 import { AccountsRepository } from "@/services/mongoose"
 import { addAttributesToCurrentSpan } from "@/services/tracing"
 
-// Inactivity notices are not stored anywhere yet, so no account has an outstanding one.
-// `asOf` is the timestamp this action replaced, and the question has to be asked as of that
-// moment: a notice only counts while it was issued after the account's last activity, and the
-// stored timestamp has already been moved to now by the update above.
+// notices are not stored yet; asOf is the replaced timestamp, not the stored one
 const hasLiveNotice = async ({
   accountId,
   asOf,
@@ -25,10 +22,7 @@ const hasLiveNotice = async ({
   return false
 }
 
-// The only code that updates an account's last-activity timestamp. Session writes are
-// rate-limited so a busy user costs one write per interval rather than one per request;
-// the age check is part of the Mongo update itself, so two concurrent requests cannot both
-// see the same stale value.
+// the only writer of the account's last-activity timestamp
 export const recordActivity = async ({
   accountId,
   kind,
@@ -36,7 +30,6 @@ export const recordActivity = async ({
 }: {
   accountId: AccountId
   kind: ActivityKind
-  // the value on an account the caller has just loaded, if it has one
   knownLastActivityAt?: Date
 }): Promise<RecordAccountActivityResult | ApplicationError> => {
   const now = new Date()
@@ -52,10 +45,7 @@ export const recordActivity = async ({
     "inactivityFee.kind": kind,
   })
 
-  // A value the caller already holds that is still inside the interval settles the outcome
-  // without a round-trip: the update below could not match it, and an account that fresh is
-  // not dormant. The stored timestamp only ever moves forward, so a stale copy can read as
-  // too old (and cost the round-trip) but never as fresher than the truth.
+  // a fresh caller-held value cannot match the update below; the timestamp never decreases
   if (
     onlyIfOlderThan !== undefined &&
     knownLastActivityAt !== undefined &&
@@ -82,8 +72,7 @@ export const recordActivity = async ({
   addAttributesToCurrentSpan({
     "inactivityFee.previousActivityAt": previousActivityAt?.toISOString() ?? "none",
   })
-  // undefined means the account predates the field and has not been seeded yet, so there is
-  // no earlier activity to compare against
+  // not seeded yet: nothing to compare against
   if (previousActivityAt === undefined) return { written: true, previousActivityAt }
 
   const dormant = isDormantAt({ lastActivityAt: previousActivityAt, asOf: now })

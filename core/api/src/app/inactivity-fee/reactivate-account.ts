@@ -1,8 +1,6 @@
 import { addAttributesToCurrentSpan } from "@/services/tracing"
 
-// Called when a user comes back to an account that had gone dormant. Reversing the inactivity
-// fees charged while it was dormant is not implemented yet, so for now this only records that
-// the account woke up.
+// placeholder: reversing inactivity fees is not implemented yet
 export const reactivateAccount = async ({
   accountId,
   previousActivityAt,

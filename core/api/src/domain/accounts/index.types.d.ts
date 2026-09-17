@@ -109,7 +109,7 @@ type Account = {
   contactEnabled: boolean
   kratosUserId: UserId
   displayCurrency: DisplayCurrency
-  // undefined on accounts that predate the field and have not been seeded yet
+  // undefined until seeded
   lastActivityAt?: Date
   // temp
   role?: string

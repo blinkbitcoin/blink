@@ -881,7 +881,7 @@ const executePaymentViaLn = async ({
         return reverseSettlement({ result })
       }
 
-      // the journal write succeeded (settled or HTLC in flight): the user sent
+      // journal written (settled or in flight): the user sent
       if (
         paymentSendAttemptResult.type !== PaymentSendAttemptResultType.ErrorWithJournal
       ) {

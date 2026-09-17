@@ -1272,8 +1272,7 @@ export const configSchema = {
     inactivityFee: {
       type: "object",
       properties: {
-        // app-open / API requests refresh the account's last-activity timestamp at most once per
-        // this many seconds; login and sends always refresh it
+        // app-open / API activity is written at most this often; login and sends always write
         activityRefreshIntervalSec: {
           type: "integer",
           minimum: 0,
