@@ -17,11 +17,11 @@ type IsDormantAtArgs = {
 type ResolveBackfillActivityArgs = {
   existing: Date | undefined
   createdAt: Date
-  // newest ledger entry the account paid out; receives do not count
+  // sender legs only
   ledgerLast: Date | undefined
-  // max accountips.lastConnection across both id spaces; undefined when there is no row
+  // across both accountips id spaces
   ipsLast: Date | undefined
-  // stands in for ipsLast when accountips history is missing (documented cutoff)
+  // used when accountips history is missing
   ipsFloor: Date
 }
 

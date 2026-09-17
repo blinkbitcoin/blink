@@ -1,7 +1,6 @@
 export const DORMANCY_MONTHS = 12
 
-// "N calendar months before a date": same day-of-month N months earlier, clamped to that
-// month's last day (2026-03-31 minus 1 month is 2026-02-28). Time of day is kept. UTC only.
+// clamped to the target month's last day (Mar 31 minus 1 month is Feb 28); UTC
 export const calendarMonthsBefore = ({
   date,
   months,

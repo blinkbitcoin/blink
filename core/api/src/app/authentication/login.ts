@@ -199,7 +199,7 @@ export const loginWithEmailToken = async ({
   const res = await authServiceEmail.loginToken({ email })
   if (res instanceof Error) return res
 
-  // kratosUserId is only returned when totp is not required; the totp step is a session request
+  // no kratosUserId while totp is pending
   if (res.kratosUserId) await recordLoginActivity({ userId: res.kratosUserId })
 
   return { authToken: res.authToken, totpRequired, id: res.kratosUserId }
@@ -531,10 +531,7 @@ export const loginWithDevice = async ({
   return res.authToken
 }
 
-// Login is unauthenticated (sub = "anon"), so the session middleware never sees it and the
-// activity has to be recorded here, once the login is complete. While TOTP is still pending the
-// login is not done; that step is itself a session request and records the activity. New
-// accounts get their value when the account row is created.
+// login requests carry no session, so the session middleware never sees them
 const recordLoginActivity = async (
   args: { userId: UserId } | { accountId: AccountId },
 ): Promise<void> => {

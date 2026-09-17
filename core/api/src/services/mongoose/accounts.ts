@@ -107,8 +107,7 @@ export const AccountsRepository = (): IAccountsRepository => {
     }
   }
 
-  // `lean` is required: mongoose would otherwise hydrate the document and could hand back a
-  // defaulted value, hiding the fact that an account has never had this field set.
+  // lean: return the raw stored value, never a hydrated default
   const recordActivity = async ({
     id,
     now,

@@ -1,8 +1,6 @@
 #!/usr/bin/env bats
 
-# The "leaves it" cases rely on inactivityFee.activityRefreshIntervalSec (default 3600) being
-# longer than this test run: every authenticated call after the login falls inside that interval
-# and does not write.
+# The "leaves it" cases assume activityRefreshIntervalSec (default 3600) outlasts the test run.
 
 load "../../helpers/_common.bash"
 load "../../helpers/cli.bash"
@@ -30,7 +28,7 @@ teardown() {
   assert_balance_for_check
 }
 
-# mongo_cli word-splits its argument, so the command must not contain whitespace.
+# mongo_cli word-splits its argument: no whitespace in the command.
 last_activity_ms() {
   local account_id=$1
   mongo_cli "db.accounts.findOne({id:'${account_id}'}).last_activity_at.getTime()"
