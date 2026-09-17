@@ -32,9 +32,12 @@ const hasLiveNotice = async ({
 export const recordActivity = async ({
   accountId,
   kind,
+  knownLastActivityAt,
 }: {
   accountId: AccountId
   kind: ActivityKind
+  // the value on an account the caller has just loaded, if it has one
+  knownLastActivityAt?: Date
 }): Promise<RecordAccountActivityResult | ApplicationError> => {
   const now = new Date()
   const onlyIfOlderThan =
@@ -48,6 +51,22 @@ export const recordActivity = async ({
     "inactivityFee.accountId": accountId,
     "inactivityFee.kind": kind,
   })
+
+  // A value the caller already holds that is still inside the interval settles the outcome
+  // without a round-trip: the update below could not match it, and an account that fresh is
+  // not dormant. The stored timestamp only ever moves forward, so a stale copy can read as
+  // too old (and cost the round-trip) but never as fresher than the truth.
+  if (
+    onlyIfOlderThan !== undefined &&
+    knownLastActivityAt !== undefined &&
+    knownLastActivityAt.getTime() >= onlyIfOlderThan.getTime()
+  ) {
+    addAttributesToCurrentSpan({
+      "inactivityFee.written": false,
+      "inactivityFee.skippedRoundTrip": true,
+    })
+    return { written: false }
+  }
 
   const result = await AccountsRepository().recordActivity({
     id: accountId,

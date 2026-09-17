@@ -65,6 +65,7 @@ export const sessionPublicContext = async ({
     const activity = await InactivityFee.recordActivity({
       accountId: account.id,
       kind: ActivityKind.Session,
+      knownLastActivityAt: account.lastActivityAt,
     })
     if (activity instanceof Error) {
       recordExceptionInCurrentSpan({
