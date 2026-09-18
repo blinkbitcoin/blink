@@ -126,21 +126,23 @@ export const AccountsRepository = (): IAccountsRepository => {
                 { last_activity_at: { $lt: onlyIfOlderThan } },
               ],
             }
+      // $max: writes that reach Mongo out of order can never move the value backward
       const previous = await Account.findOneAndUpdate(
         filter,
-        { $set: { last_activity_at: now } },
+        { $max: { last_activity_at: now } },
         { returnDocument: "before", projection: { last_activity_at: 1 }, lean: true },
       )
       if (!previous) {
         if (onlyIfOlderThan !== undefined) return { written: false }
         return new CouldNotFindAccountFromIdError(id)
       }
-      return {
-        written: true,
-        previousActivityAt: previous.last_activity_at
-          ? new Date(previous.last_activity_at)
-          : undefined,
+      const previousActivityAt = previous.last_activity_at
+        ? new Date(previous.last_activity_at)
+        : undefined
+      if (previousActivityAt && previousActivityAt.getTime() >= now.getTime()) {
+        return { written: false }
       }
+      return { written: true, previousActivityAt }
     } catch (err) {
       return parseRepositoryError(err)
     }
