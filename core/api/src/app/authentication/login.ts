@@ -5,6 +5,7 @@ import {
 } from "./ratelimits"
 
 import { activateInvitedAccount } from "./activate-invited-account"
+import { recordLoginActivity } from "./record-login-activity"
 import { getPhoneMetadata } from "./get-phone-metadata"
 
 import { upgradeAccountFromDeviceToPhone } from "@/app/accounts"
@@ -13,7 +14,6 @@ import {
   createAccountForDeviceAccount,
   createAccountWithPhoneIdentifier,
 } from "@/app/accounts/create-account"
-import { recordActivity } from "@/app/inactivity-fee"
 import {
   checkedToEmailCode,
   telegramPassportLoginKey,
@@ -30,7 +30,6 @@ import {
   InvalidNonceTelegramPassportError,
   WaitingDataTelegramPassportError,
 } from "@/domain/authentication/errors"
-import { ActivityKind } from "@/domain/inactivity-fee"
 import { ChannelType, checkedToChannel } from "@/domain/phone-provider"
 import {
   checkedToDeviceId,
@@ -51,7 +50,6 @@ import {
 import { isPhoneCodeValid } from "@/services/phone-provider"
 import { consumeLimiter } from "@/services/rate-limit"
 import { RedisCacheService } from "@/services/cache"
-import { AccountsRepository } from "@/services/mongoose"
 
 import { IPMetadataAuthorizer } from "@/domain/accounts-ips/ip-metadata-authorizer"
 
@@ -529,30 +527,6 @@ export const loginWithDevice = async ({
   }
 
   return res.authToken
-}
-
-// login requests carry no session, so the session middleware never sees them
-const recordLoginActivity = async (
-  args: { userId: UserId } | { accountId: AccountId },
-): Promise<void> => {
-  const accountId =
-    "accountId" in args
-      ? args.accountId
-      : await AccountsRepository()
-          .findByUserId(args.userId)
-          .then((account) => (account instanceof Error ? account : account.id))
-
-  const result =
-    accountId instanceof Error
-      ? accountId
-      : await recordActivity({ accountId, kind: ActivityKind.Login })
-  if (result instanceof Error) {
-    recordExceptionInCurrentSpan({
-      error: result,
-      level: ErrorLevel.Warn,
-      fallbackMsg: "error recording login activity",
-    })
-  }
 }
 
 const isAllowedToOnboard = async ({
