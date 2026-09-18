@@ -34,9 +34,9 @@ migration_retry_ready.title: "Uhamishaji wako uko tayari kujaribiwa tena"
 migration_retry_ready.body: "Tumeweka upya uhamishaji wako ili uweze kujaribu tena. Gusa ili kuendelea kuhamisha fedha zako."
 
 inactivity_fee_notice.push.title: "Taarifa ya ada ya kutotumika"
-inactivity_fee_notice.push.body: "Akaunti yako ya Blink haijatumika kwa miezi 12. Kuanzia %{date}, ada ya $1 kwa kila salio kwa mwezi itatumika. Fungua Blink mara moja ili ubaki hai — ada yoyote iliyotozwa hurejeshwa kikamilifu."
+inactivity_fee_notice.push.body: "Akaunti yako ya Blink haijatumika kwa miezi 12. Kuanzia %{date}, ada ya %{amount} kwa kila salio kwa mwezi itatumika. Fungua Blink mara moja ili ubaki hai — ada yoyote iliyotozwa hurejeshwa kikamilifu."
 inactivity_fee_notice.bulletin.title: "Taarifa ya ada ya kutotumika"
-inactivity_fee_notice.bulletin.body: "Ada ya kutotumika: kuanzia %{date}, ada ya $1 kwa kila salio kwa mwezi itatumika kwenye akaunti hii. Itumie mara moja ili ubaki hai — ada yoyote iliyotozwa hurejeshwa kikamilifu."
+inactivity_fee_notice.bulletin.body: "Ada ya kutotumika: kuanzia %{date}, ada ya %{amount} kwa kila salio kwa mwezi itatumika kwenye akaunti hii. Itumie mara moja ili ubaki hai — ada yoyote iliyotozwa hurejeshwa kikamilifu."
 
 inactivity_fee_welcome_back.title: "Karibu tena"
 inactivity_fee_welcome_back.body: "Karibu tena. Akaunti yako inatumika tena na ada ya kutotumika ya %{amount} imerejeshwa kwenye salio lako."

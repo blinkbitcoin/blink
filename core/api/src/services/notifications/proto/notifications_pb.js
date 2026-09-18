@@ -6441,7 +6441,8 @@ proto.services.notifications.v1.InactivityFeeNotice.prototype.toObject = functio
 proto.services.notifications.v1.InactivityFeeNotice.toObject = function(includeInstance, msg) {
   var f, obj = {
 userId: jspb.Message.getFieldWithDefault(msg, 1, ""),
-effectiveDate: jspb.Message.getFieldWithDefault(msg, 2, "")
+effectiveDate: jspb.Message.getFieldWithDefault(msg, 2, ""),
+feeAmountCents: jspb.Message.getFieldWithDefault(msg, 3, 0)
   };
 
   if (includeInstance) {
@@ -6486,6 +6487,10 @@ proto.services.notifications.v1.InactivityFeeNotice.deserializeBinaryFromReader 
       var value = /** @type {string} */ (reader.readString());
       msg.setEffectiveDate(value);
       break;
+    case 3:
+      var value = /** @type {number} */ (reader.readUint64());
+      msg.setFeeAmountCents(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -6529,6 +6534,13 @@ proto.services.notifications.v1.InactivityFeeNotice.serializeBinaryToWriter = fu
       f
     );
   }
+  f = message.getFeeAmountCents();
+  if (f !== 0) {
+    writer.writeUint64(
+      3,
+      f
+    );
+  }
 };
 
 
@@ -6565,6 +6577,24 @@ proto.services.notifications.v1.InactivityFeeNotice.prototype.getEffectiveDate =
  */
 proto.services.notifications.v1.InactivityFeeNotice.prototype.setEffectiveDate = function(value) {
   return jspb.Message.setProto3StringField(this, 2, value);
+};
+
+
+/**
+ * optional uint64 fee_amount_cents = 3;
+ * @return {number}
+ */
+proto.services.notifications.v1.InactivityFeeNotice.prototype.getFeeAmountCents = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 3, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.services.notifications.v1.InactivityFeeNotice} returns this
+ */
+proto.services.notifications.v1.InactivityFeeNotice.prototype.setFeeAmountCents = function(value) {
+  return jspb.Message.setProto3IntField(this, 3, value);
 };
 
 

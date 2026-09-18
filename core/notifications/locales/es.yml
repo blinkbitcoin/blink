@@ -71,9 +71,9 @@ migration_retry_ready.title: "Tu migración está lista para reintentar"
 migration_retry_ready.body: "Hemos restablecido tu migración para que puedas intentarlo de nuevo. Toca para continuar moviendo tus fondos."
 
 inactivity_fee_notice.push.title: "Aviso de comisión por inactividad"
-inactivity_fee_notice.push.body: "Tu cuenta de Blink no ha tenido actividad durante 12 meses. A partir del %{date}, se aplica una comisión de $1 por saldo al mes. Abre Blink una vez para mantenerla activa: cualquier comisión cobrada se reembolsa en su totalidad."
+inactivity_fee_notice.push.body: "Tu cuenta de Blink no ha tenido actividad durante 12 meses. A partir del %{date}, se aplica una comisión de %{amount} por saldo al mes. Abre Blink una vez para mantenerla activa: cualquier comisión cobrada se reembolsa en su totalidad."
 inactivity_fee_notice.bulletin.title: "Aviso de comisión por inactividad"
-inactivity_fee_notice.bulletin.body: "Comisión por inactividad: a partir del %{date}, se aplica $1 por saldo al mes a esta cuenta. Úsala una vez para mantenerla activa: cualquier comisión cobrada se reembolsa en su totalidad."
+inactivity_fee_notice.bulletin.body: "Comisión por inactividad: a partir del %{date}, se aplica %{amount} por saldo al mes a esta cuenta. Úsala una vez para mantenerla activa: cualquier comisión cobrada se reembolsa en su totalidad."
 
 inactivity_fee_welcome_back.title: "Te damos la bienvenida de nuevo"
 inactivity_fee_welcome_back.body: "Te damos la bienvenida de nuevo. Tu cuenta vuelve a estar activa y la comisión por inactividad de %{amount} se ha reembolsado a tu saldo."

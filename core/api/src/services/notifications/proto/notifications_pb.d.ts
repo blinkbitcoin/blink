@@ -806,6 +806,8 @@ export class InactivityFeeNotice extends jspb.Message {
     setUserId(value: string): InactivityFeeNotice;
     getEffectiveDate(): string;
     setEffectiveDate(value: string): InactivityFeeNotice;
+    getFeeAmountCents(): number;
+    setFeeAmountCents(value: number): InactivityFeeNotice;
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): InactivityFeeNotice.AsObject;
@@ -821,6 +823,7 @@ export namespace InactivityFeeNotice {
     export type AsObject = {
         userId: string,
         effectiveDate: string,
+        feeAmountCents: number,
     }
 }
 
