@@ -72,21 +72,6 @@ describe("recordActivity", () => {
       expect(result).toEqual({ written: true, previousActivityAt })
     })
 
-    it("send always writes (no age check in the filter)", async () => {
-      mockRepoRecordActivity.mockResolvedValue({
-        written: true,
-        previousActivityAt: new Date("2026-09-15T11:59:59.000Z"),
-      })
-
-      await recordActivity({ accountId, kind: ActivityKind.Send })
-
-      expect(mockRepoRecordActivity).toHaveBeenCalledWith({
-        id: accountId,
-        now,
-        onlyIfOlderThan: undefined,
-      })
-    })
-
     it("session passes the age cutoff (now - activityRefreshIntervalSec) into the filter", async () => {
       mockRepoRecordActivity.mockResolvedValue({
         written: true,
@@ -180,21 +165,19 @@ describe("recordActivity", () => {
       expect(mockRepoRecordActivity).toHaveBeenCalledTimes(1)
     })
 
-    it("login and send always write, however fresh the known value is", async () => {
+    it("login always writes, however fresh the known value is", async () => {
       mockRepoRecordActivity.mockResolvedValue({
         written: true,
         previousActivityAt: new Date(now.getTime() - 1000),
       })
 
-      for (const kind of [ActivityKind.Login, ActivityKind.Send]) {
-        await recordActivity({
-          accountId,
-          kind,
-          knownLastActivityAt: new Date(now.getTime() - 1000),
-        })
-      }
+      await recordActivity({
+        accountId,
+        kind: ActivityKind.Login,
+        knownLastActivityAt: new Date(now.getTime() - 1000),
+      })
 
-      expect(mockRepoRecordActivity).toHaveBeenCalledTimes(2)
+      expect(mockRepoRecordActivity).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -217,7 +200,7 @@ describe("recordActivity", () => {
       const previousActivityAt = new Date("2025-09-15T12:00:00.000Z")
       mockRepoRecordActivity.mockResolvedValue({ written: true, previousActivityAt })
 
-      await recordActivity({ accountId, kind: ActivityKind.Send })
+      await recordActivity({ accountId, kind: ActivityKind.Login })
 
       expect(mockReactivateAccount).toHaveBeenCalledWith({
         accountId,
@@ -311,30 +294,23 @@ describe("single writer invariant (source scan)", () => {
     ])
   })
 
-  it("has call sites in login, the send paths and the session middleware only", () => {
+  it("has call sites in login and the session middleware only", () => {
     expect(filesContaining(/recordActivity\(\{\s*accountId/)).toEqual([
       "app/authentication/login.ts",
-      "app/payments/helpers.ts",
       "servers/middlewares/session.ts",
     ])
   })
 
-  it("receive, pending-payment, fee reimbursement and admin modules never record activity", () => {
+  it("receive, payment, fee reimbursement and admin modules never record activity", () => {
     const receiveModules = [
+      ...listTsFiles(path.join(srcRoot, "app/payments")),
       ...listTsFiles(path.join(srcRoot, "app/wallets")),
       ...listTsFiles(path.join(srcRoot, "app/admin")),
       ...listTsFiles(path.join(srcRoot, "app/lightning")),
       ...listTsFiles(path.join(srcRoot, "app/on-chain")),
-      path.join(srcRoot, "app/payments/update-pending-payments.ts"),
-      path.join(srcRoot, "app/payments/reimburse-fee.ts"),
-      path.join(srcRoot, "app/payments/reimburse-failed-usd.ts"),
     ]
     const offenders = receiveModules
-      .filter((file) =>
-        /recordActivity|inactivity-fee|recordSendActivity/.test(
-          readFileSync(file, "utf8"),
-        ),
-      )
+      .filter((file) => /recordActivity|inactivity-fee/.test(readFileSync(file, "utf8")))
       .map((file) => path.relative(srcRoot, file))
     expect(offenders).toEqual([])
   })

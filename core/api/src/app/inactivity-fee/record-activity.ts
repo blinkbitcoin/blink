@@ -22,7 +22,8 @@ const hasLiveNotice = async ({
   return false
 }
 
-// the only writer of the account's last-activity timestamp
+// the only writer of the account's last-activity timestamp; login always writes, session
+// writes at most once per interval
 export const recordActivity = async ({
   accountId,
   kind,

@@ -111,12 +111,13 @@ last_activity_ms() {
   [[ $((now_ms - after)) -lt 60000 ]] || exit 1
 }
 
-@test "inactivity-fee: an intraledger send bumps the sender and leaves the recipient" {
+@test "inactivity-fee: an intraledger send counts as activity for the sender, not the recipient" {
   local account_id
   account_id="$(read_value "$ALICE.account_id")"
   local bob_account_id
   bob_account_id="$(read_value "$BOB.account_id")"
 
+  mongo_cli "db.accounts.updateOne({id:'${account_id}'},{\$set:{last_activity_at:ISODate('2020-01-01')}})"
   before="$(last_activity_ms "$account_id")"
   bob_before="$(last_activity_ms "$bob_account_id")"
   sleep 1
@@ -139,10 +140,11 @@ last_activity_ms() {
   [[ "$bob_after" -eq "$bob_before" ]] || exit 1
 }
 
-@test "inactivity-fee: an external lightning send bumps it" {
+@test "inactivity-fee: an external lightning send counts as activity" {
   local account_id
   account_id="$(read_value "$ALICE.account_id")"
 
+  mongo_cli "db.accounts.updateOne({id:'${account_id}'},{\$set:{last_activity_at:ISODate('2020-01-01')}})"
   before="$(last_activity_ms "$account_id")"
   sleep 1
 

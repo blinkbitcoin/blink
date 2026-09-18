@@ -60,7 +60,9 @@ export const sessionPublicContext = async ({
 
     domainAccount = account
 
-    // awaited, unlike the IP write below; never fails the request
+    // every authenticated request counts as activity, sends included; only login is recorded
+    // elsewhere, because it carries no session. Awaited, unlike the IP write below; never fails
+    // the request
     const activity = await InactivityFee.recordActivity({
       accountId: account.id,
       kind: ActivityKind.Session,
