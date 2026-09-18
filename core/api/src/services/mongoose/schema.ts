@@ -282,8 +282,6 @@ const AccountSchema = new Schema<AccountRecord>(
 
     displayCurrency: String, // FIXME: should be an enum
 
-    // must never decrease and must have no default: callers skip the write when their
-    // copy is fresh, and mongoose applies defaults on hydration
     last_activity_at: Date,
   },
   { id: false },
