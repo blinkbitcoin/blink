@@ -294,9 +294,9 @@ describe("single writer invariant (source scan)", () => {
     ])
   })
 
-  it("has call sites in login and the session middleware only", () => {
+  it("has call sites in the login helper and the session middleware only", () => {
     expect(filesContaining(/recordActivity\(\{\s*accountId/)).toEqual([
-      "app/authentication/login.ts",
+      "app/authentication/record-login-activity.ts",
       "servers/middlewares/session.ts",
     ])
   })
