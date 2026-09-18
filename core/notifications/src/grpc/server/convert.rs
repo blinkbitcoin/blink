@@ -276,12 +276,6 @@ impl From<proto::DeepLinkScreen> for notification_event::DeepLinkScreen {
             proto::DeepLinkScreen::CardOnboardingInvestment => {
                 notification_event::DeepLinkScreen::CardOnboardingInvestment
             }
-            proto::DeepLinkScreen::CardOnboardingInvestmentTransfer => {
-                notification_event::DeepLinkScreen::CardOnboardingInvestmentTransfer
-            }
-            proto::DeepLinkScreen::CardOnboardingInvestmentDepositPending => {
-                notification_event::DeepLinkScreen::CardOnboardingInvestmentDepositPending
-            }
         }
     }
 }
