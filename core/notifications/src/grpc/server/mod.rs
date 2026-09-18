@@ -539,12 +539,10 @@ impl NotificationsService for Notifications {
     }
 }
 
-/// `YYYY-MM-DD` and a real calendar date: the templates render the string verbatim.
 fn is_iso_date(value: &str) -> bool {
     value.len() == 10 && chrono::NaiveDate::parse_from_str(value, "%Y-%m-%d").is_ok()
 }
 
-/// A welcome-back bulletin names an amount, so at least one balance must have been refunded.
 fn has_refund_amount(refunded_sats: Option<u64>, refunded_cents: Option<u64>) -> bool {
     refunded_sats.unwrap_or(0) > 0 || refunded_cents.unwrap_or(0) > 0
 }
