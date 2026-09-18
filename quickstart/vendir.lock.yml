@@ -2,27 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix(core): await payment flow persist in skip-probe fee estimate
-        (#849)...'
-      sha: cb6ad016520b22a15ef631539121cb148f4f74c8
+      commitTitle: 'feat: investment-flow deeplinks (#834)...'
+      sha: 2d12f34ad31d190d25d5f741f6219983059bb1fd
       tags:
-      - 0.22.63-2-gcb6ad0165
+      - 0.22.64-1-g2d12f34ad
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'fix(core): await payment flow persist in skip-probe fee estimate
-        (#849)...'
-      sha: cb6ad016520b22a15ef631539121cb148f4f74c8
+      commitTitle: 'feat: investment-flow deeplinks (#834)...'
+      sha: 2d12f34ad31d190d25d5f741f6219983059bb1fd
       tags:
-      - 0.22.63-2-gcb6ad0165
+      - 0.22.64-1-g2d12f34ad
     path: schemas
   - git:
-      commitTitle: 'fix(core): await payment flow persist in skip-probe fee estimate
-        (#849)...'
-      sha: cb6ad016520b22a15ef631539121cb148f4f74c8
+      commitTitle: 'feat: investment-flow deeplinks (#834)...'
+      sha: 2d12f34ad31d190d25d5f741f6219983059bb1fd
       tags:
-      - 0.22.63-2-gcb6ad0165
+      - 0.22.64-1-g2d12f34ad
     path: gql
   path: graphql
 kind: LockConfig
