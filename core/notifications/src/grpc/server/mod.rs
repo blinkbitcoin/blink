@@ -331,19 +331,28 @@ impl NotificationsService for Notifications {
                         proto::InactivityFeeNotice {
                             user_id,
                             effective_date,
+                            fee_amount_cents,
                         },
                     )),
             }) => {
                 if !is_iso_date(&effective_date) {
                     return Err(Status::invalid_argument(
-                        "effective_date must be YYYY-MM-DD",
+                        "effective_date must be a calendar date, YYYY-MM-DD",
+                    ));
+                }
+                if fee_amount_cents == 0 {
+                    return Err(Status::invalid_argument(
+                        "fee_amount_cents must be positive",
                     ));
                 }
                 let user_id = GaloyUserId::from(user_id);
                 self.app
                     .handle_single_user_event(
                         user_id,
-                        notification_event::InactivityFeeNotice { effective_date },
+                        notification_event::InactivityFeeNotice {
+                            effective_date,
+                            fee_amount_cents,
+                        },
                     )
                     .await?;
             }
@@ -357,7 +366,7 @@ impl NotificationsService for Notifications {
                         },
                     )),
             }) => {
-                if refunded_sats.unwrap_or(0) == 0 && refunded_cents.unwrap_or(0) == 0 {
+                if !has_refund_amount(refunded_sats, refunded_cents) {
                     return Err(Status::invalid_argument("a refunded amount is required"));
                 }
                 let user_id = GaloyUserId::from(user_id);
@@ -530,17 +539,49 @@ impl NotificationsService for Notifications {
     }
 }
 
-/// `YYYY-MM-DD`: the only date shape core sends and the templates render verbatim.
+/// `YYYY-MM-DD` and a real calendar date: the templates render the string verbatim.
 fn is_iso_date(value: &str) -> bool {
-    let bytes = value.as_bytes();
-    bytes.len() == 10
-        && bytes.iter().enumerate().all(|(i, b)| {
-            if i == 4 || i == 7 {
-                *b == b'-'
-            } else {
-                b.is_ascii_digit()
-            }
-        })
+    value.len() == 10 && chrono::NaiveDate::parse_from_str(value, "%Y-%m-%d").is_ok()
+}
+
+/// A welcome-back bulletin names an amount, so at least one balance must have been refunded.
+fn has_refund_amount(refunded_sats: Option<u64>, refunded_cents: Option<u64>) -> bool {
+    refunded_sats.unwrap_or(0) > 0 || refunded_cents.unwrap_or(0) > 0
+}
+
+#[cfg(test)]
+mod inactivity_fee_guards {
+    use super::*;
+
+    #[test]
+    fn accepts_a_real_calendar_date_in_the_expected_shape() {
+        assert!(is_iso_date("2026-10-15"));
+        assert!(is_iso_date("2028-02-29"));
+    }
+
+    #[test]
+    fn rejects_the_wrong_shape_and_impossible_dates() {
+        for bad in [
+            "2026-99-99",
+            "2026-02-30",
+            "2027-02-29",
+            "2026-10-15T00:00:00Z",
+            "15-10-2026",
+            "2026-1-5",
+            "",
+        ] {
+            assert!(!is_iso_date(bad), "accepted {bad:?}");
+        }
+    }
+
+    #[test]
+    fn a_refund_needs_at_least_one_positive_amount() {
+        assert!(has_refund_amount(Some(300), None));
+        assert!(has_refund_amount(None, Some(60)));
+        assert!(has_refund_amount(Some(0), Some(1)));
+        assert!(!has_refund_amount(None, None));
+        assert!(!has_refund_amount(Some(0), Some(0)));
+    }
 }
 
 pub(crate) async fn start(

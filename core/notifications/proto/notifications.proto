@@ -194,6 +194,7 @@ message MigrationRetryReady {
 message InactivityFeeNotice {
   string user_id = 1;
   string effective_date = 2;
+  uint64 fee_amount_cents = 3;
 }
 
 message InactivityFeeWelcomeBack {
