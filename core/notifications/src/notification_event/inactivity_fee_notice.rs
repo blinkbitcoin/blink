@@ -7,6 +7,20 @@ use crate::{messages::*, primitives::*};
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct InactivityFeeNotice {
     pub effective_date: String,
+    pub fee_amount_cents: u64,
+}
+
+impl InactivityFeeNotice {
+    // "$1" for whole dollars (the approved copy), "$2.50" otherwise
+    fn fee_amount(&self) -> String {
+        let dollars = self.fee_amount_cents / 100;
+        let cents = self.fee_amount_cents % 100;
+        if cents == 0 {
+            format!("${dollars}")
+        } else {
+            format!("${dollars}.{cents:02}")
+        }
+    }
 }
 
 impl NotificationEvent for InactivityFeeNotice {
@@ -23,7 +37,8 @@ impl NotificationEvent for InactivityFeeNotice {
         let body = t!(
             "inactivity_fee_notice.push.body",
             locale = locale.as_ref(),
-            date = self.effective_date
+            date = self.effective_date,
+            amount = self.fee_amount()
         )
         .to_string();
         LocalizedPushMessage { title, body }
@@ -46,7 +61,8 @@ impl NotificationEvent for InactivityFeeNotice {
         let body = t!(
             "inactivity_fee_notice.bulletin.body",
             locale = locale.as_ref(),
-            date = self.effective_date
+            date = self.effective_date,
+            amount = self.fee_amount()
         )
         .to_string();
         LocalizedStatefulMessage {
@@ -64,6 +80,7 @@ mod tests {
     fn event() -> InactivityFeeNotice {
         InactivityFeeNotice {
             effective_date: "2026-10-15".to_string(),
+            fee_amount_cents: 100,
         }
     }
 
@@ -100,6 +117,30 @@ mod tests {
         assert!(es_bulletin
             .body
             .starts_with("Comisión por inactividad: a partir del 2026-10-15"));
+    }
+
+    #[test]
+    fn renders_the_configured_fee_not_a_literal() {
+        let event = InactivityFeeNotice {
+            effective_date: "2026-10-15".to_string(),
+            fee_amount_cents: 250,
+        };
+        let push = event.to_localized_push_msg(&GaloyLocale::from("en".to_string()));
+        assert!(push
+            .body
+            .contains("From 2026-10-15, $2.50 per balance per month applies."));
+        let bulletin = event.to_localized_persistent_message(GaloyLocale::from("en".to_string()));
+        assert!(bulletin
+            .body
+            .starts_with("Inactivity fee: from 2026-10-15, $2.50 per balance"));
+        for locale in ["es", "ca", "de", "el", "hu", "ro", "sw"] {
+            let msg = event.to_localized_push_msg(&GaloyLocale::from(locale.to_string()));
+            assert!(
+                msg.body.contains("$2.50"),
+                "fee not interpolated for {locale}"
+            );
+            assert!(!msg.body.contains("$1"), "literal fee left in {locale}");
+        }
     }
 
     #[test]
