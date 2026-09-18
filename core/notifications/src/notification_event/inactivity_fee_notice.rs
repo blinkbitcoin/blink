@@ -6,8 +6,6 @@ use crate::{messages::*, primitives::*};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct InactivityFeeNotice {
-    /// First day the fee applies, `YYYY-MM-DD`. Computed by core and rendered verbatim: this
-    /// service never derives lifecycle dates.
     pub effective_date: String,
 }
 
@@ -92,18 +90,45 @@ mod tests {
     }
 
     #[test]
-    fn untranslated_locales_fall_back_to_en() {
-        let en = event().to_localized_push_msg(&GaloyLocale::from("en".to_string()));
+    fn renders_in_the_users_locale() {
         let es = event().to_localized_push_msg(&GaloyLocale::from("es".to_string()));
-        assert_eq!(es.title, en.title);
-        assert_eq!(es.body, en.body);
+        assert_eq!(es.title, "Aviso de comisión por inactividad");
+        assert!(es.body.contains("A partir del 2026-10-15"));
 
-        let en_bulletin =
-            event().to_localized_persistent_message(GaloyLocale::from("en".to_string()));
         let es_bulletin =
             event().to_localized_persistent_message(GaloyLocale::from("es".to_string()));
-        assert_eq!(es_bulletin.title, en_bulletin.title);
-        assert_eq!(es_bulletin.body, en_bulletin.body);
+        assert!(es_bulletin
+            .body
+            .starts_with("Comisión por inactividad: a partir del 2026-10-15"));
+    }
+
+    #[test]
+    fn every_shipped_locale_has_the_keys() {
+        for locale in ["en", "es", "ca", "de", "el", "hu", "ro", "sw"] {
+            let push = event().to_localized_push_msg(&GaloyLocale::from(locale.to_string()));
+            assert!(
+                push.body.contains("2026-10-15"),
+                "push body untranslated for {locale}"
+            );
+            assert!(
+                !push.title.contains("inactivity_fee_notice"),
+                "raw key for {locale}"
+            );
+            let bulletin =
+                event().to_localized_persistent_message(GaloyLocale::from(locale.to_string()));
+            assert!(
+                bulletin.body.contains("2026-10-15"),
+                "bulletin untranslated for {locale}"
+            );
+        }
+    }
+
+    #[test]
+    fn unknown_locales_fall_back_to_en() {
+        let en = event().to_localized_push_msg(&GaloyLocale::from("en".to_string()));
+        let xx = event().to_localized_push_msg(&GaloyLocale::from("xx".to_string()));
+        assert_eq!(xx.title, en.title);
+        assert_eq!(xx.body, en.body);
     }
 
     #[test]
