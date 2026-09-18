@@ -1272,7 +1272,6 @@ export const configSchema = {
     inactivityFee: {
       type: "object",
       properties: {
-        // app-open / API activity is written at most this often; login and sends always write
         activityRefreshIntervalSec: {
           type: "integer",
           minimum: 0,
