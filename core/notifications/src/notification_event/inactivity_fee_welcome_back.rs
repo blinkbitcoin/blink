@@ -6,8 +6,6 @@ use crate::{messages::*, primitives::*};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct InactivityFeeWelcomeBack {
-    /// Amounts refunded per balance, never blended. `None` and `0` both mean "nothing refunded
-    /// on that balance"; the template renders whichever is set, both when both are.
     pub refunded_sats: Option<u64>,
     pub refunded_cents: Option<u64>,
 }
@@ -118,16 +116,26 @@ mod tests {
     }
 
     #[test]
-    fn untranslated_locales_fall_back_to_en() {
+    fn renders_in_the_users_locale_and_falls_back_for_unknown_ones() {
         let event = InactivityFeeWelcomeBack {
             refunded_sats: Some(300),
             refunded_cents: None,
         };
         let en = event.to_localized_persistent_message(GaloyLocale::from("en".to_string()));
-        let es = event.to_localized_persistent_message(GaloyLocale::from("es".to_string()));
-        assert_eq!(es.title, en.title);
-        assert_eq!(es.body, en.body);
         assert_eq!(en.title, "Welcome back");
+
+        let es = event.to_localized_persistent_message(GaloyLocale::from("es".to_string()));
+        assert_eq!(es.title, "Te damos la bienvenida de nuevo");
+        assert!(es.body.contains("300 sats"));
+
+        for locale in ["ca", "de", "el", "hu", "ro", "sw"] {
+            let msg = event.to_localized_persistent_message(GaloyLocale::from(locale.to_string()));
+            assert!(msg.body.contains("300 sats"), "amount missing for {locale}");
+            assert_ne!(msg.title, en.title, "title untranslated for {locale}");
+        }
+
+        let xx = event.to_localized_persistent_message(GaloyLocale::from("xx".to_string()));
+        assert_eq!(xx.body, en.body);
     }
 
     #[test]

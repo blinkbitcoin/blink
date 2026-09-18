@@ -63,3 +63,11 @@ price_changed.up.body: "Bitcoin este în creștere cu %{change_percent}% în ult
 
 migration_retry_ready.title: "Migrarea ta este gata pentru o nouă încercare"
 migration_retry_ready.body: "Ți-am resetat migrarea ca să poți încerca din nou. Apasă pentru a continua mutarea fondurilor tale."
+
+inactivity_fee_notice.push.title: "Notificare privind comisionul de inactivitate"
+inactivity_fee_notice.push.body: "Contul tău Blink nu a avut nicio activitate timp de 12 luni. Începând cu %{date}, se aplică un comision de $1 pe sold pe lună. Deschide Blink o dată ca să rămâi activ – orice comision perceput este rambursat integral."
+inactivity_fee_notice.bulletin.title: "Notificare privind comisionul de inactivitate"
+inactivity_fee_notice.bulletin.body: "Comision de inactivitate: începând cu %{date}, se aplică $1 pe sold pe lună acestui cont. Folosește-l o dată ca să rămână activ – orice comision perceput este rambursat integral."
+
+inactivity_fee_welcome_back.title: "Bine ai revenit"
+inactivity_fee_welcome_back.body: "Bine ai revenit. Contul tău este din nou activ, iar comisionul de inactivitate de %{amount} a fost rambursat în soldul tău."

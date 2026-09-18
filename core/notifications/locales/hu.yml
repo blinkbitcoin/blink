@@ -17,3 +17,11 @@ circle_threshold_reached.outer.body: "A Külső Köröd elérte a %{threshold} e
 
 migration_retry_ready.title: "A migrációd készen áll az újrapróbálkozásra"
 migration_retry_ready.body: "Visszaállítottuk a migrációdat, hogy újra megpróbálhasd. Koppints, hogy folytasd a pénzed átmozgatását."
+
+inactivity_fee_notice.push.title: "Értesítés inaktivitási díjról"
+inactivity_fee_notice.push.body: "A Blink-fiókodban 12 hónapja nem volt aktivitás. %{date} napjától egyenlegenként havi $1 díj kerül felszámításra. Nyisd meg egyszer a Blinket, hogy aktív maradj – minden felszámított díjat teljes egészében visszatérítünk."
+inactivity_fee_notice.bulletin.title: "Értesítés inaktivitási díjról"
+inactivity_fee_notice.bulletin.body: "Inaktivitási díj: %{date} napjától erre a fiókra egyenlegenként havi $1 díj vonatkozik. Használd egyszer, hogy aktív maradjon – minden felszámított díjat teljes egészében visszatérítünk."
+
+inactivity_fee_welcome_back.title: "Üdvözlünk újra"
+inactivity_fee_welcome_back.body: "Üdvözlünk újra. A fiókod ismét aktív, és a(z) %{amount} összegű inaktivitási díjat visszatérítettük az egyenlegedre."
