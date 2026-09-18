@@ -118,6 +118,7 @@ pub enum DeepLinkScreen {
     CardOnboardingPreapproved,
     CardOnboardingApproved,
     AccountMigration,
+    CardOnboardingInvestment,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -227,6 +228,9 @@ impl DeepLink {
                 }
                 DeepLinkScreen::CardOnboardingApproved => "card/onboarding/approved".to_string(),
                 DeepLinkScreen::AccountMigration => "account-migration".to_string(),
+                DeepLinkScreen::CardOnboardingInvestment => {
+                    "card/onboarding/investment".to_string()
+                }
             };
             link_string.push_str(&screen);
         }
@@ -428,6 +432,14 @@ mod deep_link_tests {
         assert_eq!(
             screen_link(DeepLinkScreen::AccountMigration),
             "/account-migration"
+        );
+    }
+
+    #[test]
+    fn card_onboarding_investment_screen_produces_expected_link() {
+        assert_eq!(
+            screen_link(DeepLinkScreen::CardOnboardingInvestment),
+            "/card/onboarding/investment"
         );
     }
 }
