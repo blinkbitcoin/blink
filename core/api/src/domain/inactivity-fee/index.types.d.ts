@@ -17,11 +17,8 @@ type IsDormantAtArgs = {
 type ResolveBackfillActivityArgs = {
   existing: Date | undefined
   createdAt: Date
-  // sender legs only
   ledgerLast: Date | undefined
-  // across both accountips id spaces
   ipsLast: Date | undefined
-  // used when accountips history is missing
   ipsFloor: Date
 }
 
