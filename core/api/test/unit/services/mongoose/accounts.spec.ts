@@ -11,8 +11,11 @@ jest.mock("@/services/mongoose/schema", () => ({
     kratosUserId?: string
     last_activity_at?: Date
     save = jest.requireMock("@/services/mongoose/schema").__mocks.save
-    static findOneAndUpdate = jest.requireMock("@/services/mongoose/schema").__mocks
-      .findOneAndUpdate
+    static findOneAndUpdate(...args: unknown[]) {
+      return jest
+        .requireMock("@/services/mongoose/schema")
+        .__mocks.findOneAndUpdate(...args)
+    }
   },
 }))
 
