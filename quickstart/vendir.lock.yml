@@ -2,27 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat(core): allow disabling admin jwt audience check for rollout
-        (#855)...'
-      sha: 0b43f994c78d794b06869557cd5d05f45674ad49
+      commitTitle: 'feat(core): allow freezing admin api mutations via config (#861)'
+      sha: ceb47afcf87b60496d7918c22942e69924c4bf55
       tags:
-      - 0.22.64-4-g0b43f994c
+      - 0.22.65
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat(core): allow disabling admin jwt audience check for rollout
-        (#855)...'
-      sha: 0b43f994c78d794b06869557cd5d05f45674ad49
+      commitTitle: 'feat(core): allow freezing admin api mutations via config (#861)'
+      sha: ceb47afcf87b60496d7918c22942e69924c4bf55
       tags:
-      - 0.22.64-4-g0b43f994c
+      - 0.22.65
     path: schemas
   - git:
-      commitTitle: 'feat(core): allow disabling admin jwt audience check for rollout
-        (#855)...'
-      sha: 0b43f994c78d794b06869557cd5d05f45674ad49
+      commitTitle: 'feat(core): allow freezing admin api mutations via config (#861)'
+      sha: ceb47afcf87b60496d7918c22942e69924c4bf55
       tags:
-      - 0.22.64-4-g0b43f994c
+      - 0.22.65
     path: gql
   path: graphql
 kind: LockConfig
