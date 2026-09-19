@@ -26,6 +26,7 @@ export const issueNotice = async ({
   const sent = await NotificationsService().sendInactivityFeeNotice({
     userId: account.kratosUserId,
     effectiveDate: noticeEffectiveDate({ issuedAt, effectiveFrom: config.effectiveFrom }),
+    feeAmountCents: config.feeAmountUsdCents,
   })
   if (sent instanceof Error) return sent
 

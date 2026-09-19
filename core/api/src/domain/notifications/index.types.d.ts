@@ -141,6 +141,7 @@ interface INotificationsService {
   sendInactivityFeeNotice(args: {
     userId: UserId
     effectiveDate: Date
+    feeAmountCents: UsdCents
   }): Promise<true | NotificationsServiceError>
 
   sendInactivityFeeWelcomeBack(args: {
