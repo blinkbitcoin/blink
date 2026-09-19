@@ -65,10 +65,12 @@ const submitForm = async (form: FormData) => {
 
   const extraScopes = extraGrantScopes(grantScope, body.requested_scope || [])
   if (extraScopes.length > 0) {
+    // Log the consent challenge rather than the subject; it is enough to
+    // correlate with hydra when troubleshooting.
     console.error("consent grant_scope exceeds requested_scope", {
       extraScopes,
-      subject: body.subject,
       clientId: body.client?.client_id,
+      consentChallenge: consent_challenge,
     })
     const responseReject = await hydraClient.rejectOAuth2ConsentRequest(
       {
