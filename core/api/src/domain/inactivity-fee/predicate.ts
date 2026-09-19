@@ -1,3 +1,5 @@
+import { InactivityFeeNoticeStatus } from "./primitives"
+
 export const DORMANCY_MONTHS = 12
 
 // clamped to the target month's last day (Mar 31 minus 1 month is Feb 28); UTC
@@ -27,3 +29,12 @@ export const dormancyCutoffAt = (asOf: Date): Date =>
 
 export const isDormantAt = ({ lastActivityAt, asOf }: IsDormantAtArgs): boolean =>
   lastActivityAt.getTime() <= dormancyCutoffAt(asOf).getTime()
+
+// The one liveness rule. A notice is live only while the account has not acted since it was
+// issued: any later user action ends it mathematically, `superseded` is bookkeeping. An
+// account whose clock was never backfilled cannot prove anything, so nothing is live for it.
+export const isNoticeLive = ({ notice, account }: IsNoticeLiveArgs): boolean =>
+  notice.status === InactivityFeeNoticeStatus.Active &&
+  notice.bulletinIssued &&
+  account.lastActivityAt !== undefined &&
+  notice.issuedAt.getTime() > account.lastActivityAt.getTime()
