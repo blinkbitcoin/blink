@@ -7,11 +7,14 @@ jest.mock("@/app/payments/update-pending-payments", () => ({
   updatePendingPaymentByHash: jest.fn(),
 }))
 
-jest.mock("@/services/ledger", () => ({
-  __mockGetTransactionsByHash: jest.fn(),
-  LedgerService: () => ({
-    getTransactionsByHash:
-      jest.requireMock("@/services/ledger").__mockGetTransactionsByHash,
+jest.mock("@/services/ledger/facade", () => ({
+  getTransactionsForWalletsByPaymentHash: jest.fn(),
+}))
+
+jest.mock("@/services/lock", () => ({
+  __mockLockWalletId: jest.fn(),
+  LockService: () => ({
+    lockWalletId: jest.requireMock("@/services/lock").__mockLockWalletId,
   }),
 }))
 
@@ -22,9 +25,14 @@ jest.mock("@/services/logger", () => ({
 jest.mock("@/services/mongoose", () => ({
   __mocks: {
     findFlowByAccountId: jest.fn(),
+    findAccountWalletsByAccountId: jest.fn(),
   },
   MigrationFlowStateRepository: () => ({
     findByAccountId: jest.requireMock("@/services/mongoose").__mocks.findFlowByAccountId,
+  }),
+  WalletsRepository: () => ({
+    findAccountWalletsByAccountId:
+      jest.requireMock("@/services/mongoose").__mocks.findAccountWalletsByAccountId,
   }),
 }))
 
@@ -40,15 +48,19 @@ import {
 import { updatePendingPaymentByHash } from "@/app/payments/update-pending-payments"
 import { CouldNotFindMigrationFlowStateError } from "@/domain/errors"
 import { LedgerTransactionType } from "@/domain/ledger"
+import { ResourceExpiredLockServiceError } from "@/domain/lock"
 import { MigrationFlowPhase } from "@/domain/migration-flow"
+import { getTransactionsForWalletsByPaymentHash } from "@/services/ledger/facade"
 import { recordExceptionInCurrentSpan } from "@/services/tracing"
 
 const mocks = jest.requireMock("@/services/mongoose").__mocks as {
   findFlowByAccountId: jest.Mock
+  findAccountWalletsByAccountId: jest.Mock
 }
+const mockLockWalletId = jest.requireMock("@/services/lock")
+  .__mockLockWalletId as jest.Mock
 const mockUpdatePendingPaymentByHash = updatePendingPaymentByHash as jest.Mock
-const mockGetTransactionsByHash = jest.requireMock("@/services/ledger")
-  .__mockGetTransactionsByHash as jest.Mock
+const mockGetTransactionsByHash = getTransactionsForWalletsByPaymentHash as jest.Mock
 const mockCompleteFlow = completeMigrationFlowForSettledPayment as jest.Mock
 const mockFailFlow = failMigrationFlowForFailedPayment as jest.Mock
 const mockRecordException = recordExceptionInCurrentSpan as jest.Mock
@@ -83,12 +95,38 @@ describe("resumeMigrationFlow", () => {
       timestamp: at,
     }) as LedgerTransaction<WalletCurrency>
 
+  const btcWalletId = "btc-wallet-id" as WalletId
+  let lockHeld = false
+  let settledUnderLock = 0
+
   beforeEach(() => {
     jest.clearAllMocks()
     mockUpdatePendingPaymentByHash.mockResolvedValue(true)
     mockGetTransactionsByHash.mockResolvedValue([paymentTxn({ pending: true })])
     mockCompleteFlow.mockResolvedValue(undefined)
     mockFailFlow.mockResolvedValue(undefined)
+    mocks.findAccountWalletsByAccountId.mockResolvedValue({
+      BTC: { id: btcWalletId },
+      USD: { id: "usd-wallet-id" as WalletId },
+    })
+    lockHeld = false
+    settledUnderLock = 0
+    mockLockWalletId.mockImplementation(
+      async (_walletId: WalletId, fn: (signal: unknown) => Promise<unknown>) => {
+        lockHeld = true
+        try {
+          return await fn({ aborted: false })
+        } finally {
+          lockHeld = false
+        }
+      },
+    )
+    mockCompleteFlow.mockImplementation(async () => {
+      if (lockHeld) settledUnderLock += 1
+    })
+    mockFailFlow.mockImplementation(async () => {
+      if (lockHeld) settledUnderLock += 1
+    })
   })
 
   it("returns CouldNotFind when there is no migration record", async () => {
@@ -181,15 +219,75 @@ describe("resumeMigrationFlow", () => {
     mocks.findFlowByAccountId
       .mockResolvedValueOnce(transferringFlow)
       .mockResolvedValueOnce(transferringFlow)
+      .mockResolvedValueOnce(transferringFlow)
       .mockResolvedValueOnce(completedFlow)
     mockGetTransactionsByHash.mockResolvedValue([paymentTxn({ pending: false })])
 
     const result = await resumeMigrationFlow({ accountId })
 
+    expect(mockLockWalletId).toHaveBeenCalledTimes(1)
+    expect(mockLockWalletId.mock.calls[0][0]).toBe(btcWalletId)
+    expect(mockGetTransactionsByHash).toHaveBeenCalledWith({
+      walletIds: [btcWalletId, "usd-wallet-id"],
+      paymentHash,
+    })
     expect(mockCompleteFlow).toHaveBeenCalledTimes(1)
     expect(mockCompleteFlow).toHaveBeenCalledWith({ paymentHash })
+    expect(settledUnderLock).toBe(0)
     expect(mockFailFlow).not.toHaveBeenCalled()
     expect(result).toBe(completedFlow)
+  })
+
+  it("does not act when the lock was lost while resolving the verdict", async () => {
+    mocks.findFlowByAccountId.mockResolvedValue(transferringFlow)
+    mockGetTransactionsByHash.mockResolvedValue([paymentTxn({ pending: false })])
+    mockLockWalletId.mockImplementation(
+      (_walletId: WalletId, fn: (signal: unknown) => Promise<unknown>) =>
+        fn({ aborted: true, error: new Error("lock expired") }),
+    )
+
+    const result = await resumeMigrationFlow({ accountId })
+
+    expect(mockCompleteFlow).not.toHaveBeenCalled()
+    expect(result).toBe(transferringFlow)
+    expect(mockRecordException).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.any(ResourceExpiredLockServiceError) }),
+    )
+  })
+
+  it("does not act when the flow left TRANSFERRING before the lock was taken", async () => {
+    const failedFlow = {
+      ...transferringFlow,
+      phase: MigrationFlowPhase.Failed,
+    } as MigrationFlow
+    mocks.findFlowByAccountId
+      .mockResolvedValueOnce(transferringFlow)
+      .mockResolvedValueOnce(transferringFlow)
+      .mockResolvedValueOnce(failedFlow)
+      .mockResolvedValueOnce(failedFlow)
+    mockGetTransactionsByHash.mockResolvedValue([paymentTxn({ pending: false })])
+
+    const result = await resumeMigrationFlow({ accountId })
+
+    expect(mockGetTransactionsByHash).not.toHaveBeenCalled()
+    expect(mockCompleteFlow).not.toHaveBeenCalled()
+    expect(result).toBe(failedFlow)
+  })
+
+  it("returns the re-read flow without a verdict when the wallet lock cannot be taken", async () => {
+    mocks.findFlowByAccountId.mockResolvedValue(transferringFlow)
+    mockGetTransactionsByHash.mockResolvedValue([paymentTxn({ pending: false })])
+    const lockError = new ResourceExpiredLockServiceError()
+    mockLockWalletId.mockResolvedValue(lockError)
+
+    const result = await resumeMigrationFlow({ accountId })
+
+    expect(mockGetTransactionsByHash).not.toHaveBeenCalled()
+    expect(mockCompleteFlow).not.toHaveBeenCalled()
+    expect(result).toBe(transferringFlow)
+    expect(mockRecordException).toHaveBeenCalledWith(
+      expect.objectContaining({ error: lockError }),
+    )
   })
 
   it("fails a stuck TRANSFERRING flow when the payment is persisted as voided", async () => {
@@ -198,6 +296,7 @@ describe("resumeMigrationFlow", () => {
       phase: MigrationFlowPhase.Failed,
     } as MigrationFlow
     mocks.findFlowByAccountId
+      .mockResolvedValueOnce(transferringFlow)
       .mockResolvedValueOnce(transferringFlow)
       .mockResolvedValueOnce(transferringFlow)
       .mockResolvedValueOnce(failedFlow)
@@ -215,6 +314,7 @@ describe("resumeMigrationFlow", () => {
 
     expect(mockFailFlow).toHaveBeenCalledTimes(1)
     expect(mockFailFlow).toHaveBeenCalledWith({ paymentHash })
+    expect(settledUnderLock).toBe(0)
     expect(mockCompleteFlow).not.toHaveBeenCalled()
     expect(result).toBe(failedFlow)
   })

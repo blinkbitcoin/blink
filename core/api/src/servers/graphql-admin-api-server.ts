@@ -15,7 +15,11 @@ import { queryPermissions } from "@/graphql/admin/queries"
 
 import { mutationPermissions } from "@/graphql/admin/mutations"
 
-import { GALOY_ADMIN_PORT } from "@/config"
+import {
+  ADMIN_API_FROZEN_MUTATIONS,
+  ADMIN_API_JWT_AUDIENCE,
+  GALOY_ADMIN_PORT,
+} from "@/config"
 
 import {
   SemanticAttributes,
@@ -89,10 +93,26 @@ export async function startApolloServerForAdminSchema() {
   )
 
   const schema = applyMiddleware(gqlAdminSchema, permissions)
+
+  if (!ADMIN_API_JWT_AUDIENCE) {
+    baseLogger.warn(
+      "ADMIN_API_JWT_AUDIENCE is empty: admin API JWT audience check is disabled. " +
+        "Intended only for rollout; set an audience once all token issuers mint it.",
+    )
+  }
+
+  if (ADMIN_API_FROZEN_MUTATIONS.length > 0) {
+    baseLogger.warn(
+      { frozenMutations: ADMIN_API_FROZEN_MUTATIONS },
+      "admin API mutations are frozen and will be rejected for every caller",
+    )
+  }
+
   return startApolloServer({
     schema,
     port: GALOY_ADMIN_PORT,
     type: "admin",
     setGqlContext: setGqlAdminContext,
+    audience: ADMIN_API_JWT_AUDIENCE,
   })
 }

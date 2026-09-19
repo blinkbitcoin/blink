@@ -78,6 +78,7 @@ export const DeepLinkScreen = {
   CardOnboardingPreapproved: "CardOnboardingPreapproved",
   CardOnboardingApproved: "CardOnboardingApproved",
   AccountMigration: "AccountMigration",
+  CardOnboardingInvestment: "CardOnboardingInvestment",
 } as const
 
 export const DeepLinkAction = {
