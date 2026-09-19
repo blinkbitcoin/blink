@@ -119,7 +119,7 @@ export function buildPermissionMappings<T extends AdminFieldDefinitions>(
   return permissionMap
 }
 
-// Rejects every caller, whatever scope the token carries
+// Rejects every caller, regardless of access rights
 const createFrozenRule = (fieldName: string) =>
   rule({ cache: "no_cache" })(async () => {
     addAttributesToCurrentSpan({ "admin.frozenMutation": fieldName })

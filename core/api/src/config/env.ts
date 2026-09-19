@@ -42,7 +42,7 @@ export const env = createEnv({
       .default("galoy-admin")
       .transform((value) => (value.trim() === "" ? undefined : value.trim())),
     // Frozen by default. Comma-separated admin mutation names that are rejected for
-    // every caller, whatever scope the token carries. An explicit empty value lifts
+    // every caller, regardless of access rights. An explicit empty value lifts
     // the freeze; add accountUpdateLevel to extend it (that one breaks kyc upgrades).
     ADMIN_API_FROZEN_MUTATIONS: z
       .string()
