@@ -1,6 +1,7 @@
 {
   "HELMREVISION": "dev",
   "NETWORK": "regtest",
+  "ADMIN_API_FROZEN_MUTATIONS": "",
   "OATHKEEPER_DECISION_ENDPOINT": "http://localhost:4456",
   "TWILIO_ACCOUNT_SID": "AC_twilio_id",
   "TWILIO_AUTH_TOKEN": "AC_twilio_auth_token",

@@ -3,6 +3,11 @@ import { Rule } from "graphql-shield/typings/rules"
 
 import { AdminFieldDefinitions, AdminGraphQLFieldConfig } from "./types"
 
+import { OperationRestrictedError } from "@/graphql/error"
+
+import { baseLogger } from "@/services/logger"
+import { addAttributesToCurrentSpan } from "@/services/tracing"
+
 /**
  * Admin Access Rules for GraphQL Shield
  *
@@ -112,4 +117,38 @@ export function buildPermissionMappings<T extends AdminFieldDefinitions>(
     permissionMap[fieldName] = rule
   }
   return permissionMap
+}
+
+// Rejects every caller, whatever scope the token carries
+const createFrozenRule = (fieldName: string) =>
+  rule({ cache: "no_cache" })(async () => {
+    addAttributesToCurrentSpan({ "admin.frozenMutation": fieldName })
+    return new OperationRestrictedError({
+      message: `${fieldName} is temporarily disabled`,
+      logger: baseLogger,
+    })
+  })
+
+/**
+ * Replaces the access rule of each frozen field with one that always rejects.
+ *
+ * A name that matches no field throws, so a typo in the configuration cannot
+ * leave a mutation open while it is believed to be frozen.
+ *
+ * @param permissions - Field name to access rule mapping from buildPermissionMappings
+ * @param frozenFieldNames - Field names to freeze
+ * @returns A new mapping with the frozen fields' rules replaced
+ */
+export function freezeFields(
+  permissions: Record<string, Rule>,
+  frozenFieldNames: string[],
+): Record<string, Rule> {
+  const result = { ...permissions }
+  for (const fieldName of frozenFieldNames) {
+    if (!(fieldName in permissions)) {
+      throw new Error(`Cannot freeze unknown admin field: ${fieldName}`)
+    }
+    result[fieldName] = createFrozenRule(fieldName)
+  }
+  return result
 }
