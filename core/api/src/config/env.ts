@@ -35,6 +35,7 @@ export const env = createEnv({
     OATHKEEPER_DECISION_ENDPOINT: z.string().url(),
     GALOY_API_PORT: z.number().or(z.string()).pipe(z.coerce.number()).default(4012),
     GALOY_ADMIN_PORT: z.number().or(z.string()).pipe(z.coerce.number()).default(4001),
+    ADMIN_API_JWT_AUDIENCE: z.string().min(1).default("galoy-admin"),
     NETWORK: z.enum(["mainnet", "testnet", "signet", "regtest"]),
 
     PRICE_SERVER_PORT: z.number().or(z.string()).pipe(z.coerce.number()).default(3325),
@@ -182,6 +183,7 @@ export const env = createEnv({
 
     GALOY_API_PORT: process.env.GALOY_API_PORT,
     GALOY_ADMIN_PORT: process.env.GALOY_ADMIN_PORT,
+    ADMIN_API_JWT_AUDIENCE: process.env.ADMIN_API_JWT_AUDIENCE,
 
     NETWORK: process.env.NETWORK,
 

@@ -12,6 +12,8 @@ import SecondaryButton from "../../components/button/secondary-button-component"
 import Heading from "../../components/heading"
 import { SubmitValue } from "../types/index.types"
 
+import { extraGrantScopes } from "./grant-scope"
+
 interface ConsentProps {
   consent_challenge: string
 }
@@ -60,6 +62,31 @@ const submitForm = async (form: FormData) => {
   )
 
   const body = responseInit.data
+
+  const extraScopes = extraGrantScopes(grantScope, body.requested_scope || [])
+  if (extraScopes.length > 0) {
+    console.error("consent grant_scope exceeds requested_scope", {
+      extraScopes,
+      subject: body.subject,
+      clientId: body.client?.client_id,
+    })
+    const responseReject = await hydraClient.rejectOAuth2ConsentRequest(
+      {
+        consentChallenge: consent_challenge,
+        rejectOAuth2Request: {
+          error: "invalid_scope",
+          error_description: "granted scopes exceed the scopes requested by the client",
+        },
+      },
+      {
+        headers: {
+          Cookie: cookies().toString(),
+        },
+      },
+    )
+    redirect(responseReject.data.redirect_to)
+  }
+
   const responseConfirm = await hydraClient.acceptOAuth2ConsentRequest(
     {
       consentChallenge: consent_challenge,
