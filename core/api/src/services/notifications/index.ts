@@ -732,14 +732,17 @@ export const NotificationsService = (): INotificationsService => {
   const sendInactivityFeeNotice = async ({
     userId,
     effectiveDate,
+    feeAmountCents,
   }: {
     userId: UserId
     effectiveDate: Date
+    feeAmountCents: UsdCents
   }): Promise<true | NotificationsServiceError> => {
     try {
       const notice = new InactivityFeeNotice()
       notice.setUserId(userId)
       notice.setEffectiveDate(effectiveDate.toISOString().slice(0, 10))
+      notice.setFeeAmountCents(Number(feeAmountCents))
 
       const event = new NotificationEvent()
       event.setInactivityFeeNotice(notice)
