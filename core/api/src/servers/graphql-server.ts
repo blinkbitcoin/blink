@@ -6,7 +6,7 @@ import { expressMiddleware } from "@apollo/server/express4"
 import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer"
 import cors from "cors"
 import express, { NextFunction, Request, Response } from "express"
-import { GetVerificationKey, expressjwt } from "express-jwt"
+import { GetVerificationKey } from "express-jwt"
 import { GraphQLError, GraphQLSchema, separateOperations } from "graphql"
 import {
   ComplexityEstimator,
@@ -14,13 +14,13 @@ import {
   getComplexity,
   simpleEstimator,
 } from "graphql-query-complexity"
-import jsonwebtoken from "jsonwebtoken"
 import jwksRsa from "jwks-rsa"
 import PinoHttp from "pino-http"
 
 import authRouter from "./authentication"
 import healthzHandler from "./middlewares/healthz"
 import { idempotencyMiddleware } from "./middlewares/idempotency"
+import { buildJwtMiddleware } from "./middlewares/jwt"
 
 import { getJwksArgs } from "@/config"
 import { DomainError, parseUnknownDomainErrorFromUnknown } from "@/domain/shared"
@@ -31,18 +31,18 @@ const graphqlLogger = baseLogger.child({
   module: "graphql",
 })
 
-const jwtAlgorithms: jsonwebtoken.Algorithm[] = ["RS256"]
-
 export const startApolloServer = async ({
   schema,
   port,
   type,
   setGqlContext,
+  audience,
 }: {
   schema: GraphQLSchema
   port: string | number
   type: string
   setGqlContext: (req: Request, res: Response, next: NextFunction) => Promise<void>
+  audience?: string
 }): Promise<Record<string, unknown>> => {
   const app = express()
   const httpServer = createServer(app)
@@ -142,16 +142,7 @@ export const startApolloServer = async ({
 
   const secret = jwksRsa.expressJwtSecret(getJwksArgs()) as GetVerificationKey // https://github.com/auth0/express-jwt/issues/288#issuecomment-1122524366
 
-  app.use(
-    "/graphql",
-    expressjwt({
-      secret,
-      algorithms: jwtAlgorithms,
-      credentialsRequired: true,
-      requestProperty: "token",
-      issuer: "galoy.io",
-    }),
-  )
+  app.use("/graphql", buildJwtMiddleware({ secret, audience }))
 
   app.use("/graphql", setGqlContext)
 

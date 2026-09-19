@@ -15,7 +15,7 @@ import { queryPermissions } from "@/graphql/admin/queries"
 
 import { mutationPermissions } from "@/graphql/admin/mutations"
 
-import { GALOY_ADMIN_PORT } from "@/config"
+import { ADMIN_API_JWT_AUDIENCE, GALOY_ADMIN_PORT } from "@/config"
 
 import {
   SemanticAttributes,
@@ -94,5 +94,6 @@ export async function startApolloServerForAdminSchema() {
     port: GALOY_ADMIN_PORT,
     type: "admin",
     setGqlContext: setGqlAdminContext,
+    audience: ADMIN_API_JWT_AUDIENCE,
   })
 }
