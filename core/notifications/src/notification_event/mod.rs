@@ -3,6 +3,8 @@ mod circle_threshold_reached;
 mod identity_verification_approved;
 mod identity_verification_declined;
 mod identity_verification_review_started;
+mod inactivity_fee_notice;
+mod inactivity_fee_welcome_back;
 mod link_email_reminder;
 mod marketing_notification_triggered;
 mod migration_retry_ready;
@@ -18,6 +20,8 @@ pub(super) use circle_threshold_reached::*;
 pub(super) use identity_verification_approved::*;
 pub(super) use identity_verification_declined::*;
 pub(super) use identity_verification_review_started::*;
+pub(super) use inactivity_fee_notice::*;
+pub(super) use inactivity_fee_welcome_back::*;
 pub(super) use link_email_reminder::*;
 pub(super) use marketing_notification_triggered::*;
 pub(super) use migration_retry_ready::*;
@@ -295,6 +299,8 @@ pub enum NotificationEventPayload {
     MarketingNotificationTriggered(MarketingNotificationTriggered),
     LinkEmailReminder(LinkEmailReminder),
     MigrationRetryReady(MigrationRetryReady),
+    InactivityFeeNotice(InactivityFeeNotice),
+    InactivityFeeWelcomeBack(InactivityFeeWelcomeBack),
 }
 
 impl AsRef<dyn NotificationEvent> for NotificationEventPayload {
@@ -310,6 +316,8 @@ impl AsRef<dyn NotificationEvent> for NotificationEventPayload {
             NotificationEventPayload::MarketingNotificationTriggered(event) => event,
             NotificationEventPayload::LinkEmailReminder(event) => event,
             NotificationEventPayload::MigrationRetryReady(event) => event,
+            NotificationEventPayload::InactivityFeeNotice(event) => event,
+            NotificationEventPayload::InactivityFeeWelcomeBack(event) => event,
         }
     }
 }
@@ -379,6 +387,18 @@ impl From<LinkEmailReminder> for NotificationEventPayload {
 impl From<MigrationRetryReady> for NotificationEventPayload {
     fn from(event: MigrationRetryReady) -> Self {
         NotificationEventPayload::MigrationRetryReady(event)
+    }
+}
+
+impl From<InactivityFeeNotice> for NotificationEventPayload {
+    fn from(event: InactivityFeeNotice) -> Self {
+        NotificationEventPayload::InactivityFeeNotice(event)
+    }
+}
+
+impl From<InactivityFeeWelcomeBack> for NotificationEventPayload {
+    fn from(event: InactivityFeeWelcomeBack) -> Self {
+        NotificationEventPayload::InactivityFeeWelcomeBack(event)
     }
 }
 
