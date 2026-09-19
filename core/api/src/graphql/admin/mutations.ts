@@ -12,7 +12,14 @@ import MigrationRetryGrantMutation from "./root/mutation/migration-retry-grant"
 
 import TriggerMarketingNotificationMutation from "./root/mutation/marketing-notification-trigger"
 
-import { accessRules, extractFields, buildPermissionMappings } from "./access-rules"
+import {
+  accessRules,
+  extractFields,
+  buildPermissionMappings,
+  freezeFields,
+} from "./access-rules"
+
+import { ADMIN_API_FROZEN_MUTATIONS } from "@/config"
 
 import { GT } from "@/graphql/index"
 
@@ -61,7 +68,10 @@ export const mutationFields = {
 
 const extractedMutationFields = extractFields(mutationFields.authed)
 
-export const mutationPermissions = buildPermissionMappings(mutationFields.authed)
+export const mutationPermissions = freezeFields(
+  buildPermissionMappings(mutationFields.authed),
+  ADMIN_API_FROZEN_MUTATIONS,
+)
 
 export const MutationType = GT.Object<null, GraphQLAdminContext>({
   name: "Mutation",

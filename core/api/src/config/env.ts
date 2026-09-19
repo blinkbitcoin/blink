@@ -41,6 +41,18 @@ export const env = createEnv({
       .string()
       .default("galoy-admin")
       .transform((value) => (value.trim() === "" ? undefined : value.trim())),
+    // Frozen by default. Comma-separated admin mutation names that are rejected for
+    // every caller, regardless of access rights. An explicit empty value lifts
+    // the freeze; add accountUpdateLevel to extend it (that one breaks kyc upgrades).
+    ADMIN_API_FROZEN_MUTATIONS: z
+      .string()
+      .default("userUpdateEmail,userUpdatePhone")
+      .transform((value) =>
+        value
+          .split(",")
+          .map((name) => name.trim())
+          .filter((name) => name !== ""),
+      ),
     NETWORK: z.enum(["mainnet", "testnet", "signet", "regtest"]),
 
     PRICE_SERVER_PORT: z.number().or(z.string()).pipe(z.coerce.number()).default(3325),
@@ -189,6 +201,7 @@ export const env = createEnv({
     GALOY_API_PORT: process.env.GALOY_API_PORT,
     GALOY_ADMIN_PORT: process.env.GALOY_ADMIN_PORT,
     ADMIN_API_JWT_AUDIENCE: process.env.ADMIN_API_JWT_AUDIENCE,
+    ADMIN_API_FROZEN_MUTATIONS: process.env.ADMIN_API_FROZEN_MUTATIONS,
 
     NETWORK: process.env.NETWORK,
 
