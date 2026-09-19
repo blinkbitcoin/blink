@@ -91,6 +91,9 @@ const DeepLinkScreen = GT.Enum({
     ACCOUNT_MIGRATION: {
       value: DomainDeepLinkScreen.AccountMigration,
     },
+    CARD_ONBOARDING_INVESTMENT: {
+      value: DomainDeepLinkScreen.CardOnboardingInvestment,
+    },
   },
 })
 
