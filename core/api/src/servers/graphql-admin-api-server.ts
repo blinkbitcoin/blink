@@ -89,6 +89,14 @@ export async function startApolloServerForAdminSchema() {
   )
 
   const schema = applyMiddleware(gqlAdminSchema, permissions)
+
+  if (!ADMIN_API_JWT_AUDIENCE) {
+    baseLogger.warn(
+      "ADMIN_API_JWT_AUDIENCE is empty: admin API JWT audience check is disabled. " +
+        "Intended only for rollout; set an audience once all token issuers mint it.",
+    )
+  }
+
   return startApolloServer({
     schema,
     port: GALOY_ADMIN_PORT,
