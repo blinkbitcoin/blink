@@ -278,6 +278,7 @@ describe("runNoticeJob", () => {
     expect(sendInactivityFeeNotice).toHaveBeenCalledWith({
       userId: alice.kratosUserId,
       effectiveDate: iso("2026-11-15T00:00:00Z"),
+      feeAmountCents: toCents(100),
     })
     expect(mocks.markBulletinIssued).toHaveBeenCalledWith({
       id: `inserted-${alice.id}`,
@@ -388,6 +389,7 @@ describe("runNoticeJob", () => {
     expect(sendInactivityFeeNotice).toHaveBeenCalledWith({
       userId: alice.kratosUserId,
       effectiveDate: iso("2026-11-15T00:00:00Z"),
+      feeAmountCents: toCents(100),
     })
     expect(mocks.markBulletinIssued).toHaveBeenCalledWith({
       id: failedLastMonth.id,
