@@ -64,8 +64,8 @@ describe("freezeFields", () => {
   })
 
   it("throws on a field name that does not exist", () => {
-    expect(() => freezeFields(basePermissions, ["userUpdateEmial"])).toThrow(
-      "Cannot freeze unknown admin field: userUpdateEmial",
+    expect(() => freezeFields(basePermissions, ["notAnAdminMutation"])).toThrow(
+      "Cannot freeze unknown admin field: notAnAdminMutation",
     )
   })
 
