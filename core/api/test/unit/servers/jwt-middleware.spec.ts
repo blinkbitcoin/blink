@@ -20,11 +20,15 @@ const startApp = async (audience?: string) => {
   const app = express()
   app.use(buildJwtMiddleware({ secret: publicKeyPem, audience }))
   app.get("/probe", (_req, res) => res.json({ ok: true }))
+  // Express only treats 4-arity functions as error handlers, so `_next` must stay
+  // in the signature even though it is unused.
   app.use(
     (
       err: { status?: number; code?: string },
       _req: express.Request,
       res: express.Response,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      _next: express.NextFunction,
     ) => res.status(err.status || 500).json({ error: err.code }),
   )
   const server = http.createServer(app)
@@ -38,7 +42,8 @@ const probe = async (baseUrl: string, token?: string) => {
   const headers: Record<string, string> = {}
   if (token) headers.Authorization = `Bearer ${token}`
   const res = await fetch(`${baseUrl}/probe`, { headers })
-  return res.status
+  const body = (await res.json()) as { ok?: boolean; error?: string }
+  return { status: res.status, body }
 }
 
 describe("buildJwtMiddleware", () => {
@@ -54,7 +59,7 @@ describe("buildJwtMiddleware", () => {
 
     it("accepts a user token without an aud claim", async () => {
       const token = signToken({ sub: "user-id" })
-      expect(await probe(baseUrl, token)).toBe(200)
+      expect(await probe(baseUrl, token)).toEqual({ status: 200, body: { ok: true } })
     })
   })
 
@@ -69,22 +74,47 @@ describe("buildJwtMiddleware", () => {
     afterAll(() => server.close())
 
     it("rejects a request without a token", async () => {
-      expect(await probe(baseUrl)).toBe(401)
+      expect(await probe(baseUrl)).toEqual({
+        status: 401,
+        body: { error: "credentials_required" },
+      })
     })
 
     it("rejects a user token without an aud claim", async () => {
       const token = signToken({ sub: "user-id" })
-      expect(await probe(baseUrl, token)).toBe(401)
+      expect(await probe(baseUrl, token)).toEqual({
+        status: 401,
+        body: { error: "invalid_token" },
+      })
     })
 
     it("rejects a token with a different audience", async () => {
       const token = signToken({ sub: "user-id", aud: "galoy-public" })
-      expect(await probe(baseUrl, token)).toBe(401)
+      expect(await probe(baseUrl, token)).toEqual({
+        status: 401,
+        body: { error: "invalid_token" },
+      })
+    })
+
+    it("rejects a token with a different issuer even with the admin audience", async () => {
+      const token = jsonwebtoken.sign(
+        { sub: "user-id", aud: "galoy-admin" },
+        privateKey,
+        {
+          algorithm: "RS256",
+          issuer: "not-galoy.io",
+          expiresIn: "1h",
+        },
+      )
+      expect(await probe(baseUrl, token)).toEqual({
+        status: 401,
+        body: { error: "invalid_token" },
+      })
     })
 
     it("accepts a token with the admin audience", async () => {
       const token = signToken({ sub: "admin@blink.sv", aud: "galoy-admin" })
-      expect(await probe(baseUrl, token)).toBe(200)
+      expect(await probe(baseUrl, token)).toEqual({ status: 200, body: { ok: true } })
     })
   })
 })
