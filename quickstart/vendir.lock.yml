@@ -2,24 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat: investment-flow deeplinks (#834)...'
-      sha: 2d12f34ad31d190d25d5f741f6219983059bb1fd
+      commitTitle: 'feat(core): allow disabling admin jwt audience check for rollout
+        (#855)...'
+      sha: 0b43f994c78d794b06869557cd5d05f45674ad49
       tags:
-      - 0.22.64-1-g2d12f34ad
+      - 0.22.64-4-g0b43f994c
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat: investment-flow deeplinks (#834)...'
-      sha: 2d12f34ad31d190d25d5f741f6219983059bb1fd
+      commitTitle: 'feat(core): allow disabling admin jwt audience check for rollout
+        (#855)...'
+      sha: 0b43f994c78d794b06869557cd5d05f45674ad49
       tags:
-      - 0.22.64-1-g2d12f34ad
+      - 0.22.64-4-g0b43f994c
     path: schemas
   - git:
-      commitTitle: 'feat: investment-flow deeplinks (#834)...'
-      sha: 2d12f34ad31d190d25d5f741f6219983059bb1fd
+      commitTitle: 'feat(core): allow disabling admin jwt audience check for rollout
+        (#855)...'
+      sha: 0b43f994c78d794b06869557cd5d05f45674ad49
       tags:
-      - 0.22.64-1-g2d12f34ad
+      - 0.22.64-4-g0b43f994c
     path: gql
   path: graphql
 kind: LockConfig
