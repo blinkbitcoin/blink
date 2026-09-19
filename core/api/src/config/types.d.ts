@@ -60,6 +60,14 @@ type WindDownConfig = {
   regions: WindDownRegionConfig[]
 }
 
+type InactivityFeeYamlConfig = {
+  activityRefreshIntervalSec: number
+}
+
+type InactivityFeeConfig = {
+  activityRefreshIntervalSec: Seconds
+}
+
 type RegionRestrictionsYamlConfig = {
   restrictedCountries: string[]
   custodialDollarBalanceBlockedCountries: string[]

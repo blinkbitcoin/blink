@@ -319,6 +319,10 @@ const windDownConfig: WindDownConfig = {
 
 export const getWindDownConfig = (): WindDownConfig => windDownConfig
 
+export const getInactivityFeeConfig = (config = yamlConfig): InactivityFeeConfig => ({
+  activityRefreshIntervalSec: toSeconds(config.inactivityFee.activityRefreshIntervalSec),
+})
+
 const alpha2Pattern = /^[A-Z]{2}$/
 
 const toRestrictedCountries = (key: string, countries: string[]): RestrictedCountry[] => {
