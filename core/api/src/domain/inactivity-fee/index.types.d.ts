@@ -51,6 +51,15 @@ type InactivityFeeRunKind =
 type InactivityFeeRunMode =
   (typeof import("./index").InactivityFeeRunMode)[keyof typeof import("./index").InactivityFeeRunMode]
 
+type InactivityFeeRefundReason =
+  (typeof import("./index").InactivityFeeRefundReason)[keyof typeof import("./index").InactivityFeeRefundReason]
+
+type InactivityFeeExternalIdKind =
+  (typeof import("./index").InactivityFeeExternalIdKind)[keyof typeof import("./index").InactivityFeeExternalIdKind]
+
+type InactivityFeeRefundRunKind =
+  (typeof import("./index").InactivityFeeRefundRunKind)[keyof typeof import("./index").InactivityFeeRefundRunKind]
+
 type InactivityFeeImportVerdict =
   (typeof import("./index").InactivityFeeImportVerdict)[keyof typeof import("./index").InactivityFeeImportVerdict]
 
@@ -191,4 +200,66 @@ type RunNoticeJobArgs = {
   // label only: the caller downgraded a live request to dry (on-demand, asOf not today)
   forcedDry?: boolean
   onOutcome?: (record: InactivityFeeNoticeOutcomeRecord) => Promise<void> | void
+}
+
+type InactivityFeeMonthKey = string & { readonly brand: unique symbol }
+
+type InactivityFeeExternalIdArgs = {
+  walletId: WalletId
+  // YYYY-MM, UTC: the month of the debit, for a refund too
+  month: string
+}
+
+type UnpairedInactivityFeeDebit = {
+  debit: LedgerTransaction<WalletCurrency>
+  walletId: WalletId
+  month: InactivityFeeMonthKey
+  refundExternalId: LedgerExternalId
+}
+
+type UnpairedInactivityFeeDebits = {
+  unpaired: UnpairedInactivityFeeDebit[]
+  // fee rows whose key cannot be read: cannot be paired, never refunded blindly
+  malformed: LedgerTransaction<WalletCurrency>[]
+}
+
+type InactivityFeeMemoArgs = {
+  currency: WalletCurrency
+  sats: number | bigint
+  cents: number | bigint
+  // USD per BTC
+  rate: number
+}
+
+type InactivityFeeRefundMemoArgs = {
+  currency: WalletCurrency
+  sats: number | bigint
+  cents: number | bigint
+}
+
+type RefundInactivityFeesArgs = {
+  accountId: AccountId
+  reason: InactivityFeeRefundReason
+  runId: string
+  // handed over by a caller that already holds the account lock
+  signal?: InactivityFeeAccountAbortSignal
+}
+
+type InactivityFeeRefundFailure = {
+  walletId: WalletId
+  // the refund key, when the failure is about one debit
+  externalId?: LedgerExternalId
+  error: Error
+}
+
+type InactivityFeeRefundResult = {
+  refundedSats: Satoshis
+  refundedCents: UsdCents
+  failures: InactivityFeeRefundFailure[]
+}
+
+type ReactivateAccountResult = {
+  refundedSats: Satoshis
+  refundedCents: UsdCents
+  noticeSuperseded: boolean
 }

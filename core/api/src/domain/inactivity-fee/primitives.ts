@@ -54,6 +54,23 @@ export const InactivityFeeRunKind = {
   Fee: "fee",
 } as const
 
+// stored on every refund row as `refundReason`
+export const InactivityFeeRefundReason = {
+  Activity: "activity",
+  Claims: "claims",
+} as const
+
+export const InactivityFeeExternalIdKind = {
+  Fee: "fee",
+  Refund: "refund",
+} as const
+
+// prefix of a refund caller's run id
+export const InactivityFeeRefundRunKind = {
+  Reactivation: "reactivation",
+  Claims: "claims",
+} as const
+
 export const InactivityFeeRunMode = {
   Live: "live",
   Dry: "dry",

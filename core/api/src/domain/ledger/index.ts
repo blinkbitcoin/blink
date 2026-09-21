@@ -57,10 +57,17 @@ export const AdminLedgerTransactionType = {
   Reconciliation: "reconciliation",
 } as const
 
+// kept out of the admin group: history rewrites admin amounts from the deprecated usd/fee fields
+export const InactivityFeeLedgerTransactionType = {
+  InactivityFee: "inactivity_fee",
+  InactivityFeeRefund: "inactivity_fee_refund",
+} as const
+
 export const LedgerTransactionType = {
   ...ExternalLedgerTransactionType,
   ...InternalLedgerTransactionType,
   ...AdminLedgerTransactionType,
+  ...InactivityFeeLedgerTransactionType,
 } as const
 
 export const isOnChainTransaction = (type: LedgerTransactionType): boolean =>

@@ -1,25 +1,44 @@
+import { alertFailedRefund } from "./alert-failed-refund"
 import { reactivateAccount } from "./reactivate-account"
 
 import { getInactivityFeeConfig } from "@/config"
 
-import { ActivityKind, isDormantAt } from "@/domain/inactivity-fee"
+import {
+  ActivityKind,
+  InactivityFeeNoticeNotFoundError,
+  isDormantAt,
+} from "@/domain/inactivity-fee"
+import { parseErrorFromUnknown } from "@/domain/shared"
 
-import { AccountsRepository } from "@/services/mongoose"
+import { AccountsRepository, InactivityFeeNoticesRepository } from "@/services/mongoose"
 import { addAttributesToCurrentSpan } from "@/services/tracing"
 
-// stays false until Epic 3 wires the lookup; asOf is the replaced timestamp, not the stored one
-const hasLiveNotice = async ({
+// status only, no timestamp test: a failed reactivation is retried by the next activity write
+const hasIssuedActiveNotice = async ({
   accountId,
-  asOf,
 }: {
   accountId: AccountId
-  asOf: Date
 }): Promise<boolean | ApplicationError> => {
-  addAttributesToCurrentSpan({
-    "inactivityFee.liveNotice.accountId": accountId,
-    "inactivityFee.liveNotice.asOf": asOf.toISOString(),
-  })
-  return false
+  const notice = await InactivityFeeNoticesRepository().findActiveByAccountId(accountId)
+  if (notice instanceof InactivityFeeNoticeNotFoundError) return false
+  if (notice instanceof Error) return notice
+  return notice.bulletinIssued
+}
+
+// reactivation never costs the caller its request: a failure ends here as a span error and an alert
+const reactivateContained = async ({
+  accountId,
+  previousActivityAt,
+}: {
+  accountId: AccountId
+  previousActivityAt: Date
+}): Promise<void> => {
+  try {
+    const reactivated = await reactivateAccount({ accountId, previousActivityAt })
+    if (reactivated instanceof Error) alertFailedRefund({ accountId, error: reactivated })
+  } catch (err) {
+    alertFailedRefund({ accountId, error: parseErrorFromUnknown(err) })
+  }
 }
 
 // the only writer of the account's last-activity timestamp; login always writes, session
@@ -77,18 +96,16 @@ export const recordActivity = async ({
   if (previousActivityAt === undefined) return { written: true, previousActivityAt }
 
   const dormant = isDormantAt({ lastActivityAt: previousActivityAt, asOf: now })
-  const shouldReactivate =
-    dormant || (await hasLiveNotice({ accountId, asOf: previousActivityAt }))
-  if (shouldReactivate instanceof Error) return shouldReactivate
+  const noticed = dormant || (await hasIssuedActiveNotice({ accountId }))
+  // a failed lookup is retried by the next activity write, like a failed refund
+  if (noticed instanceof Error) alertFailedRefund({ accountId, error: noticed })
+  const shouldReactivate = noticed === true
   addAttributesToCurrentSpan({
     "inactivityFee.dormant": dormant,
     "inactivityFee.reactivate": shouldReactivate,
   })
 
-  if (shouldReactivate) {
-    const reactivated = await reactivateAccount({ accountId, previousActivityAt })
-    if (reactivated instanceof Error) return reactivated
-  }
+  if (shouldReactivate) await reactivateContained({ accountId, previousActivityAt })
 
   return { written: true, previousActivityAt }
 }
