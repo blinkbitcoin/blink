@@ -281,6 +281,8 @@ const AccountSchema = new Schema<AccountRecord>(
     },
 
     displayCurrency: String, // FIXME: should be an enum
+
+    last_activity_at: Date,
   },
   { id: false },
 )
@@ -289,6 +291,8 @@ AccountSchema.index({
   title: 1,
   coordinates: 1,
 })
+
+AccountSchema.index({ last_activity_at: 1 })
 
 export const Account = mongoose.model<AccountRecord>("Account", AccountSchema)
 
