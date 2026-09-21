@@ -17,3 +17,11 @@ circle_threshold_reached.outer.body: "Dein äußerer Kreis ist auf %{threshold} 
 
 migration_retry_ready.title: "Deine Migration kann erneut versucht werden"
 migration_retry_ready.body: "Wir haben deine Migration zurückgesetzt, damit du es erneut versuchen kannst. Tippe, um deine Gelder weiter zu übertragen."
+
+inactivity_fee_notice.push.title: "Hinweis zur Inaktivitätsgebühr"
+inactivity_fee_notice.push.body: "Dein Blink-Konto war 12 Monate lang inaktiv. Ab dem %{date} gilt eine Gebühr von %{amount} pro Guthaben und Monat. Öffne Blink einmal, um aktiv zu bleiben – jede erhobene Gebühr wird vollständig erstattet."
+inactivity_fee_notice.bulletin.title: "Hinweis zur Inaktivitätsgebühr"
+inactivity_fee_notice.bulletin.body: "Inaktivitätsgebühr: Ab dem %{date} gilt für dieses Konto eine Gebühr von %{amount} pro Guthaben und Monat. Nutze es einmal, um aktiv zu bleiben – jede erhobene Gebühr wird vollständig erstattet."
+
+inactivity_fee_welcome_back.title: "Willkommen zurück"
+inactivity_fee_welcome_back.body: "Willkommen zurück. Dein Konto ist wieder aktiv und die Inaktivitätsgebühr von %{amount} wurde deinem Guthaben zurückerstattet."

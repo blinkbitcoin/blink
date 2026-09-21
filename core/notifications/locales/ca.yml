@@ -66,3 +66,11 @@ security.link_email_reminder.body: "Enllaça el teu correu electrònic per prote
 
 migration_retry_ready.title: "La teva migració està llesta per tornar-ho a provar"
 migration_retry_ready.body: "Hem restablert la teva migració perquè ho puguis tornar a intentar. Toca per continuar movent els teus fons."
+
+inactivity_fee_notice.push.title: "Avís de comissió per inactivitat"
+inactivity_fee_notice.push.body: "El teu compte de Blink no ha tingut activitat durant 12 mesos. A partir del %{date}, s'aplica una comissió de %{amount} per saldo al mes. Obre Blink un cop per mantenir-lo actiu: qualsevol comissió cobrada es reemborsa íntegrament."
+inactivity_fee_notice.bulletin.title: "Avís de comissió per inactivitat"
+inactivity_fee_notice.bulletin.body: "Comissió per inactivitat: a partir del %{date}, s'aplica %{amount} per saldo al mes a aquest compte. Fes-lo servir un cop per mantenir-lo actiu: qualsevol comissió cobrada es reemborsa íntegrament."
+
+inactivity_fee_welcome_back.title: "Et donem la benvinguda de nou"
+inactivity_fee_welcome_back.body: "Et donem la benvinguda de nou. El teu compte torna a estar actiu i la comissió per inactivitat de %{amount} s'ha reemborsat al teu saldo."

@@ -69,3 +69,11 @@ security.link_email_reminder.body: "Link your email to secure your account and r
 
 migration_retry_ready.title: "Your migration is ready to retry"
 migration_retry_ready.body: "We've reset your migration so you can try again. Tap to continue moving your funds."
+
+inactivity_fee_notice.push.title: "Inactivity fee notice"
+inactivity_fee_notice.push.body: "Your Blink account has had no activity for 12 months. From %{date}, %{amount} per balance per month applies. Open Blink once to stay active — any fee charged is refunded in full."
+inactivity_fee_notice.bulletin.title: "Inactivity fee notice"
+inactivity_fee_notice.bulletin.body: "Inactivity fee: from %{date}, %{amount} per balance per month applies to this account. Use it once to stay active — any fee charged is refunded in full."
+
+inactivity_fee_welcome_back.title: "Welcome back"
+inactivity_fee_welcome_back.body: "Welcome back. Your account is active again and the inactivity fee of %{amount} has been refunded to your balance."
