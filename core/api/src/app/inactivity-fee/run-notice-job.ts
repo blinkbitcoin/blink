@@ -7,11 +7,13 @@ import {
   dormancyCutoffAt,
   evaluateAccountEligibility,
   evaluateAccountStaticChecks,
+  formatIsoDate,
   InactivityFeeNoticeNotFoundError,
   InactivityFeeNoticeOutcome,
   InactivityFeeNoticeSentButUnflaggedError,
   InactivityFeeNoticeSource,
   InactivityFeeRunAbortedError,
+  InactivityFeeRunInProgressError,
   InactivityFeeRunKind,
   InactivityFeeRunMode,
   InactivityFeeSupersededReason,
@@ -19,9 +21,11 @@ import {
   isNoticeLive,
   skipListHash,
 } from "@/domain/inactivity-fee"
+import { ResourceAttemptsRedlockServiceError } from "@/domain/lock"
 import { NotificationsError } from "@/domain/notifications"
 import { ErrorLevel, parseErrorFromUnknown } from "@/domain/shared"
 
+import { LockService } from "@/services/lock"
 import {
   AccountsRepository,
   InactivityFeeNoticesRepository,
@@ -39,7 +43,31 @@ import {
 // onOutcome sink (the CSV writer) is part of the scan, so its failure aborts too. Config is
 // read once here and threaded through. Dry-run evaluates and reports, writes no notice row
 // and sends nothing; the run summary is written either way.
-export const runNoticeJob = async ({
+export const runNoticeJob = async (
+  args: RunNoticeJobArgs,
+): Promise<InactivityFeeRun | ApplicationError> => {
+  // a dry run writes and sends nothing, so it is never locked
+  if (args.dryRun) return runNoticeJobUnlocked(args)
+
+  // refused while another live run for the day is in progress; result kept aside for a late release
+  const finished: { run?: InactivityFeeRun | ApplicationError } = {}
+  const locked = await LockService().lockInactivityFeeRun(
+    { kind: InactivityFeeRunKind.Notice, asOf: args.asOf },
+    async () => {
+      finished.run = await runNoticeJobUnlocked(args)
+      return finished.run
+    },
+  )
+  if (finished.run !== undefined) return finished.run
+  if (locked instanceof ResourceAttemptsRedlockServiceError) {
+    return new InactivityFeeRunInProgressError(
+      `a live notice run for ${formatIsoDate({ date: args.asOf })} is already in progress`,
+    )
+  }
+  return locked
+}
+
+const runNoticeJobUnlocked = async ({
   asOf,
   dryRun,
   runId,

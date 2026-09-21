@@ -85,11 +85,23 @@ const getBtcMapPlaceSubmissionLockResource = ({
   submissionId: BtcMapSubmissionId
 }) => `locks:btcmapplacesubmission:${accountId}:${submissionId}`
 
-// unlock after asyncFn is done
+const getInactivityFeeAccountLockResource = (path: AccountId) =>
+  `locks:inactivityfee:account:${path}`
+// one per run kind and UTC day
+const getInactivityFeeRunLockResource = ({
+  kind,
+  asOf,
+}: {
+  kind: InactivityFeeRunKind
+  asOf: Date
+}) => `locks:inactivityfee:run:${kind}:${asOf.toISOString().slice(0, 10)}`
+
+// unlock after asyncFn is done; settings override the client's retry policy for this call only
 export const redlock = async <Signal extends RedlockAbortSignal, Ret>({
   path,
   signal,
   asyncFn,
+  settings,
 }: RedlockArgs<Signal, Ret>): Promise<Ret | LockServiceError> => {
   if (signal) {
     if (signal.aborted) {
@@ -99,9 +111,10 @@ export const redlock = async <Signal extends RedlockAbortSignal, Ret>({
   }
 
   try {
-    return await redlockClient.using([path], ttl(), async (signal) =>
-      asyncFn(signal as Signal),
-    )
+    const routine = async (signal: RedlockAbortSignal) => asyncFn(signal as Signal)
+    return settings === undefined
+      ? await redlockClient.using([path], ttl(), routine)
+      : await redlockClient.using([path], ttl(), settings, routine)
   } catch (error) {
     if (error instanceof ExecutionError) {
       return new ResourceAttemptsRedlockServiceError()
@@ -189,6 +202,27 @@ export const LockService = (): ILockService => {
     return redlock({ path, asyncFn })
   }
 
+  // shared by the reactivation handler and the fee job: a debit never lands after a refund run
+  const lockInactivityFeeAccount = async <Res>(
+    accountId: AccountId,
+    asyncFn: (signal: InactivityFeeAccountAbortSignal) => Promise<Res>,
+    settings?: LockRetrySettings,
+  ): Promise<Res | LockServiceError> => {
+    const path = getInactivityFeeAccountLockResource(accountId)
+
+    return redlock({ path, asyncFn, settings })
+  }
+
+  // one attempt: a second live run for the same kind and day is refused, not queued
+  const lockInactivityFeeRun = async <Res>(
+    { kind, asOf }: { kind: InactivityFeeRunKind; asOf: Date },
+    asyncFn: (signal: InactivityFeeRunAbortSignal) => Promise<Res>,
+  ): Promise<Res | LockServiceError> => {
+    const path = getInactivityFeeRunLockResource({ kind, asOf })
+
+    return redlock({ path, asyncFn, settings: { retryCount: 0 } })
+  }
+
   return wrapAsyncFunctionsToRunInSpan({
     namespace: "services.lock",
     fns: {
@@ -198,6 +232,8 @@ export const LockService = (): ILockService => {
       lockOnChainTxHashAndVout,
       lockIdempotencyKey,
       lockBtcMapPlaceSubmission,
+      lockInactivityFeeAccount,
+      lockInactivityFeeRun,
     },
   })
 }

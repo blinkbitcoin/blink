@@ -29,6 +29,12 @@ interface ILedgerTransaction {
   request_id?: string
   payout_id?: string
   memoPayer?: string
+  rate?: number
+  rateSource?: string
+  configVersion?: string
+  noticeId?: string
+  refundReason?: string
+  runId?: string
   sats?: number
   username?: string
   pubkey?: string

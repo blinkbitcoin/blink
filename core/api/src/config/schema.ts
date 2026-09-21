@@ -1320,6 +1320,20 @@ export const configSchema = {
           format: "date-time",
           default: "2026-10-31T22:59:59Z",
         },
+        // how long a returning user's request waits for the account lock before giving up
+        reactivationLockWaitMs: {
+          type: "integer",
+          minimum: 0,
+          maximum: 10000,
+          default: 1500,
+        },
+        // total time a request waits for the reactivation refund; the refund itself is not cancelled
+        reactivationBudgetMs: {
+          type: "integer",
+          minimum: 100,
+          maximum: 30000,
+          default: 5000,
+        },
       },
       required: [
         "activityRefreshIntervalSec",
@@ -1330,6 +1344,8 @@ export const configSchema = {
         "skipAccountIds",
         "notPermittedCountries",
         "level0Deadline",
+        "reactivationLockWaitMs",
+        "reactivationBudgetMs",
       ],
       additionalProperties: false,
       default: {
@@ -1341,6 +1357,8 @@ export const configSchema = {
         skipAccountIds: [],
         notPermittedCountries: [],
         level0Deadline: "2026-10-31T22:59:59Z",
+        reactivationLockWaitMs: 1500,
+        reactivationBudgetMs: 5000,
       },
     },
     regionRestrictions: {

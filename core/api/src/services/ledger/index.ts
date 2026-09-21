@@ -162,6 +162,27 @@ export const LedgerService = (): ILedgerService => {
     }
   }
 
+  const listInactivityFeeTransactionsByWalletId = async (
+    walletId: WalletId,
+  ): Promise<LedgerTransaction<WalletCurrency>[] | LedgerServiceError> => {
+    try {
+      const entries = await Transaction.find({
+        accounts: toLiabilitiesWalletId(walletId),
+        type: {
+          $in: [
+            LedgerTransactionType.InactivityFee,
+            LedgerTransactionType.InactivityFeeRefund,
+          ],
+        },
+        // a voided fee was already reversed by its void
+        voided: { $ne: true },
+      })
+      return entries.map((tx) => translateToLedgerTx(tx))
+    } catch (err) {
+      return new UnknownLedgerError(err)
+    }
+  }
+
   const getTransactionsByHash = async (
     hash: PaymentHash | OnChainTxHash,
   ): Promise<LedgerTransaction<WalletCurrency>[] | LedgerServiceError> => {
@@ -574,6 +595,7 @@ export const LedgerService = (): ILedgerService => {
       getTransactionForWalletById,
       getTransactionForWalletByJournalId,
       getTransactionForWalletByExternalId,
+      listInactivityFeeTransactionsByWalletId,
       getTransactionsByHash,
       getTransactionsForWalletByPaymentHash,
       getTransactionsByWalletId,

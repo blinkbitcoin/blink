@@ -1,6 +1,7 @@
 import { Transaction } from "../books"
 
 import {
+  InactivityFeeLedgerTransactionType,
   LedgerTransactionType,
   UnknownLedgerError,
   toLiabilitiesWalletId,
@@ -11,6 +12,10 @@ import { addAttributesToCurrentSpan } from "@/services/tracing"
 import { MS_PER_DAY } from "@/config"
 
 const calc = AmountCalculator()
+
+const inactivityFeeTxnTypes: LedgerTransactionType[] = Object.values(
+  InactivityFeeLedgerTransactionType,
+)
 
 export const TxnGroups = {
   allPaymentVolumeSince: [
@@ -45,7 +50,10 @@ export const TxnGroups = {
     LedgerTransactionType.OnchainPayment,
     LedgerTransactionType.OnchainReceipt,
   ],
-  allTxBaseVolumeSince: Object.values(LedgerTransactionType),
+  // system fee entries are not user volume: a refund credit must never read as a deposit
+  allTxBaseVolumeSince: Object.values(LedgerTransactionType).filter(
+    (type) => !inactivityFeeTxnTypes.includes(type),
+  ),
 } as const
 
 export const TxVolumeAmountSinceFactory = () => {

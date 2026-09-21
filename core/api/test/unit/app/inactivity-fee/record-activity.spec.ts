@@ -5,14 +5,21 @@ jest.mock("@/config", () => ({
 jest.mock("@/services/mongoose", () => ({
   __mocks: {
     recordActivity: jest.fn(),
+    findActiveByAccountId: jest.fn(),
   },
   AccountsRepository: () => ({
     recordActivity: jest.requireMock("@/services/mongoose").__mocks.recordActivity,
+  }),
+  InactivityFeeNoticesRepository: () => ({
+    findActiveByAccountId:
+      jest.requireMock("@/services/mongoose").__mocks.findActiveByAccountId,
   }),
 }))
 
 jest.mock("@/services/tracing", () => ({
   addAttributesToCurrentSpan: jest.fn(),
+  addEventToCurrentSpan: jest.fn(),
+  recordExceptionInCurrentSpan: jest.fn(),
 }))
 
 jest.mock("@/app/inactivity-fee/reactivate-account", () => ({
@@ -25,10 +32,24 @@ import path from "path"
 import { recordActivity } from "@/app/inactivity-fee/record-activity"
 import { reactivateAccount } from "@/app/inactivity-fee/reactivate-account"
 import { getInactivityFeeConfig } from "@/config"
-import { UnknownRepositoryError } from "@/domain/errors"
+import {
+  CouldNotListWalletsFromAccountIdError,
+  UnknownRepositoryError,
+} from "@/domain/errors"
 import { toCents } from "@/domain/fiat"
-import { ActivityKind } from "@/domain/inactivity-fee"
+import { toSats } from "@/domain/bitcoin"
+import {
+  ActivityKind,
+  InactivityFeeNoticeNotFoundError,
+  InactivityFeeNoticeSource,
+  InactivityFeeNoticeStatus,
+  InactivityFeeReactivationTimeoutError,
+  InactivityFeeRefundFailedError,
+  InactivityFeeTemplateVersion,
+} from "@/domain/inactivity-fee"
 import { toSeconds } from "@/domain/primitives"
+import { ErrorLevel } from "@/domain/shared"
+import { addEventToCurrentSpan, recordExceptionInCurrentSpan } from "@/services/tracing"
 
 const mockGetInactivityFeeConfig = getInactivityFeeConfig as jest.MockedFunction<
   typeof getInactivityFeeConfig
@@ -36,8 +57,19 @@ const mockGetInactivityFeeConfig = getInactivityFeeConfig as jest.MockedFunction
 const mockReactivateAccount = reactivateAccount as jest.MockedFunction<
   typeof reactivateAccount
 >
-const { recordActivity: mockRepoRecordActivity } = jest.requireMock("@/services/mongoose")
-  .__mocks as { recordActivity: jest.Mock }
+const {
+  recordActivity: mockRepoRecordActivity,
+  findActiveByAccountId: mockFindActiveNotice,
+} = jest.requireMock("@/services/mongoose").__mocks as {
+  recordActivity: jest.Mock
+  findActiveByAccountId: jest.Mock
+}
+const mockAddEvent = addEventToCurrentSpan as jest.MockedFunction<
+  typeof addEventToCurrentSpan
+>
+const mockRecordException = recordExceptionInCurrentSpan as jest.MockedFunction<
+  typeof recordExceptionInCurrentSpan
+>
 
 const accountId = "1c2b5a6e-1a2b-4c3d-8e9f-0a1b2c3d4e5f" as AccountId
 const now = new Date("2026-09-15T12:00:00.000Z")
@@ -56,8 +88,17 @@ describe("recordActivity", () => {
       skipAccountIds: [],
       notPermittedCountries: [],
       level0Deadline: new Date("2026-10-31T22:59:59Z"),
+      reactivationLockWaitMs: 1500,
+      reactivationBudgetMs: 5000,
     })
-    mockReactivateAccount.mockResolvedValue(true)
+    mockReactivateAccount.mockResolvedValue({
+      refundedSats: toSats(0),
+      refundedCents: toCents(0),
+      noticeSuperseded: false,
+    })
+    mockFindActiveNotice.mockResolvedValue(
+      new InactivityFeeNoticeNotFoundError(accountId),
+    )
   })
 
   afterEach(() => {
@@ -239,15 +280,163 @@ describe("recordActivity", () => {
       expect(mockReactivateAccount).not.toHaveBeenCalled()
     })
 
-    it("returns the hook's error", async () => {
-      const previousActivityAt = new Date("2025-01-01T00:00:00.000Z")
+    const activeNotice = (
+      overrides: Partial<InactivityFeeNotice> = {},
+    ): InactivityFeeNotice => ({
+      id: "notice" as InactivityFeeNoticeId,
+      accountId,
+      issuedAt: new Date("2026-08-01T02:00:00Z"),
+      templateVersion: InactivityFeeTemplateVersion.NoticeV1,
+      bulletinIssued: true,
+      pushSent: false,
+      status: InactivityFeeNoticeStatus.Active,
+      source: InactivityFeeNoticeSource.NoticeJob,
+      createdAt: new Date("2026-08-01T02:00:00Z"),
+      updatedAt: new Date("2026-08-01T02:00:00Z"),
+      ...overrides,
+    })
+
+    it("does not look the notice up when the previous value is already dormant", async () => {
+      mockRepoRecordActivity.mockResolvedValue({
+        written: true,
+        previousActivityAt: new Date("2025-08-15T12:00:00.000Z"),
+      })
+
+      await recordActivity({ accountId, kind: ActivityKind.Login })
+
+      expect(mockFindActiveNotice).not.toHaveBeenCalled()
+    })
+
+    it("retries on a fresh clock while an issued notice row is still active", async () => {
+      // the earlier run failed: the clock moved yesterday, the row was never superseded
+      const previousActivityAt = new Date("2026-09-14T12:00:00.000Z")
       mockRepoRecordActivity.mockResolvedValue({ written: true, previousActivityAt })
-      const hookError = new UnknownRepositoryError("hook failed")
+      mockFindActiveNotice.mockResolvedValue(activeNotice())
+
+      const result = await recordActivity({ accountId, kind: ActivityKind.Session })
+
+      expect(mockFindActiveNotice).toHaveBeenCalledWith(accountId)
+      expect(mockReactivateAccount).toHaveBeenCalledWith({
+        accountId,
+        previousActivityAt,
+      })
+      expect(result).toEqual({ written: true, previousActivityAt })
+    })
+
+    it("tests the row's status only: a notice older than the previous activity still triggers", async () => {
+      mockRepoRecordActivity.mockResolvedValue({
+        written: true,
+        previousActivityAt: new Date("2026-09-14T12:00:00.000Z"),
+      })
+      mockFindActiveNotice.mockResolvedValue(
+        activeNotice({ issuedAt: new Date("2026-01-01T02:00:00Z") }),
+      )
+
+      await recordActivity({ accountId, kind: ActivityKind.Login })
+
+      expect(mockReactivateAccount).toHaveBeenCalledTimes(1)
+    })
+
+    it("ignores an active row whose bulletin never went out", async () => {
+      mockRepoRecordActivity.mockResolvedValue({
+        written: true,
+        previousActivityAt: new Date("2026-09-14T12:00:00.000Z"),
+      })
+      mockFindActiveNotice.mockResolvedValue(activeNotice({ bulletinIssued: false }))
+
+      await recordActivity({ accountId, kind: ActivityKind.Login })
+
+      expect(mockReactivateAccount).not.toHaveBeenCalled()
+    })
+
+    it("contains a failed notice lookup: alert, no hook, request result intact", async () => {
+      const previousActivityAt = new Date("2026-09-14T12:00:00.000Z")
+      mockRepoRecordActivity.mockResolvedValue({ written: true, previousActivityAt })
+      mockFindActiveNotice.mockResolvedValue(new UnknownRepositoryError("mongo down"))
+
+      const result = await recordActivity({ accountId, kind: ActivityKind.Login })
+
+      expect(result).toEqual({ written: true, previousActivityAt })
+      expect(mockReactivateAccount).not.toHaveBeenCalled()
+      expect(mockAddEvent).toHaveBeenCalledWith(
+        "inactivityfee.alert.failed_refund",
+        expect.objectContaining({ "inactivityfee.alert.accountId": accountId }),
+      )
+    })
+  })
+
+  describe("handler containment", () => {
+    const previousActivityAt = new Date("2025-01-01T00:00:00.000Z")
+
+    beforeEach(() => {
+      mockRepoRecordActivity.mockResolvedValue({ written: true, previousActivityAt })
+    })
+
+    it("swallows a failed refund: Critical span error, alert event, request result intact", async () => {
+      const hookError = new InactivityFeeRefundFailedError("ledger down")
       mockReactivateAccount.mockResolvedValue(hookError)
 
       const result = await recordActivity({ accountId, kind: ActivityKind.Login })
 
-      expect(result).toBe(hookError)
+      expect(result).toEqual({ written: true, previousActivityAt })
+      expect(mockRecordException).toHaveBeenCalledWith({
+        error: hookError,
+        level: ErrorLevel.Critical,
+      })
+      expect(mockAddEvent).toHaveBeenCalledWith("inactivityfee.alert.failed_refund", {
+        "inactivityfee.alert.accountId": accountId,
+        "inactivityfee.alert.error": "InactivityFeeRefundFailedError",
+        "inactivityfee.alert.message": "ledger down",
+      })
+    })
+
+    it("swallows a lock or budget timeout at level Warn", async () => {
+      const hookError = new InactivityFeeReactivationTimeoutError("lock not acquired")
+      mockReactivateAccount.mockResolvedValue(hookError)
+
+      const result = await recordActivity({ accountId, kind: ActivityKind.Session })
+
+      expect(result).toEqual({ written: true, previousActivityAt })
+      expect(mockRecordException).toHaveBeenCalledWith({
+        error: hookError,
+        level: ErrorLevel.Warn,
+      })
+      expect(mockAddEvent).toHaveBeenCalledTimes(1)
+    })
+
+    it("records a level-less repository error as Critical, not at its default Info", async () => {
+      const hookError = new CouldNotListWalletsFromAccountIdError(accountId)
+      expect(hookError.level).toBe(ErrorLevel.Info)
+      mockReactivateAccount.mockResolvedValue(hookError)
+
+      const result = await recordActivity({ accountId, kind: ActivityKind.Login })
+
+      expect(result).toEqual({ written: true, previousActivityAt })
+      expect(mockRecordException).toHaveBeenCalledWith({
+        error: hookError,
+        level: ErrorLevel.Critical,
+      })
+      expect(mockAddEvent).toHaveBeenCalledTimes(1)
+    })
+
+    it("swallows a throwing handler as Critical", async () => {
+      mockReactivateAccount.mockRejectedValue(new Error("boom"))
+
+      const result = await recordActivity({ accountId, kind: ActivityKind.Login })
+
+      expect(result).toEqual({ written: true, previousActivityAt })
+      expect(mockRecordException).toHaveBeenCalledWith({
+        error: expect.objectContaining({ message: "boom" }),
+        level: ErrorLevel.Critical,
+      })
+      expect(mockAddEvent).toHaveBeenCalledTimes(1)
+    })
+
+    it("raises no alert when the handler succeeds", async () => {
+      await recordActivity({ accountId, kind: ActivityKind.Login })
+
+      expect(mockAddEvent).not.toHaveBeenCalled()
+      expect(mockRecordException).not.toHaveBeenCalled()
     })
   })
 
