@@ -278,6 +278,8 @@ interface ILedgerService {
   getTransactionForWalletByExternalId(args: {
     walletId: WalletId
     externalId: LedgerExternalId
+    // treat a voided row as absent: its idempotency key was freed by the void
+    excludeVoided?: boolean
   }): Promise<LedgerTransaction<WalletCurrency> | undefined | LedgerServiceError>
 
   listInactivityFeeTransactionsByWalletId(

@@ -853,6 +853,14 @@ const inactivityFeeRunSchema = new Schema<InactivityFeeRunRecord>(
     countsByOutcome: { type: Schema.Types.Mixed, required: true },
     countsBySkipReason: { type: Schema.Types.Mixed, required: true },
     error: String,
+    // fee runs only
+    rate: Number,
+    rateSource: String,
+    debitedCount: Number,
+    debitedSats: Number,
+    debitedCents: Number,
+    firstExternalIdSeen: String,
+    lastExternalIdSeen: String,
     createdAt: {
       type: Date,
       default: Date.now,

@@ -5,10 +5,12 @@ jest.mock("fs", () => ({
   appendFileSync: jest.fn(),
 }))
 jest.mock("@/app", () => ({
-  __mocks: { runNoticeJob: jest.fn() },
+  __mocks: { runNoticeJob: jest.fn(), runFeeJob: jest.fn() },
   InactivityFee: {
     runNoticeJob: (...args: unknown[]) =>
       jest.requireMock("@/app").__mocks.runNoticeJob(...args),
+    runFeeJob: (...args: unknown[]) =>
+      jest.requireMock("@/app").__mocks.runFeeJob(...args),
   },
 }))
 jest.mock("@/config", () => ({
@@ -25,8 +27,11 @@ import { toCents } from "@/domain/fiat"
 import { formatIsoDate } from "@/domain/inactivity-fee"
 import { toSeconds } from "@/domain/primitives"
 
-const { runNoticeJob: mockRunNoticeJob } = jest.requireMock("@/app").__mocks as {
+const { runNoticeJob: mockRunNoticeJob, runFeeJob: mockRunFeeJob } = jest.requireMock(
+  "@/app",
+).__mocks as {
   runNoticeJob: jest.Mock
+  runFeeJob: jest.Mock
 }
 const mockExistsSync = existsSync as jest.Mock
 const mockWriteFileSync = writeFileSync as jest.Mock
@@ -104,12 +109,54 @@ describe("inactivity-fee-run-job CLI", () => {
         parse(["/var/yaml/custom.yaml", "notice", "--as-of", today]).configPath,
       ).toBe("/var/yaml/custom.yaml")
     })
+  })
 
-    it("ignores the -- separator that pnpm run and the buck2 task wrapper forward", () => {
-      const args = parse(["--", "notice", "--as-of", today, "--live"])
-      expect(args.configPath).toBeUndefined()
-      expect(args.live).toBe(true)
-      expect(args.asOfDate).toBe(today)
+  // The separator is stripped once, by the module the runner imports before the config loader
+  // runs; parseCliArgs is handed the result and never sees it.
+  describe("strip-argv-separator", () => {
+    const loadCliArgv = (argv: string[]): string[] => {
+      const saved = process.argv
+      process.argv = argv
+      let cliArgv: string[] = []
+      jest.isolateModules(() => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        cliArgv = require("@/debug/strip-argv-separator").cliArgv
+      })
+      process.argv = saved
+      return cliArgv
+    }
+
+    it("drops the separator buck2 forwards, leaving the config path first", () => {
+      // buck2 run //core/api:dev-inactivity-fee-job -- /var/yaml/custom.yaml fee --as-of X
+      expect(
+        loadCliArgv([
+          "/usr/bin/node",
+          "/work/src/debug/inactivity-fee-run-job.ts",
+          "--",
+          MOUNT,
+          "fee",
+          "--as-of",
+          today,
+          "--live",
+        ]),
+      ).toEqual([MOUNT, "fee", "--as-of", today, "--live"])
+    })
+
+    it("leaves an invocation without a separator alone", () => {
+      expect(
+        loadCliArgv(["/usr/bin/node", "/work/run-job.ts", "notice", "--as-of", today]),
+      ).toEqual(["notice", "--as-of", today])
+    })
+
+    it("also clears process.argv[2], which the config loader reads as its yaml path", () => {
+      const saved = process.argv
+      process.argv = ["/usr/bin/node", "/work/run-job.ts", "--", MOUNT, "fee"]
+      jest.isolateModules(() => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports, import/no-unassigned-import
+        require("@/debug/strip-argv-separator")
+      })
+      expect(process.argv[2]).toBe(MOUNT)
+      process.argv = saved
     })
   })
 
@@ -202,6 +249,150 @@ describe("inactivity-fee-run-job CLI", () => {
       mockRunNoticeJob.mockResolvedValue(failure)
 
       expect(await run(parse(["notice", "--as-of", today]))).toBe(failure)
+    })
+  })
+
+  describe("fee job", () => {
+    const feeResult = {
+      runId: "fee-x",
+      rate: 77566,
+      rateSource: "dealer-mid",
+      debited: { count: 1, sats: 1289, cents: 0 },
+      counts: { scanned: 1, accountsWithoutClock: 0, byOutcome: {}, bySkipReason: {} },
+    }
+
+    beforeEach(() => {
+      mockRunFeeJob.mockResolvedValue(feeResult)
+    })
+
+    it("rejects any job but notice or fee", () => {
+      expect(parseCliArgs(["refund", "--as-of", today], now)).toBeInstanceOf(Error)
+    })
+
+    it("takes a leading positional as the config path before fee too", () => {
+      const args = parse([MOUNT, "fee", "--as-of", today])
+      expect(args.configPath).toBe(MOUNT)
+      expect(args.job).toBe("fee")
+    })
+
+    it("names the default report after the job", () => {
+      expect(parse(["fee", "--as-of", today]).out).toMatch(
+        /^\/tmp\/inactivity-fee-fee-dry-run-/,
+      )
+      expect(parse(["notice", "--as-of", today]).out).toMatch(
+        /^\/tmp\/inactivity-fee-notice-dry-run-/,
+      )
+    })
+
+    it("is a plain dry run without --live, with a fee run id", async () => {
+      expect(await run(parse(["fee", "--as-of", today]))).toBe(true)
+
+      expect(mockRunNoticeJob).not.toHaveBeenCalled()
+      expect(mockRunFeeJob).toHaveBeenCalledWith(
+        expect.objectContaining({
+          dryRun: true,
+          forcedDry: false,
+          asOf: new Date(`${today}T00:00:00.000Z`),
+          runId: expect.stringMatching(new RegExp(`^fee-${today}-`)),
+        }),
+      )
+    })
+
+    it("downgrades --live for a date that is not today to a forced dry run", async () => {
+      expect(await run(parse(["fee", "--as-of", yesterday, "--live"]))).toBe(true)
+
+      expect(mockRunFeeJob).toHaveBeenCalledWith(
+        expect.objectContaining({ dryRun: true, forcedDry: true }),
+      )
+    })
+
+    it("runs live only for --live with today's date", async () => {
+      expect(await run(parse(["fee", "--as-of", today, "--live"]))).toBe(true)
+
+      expect(mockRunFeeJob).toHaveBeenCalledWith(
+        expect.objectContaining({ dryRun: false, forcedDry: false }),
+      )
+    })
+
+    it("writes the fee CSV header, one row per outcome, and the summary with the rate", async () => {
+      const { appendFileSync } = jest.requireMock("fs") as { appendFileSync: jest.Mock }
+      mockRunFeeJob.mockImplementation(async ({ onOutcome }: RunFeeJobArgs) => {
+        await onOutcome?.({
+          accountId: "acct" as AccountId,
+          walletId: "wallet-btc" as WalletId,
+          currency: "BTC",
+          outcome: "would_charge",
+          amount: 1289,
+          externalId: "ifee_wallet-btc_2026-10" as LedgerExternalId,
+          noticeId: "n1" as InactivityFeeNoticeId,
+        })
+        await onOutcome?.({
+          accountId: "acct2" as AccountId,
+          outcome: "skipped",
+          reason: "flag_off",
+        })
+        return feeResult
+      })
+
+      await run(parse(["fee", "--as-of", today, "--out", "/tmp/fee.csv"]))
+
+      expect(mockWriteFileSync).toHaveBeenCalledWith(
+        "/tmp/fee.csv",
+        "account_id,wallet_id,currency,outcome,reason,amount,external_id,notice_id\n",
+      )
+      expect(appendFileSync).toHaveBeenNthCalledWith(
+        1,
+        "/tmp/fee.csv",
+        "acct,wallet-btc,BTC,would_charge,,1289,ifee_wallet-btc_2026-10,n1\n",
+      )
+      expect(appendFileSync).toHaveBeenNthCalledWith(
+        2,
+        "/tmp/fee.csv",
+        "acct2,,,skipped,flag_off,,,\n",
+      )
+      expect(mockWriteFileSync).toHaveBeenCalledWith(
+        "/tmp/fee.csv.summary.json",
+        expect.stringContaining('"rate": 77566'),
+      )
+    })
+
+    it("returns the run's error", async () => {
+      const failure = new Error("dealer down")
+      mockRunFeeJob.mockResolvedValue(failure)
+
+      expect(await run(parse(["fee", "--as-of", today]))).toBe(failure)
+      expect(mockWriteFileSync).toHaveBeenCalledWith(
+        expect.stringMatching(/\.summary\.json$/),
+        expect.stringContaining('"error": "dealer down"'),
+      )
+    })
+
+    // a per-wallet failure or an invariant breach never aborts the run: the exit code is the
+    // only thing an automated caller sees
+    it("fails the run when any row ended in error, after writing the report", async () => {
+      mockRunFeeJob.mockResolvedValue({
+        ...feeResult,
+        counts: { ...feeResult.counts, byOutcome: { charged: 1, error: 2 } },
+      })
+
+      const result = await run(parse(["fee", "--as-of", today, "--out", "/tmp/fee.csv"]))
+
+      expect(result).toBeInstanceOf(Error)
+      expect((result as Error).message).toContain("2 of")
+      // the summary and CSV are still the run's own, not an abort stub
+      expect(mockWriteFileSync).toHaveBeenCalledWith(
+        "/tmp/fee.csv.summary.json",
+        expect.stringContaining('"rate": 77566'),
+      )
+    })
+
+    it("succeeds when no row ended in error", async () => {
+      mockRunFeeJob.mockResolvedValue({
+        ...feeResult,
+        counts: { ...feeResult.counts, byOutcome: { charged: 1, skipped: 3 } },
+      })
+
+      expect(await run(parse(["fee", "--as-of", today]))).toBe(true)
     })
   })
 })

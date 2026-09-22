@@ -238,6 +238,8 @@ type RecordInactivityFeeArgs = {
   }
   externalId: LedgerExternalId
   metadata: InactivityFeeProvenance
+  // the user's leg in the account's display currency; USD when absent
+  display?: DisplayTxnAmounts
 }
 
 type RecordInactivityFeeRefundArgs = {
@@ -248,6 +250,8 @@ type RecordInactivityFeeRefundArgs = {
   }
   externalId: LedgerExternalId
   metadata: InactivityFeeRefundProvenance
+  // copied from the debit row so both rows agree
+  display?: DisplayTxnAmounts
 }
 
 type LnRoutingRevenueLedgerMetadata = LedgerMetadata & {

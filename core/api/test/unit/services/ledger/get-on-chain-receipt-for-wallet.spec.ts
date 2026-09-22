@@ -132,6 +132,22 @@ describe("getTransactionForWalletByExternalId", () => {
     ).toBeUndefined()
   })
 
+  it("skips voided rows when asked: a void frees the key it held", async () => {
+    mockFindOne.mockResolvedValue(null)
+
+    await ledgerService.getTransactionForWalletByExternalId({
+      walletId,
+      externalId,
+      excludeVoided: true,
+    })
+
+    expect(mockFindOne).toHaveBeenCalledWith({
+      accounts: toLiabilitiesWalletId(walletId),
+      external_id: externalId,
+      voided: { $ne: true },
+    })
+  })
+
   it("returns UnknownLedgerError when the lookup fails", async () => {
     mockFindOne.mockRejectedValue(new Error("database unavailable"))
 
