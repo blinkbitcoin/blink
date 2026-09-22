@@ -104,5 +104,6 @@ export const removeEmailAddress = promisify<
 export const handleNotificationEvent = promisify<
   HandleNotificationEventRequest,
   Metadata,
+  Partial<CallOptions>,
   HandleNotificationEventResponse
 >(notificationsClient.handleNotificationEvent.bind(notificationsClient))

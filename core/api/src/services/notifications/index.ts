@@ -38,6 +38,7 @@ import { handleCommonNotificationErrors } from "./errors"
 
 import {
   getCallbackServiceConfig,
+  INACTIVITY_FEE_NOTIFICATION_TIMEOUT_MS,
   MARKETING_NOTIFICATION_USER_BATCH_SIZE,
   USER_NOTIFICATION_SETTINGS_TIMEOUT_MS,
 } from "@/config"
@@ -238,6 +239,7 @@ export const NotificationsService = (): INotificationsService => {
       await notificationsGrpc.handleNotificationEvent(
         request,
         notificationsGrpc.notificationsMetadata,
+        {},
       )
 
       return true
@@ -689,6 +691,7 @@ export const NotificationsService = (): INotificationsService => {
           notificationsGrpc.handleNotificationEvent(
             request,
             notificationsGrpc.notificationsMetadata,
+            {},
           ),
         )
       }
@@ -719,6 +722,7 @@ export const NotificationsService = (): INotificationsService => {
       await notificationsGrpc.handleNotificationEvent(
         request,
         notificationsGrpc.notificationsMetadata,
+        {},
       )
 
       return true
@@ -753,6 +757,8 @@ export const NotificationsService = (): INotificationsService => {
       await notificationsGrpc.handleNotificationEvent(
         request,
         notificationsGrpc.notificationsMetadata,
+        // bounded: a hung RPC would stall the serial monthly scan; expiry is send_failed
+        { deadline: Date.now() + INACTIVITY_FEE_NOTIFICATION_TIMEOUT_MS },
       )
 
       return true
@@ -786,6 +792,8 @@ export const NotificationsService = (): INotificationsService => {
       await notificationsGrpc.handleNotificationEvent(
         request,
         notificationsGrpc.notificationsMetadata,
+        // bounded: a hung RPC would stall the serial monthly scan; expiry is send_failed
+        { deadline: Date.now() + INACTIVITY_FEE_NOTIFICATION_TIMEOUT_MS },
       )
 
       return true
