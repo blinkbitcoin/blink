@@ -11,6 +11,12 @@ type CronConfig = {
   inactivityFeeJobsEnabled: boolean
 }
 
+type CustomConfigSource = {
+  path: string
+  defaultPath: string
+  loaded: boolean
+}
+
 type CaptchaConfig = {
   mandatory: boolean
 }

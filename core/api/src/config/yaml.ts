@@ -33,13 +33,24 @@ const DEFAULT_CONFIG_PATH = "/var/yaml/custom.yaml"
 const providedPath = process.argv[2]
 const configPath = providedPath ? path.resolve(providedPath) : DEFAULT_CONFIG_PATH
 
+let customConfigLoaded = false
+
 try {
   customContent = fs.readFileSync(configPath, "utf8")
   customConfig = yaml.load(customContent)
+  customConfigLoaded = true
   baseLogger.info("loading custom.yaml")
 } catch (err) {
   baseLogger.debug({ err }, "no custom.yaml available. using default values")
 }
+
+// the custom.yaml this process runs under: argv[2] when given, else the prod mount. A script
+// with its own positional arguments must check `loaded`, not whether the mount exists.
+export const getCustomConfigSource = (): CustomConfigSource => ({
+  path: configPath,
+  defaultPath: DEFAULT_CONFIG_PATH,
+  loaded: customConfigLoaded,
+})
 
 const ajv = addFormats(new Ajv({ useDefaults: true, discriminator: true, $data: true }))
 

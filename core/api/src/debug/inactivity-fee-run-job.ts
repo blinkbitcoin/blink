@@ -8,16 +8,18 @@
  *
  * how to run (from core/api; single runner at a time):
  *
- *   pnpm tsx src/debug/inactivity-fee-run-job.ts [custom.yaml] notice --as-of YYYY-MM-DD [--out file.csv]          # dry-run
- *   pnpm tsx src/debug/inactivity-fee-run-job.ts [custom.yaml] notice --as-of <today> --live [--out file.csv]      # live
- *   buck2 run //core/api:dev-inactivity-fee-job -- notice --as-of YYYY-MM-DD [--live]                             # dev stack
+ *   pnpm tsx src/debug/inactivity-fee-run-job.ts /var/yaml/custom.yaml notice --as-of YYYY-MM-DD [--out file.csv]     # dry-run
+ *   pnpm tsx src/debug/inactivity-fee-run-job.ts /var/yaml/custom.yaml notice --as-of <today> --live [--out file.csv] # live
+ *   buck2 run //core/api:dev-inactivity-fee-job -- notice --as-of YYYY-MM-DD [--live]                                # dev stack
  *
- * config    blink's loader reads process.argv[2] as the custom.yaml path and falls back to
- *           /var/yaml/custom.yaml, the prod mount — so in the debug pod no path is needed for
- *           skipAccountIds, level0Deadline, notPermittedCountries and configVersion to be the
- *           deployment's; pass a path only to point at another file. The resolved path and
- *           whether it was found (absent → schema defaults, i.e. the dev stack) are echoed
- *           at start.
+ * config    blink's loader reads process.argv[2] as the custom.yaml path at import time and
+ *           otherwise tries /var/yaml/custom.yaml, the prod mount. With `notice` (or buck2's
+ *           forwarded `--`) in that position it finds nothing and runs on the schema
+ *           defaults — so in the debug pod the mount path is REQUIRED as the first argument
+ *           for skipAccountIds, level0Deadline, notPermittedCountries and configVersion to
+ *           be the deployment's. The runner refuses to start when a given path is not the
+ *           one the loader read, or when the mount exists and was not loaded; the dev stack
+ *           has no mount and its config is the defaults. The path in force is echoed at start.
  * asOf      the given day at 00:00:00Z; issuedAt of every row written by a live run.
  * report    CSV account_id,outcome,reason,notice_id (outcome in noticed|resent|
  *           already_noticed|would_notice|skipped|send_failed|error; reason = skip reason or
@@ -27,10 +29,11 @@
  */
 
 import { appendFileSync, existsSync, writeFileSync } from "fs"
+import { resolve } from "path"
 
 import { InactivityFee } from "@/app"
 
-import { getInactivityFeeConfig } from "@/config"
+import { getCustomConfigSource, getInactivityFeeConfig } from "@/config"
 
 import { formatIsoDate, noticeRunId, resolveOnDemandMode } from "@/domain/inactivity-fee"
 
@@ -49,9 +52,6 @@ const usage = `usage:
   inactivity-fee-run-job.ts [custom.yaml] notice --as-of YYYY-MM-DD --live [--out <path>]    # live, today only`
 
 const CSV_HEADER = ["account_id", "outcome", "reason", "notice_id"].join(",")
-
-// same fallback as the config loader (config/yaml.ts)
-const DEFAULT_CONFIG_PATH = "/var/yaml/custom.yaml"
 
 const parseIsoDay = (value: string | undefined): Date | undefined => {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined
@@ -111,6 +111,31 @@ export const parseCliArgs = (argv: string[], now: Date): CliArgs | Error => {
   return { configPath, asOfDate: formatIsoDate({ date: asOf }), asOf, live, out }
 }
 
+// the loader chose its file at import time; refuse a run that is not on the config asked for
+const checkConfigSource = ({
+  source,
+  configPath,
+}: {
+  source: CustomConfigSource
+  configPath: string | undefined
+}): true | Error => {
+  if (
+    configPath !== undefined &&
+    !(source.loaded && source.path === resolve(configPath))
+  ) {
+    return new Error(
+      `${configPath} was not loaded (the loader read ${source.path}); the config path must ` +
+        `be the first argument, with nothing before it`,
+    )
+  }
+  if (!source.loaded && existsSync(source.defaultPath)) {
+    return new Error(
+      `${source.defaultPath} is mounted but was not loaded; pass it as the first argument`,
+    )
+  }
+  return true
+}
+
 const csvCell = (v: string): string =>
   /[",\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v
 
@@ -128,15 +153,17 @@ export const run = async (args: CliArgs): Promise<true | Error> => {
   })
   const runId = noticeRunId({ asOf: args.asOf })
   const config = getInactivityFeeConfig()
+  const source = getCustomConfigSource()
+  const checked = checkConfigSource({ source, configPath: args.configPath })
+  if (checked instanceof Error) return checked
 
   console.log(
     `inactivity-fee notice job — ${dryRun ? "DRY-RUN (no rows, nothing sent)" : "LIVE"}` +
       (forcedDry ? ` (--live refused: --as-of ${args.asOfDate} is not today)` : ""),
   )
-  const configPath = args.configPath ?? DEFAULT_CONFIG_PATH
-  const configSource = existsSync(configPath)
-    ? `${configPath} (loaded)`
-    : `${configPath} (absent → schema defaults)`
+  const configSource = source.loaded
+    ? `${source.path} (loaded)`
+    : `${source.path} (not loaded → schema defaults)`
   console.log(
     `config: ${configSource}; ` +
       `configVersion=${config.configVersion} skipAccountIds=${config.skipAccountIds.length} ` +

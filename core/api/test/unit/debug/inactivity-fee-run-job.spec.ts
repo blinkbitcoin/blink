@@ -11,12 +11,15 @@ jest.mock("@/app", () => ({
       jest.requireMock("@/app").__mocks.runNoticeJob(...args),
   },
 }))
-jest.mock("@/config", () => ({ getInactivityFeeConfig: jest.fn() }))
+jest.mock("@/config", () => ({
+  getInactivityFeeConfig: jest.fn(),
+  getCustomConfigSource: jest.fn(),
+}))
 jest.mock("@/services/mongodb", () => ({ setupMongoConnection: jest.fn() }))
 
 import { existsSync, writeFileSync } from "fs"
 
-import { getInactivityFeeConfig } from "@/config"
+import { getCustomConfigSource, getInactivityFeeConfig } from "@/config"
 import { parseCliArgs, run } from "@/debug/inactivity-fee-run-job"
 import { toCents } from "@/domain/fiat"
 import { formatIsoDate } from "@/domain/inactivity-fee"
@@ -30,6 +33,11 @@ const mockWriteFileSync = writeFileSync as jest.Mock
 const mockGetInactivityFeeConfig = getInactivityFeeConfig as jest.MockedFunction<
   typeof getInactivityFeeConfig
 >
+const mockGetCustomConfigSource = getCustomConfigSource as jest.MockedFunction<
+  typeof getCustomConfigSource
+>
+
+const MOUNT = "/var/yaml/custom.yaml"
 
 const now = new Date("2026-09-16T10:00:00Z")
 const today = formatIsoDate({ date: now })
@@ -54,6 +62,11 @@ describe("inactivity-fee-run-job CLI", () => {
     jest.useFakeTimers().setSystemTime(now)
     mockExistsSync.mockReturnValue(false)
     mockRunNoticeJob.mockResolvedValue(runResult)
+    mockGetCustomConfigSource.mockReturnValue({
+      path: MOUNT,
+      defaultPath: MOUNT,
+      loaded: false,
+    })
     mockGetInactivityFeeConfig.mockReturnValue({
       activityRefreshIntervalSec: toSeconds(3600),
       liveCharging: false,
@@ -138,9 +151,48 @@ describe("inactivity-fee-run-job CLI", () => {
       expect(mockWriteFileSync).toHaveBeenCalledWith(
         "/tmp/out.csv.summary.json",
         expect.stringContaining(
-          '"configSource": "/var/yaml/custom.yaml (absent → schema defaults)"',
+          '"configSource": "/var/yaml/custom.yaml (not loaded → schema defaults)"',
         ),
       )
+    })
+
+    it("echoes the config path the loader actually read", async () => {
+      mockGetCustomConfigSource.mockReturnValue({
+        path: MOUNT,
+        defaultPath: MOUNT,
+        loaded: true,
+      })
+
+      await run(parse([MOUNT, "notice", "--as-of", today, "--out", "/tmp/out.csv"]))
+
+      expect(mockWriteFileSync).toHaveBeenCalledWith(
+        "/tmp/out.csv.summary.json",
+        expect.stringContaining('"configSource": "/var/yaml/custom.yaml (loaded)"'),
+      )
+    })
+
+    it("refuses to run when the mounted custom.yaml was not loaded", async () => {
+      mockExistsSync.mockImplementation((path: string) => path === MOUNT)
+
+      expect(await run(parse(["notice", "--as-of", today, "--live"]))).toBeInstanceOf(
+        Error,
+      )
+      expect(mockRunNoticeJob).not.toHaveBeenCalled()
+      expect(mockWriteFileSync).not.toHaveBeenCalled()
+    })
+
+    it("refuses to run when the given config path is not the one the loader read", async () => {
+      // buck2's forwarded `--` lands in argv[2], so the loader tried <cwd>/-- instead
+      mockGetCustomConfigSource.mockReturnValue({
+        path: "/work/core/api/--",
+        defaultPath: MOUNT,
+        loaded: false,
+      })
+
+      expect(
+        await run(parse(["/etc/blink/custom.yaml", "notice", "--as-of", today])),
+      ).toBeInstanceOf(Error)
+      expect(mockRunNoticeJob).not.toHaveBeenCalled()
     })
 
     it("returns the run's error", async () => {
