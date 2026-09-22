@@ -309,9 +309,31 @@ describe("refundInactivityFees", () => {
     expect(findByKey).toHaveBeenCalledWith({
       walletId: btcWalletId,
       externalId: `ifee_refund_${btcWalletId}_2026-10`,
+      excludeVoided: true,
     })
     expect(result).toEqual({ refundedSats: 0, refundedCents: 0, failures: [] })
     expect(mockRecordRefund).not.toHaveBeenCalled()
+  })
+
+  it("refunds again when the earlier refund was voided, instead of reading it as the pair", async () => {
+    // the pairing scan already excludes voided rows, so the debit arrives here unpaired: the
+    // key re-check has to agree, or the reversal an operator voided is never re-posted
+    rowsByWallet({
+      [btcWalletId]: [
+        fee({ walletId: btcWalletId, month: "2026-10", sats: 1289, cents: 100 }),
+      ],
+    })
+    findByKey.mockResolvedValue(undefined)
+
+    const result = expectResult(await run())
+
+    expect(findByKey).toHaveBeenCalledWith({
+      walletId: btcWalletId,
+      externalId: `ifee_refund_${btcWalletId}_2026-10`,
+      excludeVoided: true,
+    })
+    expect(result).toEqual({ refundedSats: 1289, refundedCents: 0, failures: [] })
+    expect(mockRecordRefund).toHaveBeenCalledTimes(1)
   })
 
   it("carries on past a failed post and reports it", async () => {

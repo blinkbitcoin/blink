@@ -139,10 +139,13 @@ const refundDebit = async ({
   })
   if (usd instanceof Error) return usd
 
-  // the external id index is not unique: the pair is looked up again under the lock
+  // the external id index is not unique: the pair is looked up again under the lock. A voided
+  // refund is absent here as it is to the pairing scan, so the debit it failed to reverse is
+  // refunded again rather than counted as already paired.
   const existing = await LedgerService().getTransactionForWalletByExternalId({
     walletId: wallet.id,
     externalId: refundExternalId,
+    excludeVoided: true,
   })
   if (existing instanceof Error) return existing
   if (existing !== undefined) return false
