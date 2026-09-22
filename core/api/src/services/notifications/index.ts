@@ -792,7 +792,7 @@ export const NotificationsService = (): INotificationsService => {
       await notificationsGrpc.handleNotificationEvent(
         request,
         notificationsGrpc.notificationsMetadata,
-        // bounded: a hung RPC would stall the serial monthly scan; expiry is send_failed
+        // bounded: a hung RPC would hold the reactivation's account lock and its caller
         { deadline: Date.now() + INACTIVITY_FEE_NOTIFICATION_TIMEOUT_MS },
       )
 

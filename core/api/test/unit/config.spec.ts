@@ -45,6 +45,26 @@ const withCustomYaml = (customConfig: unknown, assertions: () => void) => {
   }
 }
 
+// what the process was started with in argv[2], without writing a config file: the shape the
+// on-demand runner produced before it required the mount path as its first argument
+const withArgv2 = (value: string | undefined, assertions: () => void) => {
+  const originalArgv = process.argv[2]
+  if (value === undefined) {
+    process.argv.splice(2, 1)
+  } else {
+    process.argv[2] = value
+  }
+  try {
+    jest.isolateModules(assertions)
+  } finally {
+    if (originalArgv === undefined) {
+      process.argv.splice(2, 1)
+    } else {
+      process.argv[2] = originalArgv
+    }
+  }
+}
+
 const accountLimits = {
   withdrawal: {
     level: {
@@ -112,6 +132,34 @@ describe("config.ts", () => {
           expect(loaded).toBeDefined()
         }),
       ).toThrow("Invalid yaml configuration")
+    })
+
+    it("reports the custom.yaml it read, and its values are the ones in force", () => {
+      withCustomYaml({ inactivityFee: { configVersion: "sentinel-deployment" } }, () => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const loaded = require("@/config")
+        const source = loaded.getCustomConfigSource()
+
+        expect(source).toEqual({
+          path: path.join(os.tmpdir(), "config-spec-custom.yaml"),
+          defaultPath: "/var/yaml/custom.yaml",
+          loaded: true,
+        })
+        expect(loaded.getInactivityFeeConfig().configVersion).toBe("sentinel-deployment")
+      })
+    })
+
+    it("reports loaded false when argv[2] is a job argument, not a config path", () => {
+      withArgv2("notice", () => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const loaded = require("@/config")
+        const source = loaded.getCustomConfigSource()
+
+        // the loader resolved <cwd>/notice, found nothing, and fell back to schema defaults
+        expect(source.path).toBe(path.resolve("notice"))
+        expect(source.loaded).toBe(false)
+        expect(loaded.getInactivityFeeConfig().configVersion).toBe("dev")
+      })
     })
 
     it("normalises inactivity fee ids and countries and coerces its dates", () => {

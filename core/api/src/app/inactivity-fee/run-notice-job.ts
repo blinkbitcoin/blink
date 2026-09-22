@@ -269,6 +269,16 @@ const processAccount = async ({
     }
   }
 
+  // The account is the snapshot the cursor yielded, and the checks above take wallet, ledger
+  // and cohort reads — a user who came back in that window would still be warned. Re-read as
+  // late as possible, before anything is written or sent. What remains is the insert plus the
+  // send, and a row written in that sliver is non-live anyway: issuedAt is the run's asOf,
+  // which predates the activity. Serialising the rest would mean locking every login.
+  const fresh = await AccountsRepository().findById(account.id)
+  if (fresh instanceof Error) return errorOutcome({ account, error: fresh })
+  const freshVerdict = evaluateAccountStaticChecks({ account: fresh, asOf, config })
+  if (freshVerdict.outcome === "skip") return skipped(freshVerdict.reason)
+
   let notice = existing
   if (notice !== undefined && notice.bulletinIssued) {
     const superseded = await notices.supersede({
