@@ -184,6 +184,33 @@ describe("refundInactivityFees", () => {
     })
   })
 
+  it("copies the debit row's display fields onto the refund so both rows agree", async () => {
+    rowsByWallet({
+      [btcWalletId]: [
+        {
+          ...fee({ walletId: btcWalletId, month: "2026-10", sats: 1289, cents: 100 }),
+          displayAmount: 154_680 as DisplayCurrencyBaseAmount,
+          displayFee: 0 as DisplayCurrencyBaseAmount,
+          displayCurrency: "NGN" as DisplayCurrency,
+          displayCurrencyFractionDigits: 2,
+        },
+      ],
+    })
+
+    expectResult(await run())
+
+    expect(mockRecordRefund).toHaveBeenCalledWith(
+      expect.objectContaining({
+        display: {
+          displayAmount: 154_680,
+          displayFee: 0,
+          displayCurrency: "NGN",
+          displayCurrencyFractionDigits: 2,
+        },
+      }),
+    )
+  })
+
   it("posts nothing when there are no debits (noticed, never charged)", async () => {
     const result = expectResult(await run())
 

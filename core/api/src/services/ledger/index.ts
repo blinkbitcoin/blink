@@ -147,14 +147,18 @@ export const LedgerService = (): ILedgerService => {
   const getTransactionForWalletByExternalId = async ({
     walletId,
     externalId,
+    excludeVoided = false,
   }: {
     walletId: WalletId
     externalId: LedgerExternalId
+    excludeVoided?: boolean
   }): Promise<LedgerTransaction<WalletCurrency> | undefined | LedgerServiceError> => {
     try {
       const entry = await Transaction.findOne({
         accounts: toLiabilitiesWalletId(walletId),
         external_id: externalId,
+        // a voided row was reversed by its void: the idempotency key it holds is free again
+        ...(excludeVoided ? { voided: { $ne: true } } : {}),
       })
       return entry ? translateToLedgerTx(entry) : undefined
     } catch (err) {

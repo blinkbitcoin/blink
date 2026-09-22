@@ -1,57 +1,102 @@
 /**
- * On-demand inactivity-fee job runner (blink-wip#1225, Story 2.1). Same code path as the
- * monthly cron task, without its UTC-1st gate: `notice` evaluates every dormant account as of
- * a given day and writes one CSV row per account. Dry-run by default: no notice row is
- * inserted and nothing is sent unless --live is passed AND --as-of is today's UTC date; any
- * other date is downgraded to a dry run and reported as forcedDry. A missed 1st is never
- * re-run live for a past date.
+ * On-demand inactivity-fee job runner (blink-wip#1225, Stories 2.1 and 4.1). Same code paths
+ * as the monthly cron tasks, without their UTC-1st / UTC-15th gates: `notice` evaluates every
+ * dormant account as of a given day and writes one CSV row per account; `fee` evaluates every
+ * noticed account and writes one CSV row per wallet (one per account when an account-level
+ * check fails). Dry-run by default: nothing is inserted, sent or posted unless --live is passed
+ * AND --as-of is today's UTC date; any other date is downgraded to a dry run and reported as
+ * forcedDry. A missed 1st or 15th is never re-run live for a past date. With `fee`, the CCO
+ * switch (inactivityFee.liveCharging) always wins: --live under a false flag posts nothing and
+ * reports every wallet as flag_off.
  *
  * how to run (from core/api; single runner at a time):
  *
  *   pnpm tsx src/debug/inactivity-fee-run-job.ts /var/yaml/custom.yaml notice --as-of YYYY-MM-DD [--out file.csv]     # dry-run
  *   pnpm tsx src/debug/inactivity-fee-run-job.ts /var/yaml/custom.yaml notice --as-of <today> --live [--out file.csv] # live
- *   buck2 run //core/api:dev-inactivity-fee-job -- notice --as-of YYYY-MM-DD [--live]                                # dev stack
+ *   pnpm tsx src/debug/inactivity-fee-run-job.ts /var/yaml/custom.yaml fee --as-of YYYY-MM-DD [--out file.csv]        # dry-run
+ *   pnpm tsx src/debug/inactivity-fee-run-job.ts /var/yaml/custom.yaml fee --as-of <today> --live [--out file.csv]    # live
+ *   buck2 run //core/api:dev-inactivity-fee-job -- [custom.yaml] notice|fee --as-of YYYY-MM-DD [--live]              # dev stack
  *
  * config    blink's loader reads process.argv[2] as the custom.yaml path at import time and
- *           otherwise tries /var/yaml/custom.yaml, the prod mount. With `notice` (or buck2's
- *           forwarded `--`) in that position it finds nothing and runs on the schema
- *           defaults — so in the debug pod the mount path is REQUIRED as the first argument
- *           for skipAccountIds, level0Deadline, notPermittedCountries and configVersion to
- *           be the deployment's. The runner refuses to start when a given path is not the
- *           one the loader read, or when the mount exists and was not loaded; the dev stack
- *           has no mount and its config is the defaults. The path in force is echoed at start.
- * asOf      the given day at 00:00:00Z; issuedAt of every row written by a live run.
- * report    CSV account_id,outcome,reason,notice_id (outcome in noticed|resent|
- *           already_noticed|would_notice|skipped|send_failed|error; reason = skip reason or
- *           error name), written row by row; the run summary (the inactivityfeeruns
- *           document) to <out>.summary.json. Refuses to overwrite an existing --out. Exit
- *           code 1 when the run aborted.
+ *           otherwise tries /var/yaml/custom.yaml, the prod mount. With `notice`/`fee` in that
+ *           position it finds nothing and runs on the schema defaults — so in the debug pod the
+ *           mount path is REQUIRED as the first argument for skipAccountIds, level0Deadline,
+ *           notPermittedCountries, liveCharging and configVersion to be the deployment's. The
+ *           forwarded "--" separator is dropped before the loader runs, so the path works through
+ *           buck2 too. The runner refuses to start when a given path is not the one the loader
+ *           read, or when the mount exists and was not loaded; the dev stack has no mount and its
+ *           config is the defaults. The path in force is echoed at start.
+ * asOf      the given day at 00:00:00Z; issuedAt of every notice row written by a live run, and
+ *           the month (YYYY-MM) of every fee debit.
+ * report    notice: CSV account_id,outcome,reason,notice_id (outcome in noticed|resent|
+ *           already_noticed|would_notice|skipped|send_failed|error).
+ *           fee: CSV account_id,wallet_id,currency,outcome,reason,amount,external_id,notice_id
+ *           (outcome in charged|would_charge|skipped|error; amount in the wallet's unit).
+ *           reason = skip reason or error name. Written row by row; the run summary (the
+ *           inactivityfeeruns document, with the pinned rate for `fee`) to <out>.summary.json.
+ *           Refuses to overwrite an existing --out. Exit code 1 when the run aborted, and also
+ *           when any row ended in `error` (a per-wallet failure or an invariant breach never
+ *           aborts the run, but it must not read as a clean run either).
  */
 
 import { appendFileSync, existsSync, writeFileSync } from "fs"
 import { resolve } from "path"
 
+// MUST be imported before "@/app" and "@/config": it strips the forwarded "--" from
+// process.argv, and the config loader reads process.argv[2] as its yaml path at import time.
+// Only "fs" and "path" may precede it (neither loads the config). `cliArgv` is that cleaned
+// argv, and the only source of arguments this runner parses.
+import { cliArgv } from "./strip-argv-separator"
+
 import { InactivityFee } from "@/app"
 
 import { getCustomConfigSource, getInactivityFeeConfig } from "@/config"
 
-import { formatIsoDate, noticeRunId, resolveOnDemandMode } from "@/domain/inactivity-fee"
+import {
+  feeRunId,
+  formatIsoDate,
+  InactivityFeeChargeOutcome,
+  noticeRunId,
+  resolveOnDemandMode,
+} from "@/domain/inactivity-fee"
 
 import { setupMongoConnection } from "@/services/mongodb"
 
+type Job = "notice" | "fee"
+
 type CliArgs = {
   configPath: string | undefined
+  job: Job
   asOfDate: string
   asOf: Date
   live: boolean
   out: string
 }
 
+const JOBS: Job[] = ["notice", "fee"]
+
 const usage = `usage:
   inactivity-fee-run-job.ts [custom.yaml] notice --as-of YYYY-MM-DD [--out <path>]           # dry-run
-  inactivity-fee-run-job.ts [custom.yaml] notice --as-of YYYY-MM-DD --live [--out <path>]    # live, today only`
+  inactivity-fee-run-job.ts [custom.yaml] notice --as-of YYYY-MM-DD --live [--out <path>]    # live, today only
+  inactivity-fee-run-job.ts [custom.yaml] fee --as-of YYYY-MM-DD [--out <path>]              # dry-run
+  inactivity-fee-run-job.ts [custom.yaml] fee --as-of YYYY-MM-DD --live [--out <path>]       # live, today only`
 
-const CSV_HEADER = ["account_id", "outcome", "reason", "notice_id"].join(",")
+const CSV_HEADER: Record<Job, string> = {
+  notice: ["account_id", "outcome", "reason", "notice_id"].join(","),
+  fee: [
+    "account_id",
+    "wallet_id",
+    "currency",
+    "outcome",
+    "reason",
+    "amount",
+    "external_id",
+    "notice_id",
+  ].join(","),
+}
+
+const isJob = (value: string | undefined): value is Job =>
+  value !== undefined && (JOBS as string[]).includes(value)
 
 const parseIsoDay = (value: string | undefined): Date | undefined => {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined
@@ -61,14 +106,15 @@ const parseIsoDay = (value: string | undefined): Date | undefined => {
   return formatIsoDate({ date }) === value ? date : undefined
 }
 
+// argv is `cliArgv`: the "--" separator is already gone (see the import at the top)
 export const parseCliArgs = (argv: string[], now: Date): CliArgs | Error => {
-  // `pnpm run` / buck2's task wrapper forward the "--" separator to the script
-  const rest = argv.filter((arg) => arg !== "--")
+  const rest = [...argv]
   let configPath: string | undefined
-  if (rest[0] !== undefined && rest[0] !== "notice" && !rest[0].startsWith("-")) {
+  if (rest[0] !== undefined && !isJob(rest[0]) && !rest[0].startsWith("-")) {
     configPath = rest.shift()
   }
-  if (rest.shift() !== "notice") return new Error(`the only job is "notice"\n${usage}`)
+  const job = rest.shift()
+  if (!isJob(job)) return new Error(`the job must be one of ${JOBS.join(", ")}\n${usage}`)
 
   let asOf: Date | undefined
   let live = false
@@ -105,10 +151,10 @@ export const parseCliArgs = (argv: string[], now: Date): CliArgs | Error => {
       .toISOString()
       .replace(/[-:]/g, "")
       .replace(/\.\d{3}Z$/, "Z")
-    out = `/tmp/inactivity-fee-notice-${live ? "live" : "dry-run"}-${stamp}.csv`
+    out = `/tmp/inactivity-fee-${job}-${live ? "live" : "dry-run"}-${stamp}.csv`
   }
   if (existsSync(out)) return new Error(`${out} already exists - pass a fresh --out path`)
-  return { configPath, asOfDate: formatIsoDate({ date: asOf }), asOf, live, out }
+  return { configPath, job, asOfDate: formatIsoDate({ date: asOf }), asOf, live, out }
 }
 
 // the loader chose its file at import time; refuse a run that is not on the config asked for
@@ -139,10 +185,23 @@ const checkConfigSource = ({
 const csvCell = (v: string): string =>
   /[",\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v
 
-const csvLine = (record: InactivityFeeNoticeOutcomeRecord): string =>
-  [record.accountId, record.outcome, record.reason ?? "", record.noticeId ?? ""]
-    .map(csvCell)
-    .join(",")
+const csvLine = (cells: (string | number | undefined)[]): string =>
+  cells.map((cell) => csvCell(cell === undefined ? "" : String(cell))).join(",")
+
+const noticeCsvLine = (record: InactivityFeeNoticeOutcomeRecord): string =>
+  csvLine([record.accountId, record.outcome, record.reason, record.noticeId])
+
+const feeCsvLine = (record: InactivityFeeChargeOutcomeRecord): string =>
+  csvLine([
+    record.accountId,
+    record.walletId,
+    record.currency,
+    record.outcome,
+    record.reason,
+    record.amount,
+    record.externalId,
+    record.noticeId,
+  ])
 
 export const run = async (args: CliArgs): Promise<true | Error> => {
   const now = new Date()
@@ -151,14 +210,17 @@ export const run = async (args: CliArgs): Promise<true | Error> => {
     asOf: args.asOf,
     now,
   })
-  const runId = noticeRunId({ asOf: args.asOf })
+  const runId =
+    args.job === "fee" ? feeRunId({ asOf: args.asOf }) : noticeRunId({ asOf: args.asOf })
   const config = getInactivityFeeConfig()
   const source = getCustomConfigSource()
   const checked = checkConfigSource({ source, configPath: args.configPath })
   if (checked instanceof Error) return checked
 
+  const dryLabel =
+    args.job === "fee" ? "DRY-RUN (nothing posted)" : "DRY-RUN (no rows, nothing sent)"
   console.log(
-    `inactivity-fee notice job — ${dryRun ? "DRY-RUN (no rows, nothing sent)" : "LIVE"}` +
+    `inactivity-fee ${args.job} job — ${dryRun ? dryLabel : "LIVE"}` +
       (forcedDry ? ` (--live refused: --as-of ${args.asOfDate} is not today)` : ""),
   )
   const configSource = source.loaded
@@ -166,26 +228,38 @@ export const run = async (args: CliArgs): Promise<true | Error> => {
     : `${source.path} (not loaded → schema defaults)`
   console.log(
     `config: ${configSource}; ` +
-      `configVersion=${config.configVersion} skipAccountIds=${config.skipAccountIds.length} ` +
+      `configVersion=${config.configVersion} liveCharging=${config.liveCharging} ` +
+      `feeAmountUsdCents=${config.feeAmountUsdCents} ` +
+      `skipAccountIds=${config.skipAccountIds.length} ` +
       `notPermittedCountries=${config.notPermittedCountries.join(",") || "-"} ` +
       `level0Deadline=${config.level0Deadline.toISOString()}`,
   )
   console.log(`runId: ${runId}; asOf: ${args.asOf.toISOString()}`)
 
-  writeFileSync(args.out, CSV_HEADER + "\n")
+  writeFileSync(args.out, CSV_HEADER[args.job] + "\n")
 
   let rows = 0
-  const result = await InactivityFee.runNoticeJob({
-    asOf: args.asOf,
-    dryRun,
-    forcedDry,
-    runId,
-    onOutcome: (record) => {
-      appendFileSync(args.out, csvLine(record) + "\n")
-      rows += 1
-      if (rows % 10_000 === 0) console.log(`...processed ${rows} accounts`)
-    },
-  })
+  const append = (line: string) => {
+    appendFileSync(args.out, line + "\n")
+    rows += 1
+    if (rows % 10_000 === 0) console.log(`...processed ${rows} rows`)
+  }
+  const result =
+    args.job === "fee"
+      ? await InactivityFee.runFeeJob({
+          asOf: args.asOf,
+          dryRun,
+          forcedDry,
+          runId,
+          onOutcome: (record) => append(feeCsvLine(record)),
+        })
+      : await InactivityFee.runNoticeJob({
+          asOf: args.asOf,
+          dryRun,
+          forcedDry,
+          runId,
+          onOutcome: (record) => append(noticeCsvLine(record)),
+        })
 
   const summaryPath = `${args.out}.summary.json`
   if (result instanceof Error) {
@@ -202,18 +276,35 @@ export const run = async (args: CliArgs): Promise<true | Error> => {
   }
 
   writeFileSync(summaryPath, JSON.stringify({ ...result, configSource }, null, 2) + "\n")
-  console.log(
-    `\nscanned ${result.counts.scanned} dormant account(s); ` +
-      `${result.counts.accountsWithoutClock} account(s) without an activity clock were never scanned`,
-  )
+  if (args.job === "fee") {
+    console.log(
+      `\nscanned ${result.counts.scanned} noticed account(s) at ${result.rate} USD/BTC ` +
+        `(${result.rateSource}); debited ${result.debited?.count ?? 0} wallet(s): ` +
+        `${result.debited?.sats ?? 0} sats, ${result.debited?.cents ?? 0} cents`,
+    )
+  } else {
+    console.log(
+      `\nscanned ${result.counts.scanned} dormant account(s); ` +
+        `${result.counts.accountsWithoutClock} account(s) without an activity clock were never scanned`,
+    )
+  }
   console.log(`by outcome: ${JSON.stringify(result.counts.byOutcome)}`)
   console.log(`by skip reason: ${JSON.stringify(result.counts.bySkipReason)}`)
   console.log(`report: ${args.out} (summary: ${summaryPath})`)
+
+  // per-account and per-wallet failures never abort the run, and an invariant breach is one of
+  // them: an automated caller must not read that as a clean run
+  const errors = result.counts.byOutcome[InactivityFeeChargeOutcome.Error] ?? 0
+  if (errors > 0) {
+    return new Error(
+      `${errors} of ${rows} row(s) ended in error - see ${args.out} and the span for ${runId}`,
+    )
+  }
   return true
 }
 
 const main = async () => {
-  const args = parseCliArgs(process.argv.slice(2), new Date())
+  const args = parseCliArgs(cliArgv, new Date())
   if (args instanceof Error) {
     console.error(args.message)
     process.exitCode = 1

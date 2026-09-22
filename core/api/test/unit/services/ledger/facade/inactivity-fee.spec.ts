@@ -86,6 +86,75 @@ beforeEach(() => {
   mockPersistAndReturnEntry.mockResolvedValue({ journalId: "journal" })
 })
 
+const ngnDisplay = {
+  displayAmount: 154_680 as DisplayCurrencyBaseAmount,
+  displayFee: 0 as DisplayCurrencyBaseAmount,
+  displayCurrency: "NGN" as DisplayCurrency,
+  displayCurrencyFractionDigits: 2,
+}
+
+describe("display currency on the user's leg", () => {
+  it("shows USD on every leg when no display is given", async () => {
+    await recordInactivityFee({
+      walletDescriptor: btcWallet,
+      amount: amount(1289n, 100n),
+      externalId: key(`ifee_${btcWalletId}_2026-10`),
+      metadata: feeProvenance,
+    })
+
+    const txs = persistedTransactions()
+    for (const tx of txs) {
+      expect(tx).toEqual(
+        expect.objectContaining({
+          displayAmount: 100,
+          displayFee: 0,
+          displayCurrency: "USD",
+          displayCurrencyFractionDigits: 2,
+        }),
+      )
+    }
+  })
+
+  it("puts the account's display currency on the debit's user leg only", async () => {
+    await recordInactivityFee({
+      walletDescriptor: btcWallet,
+      amount: amount(1289n, 100n),
+      externalId: key(`ifee_${btcWalletId}_2026-10`),
+      metadata: feeProvenance,
+      display: ngnDisplay,
+    })
+
+    const txs = persistedTransactions()
+    expect(leg(txs, `Liabilities:${btcWalletId}`)).toEqual(
+      expect.objectContaining(ngnDisplay),
+    )
+    expect(leg(txs, "Liabilities:bank-owner")).toEqual(
+      expect.objectContaining({ displayAmount: 100, displayCurrency: "USD" }),
+    )
+  })
+
+  it("puts the copied display on the refund's user leg only", async () => {
+    await recordInactivityFeeRefund({
+      walletDescriptor: usdWallet,
+      amount: amount(773n, 60n),
+      externalId: key(`ifee_refund_${usdWalletId}_2026-10`),
+      metadata: refundProvenance,
+      display: { ...ngnDisplay, displayAmount: 92_808 as DisplayCurrencyBaseAmount },
+    })
+
+    const txs = persistedTransactions()
+    expect(leg(txs, `Liabilities:${usdWalletId}`)).toEqual(
+      expect.objectContaining({ displayAmount: 92_808, displayCurrency: "NGN" }),
+    )
+    expect(leg(txs, "Liabilities:bank-owner")).toEqual(
+      expect.objectContaining({ displayAmount: 60, displayCurrency: "USD" }),
+    )
+    expect(leg(txs, "Liabilities:dealer-usd")).toEqual(
+      expect.objectContaining({ displayAmount: 60, displayCurrency: "USD" }),
+    )
+  })
+})
+
 describe("recordInactivityFee", () => {
   it("debits the Bitcoin Balance to bankowner with the key, memo and provenance on every leg", async () => {
     const externalId = key(`ifee_${btcWalletId}_2026-10`)

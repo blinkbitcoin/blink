@@ -984,31 +984,50 @@ export const LnReserveRetained = ({
   return metadata
 }
 
-// system entries: amounts are shown in USD on every leg, fees are zero
+// system entries, fees are zero: the user's leg shows the account's display currency when
+// given (USD otherwise), bankowner and dealer legs always show USD
 const inactivityFeeAmountsMetadata = ({
   amount,
+  display,
 }: {
   amount: { btc: BtcPaymentAmount; usd: UsdPaymentAmount }
-}) => ({
-  amounts: {
-    satsAmount: toSats(amount.btc.amount),
-    centsAmount: toCents(amount.usd.amount),
-    satsFee: toSats(0),
-    centsFee: toCents(0),
-  },
-  display: internalMetadataAmounts({ centsAmount: amount.usd.amount, centsFee: 0n }),
-})
+  display?: DisplayTxnAmounts
+}) => {
+  const centsAmount = amount.usd.amount
+  const centsFee = 0n
+  const { debitOrCreditAdditionalMetadata: userLeg, internalAccountsAdditionalMetadata } =
+    debitOrCreditMetadataAmounts({
+      centsAmount,
+      centsFee,
+      ...(display ?? internalMetadataAmounts({ centsAmount, centsFee })),
+    })
+  return {
+    amounts: {
+      satsAmount: toSats(amount.btc.amount),
+      centsAmount: toCents(centsAmount),
+      satsFee: toSats(0),
+      centsFee: toCents(0),
+    },
+    userLeg,
+    internalLeg: internalAccountsAdditionalMetadata,
+  }
+}
 
 export const InactivityFeeLedgerMetadata = ({
   amount,
   memo,
+  display,
   provenance: { rate, rateSource, configVersion, noticeId, runId },
 }: {
   amount: { btc: BtcPaymentAmount; usd: UsdPaymentAmount }
   memo: string
+  display?: DisplayTxnAmounts
   provenance: InactivityFeeProvenance
 }) => {
-  const { amounts, display } = inactivityFeeAmountsMetadata({ amount })
+  const { amounts, userLeg, internalLeg } = inactivityFeeAmountsMetadata({
+    amount,
+    display,
+  })
   const metadata: InactivityFeeLedgerMetadata = {
     type: LedgerTransactionType.InactivityFee,
     pending: false,
@@ -1021,24 +1040,30 @@ export const InactivityFeeLedgerMetadata = ({
     runId,
   }
 
+  // the user's wallet is the debit side
   return {
     metadata,
-    debitAccountAdditionalMetadata: display,
-    creditAccountAdditionalMetadata: display,
-    internalAccountsAdditionalMetadata: display,
+    debitAccountAdditionalMetadata: userLeg,
+    creditAccountAdditionalMetadata: internalLeg,
+    internalAccountsAdditionalMetadata: internalLeg,
   }
 }
 
 export const InactivityFeeRefundLedgerMetadata = ({
   amount,
   memo,
+  display,
   provenance: { refundReason, noticeId, runId },
 }: {
   amount: { btc: BtcPaymentAmount; usd: UsdPaymentAmount }
   memo: string
+  display?: DisplayTxnAmounts
   provenance: InactivityFeeRefundProvenance
 }) => {
-  const { amounts, display } = inactivityFeeAmountsMetadata({ amount })
+  const { amounts, userLeg, internalLeg } = inactivityFeeAmountsMetadata({
+    amount,
+    display,
+  })
   const metadata: InactivityFeeRefundLedgerMetadata = {
     type: LedgerTransactionType.InactivityFeeRefund,
     pending: false,
@@ -1049,10 +1074,11 @@ export const InactivityFeeRefundLedgerMetadata = ({
     runId,
   }
 
+  // the user's wallet is the credit side
   return {
     metadata,
-    debitAccountAdditionalMetadata: display,
-    creditAccountAdditionalMetadata: display,
-    internalAccountsAdditionalMetadata: display,
+    debitAccountAdditionalMetadata: internalLeg,
+    creditAccountAdditionalMetadata: userLeg,
+    internalAccountsAdditionalMetadata: internalLeg,
   }
 }

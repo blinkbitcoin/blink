@@ -159,7 +159,27 @@ const refundDebit = async ({
     amount: { btc, usd },
     externalId: refundExternalId,
     metadata: { refundReason: reason, noticeId: debit.noticeId, runId },
+    display: displayFromDebit({ debit }),
   })
   if (journal instanceof Error) return journal
   return true
+}
+
+// the debit row's own display fields, so both rows agree; none when the row carries none
+const displayFromDebit = ({
+  debit,
+}: {
+  debit: LedgerTransaction<WalletCurrency>
+}): DisplayTxnAmounts | undefined => {
+  if (debit.displayAmount === undefined || debit.displayCurrency === undefined) {
+    return undefined
+  }
+  return {
+    displayAmount: debit.displayAmount,
+    displayFee: debit.displayFee ?? (0 as DisplayCurrencyBaseAmount),
+    displayCurrency: debit.displayCurrency,
+    ...(debit.displayCurrencyFractionDigits !== undefined
+      ? { displayCurrencyFractionDigits: debit.displayCurrencyFractionDigits }
+      : {}),
+  }
 }

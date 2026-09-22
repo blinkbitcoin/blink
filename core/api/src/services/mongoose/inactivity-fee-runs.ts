@@ -22,6 +22,21 @@ export const InactivityFeeRunsRepository = (): IInactivityFeeRunsRepository => {
         countsByOutcome: run.counts.byOutcome,
         countsBySkipReason: run.counts.bySkipReason,
         ...(run.error !== undefined ? { error: run.error } : {}),
+        ...(run.rate !== undefined ? { rate: run.rate } : {}),
+        ...(run.rateSource !== undefined ? { rateSource: run.rateSource } : {}),
+        ...(run.debited !== undefined
+          ? {
+              debitedCount: run.debited.count,
+              debitedSats: run.debited.sats,
+              debitedCents: run.debited.cents,
+            }
+          : {}),
+        ...(run.firstExternalIdSeen !== undefined
+          ? { firstExternalIdSeen: run.firstExternalIdSeen }
+          : {}),
+        ...(run.lastExternalIdSeen !== undefined
+          ? { lastExternalIdSeen: run.lastExternalIdSeen }
+          : {}),
       })
       return runFromRaw(result)
     } catch (err) {
@@ -49,4 +64,16 @@ const runFromRaw = (result: InactivityFeeRunRecord): InactivityFeeRun => ({
     bySkipReason: { ...result.countsBySkipReason },
   },
   error: result.error || undefined,
+  rate: result.rate ?? undefined,
+  rateSource: result.rateSource || undefined,
+  debited:
+    result.debitedCount !== undefined && result.debitedCount !== null
+      ? {
+          count: result.debitedCount,
+          sats: result.debitedSats ?? 0,
+          cents: result.debitedCents ?? 0,
+        }
+      : undefined,
+  firstExternalIdSeen: result.firstExternalIdSeen || undefined,
+  lastExternalIdSeen: result.lastExternalIdSeen || undefined,
 })

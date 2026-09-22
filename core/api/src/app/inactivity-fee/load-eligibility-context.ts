@@ -21,9 +21,9 @@ export const loadEligibilityContext = async ({
   activeNotice: InactivityFeeNotice | undefined
   config: InactivityFeeConfig
   windDownConfig: WindDownConfig
-}): Promise<InactivityFeeEligibilityContext | ApplicationError> => {
-  const balances = await loadBalances({ account })
-  if (balances instanceof Error) return balances
+}): Promise<InactivityFeeLoadedContext | ApplicationError> => {
+  const wallets = await loadWalletBalances({ account })
+  if (wallets instanceof Error) return wallets
 
   const windDownStatus = await loadWindDownStatus({ account, windDownConfig })
   if (windDownStatus instanceof Error) return windDownStatus
@@ -31,27 +31,33 @@ export const loadEligibilityContext = async ({
   const assignedCountry = await loadAssignedCountry({ account, config, windDownConfig })
   if (assignedCountry instanceof Error) return assignedCountry
 
-  return { activeNotice, balances, windDownStatus, assignedCountry }
+  return {
+    activeNotice,
+    balances: wallets.map(({ balance }) => balance),
+    wallets,
+    windDownStatus,
+    assignedCountry,
+  }
 }
 
 // MainBook.balance is the snapshot plus every entry after it: exact at read time
-const loadBalances = async ({
+const loadWalletBalances = async ({
   account,
 }: {
   account: Account
-}): Promise<BalanceAmount<WalletCurrency>[] | ApplicationError> => {
+}): Promise<InactivityFeeWalletBalance[] | ApplicationError> => {
   const wallets = await WalletsRepository().listByAccountId(account.id)
   // an account without wallets holds nothing
   if (wallets instanceof CouldNotListWalletsFromAccountIdError) return []
   if (wallets instanceof Error) return wallets
 
-  const balances: BalanceAmount<WalletCurrency>[] = []
+  const loaded: InactivityFeeWalletBalance[] = []
   for (const wallet of wallets) {
     const balance = await LedgerService().getWalletBalanceAmount(wallet)
     if (balance instanceof Error) return balance
-    balances.push(balance)
+    loaded.push({ wallet, balance })
   }
-  return balances
+  return loaded
 }
 
 const loadWindDownStatus = async ({

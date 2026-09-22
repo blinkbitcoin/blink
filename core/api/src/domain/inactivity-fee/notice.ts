@@ -26,6 +26,15 @@ export const formatIsoDate = ({ date }: { date: Date }): string =>
 export const noticeRunId = ({ asOf }: { asOf: Date }): string =>
   `notice-${formatIsoDate({ date: asOf })}-${randomUUID()}`
 
+export const feeRunId = ({ asOf }: { asOf: Date }): string =>
+  `fee-${formatIsoDate({ date: asOf })}-${randomUUID()}`
+
+// a notice charges once it is 31 days old: issuedAt at or before this instant (exactly 31 days charges)
+export const NOTICE_LEAD_DAYS = 31
+
+export const feeChargeCutoff = ({ asOf }: { asOf: Date }): Date =>
+  new Date(asOf.getTime() - NOTICE_LEAD_DAYS * 24 * 60 * 60 * 1000)
+
 // order-independent fingerprint of the skip list a run used
 export const skipListHash = ({ skipAccountIds }: { skipAccountIds: string[] }): string =>
   createHash("sha256")
@@ -35,6 +44,10 @@ export const skipListHash = ({ skipAccountIds }: { skipAccountIds: string[] }): 
 // the cron gate: the monthly notice run fires only on the 1st, UTC
 export const isFirstOfMonthUtc = ({ date }: { date: Date }): boolean =>
   date.getUTCDate() === 1
+
+// the cron gate: the monthly fee run fires only on the 15th, UTC
+export const isFifteenthOfMonthUtc = ({ date }: { date: Date }): boolean =>
+  date.getUTCDate() === 15
 
 // On-demand runs are live only for today's UTC date; any other asOf is a dry run whatever was
 // asked for (a missed 1st is never re-run live for a past date). `forcedDry` records that a
