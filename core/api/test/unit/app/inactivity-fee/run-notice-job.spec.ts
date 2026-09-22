@@ -7,6 +7,7 @@ jest.mock("@/services/mongoose", () => ({
   __mocks: {
     listDormantAccounts: jest.fn(),
     countWithoutActivityClock: jest.fn(),
+    findById: jest.fn(),
     findActiveByAccountId: jest.fn(),
     insertActive: jest.fn(),
     markBulletinIssued: jest.fn(),
@@ -19,6 +20,7 @@ jest.mock("@/services/mongoose", () => ({
       jest.requireMock("@/services/mongoose").__mocks.listDormantAccounts,
     countWithoutActivityClock:
       jest.requireMock("@/services/mongoose").__mocks.countWithoutActivityClock,
+    findById: jest.requireMock("@/services/mongoose").__mocks.findById,
   }),
   InactivityFeeNoticesRepository: () => ({
     findActiveByAccountId:
@@ -72,6 +74,7 @@ import { gatherCohortSignals } from "@/app/wind-down/gather-cohort-signals"
 import { getInactivityFeeConfig, getWindDownConfig } from "@/config"
 import { AccountLevel, AccountStatus } from "@/domain/accounts"
 import {
+  CouldNotFindAccountFromIdError,
   CouldNotListWalletsFromAccountIdError,
   DuplicateKeyForPersistError,
   UnknownRepositoryError,
@@ -155,9 +158,10 @@ const windDownConfig = (overrides: Partial<WindDownConfig> = {}): WindDownConfig
 })
 
 let accountCounter = 0
+const stored = new Map<AccountId, Account>()
 const account = (overrides: Partial<Account> = {}): Account => {
   accountCounter += 1
-  return {
+  const built = {
     id: `00000000-0000-4000-8000-${String(accountCounter).padStart(12, "0")}` as AccountId,
     createdAt: iso("2020-01-01T00:00:00Z"),
     defaultWalletId: "wallet" as WalletId,
@@ -171,6 +175,8 @@ const account = (overrides: Partial<Account> = {}): Account => {
     lastActivityAt: iso("2025-09-01T00:00:00Z"),
     ...overrides,
   }
+  stored.set(built.id, built)
+  return built
 }
 
 const notice = (
@@ -218,6 +224,12 @@ const walletsFor = (balances: Record<string, bigint>) => {
 describe("runNoticeJob", () => {
   beforeEach(() => {
     jest.resetAllMocks()
+    stored.clear()
+    // the re-read before the write finds what the scan yielded, unless a test says otherwise
+    mocks.findById.mockImplementation(
+      async (accountId: AccountId) =>
+        stored.get(accountId) ?? new CouldNotFindAccountFromIdError(accountId),
+    )
     mockGetInactivityFeeConfig.mockReturnValue(config)
     mockGetWindDownConfig.mockReturnValue(windDownConfig())
     mocks.countWithoutActivityClock.mockResolvedValue(7)
@@ -691,6 +703,74 @@ describe("runNoticeJob", () => {
       expect(run.forcedDry).toBe(true)
       expect(run.counts.byOutcome).toEqual({ would_notice: 1, already_noticed: 1 })
       expect(mocks.persistRun).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe("activity between the scan and the write", () => {
+    it("skips an account that came back while its balances were being read", async () => {
+      const alice = account()
+      dormant([alice])
+      // the user opens the app after the cursor yielded the snapshot
+      mocks.findById.mockResolvedValue({
+        ...alice,
+        lastActivityAt: iso("2026-10-01T02:14:07Z"),
+      })
+      const outcomes: InactivityFeeNoticeOutcomeRecord[] = []
+
+      const run = expectRun(
+        await runLive({
+          onOutcome: (record) => {
+            outcomes.push(record)
+          },
+        }),
+      )
+
+      expect(mocks.insertActive).not.toHaveBeenCalled()
+      expect(mocks.supersede).not.toHaveBeenCalled()
+      expect(sendInactivityFeeNotice).not.toHaveBeenCalled()
+      expect(outcomes).toEqual([
+        {
+          accountId: alice.id,
+          outcome: InactivityFeeNoticeOutcome.Skipped,
+          reason: InactivityFeeSkipReason.Active,
+        },
+      ])
+      expect(run.counts.bySkipReason).toEqual({ [InactivityFeeSkipReason.Active]: 1 })
+    })
+
+    it("leaves a stale row alone when the account came back", async () => {
+      const alice = account()
+      dormant([alice])
+      mocks.findActiveByAccountId.mockResolvedValue(
+        notice(alice.id, { issuedAt: iso("2024-01-01T00:00:00Z") }),
+      )
+      mocks.findById.mockResolvedValue({
+        ...alice,
+        lastActivityAt: iso("2026-10-01T02:14:07Z"),
+      })
+
+      const run = expectRun(await runLive())
+
+      expect(mocks.supersede).not.toHaveBeenCalled()
+      expect(mocks.insertActive).not.toHaveBeenCalled()
+      expect(run.counts.byOutcome).toEqual({ [InactivityFeeNoticeOutcome.Skipped]: 1 })
+    })
+
+    it("contains a failed re-read as the account's outcome, and the run continues", async () => {
+      const alice = account()
+      const bob = account()
+      dormant([alice, bob])
+      mocks.findById.mockImplementation(async (accountId: AccountId) =>
+        accountId === alice.id ? new UnknownRepositoryError("down") : bob,
+      )
+
+      const run = expectRun(await runLive())
+
+      expect(run.counts.byOutcome).toEqual({
+        [InactivityFeeNoticeOutcome.Error]: 1,
+        [InactivityFeeNoticeOutcome.Noticed]: 1,
+      })
+      expect(sendInactivityFeeNotice).toHaveBeenCalledTimes(1)
     })
   })
 
