@@ -8,6 +8,13 @@ type Levels = number[]
 type CronConfig = {
   rebalanceEnabled: boolean
   removeInactiveMerchantsEnabled: boolean
+  inactivityFeeJobsEnabled: boolean
+}
+
+type CustomConfigSource = {
+  path: string
+  defaultPath: string
+  loaded: boolean
 }
 
 type CaptchaConfig = {
@@ -62,10 +69,25 @@ type WindDownConfig = {
 
 type InactivityFeeYamlConfig = {
   activityRefreshIntervalSec: number
+  liveCharging: boolean
+  feeAmountUsdCents: number
+  effectiveFrom: string
+  configVersion: string
+  skipAccountIds: string[]
+  notPermittedCountries: string[]
+  level0Deadline: string
 }
 
 type InactivityFeeConfig = {
   activityRefreshIntervalSec: Seconds
+  liveCharging: boolean
+  feeAmountUsdCents: UsdCents
+  effectiveFrom: Date
+  configVersion: string
+  // lower-cased, like windDown.excludedAccountIds
+  skipAccountIds: string[]
+  notPermittedCountries: RestrictedCountry[]
+  level0Deadline: Date
 }
 
 type RegionRestrictionsYamlConfig = {

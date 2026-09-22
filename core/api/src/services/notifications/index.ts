@@ -25,6 +25,8 @@ import {
   NotificationEvent,
   MarketingNotificationTriggered,
   MigrationRetryReady,
+  InactivityFeeNotice,
+  InactivityFeeWelcomeBack,
   DeepLink as ProtoDeepLink,
   HandleNotificationEventResponse,
   Action,
@@ -36,6 +38,7 @@ import { handleCommonNotificationErrors } from "./errors"
 
 import {
   getCallbackServiceConfig,
+  INACTIVITY_FEE_NOTIFICATION_TIMEOUT_MS,
   MARKETING_NOTIFICATION_USER_BATCH_SIZE,
   USER_NOTIFICATION_SETTINGS_TIMEOUT_MS,
 } from "@/config"
@@ -236,6 +239,7 @@ export const NotificationsService = (): INotificationsService => {
       await notificationsGrpc.handleNotificationEvent(
         request,
         notificationsGrpc.notificationsMetadata,
+        {},
       )
 
       return true
@@ -687,6 +691,7 @@ export const NotificationsService = (): INotificationsService => {
           notificationsGrpc.handleNotificationEvent(
             request,
             notificationsGrpc.notificationsMetadata,
+            {},
           ),
         )
       }
@@ -717,6 +722,78 @@ export const NotificationsService = (): INotificationsService => {
       await notificationsGrpc.handleNotificationEvent(
         request,
         notificationsGrpc.notificationsMetadata,
+        {},
+      )
+
+      return true
+    } catch (err) {
+      return handleCommonNotificationErrors(err)
+    }
+  }
+
+  // effectiveDate is computed by core (the 15th of the month after the notice was issued) and
+  // sent as YYYY-MM-DD; the service renders it verbatim in the user's locale.
+  const sendInactivityFeeNotice = async ({
+    userId,
+    effectiveDate,
+    feeAmountCents,
+  }: {
+    userId: UserId
+    effectiveDate: Date
+    feeAmountCents: UsdCents
+  }): Promise<true | NotificationsServiceError> => {
+    try {
+      const notice = new InactivityFeeNotice()
+      notice.setUserId(userId)
+      notice.setEffectiveDate(effectiveDate.toISOString().slice(0, 10))
+      notice.setFeeAmountCents(Number(feeAmountCents))
+
+      const event = new NotificationEvent()
+      event.setInactivityFeeNotice(notice)
+
+      const request = new HandleNotificationEventRequest()
+      request.setEvent(event)
+
+      await notificationsGrpc.handleNotificationEvent(
+        request,
+        notificationsGrpc.notificationsMetadata,
+        // bounded: a hung RPC would stall the serial monthly scan; expiry is send_failed
+        { deadline: Date.now() + INACTIVITY_FEE_NOTIFICATION_TIMEOUT_MS },
+      )
+
+      return true
+    } catch (err) {
+      return handleCommonNotificationErrors(err)
+    }
+  }
+
+  // amounts stay per balance, never blended; the service refuses an event with no amount
+  const sendInactivityFeeWelcomeBack = async ({
+    userId,
+    refundedSats,
+    refundedCents,
+  }: {
+    userId: UserId
+    refundedSats?: Satoshis
+    refundedCents?: UsdCents
+  }): Promise<true | NotificationsServiceError> => {
+    try {
+      const welcomeBack = new InactivityFeeWelcomeBack()
+      welcomeBack.setUserId(userId)
+      if (refundedSats !== undefined) welcomeBack.setRefundedSats(refundedSats)
+      if (refundedCents !== undefined) welcomeBack.setRefundedCents(refundedCents)
+
+      const event = new NotificationEvent()
+      event.setInactivityFeeWelcomeBack(welcomeBack)
+
+      const request = new HandleNotificationEventRequest()
+      request.setEvent(event)
+
+      await notificationsGrpc.handleNotificationEvent(
+        request,
+        notificationsGrpc.notificationsMetadata,
+        // bounded: a hung RPC would hold the reactivation's account lock and its caller
+        { deadline: Date.now() + INACTIVITY_FEE_NOTIFICATION_TIMEOUT_MS },
       )
 
       return true
@@ -748,6 +825,8 @@ export const NotificationsService = (): INotificationsService => {
         removeEmailAddress,
         removePushDeviceToken,
         sendMigrationRetryReady,
+        sendInactivityFeeNotice,
+        sendInactivityFeeWelcomeBack,
       },
     }),
   }

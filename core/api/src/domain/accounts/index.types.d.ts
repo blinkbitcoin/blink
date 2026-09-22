@@ -172,6 +172,9 @@ interface IAccountsRepository {
   recordActivity(
     args: RecordAccountActivityArgs,
   ): Promise<RecordAccountActivityResult | RepositoryError>
+  // last activity at or before `cutoff`; accounts without a clock are never yielded
+  listDormantAccounts(args: { cutoff: Date }): AsyncGenerator<Account>
+  countWithoutActivityClock(): Promise<number | RepositoryError>
 }
 
 type AdminRole = "dealer" | "funder" | "bankowner"

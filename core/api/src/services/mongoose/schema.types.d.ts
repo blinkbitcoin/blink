@@ -277,6 +277,39 @@ interface WindDownCohortAssessmentRecord {
   updatedAt: Date
 }
 
+interface InactivityFeeNoticeRecord {
+  accountId: string
+  issuedAt: Date
+  templateVersion: string
+  bulletinIssued: boolean
+  pushSent: boolean
+  status: string
+  supersededAt?: Date
+  supersededReason?: string
+  source: string
+  sourceHash?: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+interface InactivityFeeRunRecord {
+  runId: string
+  kind: string
+  asOf: Date
+  mode: string
+  forcedDry: boolean
+  startedAt: Date
+  finishedAt: Date
+  configVersion: string
+  skipListHash: string
+  scanned: number
+  accountsWithoutClock: number
+  countsByOutcome: Record<string, number>
+  countsBySkipReason: Record<string, number>
+  error?: string
+  createdAt: Date
+}
+
 type WalletOnChainPendingReceiveRecord = {
   walletId: string
   address: string

@@ -13,6 +13,8 @@ import { toCents } from "@/domain/fiat"
 import {
   configSchema,
   getAccountLimits,
+  getCronConfig,
+  getInactivityFeeConfig,
   yamlConfig,
   getOnchainNetworkConfig,
 } from "@/config"
@@ -40,6 +42,26 @@ const withCustomYaml = (customConfig: unknown, assertions: () => void) => {
       process.argv[2] = originalArgv
     }
     fs.unlinkSync(customPath)
+  }
+}
+
+// what the process was started with in argv[2], without writing a config file: the shape the
+// on-demand runner produced before it required the mount path as its first argument
+const withArgv2 = (value: string | undefined, assertions: () => void) => {
+  const originalArgv = process.argv[2]
+  if (value === undefined) {
+    process.argv.splice(2, 1)
+  } else {
+    process.argv[2] = value
+  }
+  try {
+    jest.isolateModules(assertions)
+  } finally {
+    if (originalArgv === undefined) {
+      process.argv.splice(2, 1)
+    } else {
+      process.argv[2] = originalArgv
+    }
   }
 }
 
@@ -86,6 +108,86 @@ describe("config.ts", () => {
       const contentNew = fs.readFileSync("./galoy.yaml", "utf8")
 
       expect(contentOrg).toEqual(contentNew)
+    })
+
+    it("ships the inactivity fee inert: jobs off, no live charging, documented defaults", () => {
+      expect(getCronConfig().inactivityFeeJobsEnabled).toBe(false)
+      expect(getInactivityFeeConfig()).toEqual({
+        activityRefreshIntervalSec: 3600,
+        liveCharging: false,
+        feeAmountUsdCents: 100,
+        effectiveFrom: new Date("2026-10-15T00:00:00Z"),
+        configVersion: "dev",
+        skipAccountIds: [],
+        notPermittedCountries: [],
+        level0Deadline: new Date("2026-10-31T22:59:59Z"),
+      })
+    })
+
+    it("refuses an inactivity fee above 500 cents at startup", () => {
+      expect(() =>
+        withCustomYaml({ inactivityFee: { feeAmountUsdCents: 600 } }, () => {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const loaded = require("@/config")
+          expect(loaded).toBeDefined()
+        }),
+      ).toThrow("Invalid yaml configuration")
+    })
+
+    it("reports the custom.yaml it read, and its values are the ones in force", () => {
+      withCustomYaml({ inactivityFee: { configVersion: "sentinel-deployment" } }, () => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const loaded = require("@/config")
+        const source = loaded.getCustomConfigSource()
+
+        expect(source).toEqual({
+          path: path.join(os.tmpdir(), "config-spec-custom.yaml"),
+          defaultPath: "/var/yaml/custom.yaml",
+          loaded: true,
+        })
+        expect(loaded.getInactivityFeeConfig().configVersion).toBe("sentinel-deployment")
+      })
+    })
+
+    it("reports loaded false when argv[2] is a job argument, not a config path", () => {
+      withArgv2("notice", () => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const loaded = require("@/config")
+        const source = loaded.getCustomConfigSource()
+
+        // the loader resolved <cwd>/notice, found nothing, and fell back to schema defaults
+        expect(source.path).toBe(path.resolve("notice"))
+        expect(source.loaded).toBe(false)
+        expect(loaded.getInactivityFeeConfig().configVersion).toBe("dev")
+      })
+    })
+
+    it("normalises inactivity fee ids and countries and coerces its dates", () => {
+      withCustomYaml(
+        {
+          inactivityFee: {
+            skipAccountIds: ["1C2B5A6E-1A2B-4C3D-8E9F-0A1B2C3D4E5F"],
+            notPermittedCountries: ["nl", "de"],
+            effectiveFrom: "2026-11-01T00:00:00Z",
+            level0Deadline: "2026-12-31T22:59:59Z",
+            configVersion: "prod-2026-10",
+          },
+        },
+        () => {
+          const {
+            getInactivityFeeConfig: getConfiguredInactivityFeeConfig,
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+          } = require("@/config")
+          const configured = getConfiguredInactivityFeeConfig()
+          expect(configured.skipAccountIds).toEqual([
+            "1c2b5a6e-1a2b-4c3d-8e9f-0a1b2c3d4e5f",
+          ])
+          expect(configured.notPermittedCountries).toEqual(["NL", "DE"])
+          expect(configured.effectiveFrom).toEqual(new Date("2026-11-01T00:00:00Z"))
+          expect(configured.level0Deadline).toEqual(new Date("2026-12-31T22:59:59Z"))
+          expect(configured.configVersion).toBe("prod-2026-10")
+        },
+      )
     })
 
     it("loads fee caps for probe-excluded node groups", () => {

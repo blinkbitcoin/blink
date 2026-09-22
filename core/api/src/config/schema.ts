@@ -1088,12 +1088,20 @@ export const configSchema = {
       properties: {
         rebalanceEnabled: { type: "boolean" },
         removeInactiveMerchantsEnabled: { type: "boolean" },
+        // engineering kill-switch for the inactivity fee jobs (monthly notice run; the fee run
+        // in a later story). Distinct from inactivityFee.liveCharging, which only gates debits.
+        inactivityFeeJobsEnabled: { type: "boolean" },
       },
-      required: ["rebalanceEnabled", "removeInactiveMerchantsEnabled"],
+      required: [
+        "rebalanceEnabled",
+        "removeInactiveMerchantsEnabled",
+        "inactivityFeeJobsEnabled",
+      ],
       additionalProperties: false,
       default: {
         rebalanceEnabled: true,
         removeInactiveMerchantsEnabled: true,
+        inactivityFeeJobsEnabled: false,
       },
     },
     captcha: {
@@ -1278,10 +1286,62 @@ export const configSchema = {
           maximum: 86400,
           default: 3600,
         },
+        // gates debits only (fee run); notices are sent whenever the cron flag is on
+        liveCharging: { type: "boolean", default: false },
+        // monthly fee per balance; anything above 500 is refused at startup
+        feeAmountUsdCents: { type: "integer", minimum: 1, maximum: 500, default: 100 },
+        // first day the fee applies; shown to the app via globals.feesInformation.inactivityFee
+        effectiveFrom: {
+          type: "string",
+          format: "date-time",
+          default: "2026-10-15T00:00:00Z",
+        },
+        // stamped on every run summary so a report can be tied to the config it ran under
+        configVersion: { type: "string", minLength: 1, default: "dev" },
+        // accounts never noticed or charged; keep a comment per id citing the case
+        skipAccountIds: {
+          type: "array",
+          items: { type: "string", format: "uuid" },
+          uniqueItems: true,
+          default: [],
+        },
+        // attributed jurisdictions (alpha-2) never noticed or charged; evaluated only when set.
+        // Attribution reuses the wind-down cohort evidence (phone + IP) and windDown.ipEvidenceCutoff
+        // for the latest-IP signal.
+        notPermittedCountries: {
+          type: "array",
+          items: { type: "string", pattern: countryCodePattern },
+          uniqueItems: true,
+          default: [],
+        },
+        // level 0 accounts are skipped until this instant, ordinary afterwards
+        level0Deadline: {
+          type: "string",
+          format: "date-time",
+          default: "2026-10-31T22:59:59Z",
+        },
       },
-      required: ["activityRefreshIntervalSec"],
+      required: [
+        "activityRefreshIntervalSec",
+        "liveCharging",
+        "feeAmountUsdCents",
+        "effectiveFrom",
+        "configVersion",
+        "skipAccountIds",
+        "notPermittedCountries",
+        "level0Deadline",
+      ],
       additionalProperties: false,
-      default: { activityRefreshIntervalSec: 3600 },
+      default: {
+        activityRefreshIntervalSec: 3600,
+        liveCharging: false,
+        feeAmountUsdCents: 100,
+        effectiveFrom: "2026-10-15T00:00:00Z",
+        configVersion: "dev",
+        skipAccountIds: [],
+        notPermittedCountries: [],
+        level0Deadline: "2026-10-31T22:59:59Z",
+      },
     },
     regionRestrictions: {
       type: "object",
