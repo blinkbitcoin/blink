@@ -899,6 +899,65 @@ describe("runNoticeJob", () => {
       )
     })
 
+    it("leaves the row it inserted non-issued and never sends when the lock lapses during the insert", async () => {
+      const alice = account()
+      const bob = account()
+      dormant([alice, bob])
+      const signal = lapsing()
+      mocks.insertActive.mockImplementation(async (args: InsertActiveNoticeArgs) => {
+        signal.aborted = true
+        return notice(args.accountId, {
+          ...args,
+          id: `inserted-${args.accountId}` as InactivityFeeNoticeId,
+        })
+      })
+      const outcomes: InactivityFeeNoticeOutcomeRecord[] = []
+
+      const result = await runLive({
+        onOutcome: (record) => {
+          outcomes.push(record)
+        },
+      })
+
+      expect(result).toBeInstanceOf(InactivityFeeRunAbortedError)
+      expect(mocks.insertActive).toHaveBeenCalledTimes(1)
+      expect(sendInactivityFeeNotice).not.toHaveBeenCalled()
+      expect(mocks.markBulletinIssued).not.toHaveBeenCalled()
+      expect(outcomes).toEqual([
+        {
+          accountId: alice.id,
+          outcome: InactivityFeeNoticeOutcome.Error,
+          reason: "ResourceExpiredLockServiceError",
+          noticeId: `inserted-${alice.id}`,
+        },
+      ])
+    })
+
+    it("never inserts a fresh row when the lock lapses while the stale one is superseded", async () => {
+      const alice = account()
+      dormant([alice])
+      const signal = lapsing()
+      mocks.findActiveByAccountId.mockResolvedValue(
+        notice(alice.id, { issuedAt: iso("2024-01-01T00:00:00Z") }),
+      )
+      mocks.supersede.mockImplementation(async ({ id, reason, supersededAt }) => {
+        signal.aborted = true
+        return notice("superseded" as AccountId, {
+          id,
+          status: InactivityFeeNoticeStatus.Superseded,
+          supersededReason: reason,
+          supersededAt,
+        })
+      })
+
+      const result = await runLive()
+
+      expect(result).toBeInstanceOf(InactivityFeeRunAbortedError)
+      expect(mocks.supersede).toHaveBeenCalledTimes(1)
+      expect(mocks.insertActive).not.toHaveBeenCalled()
+      expect(sendInactivityFeeNotice).not.toHaveBeenCalled()
+    })
+
     it("stops after the account in flight when the lock lapses past its send", async () => {
       const alice = account()
       const bob = account()

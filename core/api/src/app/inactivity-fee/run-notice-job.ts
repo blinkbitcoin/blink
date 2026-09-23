@@ -324,13 +324,19 @@ const processAccount = async ({
   const freshVerdict = evaluateAccountStaticChecks({ account: fresh, asOf, config })
   if (freshVerdict.outcome === "skip") return skipped(freshVerdict.reason)
 
-  // the run lock may have lapsed during the reads above: nothing is written or sent past here
-  if (signal?.aborted) {
-    return errorOutcome({
-      account,
-      error: new ResourceExpiredLockServiceError(signal.error?.message),
-    })
-  }
+  // The run lock may have lapsed during the reads above, or during either write below: checked
+  // before each side effect, so an expired run never sends. A row it inserted stays non-issued
+  // and the replacement run sends it once.
+  const lapsed = (noticeId?: InactivityFeeNoticeId) =>
+    signal?.aborted
+      ? errorOutcome({
+          account,
+          error: new ResourceExpiredLockServiceError(signal.error?.message),
+          noticeId,
+        })
+      : undefined
+  const beforeWrite = lapsed()
+  if (beforeWrite !== undefined) return beforeWrite
 
   let notice = existing
   if (notice !== undefined && notice.bulletinIssued) {
@@ -343,6 +349,8 @@ const processAccount = async ({
       return errorOutcome({ account, error: superseded, noticeId: notice.id })
     }
     notice = undefined
+    const afterSupersede = lapsed()
+    if (afterSupersede !== undefined) return afterSupersede
   }
 
   const resend = notice !== undefined
@@ -358,6 +366,8 @@ const processAccount = async ({
     if (inserted instanceof Error) return errorOutcome({ account, error: inserted })
     notice = inserted
   }
+  const beforeSend = lapsed(notice.id)
+  if (beforeSend !== undefined) return beforeSend
 
   const issued = await issueNotice({ notice, account, issuedAt: asOf, config })
   if (issued instanceof Error) {
