@@ -58,11 +58,11 @@ const refundUnderLock = async ({
     }
 
     const { unpaired, malformed } = unpairedDebits({ transactions })
-    for (const debit of malformed) {
+    for (const row of malformed) {
       failures.push({
         walletId: wallet.id,
         error: new InactivityFeeRefundFailedError(
-          `fee row ${debit.id} has no readable key: ${debit.externalId ?? "none"}`,
+          `row ${row.id} cannot be paired safely: ${row.externalId ?? "no key"}`,
         ),
       })
     }

@@ -90,20 +90,28 @@ export const monthKeyFromExternalId = ({
   return checkedToInactivityFeeMonthKey(match[2])
 }
 
-// pairing is by key only: all months, no age limit; an unreadable, foreign or repeated key is malformed
+// pairing is by key only: all months, no age limit. A row that cannot be paired safely is handed
+// back: an unreadable, foreign or repeated key, and a refund that is not its debit's mirror
 export const unpairedDebits = ({
   transactions,
 }: {
   transactions: LedgerTransaction<WalletCurrency>[]
 }): UnpairedInactivityFeeDebits => {
-  const refundKeys = new Set(
-    transactions
-      .filter((tx) => tx.type === LedgerTransactionType.InactivityFeeRefund)
-      .map((tx) => tx.externalId),
-  )
+  const malformed: LedgerTransaction<WalletCurrency>[] = []
+
+  // a refund row is a credit leg carrying its own wallet's refund key; every row under a key is kept
+  const refunds = new Map<string, LedgerTransaction<WalletCurrency>[]>()
+  for (const refund of transactions) {
+    if (refund.type !== LedgerTransactionType.InactivityFeeRefund) continue
+    const key = refundKeyOf(refund)
+    if (key instanceof Error) {
+      malformed.push(refund)
+      continue
+    }
+    refunds.set(key, [...(refunds.get(key) ?? []), refund])
+  }
 
   const unpaired: UnpairedInactivityFeeDebit[] = []
-  const malformed: LedgerTransaction<WalletCurrency>[] = []
   const seen = new Set<string>()
   for (const debit of transactions) {
     if (debit.type !== LedgerTransactionType.InactivityFee) continue
@@ -132,12 +140,38 @@ export const unpairedDebits = ({
       continue
     }
 
-    if (refundKeys.has(refundExternalId)) continue
-    unpaired.push({ debit, walletId, month, refundExternalId })
+    const paired = refunds.get(refundExternalId)
+    if (paired === undefined) {
+      unpaired.push({ debit, walletId, month, refundExternalId })
+      continue
+    }
+    // one refund per key, for exactly the debit's amounts; anything else is for someone to look at
+    if (paired.length !== 1 || !mirrors({ debit, refund: paired[0] }))
+      malformed.push(debit)
   }
 
   return { unpaired, malformed }
 }
+
+const refundKeyOf = (
+  refund: LedgerTransaction<WalletCurrency>,
+): LedgerExternalId | ValidationError =>
+  refund.walletId === undefined || !(refund.credit > 0)
+    ? new InvalidInactivityFeeExternalIdError(refund.externalId)
+    : checkedToInactivityFeeExternalId({
+        externalId: refund.externalId ?? "",
+        kind: InactivityFeeExternalIdKind.Refund,
+        walletId: refund.walletId,
+      })
+
+const mirrors = ({
+  debit,
+  refund,
+}: {
+  debit: LedgerTransaction<WalletCurrency>
+  refund: LedgerTransaction<WalletCurrency>
+}): boolean =>
+  refund.satsAmount === debit.satsAmount && refund.centsAmount === debit.centsAmount
 
 const wholeNumber = (value: number | bigint): string =>
   new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value)

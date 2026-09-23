@@ -219,7 +219,8 @@ type UnpairedInactivityFeeDebit = {
 
 type UnpairedInactivityFeeDebits = {
   unpaired: UnpairedInactivityFeeDebit[]
-  // fee rows whose key cannot be read: cannot be paired, never refunded blindly
+  // rows that cannot be paired safely: an unreadable, foreign or repeated key, a refund that is
+  // not its debit's mirror; never refunded blindly
   malformed: LedgerTransaction<WalletCurrency>[]
 }
 
