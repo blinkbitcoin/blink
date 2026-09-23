@@ -17,6 +17,11 @@ type AdminLedgerTransactionTypeKey =
 type AdminLedgerTransactionType =
   AdminLedgerTransactionTypeObject[AdminLedgerTransactionTypeKey]
 
+type InactivityFeeLedgerTransactionTypeObject =
+  typeof import("./index").InactivityFeeLedgerTransactionType
+type InactivityFeeLedgerTransactionType =
+  InactivityFeeLedgerTransactionTypeObject[keyof InactivityFeeLedgerTransactionTypeObject]
+
 type LedgerTransactionTypeObject = typeof import("./index").LedgerTransactionType
 type LedgerTransactionTypeKey = keyof typeof import("./index").LedgerTransactionType
 type LedgerTransactionType = LedgerTransactionTypeObject[LedgerTransactionTypeKey]
@@ -71,6 +76,14 @@ type LedgerTransaction<S extends WalletCurrency> = {
   readonly vout?: OnChainTxVout
   readonly requestId?: OnChainAddressRequestId
   readonly payoutId?: PayoutId
+
+  // for inactivity fees and their refunds
+  readonly rate?: number
+  readonly rateSource?: string
+  readonly configVersion?: string
+  readonly noticeId?: string
+  readonly refundReason?: string
+  readonly runId?: string
 
   // for admin, to be removed when we switch those to satsAmount props
   readonly fee: number | undefined // Satoshis
@@ -266,6 +279,10 @@ interface ILedgerService {
     walletId: WalletId
     externalId: LedgerExternalId
   }): Promise<LedgerTransaction<WalletCurrency> | undefined | LedgerServiceError>
+
+  listInactivityFeeTransactionsByWalletId(
+    walletId: WalletId,
+  ): Promise<LedgerTransaction<WalletCurrency>[] | LedgerServiceError>
 
   getTransactionsByHash(
     paymentHash: PaymentHash | OnChainTxHash,

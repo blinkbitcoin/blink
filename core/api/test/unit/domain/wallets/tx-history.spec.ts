@@ -440,6 +440,59 @@ describe("translateDescription", () => {
     expect(result).toBeNull()
   })
 
+  it("always shows the label of a dust inactivity fee refund: 12 sats", () => {
+    const result = translateMemo({
+      type: LedgerTransactionType.InactivityFeeRefund,
+      memoFromPayer: "Inactivity fee refund — 12 sats",
+      credit: toSats(12),
+      currency: WalletCurrency.Btc,
+      memoSharingConfig,
+      ...journalIdMemoArgs,
+    })
+    expect(toSats(12)).toBeLessThan(MEMO_SHARING_SATS_THRESHOLD)
+    expect(result).toEqual("Inactivity fee refund — 12 sats")
+  })
+
+  it("always shows the label of a dust inactivity fee refund: 3 cents", () => {
+    const result = translateMemo({
+      type: LedgerTransactionType.InactivityFeeRefund,
+      memoFromPayer: "Inactivity fee refund — $0.03",
+      credit: toCents(3),
+      currency: WalletCurrency.Usd,
+      memoSharingConfig,
+      ...journalIdMemoArgs,
+    })
+    expect(toCents(3)).toBeLessThan(MEMO_SHARING_CENTS_THRESHOLD)
+    expect(result).toEqual("Inactivity fee refund — $0.03")
+  })
+
+  it("still hides a payer's memo on a dust credit of any other type", () => {
+    const result = translateMemo({
+      type: LedgerTransactionType.IntraLedger,
+      memoFromPayer: "Inactivity fee refund — 12 sats",
+      credit: toSats(12),
+      currency: WalletCurrency.Btc,
+      memoSharingConfig,
+      ...journalIdMemoArgs,
+    })
+    expect(result).toBeNull()
+  })
+
+  it("keeps the journal id on bankowner's leg of an inactivity fee refund", () => {
+    const journalId = "journal-02" as LedgerJournalId
+    const result = translateMemo({
+      type: LedgerTransactionType.InactivityFeeRefund,
+      memoFromPayer: "Inactivity fee refund — 12 sats",
+      credit: 0 as Satoshis,
+      currency: WalletCurrency.Btc,
+      walletId: journalIdMemoArgs.nonEndUserWalletIds[0],
+      journalId,
+      nonEndUserWalletIds: journalIdMemoArgs.nonEndUserWalletIds,
+      memoSharingConfig,
+    })
+    expect(result).toEqual(`JournalId:${journalId}`)
+  })
+
   it("returns memo for debit under spam threshold for USD wallet", () => {
     const result = translateMemo({
       memoFromPayer: "some memo",

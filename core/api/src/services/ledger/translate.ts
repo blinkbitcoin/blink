@@ -59,6 +59,13 @@ export const translateToLedgerTx = <S extends WalletCurrency, T extends DisplayC
     displayCurrency,
     displayCurrencyFractionDigits: tx.displayCurrencyFractionDigits ?? undefined,
 
+    rate: tx.rate ?? undefined,
+    rateSource: tx.rateSource || undefined,
+    configVersion: tx.configVersion || undefined,
+    noticeId: tx.noticeId || undefined,
+    refundReason: tx.refundReason || undefined,
+    runId: tx.runId || undefined,
+
     fee: tx.fee,
     usd: tx.usd,
     feeUsd: tx.feeUsd,

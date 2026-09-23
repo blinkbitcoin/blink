@@ -76,6 +76,8 @@ type InactivityFeeYamlConfig = {
   skipAccountIds: string[]
   notPermittedCountries: string[]
   level0Deadline: string
+  reactivationLockWaitMs: number
+  reactivationBudgetMs: number
 }
 
 type InactivityFeeConfig = {
@@ -88,6 +90,8 @@ type InactivityFeeConfig = {
   skipAccountIds: string[]
   notPermittedCountries: RestrictedCountry[]
   level0Deadline: Date
+  reactivationLockWaitMs: number
+  reactivationBudgetMs: number
 }
 
 type RegionRestrictionsYamlConfig = {

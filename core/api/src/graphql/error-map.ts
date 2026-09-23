@@ -1021,6 +1021,10 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "InactivityFeeNoticeNotFoundError":
     case "InactivityFeeNoticeSentButUnflaggedError":
     case "InactivityFeeRunAbortedError":
+    case "InactivityFeeRunInProgressError":
+    case "InvalidInactivityFeeExternalIdError":
+    case "InactivityFeeRefundFailedError":
+    case "InactivityFeeReactivationTimeoutError":
     case "OathkeeperError":
     case "OathkeeperUnauthorizedServiceError":
     case "OathkeeperMissingAuthorizationHeaderError":

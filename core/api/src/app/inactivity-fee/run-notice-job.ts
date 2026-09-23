@@ -7,11 +7,13 @@ import {
   dormancyCutoffAt,
   evaluateAccountEligibility,
   evaluateAccountStaticChecks,
+  formatIsoDate,
   InactivityFeeNoticeNotFoundError,
   InactivityFeeNoticeOutcome,
   InactivityFeeNoticeSentButUnflaggedError,
   InactivityFeeNoticeSource,
   InactivityFeeRunAbortedError,
+  InactivityFeeRunInProgressError,
   InactivityFeeRunKind,
   InactivityFeeRunMode,
   InactivityFeeSupersededReason,
@@ -19,9 +21,14 @@ import {
   isNoticeLive,
   skipListHash,
 } from "@/domain/inactivity-fee"
+import {
+  ResourceAttemptsRedlockServiceError,
+  ResourceExpiredLockServiceError,
+} from "@/domain/lock"
 import { NotificationsError } from "@/domain/notifications"
 import { ErrorLevel, parseErrorFromUnknown } from "@/domain/shared"
 
+import { LockService } from "@/services/lock"
 import {
   AccountsRepository,
   InactivityFeeNoticesRepository,
@@ -39,13 +46,42 @@ import {
 // onOutcome sink (the CSV writer) is part of the scan, so its failure aborts too. Config is
 // read once here and threaded through. Dry-run evaluates and reports, writes no notice row
 // and sends nothing; the run summary is written either way.
-export const runNoticeJob = async ({
+export const runNoticeJob = async (
+  args: RunNoticeJobArgs,
+): Promise<InactivityFeeRun | ApplicationError> => {
+  // a dry run writes and sends nothing, so it is never locked
+  if (args.dryRun) return runNoticeJobUnlocked(args)
+
+  // Refused while another live run for the day is in progress. A lock that lapses mid-run stops
+  // the scan before its next write or send: a replacement run may be sending by then. Result
+  // kept aside for a late release.
+  const finished: { run?: InactivityFeeRun | ApplicationError } = {}
+  const locked = await LockService().lockInactivityFeeRun(
+    { kind: InactivityFeeRunKind.Notice, asOf: args.asOf },
+    async (signal) => {
+      finished.run = await runNoticeJobUnlocked({ ...args, signal })
+      return finished.run
+    },
+  )
+  if (finished.run !== undefined) return finished.run
+  if (locked instanceof ResourceAttemptsRedlockServiceError) {
+    return new InactivityFeeRunInProgressError(
+      `a live notice run for ${formatIsoDate({ date: args.asOf })} is already in progress`,
+    )
+  }
+  return locked
+}
+
+const runNoticeJobUnlocked = async ({
   asOf,
   dryRun,
   runId,
   forcedDry = false,
   onOutcome,
-}: RunNoticeJobArgs): Promise<InactivityFeeRun | ApplicationError> => {
+  signal,
+}: RunNoticeJobArgs & {
+  signal?: InactivityFeeRunAbortSignal
+}): Promise<InactivityFeeRun | ApplicationError> => {
   const config = getInactivityFeeConfig()
   const windDownConfig = getWindDownConfig()
   const startedAt = new Date()
@@ -76,8 +112,9 @@ export const runNoticeJob = async ({
       cutoff,
       counts,
       onOutcome,
+      signal,
       evaluate: (account) =>
-        evaluateAccountInSpan({ account, asOf, dryRun, config, windDownConfig }),
+        evaluateAccountInSpan({ account, asOf, dryRun, config, windDownConfig, signal }),
     })
     if (scanned instanceof Error) error = scanned
   }
@@ -126,11 +163,13 @@ const scanDormantAccounts = async ({
   cutoff,
   counts,
   onOutcome,
+  signal,
   evaluate,
 }: {
   cutoff: Date
   counts: InactivityFeeRunCounts
   onOutcome: RunNoticeJobArgs["onOutcome"]
+  signal?: InactivityFeeRunAbortSignal
   evaluate: (account: Account) => Promise<InactivityFeeNoticeOutcomeRecord>
 }): Promise<true | Error> => {
   try {
@@ -142,6 +181,9 @@ const scanDormantAccounts = async ({
         counts.bySkipReason[record.reason] = (counts.bySkipReason[record.reason] ?? 0) + 1
       }
       if (onOutcome) await onOutcome(record)
+      // the run lock lapsed: the account in flight is accounted for, the next one is not started
+      if (signal?.aborted)
+        return new ResourceExpiredLockServiceError(signal.error?.message)
     }
     return true
   } catch (err) {
@@ -157,6 +199,7 @@ const evaluateAccountInSpan = async (args: {
   dryRun: boolean
   config: InactivityFeeConfig
   windDownConfig: WindDownConfig
+  signal?: InactivityFeeRunAbortSignal
 }): Promise<InactivityFeeNoticeOutcomeRecord> => {
   try {
     return await asyncRunInSpan(
@@ -218,12 +261,14 @@ const processAccount = async ({
   dryRun,
   config,
   windDownConfig,
+  signal,
 }: {
   account: Account
   asOf: Date
   dryRun: boolean
   config: InactivityFeeConfig
   windDownConfig: WindDownConfig
+  signal?: InactivityFeeRunAbortSignal
 }): Promise<InactivityFeeNoticeOutcomeRecord> => {
   const skipped = (
     reason: InactivityFeeSkipReason,
@@ -279,6 +324,20 @@ const processAccount = async ({
   const freshVerdict = evaluateAccountStaticChecks({ account: fresh, asOf, config })
   if (freshVerdict.outcome === "skip") return skipped(freshVerdict.reason)
 
+  // The run lock may have lapsed during the reads above, or during either write below: checked
+  // before each side effect, so an expired run never sends. A row it inserted stays non-issued
+  // and the replacement run sends it once.
+  const lapsed = (noticeId?: InactivityFeeNoticeId) =>
+    signal?.aborted
+      ? errorOutcome({
+          account,
+          error: new ResourceExpiredLockServiceError(signal.error?.message),
+          noticeId,
+        })
+      : undefined
+  const beforeWrite = lapsed()
+  if (beforeWrite !== undefined) return beforeWrite
+
   let notice = existing
   if (notice !== undefined && notice.bulletinIssued) {
     const superseded = await notices.supersede({
@@ -290,6 +349,8 @@ const processAccount = async ({
       return errorOutcome({ account, error: superseded, noticeId: notice.id })
     }
     notice = undefined
+    const afterSupersede = lapsed()
+    if (afterSupersede !== undefined) return afterSupersede
   }
 
   const resend = notice !== undefined
@@ -305,6 +366,8 @@ const processAccount = async ({
     if (inserted instanceof Error) return errorOutcome({ account, error: inserted })
     notice = inserted
   }
+  const beforeSend = lapsed(notice.id)
+  if (beforeSend !== undefined) return beforeSend
 
   const issued = await issueNotice({ notice, account, issuedAt: asOf, config })
   if (issued instanceof Error) {

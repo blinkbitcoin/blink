@@ -46,6 +46,14 @@ jest.mock("@/services/ledger", () => ({
   }),
 }))
 
+jest.mock("@/services/lock", () => ({
+  __mocks: { lockInactivityFeeRun: jest.fn() },
+  LockService: () => ({
+    lockInactivityFeeRun:
+      jest.requireMock("@/services/lock").__mocks.lockInactivityFeeRun,
+  }),
+}))
+
 jest.mock("@/services/notifications", () => ({
   __mocks: { sendInactivityFeeNotice: jest.fn() },
   NotificationsService: () => ({
@@ -86,11 +94,17 @@ import {
   InactivityFeeNoticeSource,
   InactivityFeeNoticeStatus,
   InactivityFeeRunAbortedError,
+  InactivityFeeRunInProgressError,
+  InactivityFeeRunKind,
   InactivityFeeRunMode,
   InactivityFeeSkipReason,
   InactivityFeeSupersededReason,
   InactivityFeeTemplateVersion,
 } from "@/domain/inactivity-fee"
+import {
+  ResourceAttemptsRedlockServiceError,
+  UnknownLockServiceError,
+} from "@/domain/lock"
 import { NotificationsServiceUnreachableServerError } from "@/domain/notifications"
 import { toSeconds } from "@/domain/primitives"
 import { WalletCurrency } from "@/domain/shared"
@@ -103,6 +117,9 @@ const { getWalletBalanceAmount } = jest.requireMock("@/services/ledger").__mocks
 const { sendInactivityFeeNotice } = jest.requireMock("@/services/notifications")
   .__mocks as {
   sendInactivityFeeNotice: jest.Mock
+}
+const { lockInactivityFeeRun } = jest.requireMock("@/services/lock").__mocks as {
+  lockInactivityFeeRun: jest.Mock
 }
 const mockGetInactivityFeeConfig = getInactivityFeeConfig as jest.MockedFunction<
   typeof getInactivityFeeConfig
@@ -130,6 +147,8 @@ const config: InactivityFeeConfig = {
   skipAccountIds: [],
   notPermittedCountries: [],
   level0Deadline: iso("2026-10-31T22:59:59Z"),
+  reactivationLockWaitMs: 1500,
+  reactivationBudgetMs: 5000,
 }
 
 const region = (overrides: Partial<WindDownRegionConfig> = {}): WindDownRegionConfig => ({
@@ -256,6 +275,9 @@ describe("runNoticeJob", () => {
     )
     sendInactivityFeeNotice.mockResolvedValue(true)
     walletsFor({ [WalletCurrency.Btc]: 300n, [WalletCurrency.Usd]: 0n })
+    lockInactivityFeeRun.mockImplementation(
+      async (_key: unknown, fn: () => Promise<unknown>) => fn(),
+    )
   })
 
   const runLive = (extra: Partial<RunNoticeJobArgs> = {}) =>
@@ -771,6 +793,191 @@ describe("runNoticeJob", () => {
         [InactivityFeeNoticeOutcome.Noticed]: 1,
       })
       expect(sendInactivityFeeNotice).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe("run lock", () => {
+    it("takes the run lock for a live run, keyed on kind and asOf", async () => {
+      dormant([account()])
+
+      expectRun(await runLive())
+
+      expect(lockInactivityFeeRun).toHaveBeenCalledTimes(1)
+      expect(lockInactivityFeeRun).toHaveBeenCalledWith(
+        { kind: InactivityFeeRunKind.Notice, asOf },
+        expect.any(Function),
+      )
+    })
+
+    it("never locks a dry run", async () => {
+      dormant([account()])
+
+      expectRun(await runNoticeJob({ asOf, dryRun: true, runId }))
+
+      expect(lockInactivityFeeRun).not.toHaveBeenCalled()
+    })
+
+    it("refuses a second live run for the same day: no scan, no rows, no sends, no summary", async () => {
+      dormant([account()])
+      lockInactivityFeeRun.mockResolvedValue(new ResourceAttemptsRedlockServiceError())
+
+      const result = await runLive()
+
+      expect(result).toBeInstanceOf(InactivityFeeRunInProgressError)
+      expect(mocks.listDormantAccounts).not.toHaveBeenCalled()
+      expect(mocks.insertActive).not.toHaveBeenCalled()
+      expect(sendInactivityFeeNotice).not.toHaveBeenCalled()
+      expect(mocks.persistRun).not.toHaveBeenCalled()
+    })
+
+    it("returns any other lock error as is", async () => {
+      const lockError = new UnknownLockServiceError("redis down")
+      lockInactivityFeeRun.mockResolvedValue(lockError)
+
+      expect(await runLive()).toBe(lockError)
+      expect(sendInactivityFeeNotice).not.toHaveBeenCalled()
+    })
+
+    it("keeps a finished run's result when the lock is released late", async () => {
+      dormant([account()])
+      lockInactivityFeeRun.mockImplementation(
+        async (_key: unknown, fn: () => Promise<unknown>) => {
+          await fn()
+          return new ResourceAttemptsRedlockServiceError()
+        },
+      )
+
+      const run = expectRun(await runLive())
+
+      expect(run.counts.byOutcome).toEqual({ noticed: 1 })
+    })
+
+    const lapsing = () => {
+      const signal = { aborted: false, error: undefined as Error | undefined }
+      lockInactivityFeeRun.mockImplementation(
+        async (_key: unknown, fn: (signal: unknown) => Promise<unknown>) => fn(signal),
+      )
+      return signal
+    }
+
+    it("writes and sends nothing for the account in flight once the lock has lapsed, and aborts", async () => {
+      const alice = account()
+      const bob = account()
+      dormant([alice, bob])
+      const signal = lapsing()
+      // the lease lapses while alice's notice row is being read
+      mocks.findActiveByAccountId.mockImplementation(async (accountId: AccountId) => {
+        signal.aborted = true
+        signal.error = new Error("lock expired")
+        return new InactivityFeeNoticeNotFoundError(accountId)
+      })
+      const outcomes: InactivityFeeNoticeOutcomeRecord[] = []
+
+      const result = await runLive({
+        onOutcome: (record) => {
+          outcomes.push(record)
+        },
+      })
+
+      expect(result).toBeInstanceOf(InactivityFeeRunAbortedError)
+      expect(mocks.supersede).not.toHaveBeenCalled()
+      expect(mocks.insertActive).not.toHaveBeenCalled()
+      expect(sendInactivityFeeNotice).not.toHaveBeenCalled()
+      expect(outcomes).toEqual([
+        {
+          accountId: alice.id,
+          outcome: InactivityFeeNoticeOutcome.Error,
+          reason: "ResourceExpiredLockServiceError",
+        },
+      ])
+      expect(mocks.findActiveByAccountId).toHaveBeenCalledTimes(1)
+      expect(mocks.persistRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          counts: expect.objectContaining({ scanned: 1 }),
+          error: "ResourceExpiredLockServiceError: lock expired",
+        }),
+      )
+    })
+
+    it("leaves the row it inserted non-issued and never sends when the lock lapses during the insert", async () => {
+      const alice = account()
+      const bob = account()
+      dormant([alice, bob])
+      const signal = lapsing()
+      mocks.insertActive.mockImplementation(async (args: InsertActiveNoticeArgs) => {
+        signal.aborted = true
+        return notice(args.accountId, {
+          ...args,
+          id: `inserted-${args.accountId}` as InactivityFeeNoticeId,
+        })
+      })
+      const outcomes: InactivityFeeNoticeOutcomeRecord[] = []
+
+      const result = await runLive({
+        onOutcome: (record) => {
+          outcomes.push(record)
+        },
+      })
+
+      expect(result).toBeInstanceOf(InactivityFeeRunAbortedError)
+      expect(mocks.insertActive).toHaveBeenCalledTimes(1)
+      expect(sendInactivityFeeNotice).not.toHaveBeenCalled()
+      expect(mocks.markBulletinIssued).not.toHaveBeenCalled()
+      expect(outcomes).toEqual([
+        {
+          accountId: alice.id,
+          outcome: InactivityFeeNoticeOutcome.Error,
+          reason: "ResourceExpiredLockServiceError",
+          noticeId: `inserted-${alice.id}`,
+        },
+      ])
+    })
+
+    it("never inserts a fresh row when the lock lapses while the stale one is superseded", async () => {
+      const alice = account()
+      dormant([alice])
+      const signal = lapsing()
+      mocks.findActiveByAccountId.mockResolvedValue(
+        notice(alice.id, { issuedAt: iso("2024-01-01T00:00:00Z") }),
+      )
+      mocks.supersede.mockImplementation(async ({ id, reason, supersededAt }) => {
+        signal.aborted = true
+        return notice("superseded" as AccountId, {
+          id,
+          status: InactivityFeeNoticeStatus.Superseded,
+          supersededReason: reason,
+          supersededAt,
+        })
+      })
+
+      const result = await runLive()
+
+      expect(result).toBeInstanceOf(InactivityFeeRunAbortedError)
+      expect(mocks.supersede).toHaveBeenCalledTimes(1)
+      expect(mocks.insertActive).not.toHaveBeenCalled()
+      expect(sendInactivityFeeNotice).not.toHaveBeenCalled()
+    })
+
+    it("stops after the account in flight when the lock lapses past its send", async () => {
+      const alice = account()
+      const bob = account()
+      dormant([alice, bob])
+      const signal = lapsing()
+      sendInactivityFeeNotice.mockImplementation(async () => {
+        signal.aborted = true
+        return true
+      })
+
+      const result = await runLive()
+
+      expect(result).toBeInstanceOf(InactivityFeeRunAbortedError)
+      expect(sendInactivityFeeNotice).toHaveBeenCalledTimes(1)
+      expect(mocks.findActiveByAccountId).toHaveBeenCalledTimes(1)
+      expect(mocks.persistRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          counts: expect.objectContaining({ scanned: 1, byOutcome: { noticed: 1 } }),
+        }),
+      )
     })
   })
 
