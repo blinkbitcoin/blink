@@ -21,7 +21,10 @@ import {
   isNoticeLive,
   skipListHash,
 } from "@/domain/inactivity-fee"
-import { ResourceAttemptsRedlockServiceError } from "@/domain/lock"
+import {
+  ResourceAttemptsRedlockServiceError,
+  ResourceExpiredLockServiceError,
+} from "@/domain/lock"
 import { NotificationsError } from "@/domain/notifications"
 import { ErrorLevel, parseErrorFromUnknown } from "@/domain/shared"
 
@@ -49,12 +52,14 @@ export const runNoticeJob = async (
   // a dry run writes and sends nothing, so it is never locked
   if (args.dryRun) return runNoticeJobUnlocked(args)
 
-  // refused while another live run for the day is in progress; result kept aside for a late release
+  // Refused while another live run for the day is in progress. A lock that lapses mid-run stops
+  // the scan before its next write or send: a replacement run may be sending by then. Result
+  // kept aside for a late release.
   const finished: { run?: InactivityFeeRun | ApplicationError } = {}
   const locked = await LockService().lockInactivityFeeRun(
     { kind: InactivityFeeRunKind.Notice, asOf: args.asOf },
-    async () => {
-      finished.run = await runNoticeJobUnlocked(args)
+    async (signal) => {
+      finished.run = await runNoticeJobUnlocked({ ...args, signal })
       return finished.run
     },
   )
@@ -73,7 +78,10 @@ const runNoticeJobUnlocked = async ({
   runId,
   forcedDry = false,
   onOutcome,
-}: RunNoticeJobArgs): Promise<InactivityFeeRun | ApplicationError> => {
+  signal,
+}: RunNoticeJobArgs & {
+  signal?: InactivityFeeRunAbortSignal
+}): Promise<InactivityFeeRun | ApplicationError> => {
   const config = getInactivityFeeConfig()
   const windDownConfig = getWindDownConfig()
   const startedAt = new Date()
@@ -104,8 +112,9 @@ const runNoticeJobUnlocked = async ({
       cutoff,
       counts,
       onOutcome,
+      signal,
       evaluate: (account) =>
-        evaluateAccountInSpan({ account, asOf, dryRun, config, windDownConfig }),
+        evaluateAccountInSpan({ account, asOf, dryRun, config, windDownConfig, signal }),
     })
     if (scanned instanceof Error) error = scanned
   }
@@ -154,11 +163,13 @@ const scanDormantAccounts = async ({
   cutoff,
   counts,
   onOutcome,
+  signal,
   evaluate,
 }: {
   cutoff: Date
   counts: InactivityFeeRunCounts
   onOutcome: RunNoticeJobArgs["onOutcome"]
+  signal?: InactivityFeeRunAbortSignal
   evaluate: (account: Account) => Promise<InactivityFeeNoticeOutcomeRecord>
 }): Promise<true | Error> => {
   try {
@@ -170,6 +181,9 @@ const scanDormantAccounts = async ({
         counts.bySkipReason[record.reason] = (counts.bySkipReason[record.reason] ?? 0) + 1
       }
       if (onOutcome) await onOutcome(record)
+      // the run lock lapsed: the account in flight is accounted for, the next one is not started
+      if (signal?.aborted)
+        return new ResourceExpiredLockServiceError(signal.error?.message)
     }
     return true
   } catch (err) {
@@ -185,6 +199,7 @@ const evaluateAccountInSpan = async (args: {
   dryRun: boolean
   config: InactivityFeeConfig
   windDownConfig: WindDownConfig
+  signal?: InactivityFeeRunAbortSignal
 }): Promise<InactivityFeeNoticeOutcomeRecord> => {
   try {
     return await asyncRunInSpan(
@@ -246,12 +261,14 @@ const processAccount = async ({
   dryRun,
   config,
   windDownConfig,
+  signal,
 }: {
   account: Account
   asOf: Date
   dryRun: boolean
   config: InactivityFeeConfig
   windDownConfig: WindDownConfig
+  signal?: InactivityFeeRunAbortSignal
 }): Promise<InactivityFeeNoticeOutcomeRecord> => {
   const skipped = (
     reason: InactivityFeeSkipReason,
@@ -306,6 +323,14 @@ const processAccount = async ({
   if (fresh instanceof Error) return errorOutcome({ account, error: fresh })
   const freshVerdict = evaluateAccountStaticChecks({ account: fresh, asOf, config })
   if (freshVerdict.outcome === "skip") return skipped(freshVerdict.reason)
+
+  // the run lock may have lapsed during the reads above: nothing is written or sent past here
+  if (signal?.aborted) {
+    return errorOutcome({
+      account,
+      error: new ResourceExpiredLockServiceError(signal.error?.message),
+    })
+  }
 
   let notice = existing
   if (notice !== undefined && notice.bulletinIssued) {

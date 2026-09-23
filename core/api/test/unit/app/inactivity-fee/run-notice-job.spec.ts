@@ -851,6 +851,75 @@ describe("runNoticeJob", () => {
 
       expect(run.counts.byOutcome).toEqual({ noticed: 1 })
     })
+
+    const lapsing = () => {
+      const signal = { aborted: false, error: undefined as Error | undefined }
+      lockInactivityFeeRun.mockImplementation(
+        async (_key: unknown, fn: (signal: unknown) => Promise<unknown>) => fn(signal),
+      )
+      return signal
+    }
+
+    it("writes and sends nothing for the account in flight once the lock has lapsed, and aborts", async () => {
+      const alice = account()
+      const bob = account()
+      dormant([alice, bob])
+      const signal = lapsing()
+      // the lease lapses while alice's notice row is being read
+      mocks.findActiveByAccountId.mockImplementation(async (accountId: AccountId) => {
+        signal.aborted = true
+        signal.error = new Error("lock expired")
+        return new InactivityFeeNoticeNotFoundError(accountId)
+      })
+      const outcomes: InactivityFeeNoticeOutcomeRecord[] = []
+
+      const result = await runLive({
+        onOutcome: (record) => {
+          outcomes.push(record)
+        },
+      })
+
+      expect(result).toBeInstanceOf(InactivityFeeRunAbortedError)
+      expect(mocks.supersede).not.toHaveBeenCalled()
+      expect(mocks.insertActive).not.toHaveBeenCalled()
+      expect(sendInactivityFeeNotice).not.toHaveBeenCalled()
+      expect(outcomes).toEqual([
+        {
+          accountId: alice.id,
+          outcome: InactivityFeeNoticeOutcome.Error,
+          reason: "ResourceExpiredLockServiceError",
+        },
+      ])
+      expect(mocks.findActiveByAccountId).toHaveBeenCalledTimes(1)
+      expect(mocks.persistRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          counts: expect.objectContaining({ scanned: 1 }),
+          error: "ResourceExpiredLockServiceError: lock expired",
+        }),
+      )
+    })
+
+    it("stops after the account in flight when the lock lapses past its send", async () => {
+      const alice = account()
+      const bob = account()
+      dormant([alice, bob])
+      const signal = lapsing()
+      sendInactivityFeeNotice.mockImplementation(async () => {
+        signal.aborted = true
+        return true
+      })
+
+      const result = await runLive()
+
+      expect(result).toBeInstanceOf(InactivityFeeRunAbortedError)
+      expect(sendInactivityFeeNotice).toHaveBeenCalledTimes(1)
+      expect(mocks.findActiveByAccountId).toHaveBeenCalledTimes(1)
+      expect(mocks.persistRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          counts: expect.objectContaining({ scanned: 1, byOutcome: { noticed: 1 } }),
+        }),
+      )
+    })
   })
 
   describe("abort", () => {
