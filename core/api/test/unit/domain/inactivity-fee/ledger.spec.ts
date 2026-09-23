@@ -305,6 +305,77 @@ describe("unpairedDebits", () => {
       malformed: [noKey, badKey, noWallet],
     })
   })
+
+  it("hands back a refund row that is not a credit leg, and the debit stays unpaired", () => {
+    const debit = fee("2026-10")
+    const wrongLeg = {
+      ...refund("2026-10"),
+      debit: 1289 as Satoshis,
+      credit: 0 as Satoshis,
+    }
+
+    expect(unpairedDebits({ transactions: [debit, wrongLeg] })).toEqual({
+      unpaired: [expect.objectContaining({ debit })],
+      malformed: [wrongLeg],
+    })
+  })
+
+  it("hands back a refund row carrying another wallet's key", () => {
+    const debit = fee("2026-10")
+    const foreign = tx({
+      type: LedgerTransactionType.InactivityFeeRefund,
+      externalId: `ifee_refund_${otherWalletId}_2026-10`,
+    })
+
+    expect(unpairedDebits({ transactions: [debit, foreign] })).toEqual({
+      unpaired: [expect.objectContaining({ debit })],
+      malformed: [foreign],
+    })
+  })
+
+  it("hands back a refund row whose key cannot be read", () => {
+    const noKey = tx({
+      type: LedgerTransactionType.InactivityFeeRefund,
+      externalId: undefined,
+    })
+    const debitShaped = tx({
+      type: LedgerTransactionType.InactivityFeeRefund,
+      externalId: `ifee_${walletId}_2026-10`,
+    })
+    const noWallet = tx({
+      type: LedgerTransactionType.InactivityFeeRefund,
+      externalId: `ifee_refund_${walletId}_2026-10`,
+      wallet: undefined,
+    })
+
+    expect(unpairedDebits({ transactions: [noKey, debitShaped, noWallet] })).toEqual({
+      unpaired: [],
+      malformed: [noKey, debitShaped, noWallet],
+    })
+  })
+
+  it("hands the debit back when its refund carries other amounts", () => {
+    const debit = fee("2026-10")
+    const partial = tx({
+      type: LedgerTransactionType.InactivityFeeRefund,
+      externalId: `ifee_refund_${walletId}_2026-10`,
+      satsAmount: 500,
+      centsAmount: 100,
+    })
+
+    expect(unpairedDebits({ transactions: [debit, partial] })).toEqual({
+      unpaired: [],
+      malformed: [debit],
+    })
+  })
+
+  it("hands the debit back when its key is refunded twice", () => {
+    const debit = fee("2026-10")
+
+    expect(
+      unpairedDebits({ transactions: [debit, refund("2026-10"), refund("2026-10")] }),
+    ).toEqual({ unpaired: [], malformed: [debit] })
+  })
 })
 
 describe("history labels", () => {

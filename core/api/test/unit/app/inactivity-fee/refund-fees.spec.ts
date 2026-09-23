@@ -358,6 +358,22 @@ describe("refundInactivityFees", () => {
     expect(mockRecordRefund).not.toHaveBeenCalled()
   })
 
+  it("reports a refund row that is not the debit's mirror and posts nothing", async () => {
+    rowsByWallet({
+      [btcWalletId]: [
+        fee({ walletId: btcWalletId, month: "2026-10", sats: 1289, cents: 100 }),
+        refund({ walletId: btcWalletId, month: "2026-10", sats: 500, cents: 100 }),
+      ],
+    })
+
+    const result = expectResult(await run())
+
+    expect(result.failures).toHaveLength(1)
+    expect(result.failures[0].error).toBeInstanceOf(InactivityFeeRefundFailedError)
+    expect(result.refundedSats).toBe(0)
+    expect(mockRecordRefund).not.toHaveBeenCalled()
+  })
+
   it("stops posting once the lock is lost", async () => {
     rowsByWallet({
       [btcWalletId]: [
