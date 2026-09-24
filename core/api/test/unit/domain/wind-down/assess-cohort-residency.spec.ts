@@ -40,6 +40,15 @@ describe("assessCohortResidency", () => {
       ).toEqual({ matched: true, assignedCountry: "FJ", rule: "strict-list" })
     })
 
+    it("holds a strict AND affected phone against the same-country release pair", () => {
+      // the release would fire for this affected primary if the strict scan did not run first
+      expect(
+        assessCohortResidency(
+          args({ phoneCountry: "KE", creationIpCountry: "GT", latestIpCountry: "GT" }),
+        ),
+      ).toEqual({ matched: true, assignedCountry: "KE", rule: "strict-list" })
+    })
+
     it("locks on a strict newest deleted phone regardless of IPs", () => {
       expect(
         assessCohortResidency(
