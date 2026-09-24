@@ -45,6 +45,12 @@ type InactivityFeeTemplateVersion =
 type InactivityFeeNoticeOutcome =
   (typeof import("./index").InactivityFeeNoticeOutcome)[keyof typeof import("./index").InactivityFeeNoticeOutcome]
 
+type InactivityFeeChargeOutcome =
+  (typeof import("./index").InactivityFeeChargeOutcome)[keyof typeof import("./index").InactivityFeeChargeOutcome]
+
+type InactivityFeeRateSource =
+  (typeof import("./index").InactivityFeeRateSource)[keyof typeof import("./index").InactivityFeeRateSource]
+
 type InactivityFeeRunKind =
   (typeof import("./index").InactivityFeeRunKind)[keyof typeof import("./index").InactivityFeeRunKind]
 
@@ -115,6 +121,61 @@ type AccountEligibility =
   | { outcome: "eligible" }
   | { outcome: "skip"; reason: InactivityFeeSkipReason }
 
+// the context the charge predicate needs beyond the account, notice and wallet
+type InactivityFeeChargeContext = Pick<
+  InactivityFeeEligibilityContext,
+  "windDownStatus" | "assignedCountry"
+>
+
+type EvaluateChargeAccountChecksArgs = {
+  account: Account
+  notice: InactivityFeeNotice | undefined
+  asOf: Date
+  // flag_off is a live-run verdict: a dry run reports what the flag holds back
+  dryRun: boolean
+  config: InactivityFeeConfig
+}
+
+type EvaluateChargeArgs = EvaluateChargeAccountChecksArgs & {
+  balance: BalanceAmount<WalletCurrency>
+  // the month key already exists on this wallet
+  keyExists: boolean
+  ctx: InactivityFeeChargeContext
+}
+
+type ChargeVerdict =
+  | { outcome: "charge" }
+  | { outcome: "skip"; reason: InactivityFeeSkipReason }
+
+type InactivityFeeAmount = {
+  btc: BtcPaymentAmount
+  usd: UsdPaymentAmount
+}
+
+type SizeInactivityFeeArgs = {
+  balance: BalanceAmount<WalletCurrency>
+  feeAmountUsdCents: UsdCents
+  ratio: WalletPriceRatio
+}
+
+// one dealer mid-rate for the whole run
+type InactivityFeePinnedRate = {
+  ratio: WalletPriceRatio
+  // USD per BTC
+  rate: number
+  rateSource: InactivityFeeRateSource
+}
+
+type InactivityFeeWalletBalance = {
+  wallet: Wallet
+  balance: BalanceAmount<WalletCurrency>
+}
+
+// what the context loader returns: the eligibility context plus the wallets it read
+type InactivityFeeLoadedContext = InactivityFeeEligibilityContext & {
+  wallets: InactivityFeeWalletBalance[]
+}
+
 type InactivityFeeRunCounts = {
   scanned: number
   // accounts with no activity clock at all (never backfilled): never scanned
@@ -137,6 +198,21 @@ type InactivityFeeRun = {
   skipListHash: string
   counts: InactivityFeeRunCounts
   error?: string
+  // fee runs only: the pinned rate (USD per BTC) and what was posted
+  rate?: number
+  rateSource?: string
+  debited?: InactivityFeeRunDebited
+  // the first and last charge key produced, in scan order: a sample, not an ordered range and
+  // not a selector — `runId` on every row is what picks out a run's debits
+  firstExternalIdSeen?: string
+  lastExternalIdSeen?: string
+}
+
+// live posts only; sats from Bitcoin Balances, cents from Dollar Balances
+type InactivityFeeRunDebited = {
+  count: number
+  sats: number
+  cents: number
 }
 
 type InsertActiveNoticeArgs = {
@@ -175,6 +251,8 @@ interface IInactivityFeeNoticesRepository {
   supersede(
     args: SupersedeNoticeArgs,
   ): Promise<InactivityFeeNotice | InactivityFeeNoticeNotFoundError | RepositoryError>
+  // every active row issued at or before the cutoff; a driver error throws from the `for await`
+  listActiveIssuedBefore(args: { cutoff: Date }): AsyncGenerator<InactivityFeeNotice>
 }
 
 interface IInactivityFeeRunsRepository {
@@ -200,6 +278,29 @@ type RunNoticeJobArgs = {
   // label only: the caller downgraded a live request to dry (on-demand, asOf not today)
   forcedDry?: boolean
   onOutcome?: (record: InactivityFeeNoticeOutcomeRecord) => Promise<void> | void
+}
+
+// one line per wallet verdict, or one per account when an account-level check fails (no wallet)
+type InactivityFeeChargeOutcomeRecord = {
+  accountId: AccountId
+  walletId?: WalletId
+  currency?: WalletCurrency
+  outcome: InactivityFeeChargeOutcome
+  // skip reason, or the error name for error
+  reason?: string
+  // the wallet's own unit: sats or cents
+  amount?: number
+  externalId?: LedgerExternalId
+  noticeId?: InactivityFeeNoticeId
+}
+
+type RunFeeJobArgs = {
+  asOf: Date
+  dryRun: boolean
+  runId: string
+  // label only: the caller downgraded a live request to dry (on-demand, asOf not today)
+  forcedDry?: boolean
+  onOutcome?: (record: InactivityFeeChargeOutcomeRecord) => Promise<void> | void
 }
 
 type InactivityFeeMonthKey = string & { readonly brand: unique symbol }

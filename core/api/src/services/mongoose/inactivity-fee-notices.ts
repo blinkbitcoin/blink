@@ -103,11 +103,31 @@ export const InactivityFeeNoticesRepository = (): IInactivityFeeNoticesRepositor
     }
   }
 
+  // The fee job's worklist, via the {status, issuedAt} index: a superset (a row may be dead by
+  // timestamp, the account may have reactivated) that decides nothing. A driver error while
+  // iterating surfaces as a thrown error from the `for await`: a scan cannot half-succeed.
+  const listActiveIssuedBefore = async function* ({
+    cutoff,
+  }: {
+    cutoff: Date
+  }): AsyncGenerator<InactivityFeeNotice> {
+    // small batches: at tens of ms per account a size-bound default batch could sit longer than
+    // Mongo's cursor idle timeout on a six-figure scan
+    const cursor = InactivityFeeNotice.find({
+      status: InactivityFeeNoticeStatus.Active,
+      issuedAt: { $lte: cutoff },
+    }).cursor({ batchSize: 200 })
+    for await (const notice of cursor) {
+      yield noticeFromRaw(notice)
+    }
+  }
+
   return {
     findActiveByAccountId,
     insertActive,
     markBulletinIssued,
     supersede,
+    listActiveIssuedBefore,
   }
 }
 

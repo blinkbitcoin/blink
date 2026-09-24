@@ -12,6 +12,8 @@ export const InactivityFeeSkipReason = {
   Jurisdiction: "jurisdiction",
   AlreadyDebited: "already_debited",
   FlagOff: "flag_off",
+  // asOf is before inactivityFee.effectiveFrom, the date the notice copy and the app advertise
+  BeforeEffectiveFrom: "before_effective_from",
 } as const
 
 export const InactivityFeeNoticeStatus = {
@@ -47,6 +49,21 @@ export const InactivityFeeNoticeOutcome = {
   // bulletin sent, row not flagged: warned but not live, needs a look before the next run
   SentUnflagged: "sent_unflagged",
   Error: "error",
+} as const
+
+// per-wallet result of one fee run; an account-level skip is one record without a wallet
+export const InactivityFeeChargeOutcome = {
+  Charged: "charged",
+  WouldCharge: "would_charge",
+  Skipped: "skipped",
+  Error: "error",
+  // the account lock lapsed during a post and the account came back meanwhile: refunded in-run
+  Refunded: "refunded",
+} as const
+
+// stamped on every debit as `rateSource`
+export const InactivityFeeRateSource = {
+  DealerMid: "dealer-mid",
 } as const
 
 export const InactivityFeeRunKind = {
