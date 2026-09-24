@@ -1,7 +1,9 @@
+import { alertFailedRefund } from "./alert-failed-refund"
 import { chargeWallet } from "./charge-wallet"
 import { loadChargeAccount } from "./load-charge-context"
 import { loadEligibilityContext } from "./load-eligibility-context"
 import { pinRate } from "./pin-rate"
+import { reconcileLapsedCharge } from "./reconcile-lapsed-charge"
 
 import { getInactivityFeeConfig, getWindDownConfig } from "@/config"
 
@@ -28,6 +30,7 @@ import {
 } from "@/services/mongoose"
 import {
   addAttributesToCurrentSpan,
+  addEventToCurrentSpan,
   asyncRunInSpan,
   recordExceptionInCurrentSpan,
 } from "@/services/tracing"
@@ -327,6 +330,7 @@ const processAccountLocked = async (
 ): Promise<InactivityFeeChargeOutcomeRecord[]> => {
   const records: InactivityFeeChargeOutcomeRecord[] = []
   let ran = false
+  let lapsed = false
   const locked = await LockService().lockInactivityFeeAccount(
     args.accountId,
     async (signal) => {
@@ -338,9 +342,16 @@ const processAccountLocked = async (
           errorOutcome({ accountId: args.accountId, error: parseErrorFromUnknown(err) }),
         )
       }
+      lapsed = signal.aborted
       return records
     },
   )
+  // a post may have landed after a reactivation that ran while the lock was lapsed
+  if (ran && lapsed && !args.dryRun) {
+    records.push(
+      ...(await reconcileLapsed({ accountId: args.accountId, runId: args.runId })),
+    )
+  }
   if (ran) return records
   return [
     errorOutcome({
@@ -348,6 +359,38 @@ const processAccountLocked = async (
       error: locked instanceof Error ? locked : new Error("lock returned no result"),
     }),
   ]
+}
+
+const reconcileLapsed = async ({
+  accountId,
+  runId,
+}: {
+  accountId: AccountId
+  runId: string
+}): Promise<InactivityFeeChargeOutcomeRecord[]> => {
+  const failedRecord = (error: Error): InactivityFeeChargeOutcomeRecord => {
+    alertFailedRefund({ accountId, error })
+    return { accountId, outcome: InactivityFeeChargeOutcome.Error, reason: error.name }
+  }
+
+  const reconciled = await reconcileLapsedCharge({ accountId, runId })
+  if (reconciled === false) return []
+  if (reconciled instanceof Error) return [failedRecord(reconciled)]
+
+  const records = reconciled.failures.map(({ error }) => failedRecord(error))
+  if (reconciled.refundedSats > 0 || reconciled.refundedCents > 0) {
+    addEventToCurrentSpan("inactivityfee.alert.debit_after_reactivation", {
+      "inactivityfee.alert.accountId": accountId,
+      "inactivityfee.alert.refundedSats": String(reconciled.refundedSats),
+      "inactivityfee.alert.refundedCents": String(reconciled.refundedCents),
+    })
+    records.push({
+      accountId,
+      outcome: InactivityFeeChargeOutcome.Refunded,
+      reason: "reactivated_during_post",
+    })
+  }
+  return records
 }
 
 // Under the lock, cheapest first: account row + notice → account-level checks (one record,
