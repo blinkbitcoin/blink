@@ -54,9 +54,21 @@ export const WindDownCohortAssessmentsRepository =
       }
     }
 
+    const deleteByAccountId = async (
+      accountId: AccountId,
+    ): Promise<true | RepositoryError> => {
+      try {
+        await WindDownCohortAssessment.deleteOne({ accountId })
+        return true
+      } catch (err) {
+        return parseRepositoryError(err)
+      }
+    }
+
     return {
       findByAccountId,
       persist,
+      deleteByAccountId,
     }
   }
 

@@ -218,4 +218,74 @@ describe("checkReceiveAllowed", () => {
 
     expect(result).toBe(true)
   })
+
+  describe("level-zero region", () => {
+    const armedLevelZero = region({
+      code: "level-zero",
+      countries: [],
+      receiveDisabled: true,
+    })
+
+    beforeEach(() => {
+      mockGetWindDownConfig.mockReturnValue(
+        windDownConfig({
+          includeLevelZero: true,
+          regions: [armedLevelZero, region({ receiveDisabled: false })],
+        }),
+      )
+      mockFindById.mockResolvedValue({ phone: US_PHONE, deletedPhones: [] })
+    })
+
+    it("refuses an unmatched Level 0 account when only the level-zero region is armed", async () => {
+      const result = await checkReceiveAllowed({
+        account: makeAccount({ level: 0 as AccountLevel }),
+      })
+
+      expect(result).toBeInstanceOf(ReceiveDisabledError)
+    })
+
+    it("allows an unmatched Level 1 account while the level-zero region is armed", async () => {
+      const result = await checkReceiveAllowed({
+        account: makeAccount({ level: 1 as AccountLevel }),
+      })
+
+      expect(result).toBe(true)
+    })
+
+    it("keeps a country-matched Level 0 account on its country's region", async () => {
+      mockGetWindDownConfig.mockReturnValue(
+        windDownConfig({
+          includeLevelZero: true,
+          regions: [
+            armedLevelZero,
+            region({ code: "fr", countries: ["FR"], receiveDisabled: false }),
+            region({ receiveDisabled: true }),
+          ],
+        }),
+      )
+      mockFindById.mockResolvedValue({ phone: undefined, deletedPhones: [] })
+      mockFindEarliestByAccountId.mockResolvedValue({ metadata: { isoCode: "FR" } })
+
+      const result = await checkReceiveAllowed({
+        account: makeAccount({ level: 0 as AccountLevel }),
+      })
+
+      expect(result).toBe(true)
+    })
+
+    it("allows an unmatched Level 0 account when includeLevelZero is off", async () => {
+      mockGetWindDownConfig.mockReturnValue(
+        windDownConfig({
+          includeLevelZero: false,
+          regions: [armedLevelZero, region({ receiveDisabled: false })],
+        }),
+      )
+
+      const result = await checkReceiveAllowed({
+        account: makeAccount({ level: 0 as AccountLevel }),
+      })
+
+      expect(result).toBe(true)
+    })
+  })
 })

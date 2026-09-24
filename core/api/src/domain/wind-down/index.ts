@@ -1,6 +1,9 @@
+import { AccountLevel } from "@/domain/accounts"
+
 export * from "./errors"
 
 export const DEFAULT_WIND_DOWN_REGION_CODE = "default"
+export const LEVEL_ZERO_WIND_DOWN_REGION_CODE = "level-zero"
 
 export const WindDownCohortRule = {
   StrictList: "strict-list",
@@ -98,17 +101,27 @@ export const assessCohortResidency = ({
   }
 }
 
-export const regionForCountry = (
-  matchedCountry: CohortCountry | undefined,
-  regions: WindDownRegionConfig[],
-): WindDownRegionConfig | undefined => {
+export const resolveWindDownRegion = ({
+  matchedCountry,
+  level,
+  regions,
+}: ResolveWindDownRegionArgs): WindDownRegionConfig | undefined => {
+  const byCode = (code: string) => regions.find((region) => region.code === code)
+  const defaultRegion = byCode(DEFAULT_WIND_DOWN_REGION_CODE)
+
   if (matchedCountry !== undefined) {
-    const specific = regions.find((region) =>
-      (region.countries ?? []).some((c) => c.toUpperCase() === matchedCountry),
+    return (
+      regions.find(
+        (region) =>
+          region.code !== LEVEL_ZERO_WIND_DOWN_REGION_CODE &&
+          (region.countries ?? []).some((c) => c.toUpperCase() === matchedCountry),
+      ) ?? defaultRegion
     )
-    if (specific) return specific
   }
-  return regions.find((region) => region.code === DEFAULT_WIND_DOWN_REGION_CODE)
+
+  return level === AccountLevel.Zero
+    ? (byCode(LEVEL_ZERO_WIND_DOWN_REGION_CODE) ?? defaultRegion)
+    : defaultRegion
 }
 
 export const deriveWindDownState = ({

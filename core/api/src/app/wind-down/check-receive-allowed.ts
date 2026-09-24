@@ -2,7 +2,7 @@ import { evaluateWindDownCohortMatch } from "./is-account-in-wind-down-cohort"
 
 import { getWindDownConfig } from "@/config"
 
-import { ReceiveDisabledError, regionForCountry } from "@/domain/wind-down"
+import { ReceiveDisabledError, resolveWindDownRegion } from "@/domain/wind-down"
 
 const regionArmed = (region: WindDownRegionConfig): boolean =>
   region.receiveDisabled || region.gateClosed
@@ -24,7 +24,11 @@ export const checkReceiveAllowed = async ({
   if (match instanceof Error) return match
   if (!match.matched) return true
 
-  const region = regionForCountry(match.matchedCountry, config.regions)
+  const region = resolveWindDownRegion({
+    matchedCountry: match.matchedCountry,
+    level: account.level,
+    regions: config.regions,
+  })
   if (region === undefined) return true
 
   return regionArmed(region) ? new ReceiveDisabledError() : true
