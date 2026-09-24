@@ -57,6 +57,8 @@ export const InactivityFeeChargeOutcome = {
   WouldCharge: "would_charge",
   Skipped: "skipped",
   Error: "error",
+  // the account lock lapsed during a post and the account came back meanwhile: refunded in-run
+  Refunded: "refunded",
 } as const
 
 // stamped on every debit as `rateSource`

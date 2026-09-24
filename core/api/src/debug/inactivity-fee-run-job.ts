@@ -31,7 +31,7 @@
  * report    notice: CSV account_id,outcome,reason,notice_id (outcome in noticed|resent|
  *           already_noticed|would_notice|skipped|send_failed|error).
  *           fee: CSV account_id,wallet_id,currency,outcome,reason,amount,external_id,notice_id
- *           (outcome in charged|would_charge|skipped|error; amount in the wallet's unit).
+ *           (outcome in charged|would_charge|skipped|error|refunded; amount in the wallet's unit).
  *           reason = skip reason or error name. Written row by row; the run summary (the
  *           inactivityfeeruns document, with the pinned rate for `fee`) to <out>.summary.json.
  *           Refuses to overwrite an existing --out. Exit code 1 when the run aborted, and also

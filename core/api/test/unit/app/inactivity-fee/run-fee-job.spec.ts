@@ -72,6 +72,10 @@ jest.mock("@/services/tracing", () => ({
   asyncRunInSpan: (_name: string, _options: unknown, fn: () => unknown) => fn(),
 }))
 
+jest.mock("@/app/inactivity-fee/refund-fees", () => ({
+  refundInactivityFees: jest.fn(),
+}))
+
 jest.mock("@/app/prices", () => ({
   getCurrentPriceAsDisplayPriceRatio: jest.fn(),
 }))
@@ -85,6 +89,7 @@ jest.mock("@/app/wind-down/gather-cohort-signals", () => ({
 }))
 
 import { chargeWallet } from "@/app/inactivity-fee/charge-wallet"
+import { refundInactivityFees } from "@/app/inactivity-fee/refund-fees"
 import { runFeeJob } from "@/app/inactivity-fee/run-fee-job"
 import { getCurrentPriceAsDisplayPriceRatio } from "@/app/prices"
 import { getAccountWindDown } from "@/app/wind-down/get-account-wind-down"
@@ -100,6 +105,7 @@ import {
   InactivityFeeNoticeNotFoundError,
   InactivityFeeNoticeSource,
   InactivityFeeNoticeStatus,
+  InactivityFeeRefundReason,
   InactivityFeeRunAbortedError,
   InactivityFeeRunInProgressError,
   InactivityFeeRunKind,
@@ -146,6 +152,9 @@ const mockGetWindDownConfig = getWindDownConfig as jest.MockedFunction<
 >
 const mockGetAccountWindDown = getAccountWindDown as jest.MockedFunction<
   typeof getAccountWindDown
+>
+const mockRefund = refundInactivityFees as jest.MockedFunction<
+  typeof refundInactivityFees
 >
 const mockAddEvent = addEventToCurrentSpan as jest.Mock
 const mockRecordException = recordExceptionInCurrentSpan as jest.Mock
@@ -836,6 +845,103 @@ describe("runFeeJob", () => {
           reason: "ResourceExpiredLockServiceError",
         }),
       )
+    })
+
+    // the lease lapses while the post is in flight; `reactivates` = a reactivation runs in that
+    // gap, finds no debit yet and retires the notice before the delayed post commits
+    const lapsingDuringPost = ({ reactivates }: { reactivates: boolean }) => {
+      const alice = account()
+      setup([{ account: alice, btc: 250_000n }])
+      const signal = { aborted: false, error: new Error("lock expired") }
+      lockInactivityFeeAccount.mockImplementation(
+        async (_id: AccountId, fn: (s: unknown) => Promise<unknown>) => fn(signal),
+      )
+      let retired = false
+      mocks.findActiveByAccountId.mockImplementation(async (id: AccountId) =>
+        retired ? new InactivityFeeNoticeNotFoundError(id) : notice(id),
+      )
+      mockRecordFee.mockImplementation(async () => {
+        signal.aborted = true
+        retired = reactivates
+        return journal
+      })
+      return alice
+    }
+
+    it("refunds in-run a debit that landed after a reactivation retired the notice", async () => {
+      const alice = lapsingDuringPost({ reactivates: true })
+      mockRefund.mockResolvedValue({
+        refundedSats: 1289 as Satoshis,
+        refundedCents: 0 as UsdCents,
+        failures: [],
+      })
+      const { records, onOutcome } = collect()
+
+      const run = expectRun(await runLive({ onOutcome }))
+
+      expect(mockRecordFee).toHaveBeenCalledTimes(1)
+      expect(mockRefund).toHaveBeenCalledWith({
+        accountId: alice.id,
+        reason: InactivityFeeRefundReason.Activity,
+        runId,
+        signal: expect.anything(),
+      })
+      expect(records.map(({ outcome }) => outcome)).toEqual([
+        InactivityFeeChargeOutcome.Charged,
+        InactivityFeeChargeOutcome.Refunded,
+      ])
+      expect(mockAddEvent).toHaveBeenCalledWith(
+        "inactivityfee.alert.debit_after_reactivation",
+        expect.objectContaining({ "inactivityfee.alert.refundedSats": "1289" }),
+      )
+      expect(run.counts.byOutcome).toEqual({ charged: 1, refunded: 1 })
+    })
+
+    it("leaves a lapsed debit to the next activity write while the notice is still active", async () => {
+      lapsingDuringPost({ reactivates: false })
+      const { records, onOutcome } = collect()
+
+      expectRun(await runLive({ onOutcome }))
+
+      expect(mockRefund).not.toHaveBeenCalled()
+      expect(records.map(({ outcome }) => outcome)).toEqual([
+        InactivityFeeChargeOutcome.Charged,
+      ])
+    })
+
+    it("alerts a failed refund when the lapsed debit cannot be reversed", async () => {
+      lapsingDuringPost({ reactivates: true })
+      mockRefund.mockResolvedValue(new ResourceAttemptsRedlockServiceError())
+      const { records, onOutcome } = collect()
+
+      expectRun(await runLive({ onOutcome }))
+
+      expect(records[1]).toEqual(
+        expect.objectContaining({
+          outcome: InactivityFeeChargeOutcome.Error,
+          reason: "ResourceAttemptsRedlockServiceError",
+        }),
+      )
+      expect(mockAddEvent).toHaveBeenCalledWith(
+        "inactivityfee.alert.failed_refund",
+        expect.anything(),
+      )
+      expect(mockRecordException).toHaveBeenCalledWith(
+        expect.objectContaining({ level: ErrorLevel.Critical }),
+      )
+    })
+
+    it("never reconciles a dry run", async () => {
+      const alice = account()
+      setup([{ account: alice, btc: 250_000n }])
+      lockInactivityFeeAccount.mockImplementation(
+        async (_id: AccountId, fn: (signal: unknown) => Promise<unknown>) =>
+          fn({ aborted: true, error: new Error("lock expired") }),
+      )
+
+      expectRun(await runFeeJob({ asOf, dryRun: true, runId }))
+
+      expect(mockRefund).not.toHaveBeenCalled()
     })
   })
 
