@@ -13,6 +13,7 @@ import * as TransactionsMod from "./transactions"
 import * as UsersMod from "./users"
 import * as WalletsMod from "./wallets"
 import * as PaymentsMod from "./payments"
+import * as LnurlMod from "./lnurl"
 import * as MerchantsMod from "./merchants"
 import * as SupportChatMod from "./support"
 import * as WindDownMod from "./wind-down"
@@ -35,6 +36,7 @@ const allFunctions = {
   Users: { ...UsersMod },
   Wallets: { ...WalletsMod },
   Payments: { ...PaymentsMod },
+  Lnurl: { ...LnurlMod },
   Merchants: { ...MerchantsMod },
   SupportChat: { ...SupportChatMod },
   WindDown: { ...WindDownMod },
@@ -69,6 +71,7 @@ export const {
   Users,
   Wallets,
   Payments,
+  Lnurl,
   Merchants,
   SupportChat,
   WindDown,
