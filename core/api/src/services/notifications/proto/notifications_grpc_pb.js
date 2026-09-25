@@ -26,6 +26,28 @@ function deserialize_services_notifications_v1_AddPushDeviceTokenResponse(buffer
   return notifications_pb.AddPushDeviceTokenResponse.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
+function serialize_services_notifications_v1_CloseBulletinRequest(arg) {
+  if (!(arg instanceof notifications_pb.CloseBulletinRequest)) {
+    throw new Error('Expected argument of type services.notifications.v1.CloseBulletinRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_services_notifications_v1_CloseBulletinRequest(buffer_arg) {
+  return notifications_pb.CloseBulletinRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_services_notifications_v1_CloseBulletinResponse(arg) {
+  if (!(arg instanceof notifications_pb.CloseBulletinResponse)) {
+    throw new Error('Expected argument of type services.notifications.v1.CloseBulletinResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_services_notifications_v1_CloseBulletinResponse(buffer_arg) {
+  return notifications_pb.CloseBulletinResponse.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
 function serialize_services_notifications_v1_DisableNotificationCategoryRequest(arg) {
   if (!(arg instanceof notifications_pb.DisableNotificationCategoryRequest)) {
     throw new Error('Expected argument of type services.notifications.v1.DisableNotificationCategoryRequest');
@@ -156,6 +178,28 @@ function serialize_services_notifications_v1_HandleNotificationEventResponse(arg
 
 function deserialize_services_notifications_v1_HandleNotificationEventResponse(buffer_arg) {
   return notifications_pb.HandleNotificationEventResponse.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_services_notifications_v1_ListLatestBulletinsRequest(arg) {
+  if (!(arg instanceof notifications_pb.ListLatestBulletinsRequest)) {
+    throw new Error('Expected argument of type services.notifications.v1.ListLatestBulletinsRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_services_notifications_v1_ListLatestBulletinsRequest(buffer_arg) {
+  return notifications_pb.ListLatestBulletinsRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_services_notifications_v1_ListLatestBulletinsResponse(arg) {
+  if (!(arg instanceof notifications_pb.ListLatestBulletinsResponse)) {
+    throw new Error('Expected argument of type services.notifications.v1.ListLatestBulletinsResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_services_notifications_v1_ListLatestBulletinsResponse(buffer_arg) {
+  return notifications_pb.ListLatestBulletinsResponse.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
 function serialize_services_notifications_v1_RemoveEmailAddressRequest(arg) {
@@ -368,6 +412,28 @@ var NotificationsServiceService = exports.NotificationsServiceService = {
     requestDeserialize: deserialize_services_notifications_v1_HandleNotificationEventRequest,
     responseSerialize: serialize_services_notifications_v1_HandleNotificationEventResponse,
     responseDeserialize: deserialize_services_notifications_v1_HandleNotificationEventResponse,
+  },
+  closeBulletin: {
+    path: '/services.notifications.v1.NotificationsService/CloseBulletin',
+    requestStream: false,
+    responseStream: false,
+    requestType: notifications_pb.CloseBulletinRequest,
+    responseType: notifications_pb.CloseBulletinResponse,
+    requestSerialize: serialize_services_notifications_v1_CloseBulletinRequest,
+    requestDeserialize: deserialize_services_notifications_v1_CloseBulletinRequest,
+    responseSerialize: serialize_services_notifications_v1_CloseBulletinResponse,
+    responseDeserialize: deserialize_services_notifications_v1_CloseBulletinResponse,
+  },
+  listLatestBulletins: {
+    path: '/services.notifications.v1.NotificationsService/ListLatestBulletins',
+    requestStream: false,
+    responseStream: false,
+    requestType: notifications_pb.ListLatestBulletinsRequest,
+    responseType: notifications_pb.ListLatestBulletinsResponse,
+    requestSerialize: serialize_services_notifications_v1_ListLatestBulletinsRequest,
+    requestDeserialize: deserialize_services_notifications_v1_ListLatestBulletinsRequest,
+    responseSerialize: serialize_services_notifications_v1_ListLatestBulletinsResponse,
+    responseDeserialize: deserialize_services_notifications_v1_ListLatestBulletinsResponse,
   },
 };
 
