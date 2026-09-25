@@ -151,6 +151,20 @@ export const grpcNotificationSettingsToNotificationSettings = (
   return notificationSettings
 }
 
+const unixSecondsToDate = (seconds: number): Date => new Date(seconds * 1000)
+
+export const grpcBulletinToNotificationBulletin = (
+  bulletin: Grpc.Bulletin,
+): NotificationBulletin => {
+  const acknowledgedAt = bulletin.getAcknowledgedAt()
+  return {
+    id: bulletin.getId() as NotificationBulletinId,
+    userId: bulletin.getUserId() as UserId,
+    createdAt: unixSecondsToDate(bulletin.getCreatedAt()),
+    acknowledgedAt: acknowledgedAt ? unixSecondsToDate(acknowledgedAt) : undefined,
+  }
+}
+
 export const grpcNotificationCategoryToNotificationCategory = (
   category: Grpc.NotificationCategory,
 ): NotificationCategory | InvalidNotificationCategoryError => {

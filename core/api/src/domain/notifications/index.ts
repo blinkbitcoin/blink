@@ -1,11 +1,15 @@
 export * from "./errors"
 import { checkedToNonEmptyLanguage } from "../users"
+import { checkedToUserId } from "../accounts"
 
 import {
   InvalidNotificationBodyError,
   InvalidNotificationCategoryError,
   InvalidNotificationTitleError,
   DuplicateLocalizedNotificationContentError,
+  InvalidBulletinKeyError,
+  BulletinOptionsWithoutBulletinError,
+  TooManyBulletinUserIdsError,
 } from "./errors"
 
 export const NotificationType = {
@@ -200,4 +204,63 @@ export const checkedToLocalizedNotificationContentsMap = (
   }
 
   return map
+}
+
+// Mirrored in core/notifications/src/primitives.rs (BULLETIN_KEY_MAX_LENGTH)
+export const BulletinKeyMaxLength = 100
+// Mirrored in core/notifications/src/primitives.rs (LATEST_BULLETINS_MAX_USER_IDS)
+export const NotificationBulletinsMaxUserIds = 100
+export const BulletinKeyRegex = /^[a-z0-9]+(?:[-_][a-z0-9]+)*$/
+
+export const checkedToBulletinKey = (key: string): BulletinKey | ValidationError => {
+  const normalizedKey = (key || "").trim().toLowerCase()
+  const hasValidLength = normalizedKey.length <= BulletinKeyMaxLength
+  const isValidKey = hasValidLength && BulletinKeyRegex.test(normalizedKey)
+  if (!isValidKey) {
+    return new InvalidBulletinKeyError(`Invalid bulletin key: ${key}`)
+  }
+  return normalizedKey as BulletinKey
+}
+
+export const checkedBulletinOptions = ({
+  shouldAddToBulletin,
+  bulletinKey,
+  dismissible,
+}: {
+  shouldAddToBulletin: boolean
+  bulletinKey: string | undefined | null
+  dismissible: boolean
+}): BulletinOptions | ValidationError => {
+  const hasBulletinOptions = !!bulletinKey || !dismissible
+  if (hasBulletinOptions && !shouldAddToBulletin) {
+    return new BulletinOptionsWithoutBulletinError(
+      "bulletinKey and dismissible require shouldAddToBulletin",
+    )
+  }
+
+  if (!bulletinKey) return { bulletinKey: undefined, dismissible }
+
+  const checkedBulletinKey = checkedToBulletinKey(bulletinKey)
+  if (checkedBulletinKey instanceof Error) return checkedBulletinKey
+
+  return { bulletinKey: checkedBulletinKey, dismissible }
+}
+
+export const checkedToBulletinUserIds = (
+  userIds: string[],
+): UserId[] | ValidationError => {
+  const uniqueUserIds = [...new Set(userIds)]
+  if (uniqueUserIds.length > NotificationBulletinsMaxUserIds) {
+    return new TooManyBulletinUserIdsError(
+      `At most ${NotificationBulletinsMaxUserIds} user ids are allowed, got ${uniqueUserIds.length}`,
+    )
+  }
+
+  const checkedUserIds: UserId[] = []
+  for (const userId of uniqueUserIds) {
+    const checkedUserId = checkedToUserId(userId)
+    if (checkedUserId instanceof Error) return checkedUserId
+    checkedUserIds.push(checkedUserId)
+  }
+  return checkedUserIds
 }

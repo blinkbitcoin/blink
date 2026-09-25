@@ -11,6 +11,7 @@ import AccountForceDeleteMutation from "./root/mutation/account-force-delete"
 import MigrationRetryGrantMutation from "./root/mutation/migration-retry-grant"
 
 import TriggerMarketingNotificationMutation from "./root/mutation/marketing-notification-trigger"
+import NotificationBulletinCloseMutation from "./root/mutation/notification-bulletin-close"
 
 import {
   accessRules,
@@ -61,6 +62,10 @@ export const mutationFields = {
     },
     marketingNotificationTrigger: {
       field: TriggerMarketingNotificationMutation,
+      rule: accessRules.sendNotifications,
+    },
+    notificationBulletinClose: {
+      field: NotificationBulletinCloseMutation,
       rule: accessRules.sendNotifications,
     },
   },
