@@ -16,6 +16,12 @@ pub enum ApplicationError {
     #[error("invalid fraction digits: {0}")]
     InvalidFractionDigits(u32),
     #[error("{0}")]
+    InvalidBulletinKey(String),
+    #[error("bulletin key and dismissible require the notification to be added to the bulletin")]
+    BulletinOptionsWithoutBulletin,
+    #[error("too many user ids: {0}")]
+    TooManyUserIds(usize),
+    #[error("{0}")]
     UserNotificationSettingsError(#[from] UserNotificationSettingsError),
     #[error("{0}")]
     EmailReminderProjectionError(#[from] EmailReminderProjectionError),

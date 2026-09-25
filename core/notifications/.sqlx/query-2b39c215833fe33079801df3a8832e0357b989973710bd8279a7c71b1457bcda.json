@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT u.galoy_user_id AS \"galoy_user_id!\",\n                GREATEST(\n                  (SELECT MAX(n.bulletin_triggered_at) FROM stateful_notifications n\n                   WHERE n.galoy_user_id = u.galoy_user_id AND n.bulletin_key = $2),\n                  (SELECT c.closed_at FROM stateful_notification_bulletin_closures c\n                   WHERE c.galoy_user_id = u.galoy_user_id AND c.bulletin_key = $2)\n                ) AS latest_activity_at\n            FROM UNNEST($1::VARCHAR[]) AS u(galoy_user_id)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "galoy_user_id!",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "latest_activity_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "VarcharArray",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "2b39c215833fe33079801df3a8832e0357b989973710bd8279a7c71b1457bcda"
+}

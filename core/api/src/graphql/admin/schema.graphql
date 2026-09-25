@@ -138,6 +138,11 @@ type BTCWallet implements Wallet {
   walletCurrency: WalletCurrency!
 }
 
+"""
+Identifier that groups bulletins so that a user has at most one active bulletin per key
+"""
+scalar BulletinKey
+
 type Coordinates {
   latitude: Float!
   longitude: Float!
@@ -321,6 +326,15 @@ input LocalizedNotificationContentInput {
 }
 
 input MarketingNotificationTriggerInput {
+  """
+  Replaces the active bulletin with the same key, so a user has at most one per key. Requires shouldAddToBulletin
+  """
+  bulletinKey: BulletinKey
+
+  """
+  Whether the user can close the bulletin. Setting it to false requires shouldAddToBulletin
+  """
+  dismissible: Boolean! = true
   icon: NotificationIcon
   localizedNotificationContents: [LocalizedNotificationContentInput!]!
   openDeepLink: OpenDeepLinkInput
@@ -406,8 +420,27 @@ type Mutation {
   merchantMapDelete(input: MerchantMapDeleteInput!): MerchantPayload!
   merchantMapValidate(input: MerchantMapValidateInput!): MerchantPayload!
   migrationRetryGrant(input: MigrationRetryGrantInput!): MigrationRetryGrantPayload!
+
+  """
+  Closes the active bulletin with the given key for the user. Bulletins with that key sent before this call are not shown afterwards
+  """
+  notificationBulletinClose(input: NotificationBulletinCloseInput!): SuccessPayload!
   userUpdateEmail(input: UserUpdateEmailInput!): AccountDetailPayload!
   userUpdatePhone(input: UserUpdatePhoneInput!): AccountDetailPayload!
+}
+
+"""Latest bulletin sent to a user for a given bulletin key"""
+type NotificationBulletin {
+  """Null while the bulletin is still active for the user"""
+  acknowledgedAt: Timestamp
+  createdAt: Timestamp!
+  id: ID!
+  userId: ID!
+}
+
+input NotificationBulletinCloseInput {
+  bulletinKey: BulletinKey!
+  userId: ID!
 }
 
 enum NotificationIcon {
@@ -529,6 +562,11 @@ type Query {
   lightningPayment(hash: PaymentHash!): LightningPayment!
   merchantsPendingApproval: [Merchant!]!
   migrationFlow(accountId: ID!): MigrationFlowDetails
+
+  """
+  Latest bulletin per user for the given key. Users without a bulletin for the key are omitted
+  """
+  notificationBulletins(bulletinKey: BulletinKey!, userIds: [ID!]!): [NotificationBulletin!]!
   transactionById(id: ID!): Transaction
   transactionsByHash(hash: PaymentHash!): [Transaction]
   transactionsByPaymentRequest(paymentRequest: LnPaymentRequest!): [Transaction]

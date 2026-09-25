@@ -1,0 +1,8 @@
+mutation notificationBulletinClose($input: NotificationBulletinCloseInput!) {
+  notificationBulletinClose(input: $input) {
+    errors {
+      message
+    }
+    success
+  }
+}

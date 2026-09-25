@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{Action, Icon, NotificationEvent};
@@ -16,6 +17,23 @@ pub struct MarketingNotificationTriggered {
     pub action: Option<Action>,
     #[serde(default)]
     pub icon: Option<Icon>,
+    #[serde(default)]
+    pub bulletin_key: Option<BulletinKey>,
+    #[serde(default = "default_dismissible")]
+    pub dismissible: bool,
+    #[serde(default)]
+    pub triggered_at: Option<DateTime<Utc>>,
+}
+
+fn default_dismissible() -> bool {
+    true
+}
+
+impl MarketingNotificationTriggered {
+    pub fn has_bulletin_options_without_bulletin(&self) -> bool {
+        let has_bulletin_options = self.bulletin_key.is_some() || !self.dismissible;
+        has_bulletin_options && !self.should_add_to_bulletin
+    }
 }
 
 impl NotificationEvent for MarketingNotificationTriggered {
@@ -58,6 +76,18 @@ impl NotificationEvent for MarketingNotificationTriggered {
     fn icon(&self) -> Option<Icon> {
         self.icon.clone()
     }
+
+    fn bulletin_key(&self) -> Option<BulletinKey> {
+        self.bulletin_key.clone()
+    }
+
+    fn is_dismissible(&self) -> bool {
+        self.dismissible
+    }
+
+    fn triggered_at(&self) -> Option<DateTime<Utc>> {
+        self.triggered_at
+    }
 }
 
 #[cfg(test)]
@@ -79,7 +109,14 @@ mod tests {
             should_add_to_bulletin: true,
             action: None,
             icon: None,
+            bulletin_key: None,
+            dismissible: true,
+            triggered_at: None,
         }
+    }
+
+    fn bulletin_key(key: &str) -> BulletinKey {
+        BulletinKey::try_from(key.to_string()).expect("valid bulletin key")
     }
 
     #[test]
@@ -180,6 +217,84 @@ mod tests {
             serde_json::from_str(json).expect("should deserialize without label");
         assert!(event.action().is_none());
         assert!(event.icon().is_none());
+    }
+
+    #[test]
+    fn deserialize_backward_compat_without_bulletin_options() {
+        let json = r#"{
+            "content": {},
+            "default_content": {
+                "locale": "en",
+                "title": "Old notification",
+                "body": "No bulletin options"
+            },
+            "should_send_push": false,
+            "should_add_to_history": true,
+            "should_add_to_bulletin": true
+        }"#;
+
+        let event: MarketingNotificationTriggered =
+            serde_json::from_str(json).expect("should deserialize without bulletin options");
+        assert!(event.bulletin_key().is_none());
+        assert!(event.is_dismissible());
+        assert!(event.triggered_at().is_none());
+    }
+
+    #[test]
+    fn serialize_roundtrip_with_bulletin_options() {
+        let mut event = default_event();
+        event.bulletin_key = Some(bulletin_key("feature-rollout"));
+        event.dismissible = false;
+        event.triggered_at = Some(Utc::now());
+
+        let json = serde_json::to_string(&event).expect("should serialize");
+        let deserialized: MarketingNotificationTriggered =
+            serde_json::from_str(&json).expect("should deserialize");
+
+        assert_eq!(
+            deserialized.bulletin_key(),
+            Some(bulletin_key("feature-rollout"))
+        );
+        assert!(!deserialized.is_dismissible());
+        assert_eq!(deserialized.triggered_at(), event.triggered_at);
+    }
+
+    #[test]
+    fn bulletin_options_default_to_unkeyed_and_dismissible() {
+        let event = default_event();
+        assert!(event.bulletin_key().is_none());
+        assert!(event.is_dismissible());
+    }
+
+    #[test]
+    fn bulletin_key_without_bulletin_is_rejected() {
+        let mut event = default_event();
+        event.should_add_to_bulletin = false;
+        event.bulletin_key = Some(bulletin_key("feature-rollout"));
+        assert!(event.has_bulletin_options_without_bulletin());
+    }
+
+    #[test]
+    fn non_dismissible_without_bulletin_is_rejected() {
+        let mut event = default_event();
+        event.should_add_to_bulletin = false;
+        event.dismissible = false;
+        assert!(event.has_bulletin_options_without_bulletin());
+    }
+
+    #[test]
+    fn bulletin_options_with_bulletin_are_accepted() {
+        let mut event = default_event();
+        event.bulletin_key = Some(bulletin_key("feature-rollout"));
+        event.dismissible = false;
+        assert!(!event.has_bulletin_options_without_bulletin());
+    }
+
+    #[test]
+    fn default_options_without_bulletin_are_accepted() {
+        let mut event = default_event();
+        event.should_add_to_bulletin = false;
+        assert!(!event.has_bulletin_options_without_bulletin());
     }
 
     #[test]

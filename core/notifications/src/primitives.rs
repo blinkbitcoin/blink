@@ -110,6 +110,54 @@ impl std::fmt::Display for GaloyEmailAddress {
     }
 }
 
+// Mirrored in core/api/src/domain/notifications/index.ts (BulletinKeyMaxLength)
+pub const BULLETIN_KEY_MAX_LENGTH: usize = 100;
+// Mirrored in core/api/src/domain/notifications/index.ts (NotificationBulletinsMaxUserIds)
+pub const LATEST_BULLETINS_MAX_USER_IDS: usize = 100;
+
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize, Hash)]
+pub struct BulletinKey(String);
+
+impl BulletinKey {
+    pub fn into_inner(self) -> String {
+        self.0
+    }
+
+    fn is_valid(key: &str) -> bool {
+        let is_separator = |c: char| c == '-' || c == '_';
+        let is_slug_char = |c: char| c.is_ascii_lowercase() || c.is_ascii_digit();
+        let has_valid_length = key.len() <= BULLETIN_KEY_MAX_LENGTH;
+        let has_valid_segments = key
+            .split(is_separator)
+            .all(|segment| !segment.is_empty() && segment.chars().all(is_slug_char));
+        has_valid_length && has_valid_segments
+    }
+}
+
+impl TryFrom<String> for BulletinKey {
+    type Error = String;
+
+    fn try_from(key: String) -> Result<Self, Self::Error> {
+        let normalized = key.trim().to_ascii_lowercase();
+        if !Self::is_valid(&normalized) {
+            return Err(format!("Invalid bulletin key: '{}'", key));
+        }
+        Ok(Self(normalized))
+    }
+}
+
+impl AsRef<str> for BulletinKey {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl std::fmt::Display for BulletinKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 #[derive(async_graphql::Enum, Debug, Copy, Clone, Eq, PartialEq, Deserialize, Serialize)]
 #[graphql(name = "UserNotificationChannel")]
 pub enum UserNotificationChannel {
@@ -300,5 +348,66 @@ impl ReadPool {
 impl From<sqlx::PgPool> for ReadPool {
     fn from(pool: sqlx::PgPool) -> Self {
         Self(pool)
+    }
+}
+
+#[cfg(test)]
+mod bulletin_key_tests {
+    use super::*;
+
+    fn checked(key: &str) -> Result<BulletinKey, String> {
+        BulletinKey::try_from(key.to_string())
+    }
+
+    #[test]
+    fn valid_slug_passes() {
+        let key = checked("feature-rollout_2").expect("should be valid");
+        assert_eq!(key.as_ref(), "feature-rollout_2");
+    }
+
+    #[test]
+    fn key_is_trimmed_and_lowercased() {
+        let key = checked("  Feature-Rollout  ").expect("should be valid");
+        assert_eq!(key.as_ref(), "feature-rollout");
+    }
+
+    #[test]
+    fn key_at_max_length_passes() {
+        let key = "a".repeat(BULLETIN_KEY_MAX_LENGTH);
+        assert!(checked(&key).is_ok());
+    }
+
+    #[test]
+    fn key_over_max_length_fails() {
+        let key = "a".repeat(BULLETIN_KEY_MAX_LENGTH + 1);
+        assert!(checked(&key).is_err());
+    }
+
+    #[test]
+    fn empty_key_fails() {
+        assert!(checked("").is_err());
+        assert!(checked("   ").is_err());
+    }
+
+    #[test]
+    fn key_with_invalid_chars_fails() {
+        assert!(checked("feature rollout").is_err());
+        assert!(checked("feature.rollout").is_err());
+        assert!(checked("feature/rollout").is_err());
+        assert!(checked("función").is_err());
+    }
+
+    #[test]
+    fn key_with_misplaced_separators_fails() {
+        assert!(checked("-feature").is_err());
+        assert!(checked("feature_").is_err());
+        assert!(checked("feature--rollout").is_err());
+        assert!(checked("feature-_rollout").is_err());
+    }
+
+    #[test]
+    fn invalid_key_error_includes_original_value() {
+        let err = checked("Bad Key").expect_err("should be invalid");
+        assert!(err.contains("Bad Key"));
     }
 }

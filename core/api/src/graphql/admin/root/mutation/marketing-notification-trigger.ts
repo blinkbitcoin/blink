@@ -8,6 +8,7 @@ import SuccessPayload from "@/graphql/shared/types/payload/success-payload"
 import DeepLinkAction from "@/graphql/admin/types/scalar/deep-link-action"
 import ExternalUrl from "@/graphql/admin/types/scalar/external-url"
 import NotificationIcon from "@/graphql/admin/types/scalar/notification-icon"
+import BulletinKey from "@/graphql/admin/types/scalar/bulletin-key"
 
 const LocalizedNotificationContentInput = GT.Input({
   name: "LocalizedNotificationContentInput",
@@ -69,6 +70,17 @@ const MarketingNotificationTriggerInput = GT.Input({
     shouldAddToBulletin: {
       type: GT.NonNull(GT.Boolean),
     },
+    bulletinKey: {
+      type: BulletinKey,
+      description:
+        "Replaces the active bulletin with the same key, so a user has at most one per key. Requires shouldAddToBulletin",
+    },
+    dismissible: {
+      type: GT.NonNull(GT.Boolean),
+      defaultValue: true,
+      description:
+        "Whether the user can close the bulletin. Setting it to false requires shouldAddToBulletin",
+    },
     openDeepLink: {
       type: OpenDeepLinkInput,
     },
@@ -94,6 +106,8 @@ const MarketingNotificationTriggerMutation = GT.Field<
       shouldSendPush: boolean
       shouldAddToHistory: boolean
       shouldAddToBulletin: boolean
+      bulletinKey: BulletinKey | Error | undefined
+      dismissible: boolean
       icon: Icon | Error | undefined
       openDeepLink:
         | {
@@ -125,11 +139,17 @@ const MarketingNotificationTriggerMutation = GT.Field<
       shouldSendPush,
       shouldAddToHistory,
       shouldAddToBulletin,
+      bulletinKey,
+      dismissible,
       icon,
       openDeepLink,
       openExternalUrl,
       localizedNotificationContents,
     } = args.input
+
+    if (bulletinKey instanceof Error) {
+      return { errors: [{ message: bulletinKey.message }], success: false }
+    }
 
     const nonErrorUserIdsFilter: string[] = []
     for (const id of userIdsFilter || []) {
@@ -204,6 +224,8 @@ const MarketingNotificationTriggerMutation = GT.Field<
       shouldSendPush,
       shouldAddToHistory,
       shouldAddToBulletin,
+      bulletinKey,
+      dismissible,
       icon,
       localizedNotificationContents: nonErrorLocalizedNotificationContents,
     })

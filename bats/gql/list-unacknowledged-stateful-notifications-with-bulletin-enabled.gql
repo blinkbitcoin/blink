@@ -24,6 +24,8 @@ query listUnacknowledgedStatefulNotificationsWithBulletinEnabled($first: Int = 2
           }
         }
         icon
+        bulletinKey
+        dismissible
       }
     }
   }

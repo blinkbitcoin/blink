@@ -3,6 +3,9 @@ import { DomainError, ErrorLevel, ValidationError } from "@/domain/shared"
 export class InvalidNotificationTitleError extends ValidationError {}
 export class InvalidNotificationBodyError extends ValidationError {}
 export class DuplicateLocalizedNotificationContentError extends ValidationError {}
+export class InvalidBulletinKeyError extends ValidationError {}
+export class BulletinOptionsWithoutBulletinError extends ValidationError {}
+export class TooManyBulletinUserIdsError extends ValidationError {}
 
 export class NotificationsError extends DomainError {}
 

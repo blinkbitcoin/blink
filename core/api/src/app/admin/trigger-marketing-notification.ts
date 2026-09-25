@@ -1,5 +1,8 @@
 import { checkedToUserId } from "@/domain/accounts"
-import { checkedToLocalizedNotificationContentsMap } from "@/domain/notifications"
+import {
+  checkedBulletinOptions,
+  checkedToLocalizedNotificationContentsMap,
+} from "@/domain/notifications"
 import { UsersRepository } from "@/services/mongoose"
 import { NotificationsService } from "@/services/notifications"
 
@@ -12,6 +15,8 @@ export const triggerMarketingNotification = async ({
   icon,
   shouldAddToHistory,
   shouldAddToBulletin,
+  bulletinKey: bulletinKeyRaw,
+  dismissible,
   localizedNotificationContents,
 }: AdminTriggerMarketingNotificationArgs): Promise<ApplicationError | true> => {
   const checkedUserIds: UserId[] = []
@@ -22,6 +27,13 @@ export const triggerMarketingNotification = async ({
     }
     checkedUserIds.push(checkedUserId)
   }
+
+  const bulletinOptions = checkedBulletinOptions({
+    shouldAddToBulletin,
+    bulletinKey: bulletinKeyRaw,
+    dismissible,
+  })
+  if (bulletinOptions instanceof Error) return bulletinOptions
 
   const localizedNotificationContentsMap = checkedToLocalizedNotificationContentsMap(
     localizedNotificationContents,
@@ -52,6 +64,8 @@ export const triggerMarketingNotification = async ({
     shouldSendPush,
     shouldAddToHistory,
     shouldAddToBulletin,
+    bulletinKey: bulletinOptions.bulletinKey,
+    dismissible: bulletinOptions.dismissible,
     icon,
     localizedContents: localizedNotificationContentsMap,
   })

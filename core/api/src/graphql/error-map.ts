@@ -977,6 +977,11 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "DuplicateLocalizedNotificationContentError":
       message = "Multiple localized push contents with the same language"
       return new ValidationInternalError({ message, logger: baseLogger })
+    case "InvalidBulletinKeyError":
+    case "BulletinOptionsWithoutBulletinError":
+    case "TooManyBulletinUserIdsError":
+      message = error.message
+      return new ValidationInternalError({ message, logger: baseLogger })
 
     // ----------
     // Unknown below here
