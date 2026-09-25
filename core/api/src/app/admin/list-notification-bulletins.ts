@@ -13,7 +13,7 @@ export const listNotificationBulletins = async ({
   const bulletinKey = checkedToBulletinKey(bulletinKeyRaw)
   if (bulletinKey instanceof Error) return bulletinKey
 
-  if (userIds.length === 0) return []
+  if (!userIds.length) return []
 
   return NotificationsService().listLatestBulletins({ userIds, bulletinKey })
 }
