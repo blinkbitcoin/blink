@@ -1,7 +1,13 @@
 import { InvalidDisplayAmountError } from "@/domain/notifications"
 import { WalletCurrency } from "@/domain/shared"
-import { walletTransactionToNotificationEventRequest } from "@/services/notifications/convert"
-import { TransactionType } from "@/services/notifications/proto/notifications_pb"
+import {
+  grpcBulletinToNotificationBulletin,
+  walletTransactionToNotificationEventRequest,
+} from "@/services/notifications/convert"
+import {
+  Bulletin,
+  TransactionType,
+} from "@/services/notifications/proto/notifications_pb"
 import { recordExceptionInCurrentSpan } from "@/services/tracing"
 
 jest.mock("@/services/tracing", () => ({
@@ -121,4 +127,31 @@ describe("walletTransactionToNotificationEventRequest", () => {
       expect(request).toBeInstanceOf(InvalidDisplayAmountError)
     },
   )
+})
+
+describe("grpcBulletinToNotificationBulletin", () => {
+  const buildBulletin = (acknowledgedAt?: number) => {
+    const bulletin = new Bulletin()
+    bulletin.setId("bulletin-id")
+    bulletin.setUserId("user-id")
+    bulletin.setCreatedAt(1700000000)
+    if (acknowledgedAt) bulletin.setAcknowledgedAt(acknowledgedAt)
+    return bulletin
+  }
+
+  it("translates an open bulletin", () => {
+    expect(grpcBulletinToNotificationBulletin(buildBulletin())).toEqual({
+      id: "bulletin-id",
+      userId: "user-id",
+      createdAt: new Date(1700000000 * 1000),
+      acknowledgedAt: undefined,
+    })
+  })
+
+  it("translates an acknowledged bulletin", () => {
+    expect(grpcBulletinToNotificationBulletin(buildBulletin(1700000100))).toHaveProperty(
+      "acknowledgedAt",
+      new Date(1700000100 * 1000),
+    )
+  })
 })
