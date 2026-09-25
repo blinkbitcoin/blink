@@ -1,0 +1,8 @@
+query notificationBulletins($bulletinKey: BulletinKey!, $userIds: [ID!]!) {
+  notificationBulletins(bulletinKey: $bulletinKey, userIds: $userIds) {
+    id
+    userId
+    createdAt
+    acknowledgedAt
+  }
+}
