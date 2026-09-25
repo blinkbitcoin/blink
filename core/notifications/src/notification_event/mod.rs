@@ -280,6 +280,18 @@ pub trait NotificationEvent: std::fmt::Debug + Send + Sync {
     fn icon(&self) -> Option<Icon> {
         None
     }
+
+    fn bulletin_key(&self) -> Option<BulletinKey> {
+        None
+    }
+
+    fn is_dismissible(&self) -> bool {
+        true
+    }
+
+    fn triggered_at(&self) -> Option<chrono::DateTime<chrono::Utc>> {
+        None
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

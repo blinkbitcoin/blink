@@ -1,0 +1,47 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH latest AS (\n                 SELECT DISTINCT ON (galoy_user_id) id, created_at\n                 FROM stateful_notifications\n                 WHERE galoy_user_id = ANY($1) AND bulletin_key = $2\n                 ORDER BY galoy_user_id, (acknowledged IS NOT TRUE) DESC, created_at DESC, id DESC\n               )\n            SELECT a.id, e.sequence, e.event,\n                      a.created_at AS entity_created_at, e.recorded_at AS event_recorded_at\n            FROM latest a\n            JOIN stateful_notification_events e ON a.id = e.id\n            ORDER BY a.id, e.sequence",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "sequence",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "event",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 3,
+        "name": "entity_created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "event_recorded_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "TextArray",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "9ec0f70c16e1281dc6f9f505a8f1fabe74a44728a06663345df543c085d3dff3"
+}

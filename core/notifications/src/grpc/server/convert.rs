@@ -1,7 +1,7 @@
 use super::proto;
 use crate::{
     app::error::ApplicationError,
-    notification_event,
+    history, notification_event,
     primitives::*,
     user_notification_settings::{self, error::UserNotificationSettingsError},
 };
@@ -46,7 +46,10 @@ impl From<ApplicationError> for tonic::Status {
     fn from(err: ApplicationError) -> Self {
         let message = err.to_string();
         match err {
-            ApplicationError::InvalidFractionDigits(_) => tonic::Status::invalid_argument(message),
+            ApplicationError::InvalidFractionDigits(_)
+            | ApplicationError::InvalidBulletinKey(_)
+            | ApplicationError::BulletinOptionsWithoutBulletin
+            | ApplicationError::TooManyUserIds(_) => tonic::Status::invalid_argument(message),
             ApplicationError::UserNotificationSettingsError(
                 UserNotificationSettingsError::ConcurrentModification,
             ) => tonic::Status::aborted(message),
@@ -404,6 +407,19 @@ impl From<proto::Icon> for notification_event::Icon {
     }
 }
 
+impl From<history::StatefulNotification> for proto::Bulletin {
+    fn from(notification: history::StatefulNotification) -> Self {
+        Self {
+            id: notification.id.to_string(),
+            user_id: notification.galoy_user_id.to_string(),
+            created_at: notification.created_at().timestamp(),
+            acknowledged_at: notification
+                .acknowledged_at()
+                .map(|acknowledged_at| acknowledged_at.timestamp()),
+        }
+    }
+}
+
 #[cfg(test)]
 mod money_tests {
     use prost::Message;
@@ -488,5 +504,61 @@ mod money_tests {
         let status = tonic::Status::from(error);
 
         assert_eq!(status.code(), tonic::Code::Aborted);
+    }
+}
+
+#[cfg(test)]
+mod bulletin_status_tests {
+    use super::*;
+
+    #[test]
+    fn invalid_bulletin_key_maps_to_invalid_argument() {
+        let status = tonic::Status::from(ApplicationError::InvalidBulletinKey(
+            "Invalid bulletin key: 'Bad Key'".to_string(),
+        ));
+        assert_eq!(status.code(), tonic::Code::InvalidArgument);
+        assert!(status.message().contains("Bad Key"));
+    }
+
+    #[test]
+    fn bulletin_options_without_bulletin_maps_to_invalid_argument() {
+        let status = tonic::Status::from(ApplicationError::BulletinOptionsWithoutBulletin);
+        assert_eq!(status.code(), tonic::Code::InvalidArgument);
+    }
+
+    #[test]
+    fn too_many_user_ids_maps_to_invalid_argument() {
+        let status = tonic::Status::from(ApplicationError::TooManyUserIds(101));
+        assert_eq!(status.code(), tonic::Code::InvalidArgument);
+    }
+}
+
+#[cfg(test)]
+mod bulletin_tests {
+    use super::*;
+    use crate::history::test_support::*;
+
+    #[test]
+    fn open_bulletin_converts_without_acknowledged_at() {
+        let created_at = chrono::Utc::now();
+        let notification = persisted_bulletin(BulletinFixture::default(), created_at, None);
+        let id = notification.id.to_string();
+        let bulletin = proto::Bulletin::from(notification);
+        assert_eq!(bulletin.id, id);
+        assert_eq!(bulletin.user_id, "user-id");
+        assert_eq!(bulletin.created_at, created_at.timestamp());
+        assert!(bulletin.acknowledged_at.is_none());
+    }
+
+    #[test]
+    fn acknowledged_bulletin_converts_with_acknowledged_at() {
+        let created_at = chrono::Utc::now();
+        let acknowledged_at = created_at + chrono::Duration::seconds(5);
+        let bulletin = proto::Bulletin::from(persisted_bulletin(
+            BulletinFixture::default(),
+            created_at,
+            Some(acknowledged_at),
+        ));
+        assert_eq!(bulletin.acknowledged_at, Some(acknowledged_at.timestamp()));
     }
 }

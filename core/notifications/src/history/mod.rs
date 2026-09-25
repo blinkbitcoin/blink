@@ -1,12 +1,16 @@
 mod entity;
 pub mod error;
 mod repo;
+#[cfg(test)]
+pub mod test_support;
 
 use sqlx::PgPool;
 
+use std::collections::HashSet;
+
 use crate::{
     notification_event::NotificationEventPayload,
-    primitives::{GaloyUserId, ReadPool, StatefulNotificationId},
+    primitives::{BulletinKey, GaloyUserId, ReadPool, StatefulNotificationId},
     user_notification_settings::*,
 };
 
@@ -64,7 +68,13 @@ impl NotificationHistory {
             return Ok(());
         }
 
-        let user_notification_settings = self.settings.find_for_user_ids(user_ids).await?;
+        let mut seen_user_ids = HashSet::new();
+        let unique_user_ids = user_ids
+            .iter()
+            .filter(|user_id| seen_user_ids.insert(*user_id))
+            .cloned()
+            .collect::<Vec<_>>();
+        let user_notification_settings = self.settings.find_for_user_ids(&unique_user_ids).await?;
 
         let mut new_notifications = Vec::new();
 
@@ -92,11 +102,29 @@ impl NotificationHistory {
         user_id: GaloyUserId,
         notification_id: StatefulNotificationId,
     ) -> Result<StatefulNotification, NotificationHistoryError> {
-        let mut notification = self.repo.find_by_id(user_id, notification_id).await?;
-        notification.acknowledge();
-        self.repo.update(&mut notification).await?;
+        self.repo
+            .acknowledge_for_user(user_id, notification_id)
+            .await
+    }
 
-        Ok(notification)
+    pub async fn close_bulletin_for_user(
+        &self,
+        user_id: GaloyUserId,
+        bulletin_key: BulletinKey,
+    ) -> Result<(), NotificationHistoryError> {
+        self.repo
+            .close_bulletin_for_user(user_id, bulletin_key)
+            .await
+    }
+
+    pub async fn list_latest_bulletins_for_users(
+        &self,
+        user_ids: &[GaloyUserId],
+        bulletin_key: &BulletinKey,
+    ) -> Result<Vec<StatefulNotification>, NotificationHistoryError> {
+        self.repo
+            .list_latest_bulletins_for_users(user_ids, bulletin_key)
+            .await
     }
 
     pub async fn list_notifications_for_user(

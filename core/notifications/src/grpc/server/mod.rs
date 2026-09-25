@@ -15,7 +15,7 @@ use self::proto::{notifications_service_server::NotificationsService, *};
 
 use super::config::*;
 use crate::{
-    app::*,
+    app::{error::ApplicationError, *},
     messages::LocalizedStatefulMessage,
     notification_event,
     primitives::{
@@ -421,6 +421,8 @@ impl NotificationsService for Notifications {
                             user_ids,
                             action,
                             icon,
+                            bulletin_key,
+                            dismissible,
                         },
                     )),
             }) => {
@@ -462,6 +464,11 @@ impl NotificationsService for Notifications {
                     None
                 };
 
+                let bulletin_key = bulletin_key
+                    .map(primitives::BulletinKey::try_from)
+                    .transpose()
+                    .map_err(ApplicationError::InvalidBulletinKey)?;
+
                 self.app
                     .handle_marketing_notification_triggered_event(
                         user_ids,
@@ -473,6 +480,9 @@ impl NotificationsService for Notifications {
                             should_send_push,
                             action,
                             icon,
+                            bulletin_key,
+                            dismissible: dismissible.unwrap_or(true),
+                            triggered_at: Some(chrono::Utc::now()),
                         },
                     )
                     .await?;
@@ -481,6 +491,56 @@ impl NotificationsService for Notifications {
         }
 
         Ok(Response::new(HandleNotificationEventResponse {}))
+    }
+
+    #[instrument(name = "notifications.close_bulletin", skip_all, err)]
+    async fn close_bulletin(
+        &self,
+        request: Request<CloseBulletinRequest>,
+    ) -> Result<Response<CloseBulletinResponse>, Status> {
+        grpc::extract_tracing(&request);
+        let request = request.into_inner();
+        let CloseBulletinRequest {
+            user_id,
+            bulletin_key,
+        } = request;
+        if user_id.is_empty() {
+            return Err(Status::invalid_argument("user_id is required"));
+        }
+        let user_id = GaloyUserId::from(user_id);
+        let bulletin_key = primitives::BulletinKey::try_from(bulletin_key)
+            .map_err(ApplicationError::InvalidBulletinKey)?;
+        self.app.close_bulletin(user_id, bulletin_key).await?;
+
+        Ok(Response::new(CloseBulletinResponse {}))
+    }
+
+    #[instrument(name = "notifications.list_latest_bulletins", skip_all, err)]
+    async fn list_latest_bulletins(
+        &self,
+        request: Request<ListLatestBulletinsRequest>,
+    ) -> Result<Response<ListLatestBulletinsResponse>, Status> {
+        grpc::extract_tracing(&request);
+        let request = request.into_inner();
+        let ListLatestBulletinsRequest {
+            user_ids,
+            bulletin_key,
+        } = request;
+        let has_empty_user_id = user_ids.iter().any(String::is_empty);
+        if has_empty_user_id {
+            return Err(Status::invalid_argument("user_ids must not be empty"));
+        }
+        let user_ids = user_ids.into_iter().map(GaloyUserId::from).collect();
+        let bulletin_key = primitives::BulletinKey::try_from(bulletin_key)
+            .map_err(ApplicationError::InvalidBulletinKey)?;
+        let bulletins = self
+            .app
+            .list_latest_bulletins(user_ids, bulletin_key)
+            .await?;
+
+        Ok(Response::new(ListLatestBulletinsResponse {
+            bulletins: bulletins.into_iter().map(proto::Bulletin::from).collect(),
+        }))
     }
 }
 
