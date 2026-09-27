@@ -1054,7 +1054,7 @@ export const InactivityFeeRefundLedgerMetadata = ({
   amount,
   memo,
   display,
-  provenance: { refundReason, noticeId, runId },
+  provenance: { refundReason, noticeId, runId, rate, rateSource },
 }: {
   amount: { btc: BtcPaymentAmount; usd: UsdPaymentAmount }
   memo: string
@@ -1074,6 +1074,8 @@ export const InactivityFeeRefundLedgerMetadata = ({
     // an undefined value would be stored as null
     ...(noticeId !== undefined ? { noticeId } : {}),
     runId,
+    ...(rate !== undefined ? { rate } : {}),
+    ...(rateSource !== undefined ? { rateSource } : {}),
   }
 
   // the user's wallet is the credit side

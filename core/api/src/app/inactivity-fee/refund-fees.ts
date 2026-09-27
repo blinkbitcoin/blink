@@ -1,12 +1,15 @@
 import {
+  InactivityFeeRateSource,
   InactivityFeeRefundUnpairableError,
   unpairedDebits,
 } from "@/domain/inactivity-fee"
 import { toSats } from "@/domain/bitcoin"
 import { toCents } from "@/domain/fiat"
 import { ResourceExpiredLockServiceError } from "@/domain/lock"
+import { usdPerBtcFromRatio } from "@/domain/payments"
 import { paymentAmountFromNumber, WalletCurrency } from "@/domain/shared"
 
+import { DealerPriceService } from "@/services/dealer-price"
 import { LedgerService } from "@/services/ledger"
 import * as LedgerFacade from "@/services/ledger/facade"
 import { LockService } from "@/services/lock"
@@ -50,6 +53,7 @@ const refundUnderLock = async ({
   let refundedSats = 0
   let refundedCents = 0
   const failures: InactivityFeeRefundFailure[] = []
+  const refundPrice = lazyRefundPrice()
 
   for (const wallet of wallets) {
     const transactions = await LedgerService().listInactivityFeeTransactionsByWalletId(
@@ -78,6 +82,7 @@ const refundUnderLock = async ({
         reason,
         runId,
         signal,
+        refundPrice,
       })
       if (refunded instanceof Error) {
         failures.push({
@@ -109,6 +114,35 @@ const refundUnderLock = async ({
   }
 }
 
+type RefundPrice = {
+  ratio: WalletPriceRatio
+  // USD per BTC
+  rate: number
+  rateSource: InactivityFeeRateSource
+}
+
+// One dealer mid-rate per refund call for one account, read on the first Dollar Balance refund
+// that needs it and never for a Bitcoin Balance. Straight from the dealer, no price-service or
+// cache fallback; an error is kept, so it fails that call's Dollar Balance refunds without
+// asking again.
+const lazyRefundPrice = (): (() => Promise<RefundPrice | ApplicationError>) => {
+  let price: Promise<RefundPrice | ApplicationError> | undefined
+  return () => {
+    price ??= readRefundPrice()
+    return price
+  }
+}
+
+const readRefundPrice = async (): Promise<RefundPrice | ApplicationError> => {
+  const ratio = await DealerPriceService().getCentsPerSatsExchangeMidRate()
+  if (ratio instanceof Error) return ratio
+  return {
+    ratio,
+    rate: usdPerBtcFromRatio(ratio),
+    rateSource: InactivityFeeRateSource.DealerMid,
+  }
+}
+
 // true = posted, false = the pair was already there
 const refundDebit = async ({
   wallet,
@@ -117,6 +151,7 @@ const refundDebit = async ({
   reason,
   runId,
   signal,
+  refundPrice,
 }: {
   wallet: Wallet
   debit: LedgerTransaction<WalletCurrency>
@@ -124,20 +159,17 @@ const refundDebit = async ({
   reason: InactivityFeeRefundReason
   runId: string
   signal: InactivityFeeAccountAbortSignal
+  refundPrice: () => Promise<RefundPrice | ApplicationError>
 }): Promise<boolean | ApplicationError> => {
   if (signal.aborted) return new ResourceExpiredLockServiceError(signal.error?.message)
 
-  // the amounts of the debit row itself: no config, no rate
-  if (debit.satsAmount === undefined || debit.centsAmount === undefined) {
-    return new InactivityFeeRefundUnpairableError(
-      `fee row ${debit.id} carries no amounts`,
-    )
+  // The wallet's own unit comes from the debit row, no config. A Bitcoin Balance gets the
+  // debit's sats and cents back exactly; a Dollar Balance gets the debit's cents, with the sats
+  // the dealer covers priced at refund time, so the dealer carries no price move in between.
+  const isBtc = wallet.currency === WalletCurrency.Btc
+  if (debit.centsAmount === undefined || (isBtc && debit.satsAmount === undefined)) {
+    return new InactivityFeeRefundUnpairableError(`fee row ${debit.id} carries no amounts`)
   }
-  const btc = paymentAmountFromNumber({
-    amount: debit.satsAmount,
-    currency: WalletCurrency.Btc,
-  })
-  if (btc instanceof Error) return btc
   const usd = paymentAmountFromNumber({
     amount: debit.centsAmount,
     currency: WalletCurrency.Usd,
@@ -155,7 +187,24 @@ const refundDebit = async ({
   if (existing instanceof Error) return existing
   if (existing !== undefined) return false
 
-  // the lock may have been lost during the lookup
+  let btc: BtcPaymentAmount
+  let priced: { rate: number; rateSource: InactivityFeeRateSource } | undefined
+  if (isBtc) {
+    const debitSats = paymentAmountFromNumber({
+      amount: debit.satsAmount ?? 0,
+      currency: WalletCurrency.Btc,
+    })
+    if (debitSats instanceof Error) return debitSats
+    btc = debitSats
+  } else {
+    const price = await refundPrice()
+    if (price instanceof Error) return price
+    // round-half, as a payment converts
+    btc = price.ratio.convertFromUsd(usd)
+    priced = { rate: price.rate, rateSource: price.rateSource }
+  }
+
+  // the lock may have been lost during the lookups
   if (signal.aborted) return new ResourceExpiredLockServiceError(signal.error?.message)
 
   const journal = await LedgerFacade.recordInactivityFeeRefund({
@@ -166,7 +215,7 @@ const refundDebit = async ({
     },
     amount: { btc, usd },
     externalId: refundExternalId,
-    metadata: { refundReason: reason, noticeId: debit.noticeId, runId },
+    metadata: { refundReason: reason, noticeId: debit.noticeId, runId, ...priced },
     display: displayFromDebit({ debit }),
   })
   if (journal instanceof Error) return journal

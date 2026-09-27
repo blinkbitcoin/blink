@@ -31,11 +31,20 @@ jest.mock("@/services/lock", () => ({
   }),
 }))
 
+jest.mock("@/services/dealer-price", () => ({
+  __mocks: { getCentsPerSatsExchangeMidRate: jest.fn() },
+  DealerPriceService: () => ({
+    getCentsPerSatsExchangeMidRate: jest.requireMock("@/services/dealer-price").__mocks
+      .getCentsPerSatsExchangeMidRate,
+  }),
+}))
+
 jest.mock("@/services/tracing", () => ({
   addAttributesToCurrentSpan: jest.fn(),
 }))
 
 import { refundInactivityFees } from "@/app/inactivity-fee/refund-fees"
+import { DealerStalePriceError } from "@/domain/dealer-price"
 import { CouldNotListWalletsFromAccountIdError } from "@/domain/errors"
 import {
   InactivityFeeRefundReason,
@@ -46,6 +55,7 @@ import {
   ResourceAttemptsRedlockServiceError,
   ResourceExpiredLockServiceError,
 } from "@/domain/lock"
+import { toWalletPriceRatio, usdPerBtcFromRatio } from "@/domain/payments"
 import { WalletCurrency } from "@/domain/shared"
 import { recordInactivityFeeRefund } from "@/services/ledger/facade"
 
@@ -65,6 +75,16 @@ const { lockInactivityFeeAccount } = jest.requireMock("@/services/lock").__mocks
 const mockRecordRefund = recordInactivityFeeRefund as jest.MockedFunction<
   typeof recordInactivityFeeRefund
 >
+const { getCentsPerSatsExchangeMidRate: midRate } = jest.requireMock(
+  "@/services/dealer-price",
+).__mocks as { getCentsPerSatsExchangeMidRate: jest.Mock }
+
+// the mid-rate at refund time: 1,500 sats per $1 ($66,666/BTC)
+const refundTimeRatio = () => {
+  const ratio = toWalletPriceRatio(100 / 1500)
+  if (ratio instanceof Error) throw ratio
+  return ratio
+}
 
 const accountId = "1c2b5a6e-1a2b-4c3d-8e9f-0a1b2c3d4e5f" as AccountId
 const btcWalletId = "0b1c2d3e-4f50-4a6b-8c7d-9e0f1a2b3c4d" as WalletId
@@ -149,6 +169,7 @@ beforeEach(() => {
   listFeeRows.mockResolvedValue([])
   findByKey.mockResolvedValue(undefined)
   mockRecordRefund.mockResolvedValue(journal)
+  midRate.mockResolvedValue(refundTimeRatio())
   lockInactivityFeeAccount.mockImplementation(
     async (_id: AccountId, fn: (signal: InactivityFeeAccountAbortSignal) => unknown) =>
       fn(liveSignal),
@@ -172,6 +193,8 @@ describe("refundInactivityFees", () => {
     const result = expectResult(await run())
 
     expect(result).toEqual({ refundedSats: 1289, refundedCents: 0, failures: [] })
+    // a Bitcoin Balance refund is exact: no price read
+    expect(midRate).not.toHaveBeenCalled()
     expect(mockRecordRefund).toHaveBeenCalledTimes(1)
     expect(mockRecordRefund).toHaveBeenCalledWith({
       walletDescriptor: { id: btcWalletId, currency: WalletCurrency.Btc, accountId },
@@ -267,16 +290,238 @@ describe("refundInactivityFees", () => {
 
     expect(result).toEqual({ refundedSats: 300, refundedCents: 60, failures: [] })
     expect(mockRecordRefund).toHaveBeenCalledTimes(2)
+    expect(mockRecordRefund.mock.calls[0][0].amount).toEqual({
+      btc: { amount: 300n, currency: WalletCurrency.Btc },
+      usd: { amount: 23n, currency: WalletCurrency.Usd },
+    })
     expect(mockRecordRefund.mock.calls[1][0]).toEqual(
       expect.objectContaining({
         walletDescriptor: { id: usdWalletId, currency: WalletCurrency.Usd, accountId },
         amount: {
-          btc: { amount: 773n, currency: WalletCurrency.Btc },
+          btc: { amount: 900n, currency: WalletCurrency.Btc },
           usd: { amount: 60n, currency: WalletCurrency.Usd },
         },
         externalId: `ifee_refund_${usdWalletId}_2026-10`,
       }),
     )
+  })
+
+  describe("Dollar Balance repricing", () => {
+    it("credits the debit's cents with the sats priced at the refund-time mid-rate, rate stamped", async () => {
+      rowsByWallet({
+        [usdWalletId]: [
+          fee({
+            walletId: usdWalletId,
+            month: "2026-10",
+            sats: 1289,
+            cents: 100,
+            noticeId: "n1",
+          }),
+        ],
+      })
+
+      const result = expectResult(await run())
+
+      expect(result).toEqual({ refundedSats: 0, refundedCents: 100, failures: [] })
+      expect(mockRecordRefund).toHaveBeenCalledWith({
+        walletDescriptor: { id: usdWalletId, currency: WalletCurrency.Usd, accountId },
+        amount: {
+          btc: { amount: 1500n, currency: WalletCurrency.Btc },
+          usd: { amount: 100n, currency: WalletCurrency.Usd },
+        },
+        externalId: `ifee_refund_${usdWalletId}_2026-10`,
+        metadata: {
+          refundReason: "activity",
+          noticeId: "n1",
+          runId,
+          rate: usdPerBtcFromRatio(refundTimeRatio()),
+          rateSource: "dealer-mid",
+        },
+      })
+    })
+
+    it("reads the mid-rate once per run however many Dollar Balance debits it refunds", async () => {
+      rowsByWallet({
+        [usdWalletId]: [
+          fee({ walletId: usdWalletId, month: "2026-09", sats: 1300, cents: 100 }),
+          fee({ walletId: usdWalletId, month: "2026-10", sats: 1289, cents: 100 }),
+        ],
+      })
+
+      const result = expectResult(await run())
+
+      expect(midRate).toHaveBeenCalledTimes(1)
+      expect(result.refundedCents).toBe(200)
+      expect(mockRecordRefund.mock.calls.map(([args]) => args.amount.btc.amount)).toEqual(
+        [1500n, 1500n],
+      )
+    })
+
+    it("reads no price when the Dollar Balance has nothing to refund", async () => {
+      rowsByWallet({
+        [btcWalletId]: [
+          fee({ walletId: btcWalletId, month: "2026-10", sats: 1289, cents: 100 }),
+        ],
+        [usdWalletId]: [
+          fee({ walletId: usdWalletId, month: "2026-10", sats: 1289, cents: 100 }),
+          refund({ walletId: usdWalletId, month: "2026-10", sats: 1500, cents: 100 }),
+        ],
+      })
+
+      const result = expectResult(await run())
+
+      expect(midRate).not.toHaveBeenCalled()
+      expect(result).toEqual({ refundedSats: 1289, refundedCents: 0, failures: [] })
+    })
+
+    it("finds a repriced refund as the pair on the next run and posts nothing", async () => {
+      rowsByWallet({
+        [usdWalletId]: [
+          fee({ walletId: usdWalletId, month: "2026-10", sats: 1289, cents: 100 }),
+          refund({ walletId: usdWalletId, month: "2026-10", sats: 1500, cents: 100 }),
+        ],
+      })
+
+      const result = expectResult(await run())
+
+      expect(result).toEqual({ refundedSats: 0, refundedCents: 0, failures: [] })
+      expect(findByKey).not.toHaveBeenCalled()
+      expect(mockRecordRefund).not.toHaveBeenCalled()
+    })
+
+    it("fails only the Dollar Balance refunds when the dealer price fails; Bitcoin Balance refunds post", async () => {
+      rowsByWallet({
+        [btcWalletId]: [
+          fee({ walletId: btcWalletId, month: "2026-10", sats: 1289, cents: 100 }),
+        ],
+        [usdWalletId]: [
+          fee({ walletId: usdWalletId, month: "2026-09", sats: 1300, cents: 100 }),
+          fee({ walletId: usdWalletId, month: "2026-10", sats: 1289, cents: 100 }),
+        ],
+      })
+      const priceError = new DealerStalePriceError("stale")
+      midRate.mockResolvedValue(priceError)
+
+      const result = expectResult(await run())
+
+      // asked once; the error is kept for the run
+      expect(midRate).toHaveBeenCalledTimes(1)
+      expect(mockRecordRefund).toHaveBeenCalledTimes(1)
+      expect(mockRecordRefund.mock.calls[0][0].walletDescriptor.id).toBe(btcWalletId)
+      expect(result).toEqual({
+        refundedSats: 1289,
+        refundedCents: 0,
+        failures: [
+          {
+            walletId: usdWalletId,
+            externalId: `ifee_refund_${usdWalletId}_2026-09`,
+            error: priceError,
+          },
+          {
+            walletId: usdWalletId,
+            externalId: `ifee_refund_${usdWalletId}_2026-10`,
+            error: priceError,
+          },
+        ],
+      })
+    })
+
+    it("does not post when the lock is lost during the price read", async () => {
+      rowsByWallet({
+        [usdWalletId]: [
+          fee({ walletId: usdWalletId, month: "2026-10", sats: 1289, cents: 100 }),
+        ],
+      })
+      const signal = { aborted: false, error: undefined as Error | undefined }
+      lockInactivityFeeAccount.mockImplementation(
+        async (_id: AccountId, fn: (signal: unknown) => unknown) => fn(signal),
+      )
+      midRate.mockImplementation(async () => {
+        signal.aborted = true
+        signal.error = new Error("expired")
+        return refundTimeRatio()
+      })
+
+      const result = expectResult(await run())
+
+      expect(result.failures[0].error).toBeInstanceOf(ResourceExpiredLockServiceError)
+      expect(result.refundedCents).toBe(0)
+      expect(mockRecordRefund).not.toHaveBeenCalled()
+    })
+
+    it("rounds the repriced sats half up, as a payment converts", async () => {
+      rowsByWallet({
+        [usdWalletId]: [
+          fee({ walletId: usdWalletId, month: "2026-10", sats: 1289, cents: 100 }),
+        ],
+      })
+      // 0.07 cents per sat: 100 cents are 1,428.57 sats, which a floor would make 1,428
+      const ratio = toWalletPriceRatio(0.07)
+      if (ratio instanceof Error) throw ratio
+      midRate.mockResolvedValue(ratio)
+
+      expectResult(await run())
+
+      expect(mockRecordRefund.mock.calls[0][0].amount.btc.amount).toBe(1429n)
+    })
+
+    it("refunds a Dollar Balance debit that carries no sats at the repriced sats", async () => {
+      rowsByWallet({
+        [usdWalletId]: [
+          {
+            ...fee({ walletId: usdWalletId, month: "2026-10", sats: 1289, cents: 100 }),
+            satsAmount: undefined,
+          },
+        ],
+      })
+
+      const result = expectResult(await run())
+
+      expect(result).toEqual({ refundedSats: 0, refundedCents: 100, failures: [] })
+      expect(mockRecordRefund.mock.calls[0][0].amount).toEqual({
+        btc: { amount: 1500n, currency: WalletCurrency.Btc },
+        usd: { amount: 100n, currency: WalletCurrency.Usd },
+      })
+    })
+  })
+
+  describe("a debit row missing an amount", () => {
+    it("fails a Bitcoin Balance debit that carries no sats", async () => {
+      rowsByWallet({
+        [btcWalletId]: [
+          {
+            ...fee({ walletId: btcWalletId, month: "2026-10", sats: 1289, cents: 100 }),
+            satsAmount: undefined,
+          },
+        ],
+      })
+
+      const result = expectResult(await run())
+
+      expect(result.failures).toHaveLength(1)
+      expect(result.failures[0].error).toBeInstanceOf(InactivityFeeRefundFailedError)
+      expect(result.refundedSats).toBe(0)
+      expect(mockRecordRefund).not.toHaveBeenCalled()
+    })
+
+    it("fails a debit that carries no cents", async () => {
+      rowsByWallet({
+        [usdWalletId]: [
+          {
+            ...fee({ walletId: usdWalletId, month: "2026-10", sats: 1289, cents: 100 }),
+            centsAmount: undefined,
+          },
+        ],
+      })
+
+      const result = expectResult(await run())
+
+      expect(result.failures).toHaveLength(1)
+      expect(result.failures[0].error).toBeInstanceOf(InactivityFeeRefundFailedError)
+      expect(result.refundedCents).toBe(0)
+      expect(midRate).not.toHaveBeenCalled()
+      expect(mockRecordRefund).not.toHaveBeenCalled()
+    })
   })
 
   it("posts nothing on a re-run: every debit already has its pair", async () => {

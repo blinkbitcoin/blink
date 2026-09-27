@@ -214,6 +214,9 @@ type InactivityFeeRefundProvenance = {
   // the reversed debit's notice
   noticeId?: string
   runId: string
+  // Dollar Balance refunds only: USD per BTC the sats were priced at, at refund time
+  rate?: number
+  rateSource?: string
 }
 
 type InactivityFeeLedgerMetadata = LedgerMetadata &
