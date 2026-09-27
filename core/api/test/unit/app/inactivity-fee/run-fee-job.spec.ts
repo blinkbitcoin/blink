@@ -48,12 +48,17 @@ jest.mock("@/services/ledger/facade", () => ({
 }))
 
 jest.mock("@/services/lock", () => ({
-  __mocks: { lockInactivityFeeRun: jest.fn(), lockInactivityFeeAccount: jest.fn() },
+  __mocks: {
+    lockInactivityFeeRun: jest.fn(),
+    lockInactivityFeeAccount: jest.fn(),
+    lockWalletId: jest.fn(),
+  },
   LockService: () => ({
     lockInactivityFeeRun:
       jest.requireMock("@/services/lock").__mocks.lockInactivityFeeRun,
     lockInactivityFeeAccount:
       jest.requireMock("@/services/lock").__mocks.lockInactivityFeeAccount,
+    lockWalletId: jest.requireMock("@/services/lock").__mocks.lockWalletId,
   }),
 }))
 
@@ -129,11 +134,12 @@ const { getWalletBalanceAmount, getTransactionForWalletByExternalId: findByKey }
     getWalletBalanceAmount: jest.Mock
     getTransactionForWalletByExternalId: jest.Mock
   }
-const { lockInactivityFeeRun, lockInactivityFeeAccount } = jest.requireMock(
+const { lockInactivityFeeRun, lockInactivityFeeAccount, lockWalletId } = jest.requireMock(
   "@/services/lock",
 ).__mocks as {
   lockInactivityFeeRun: jest.Mock
   lockInactivityFeeAccount: jest.Mock
+  lockWalletId: jest.Mock
 }
 const { getCentsPerSatsExchangeMidRate: midRate } = jest.requireMock(
   "@/services/dealer-price",
@@ -327,6 +333,10 @@ describe("runFeeJob", () => {
     )
     lockInactivityFeeAccount.mockImplementation(
       async (_id: AccountId, fn: (signal: unknown) => Promise<unknown>) =>
+        fn({ aborted: false }),
+    )
+    lockWalletId.mockImplementation(
+      async (_id: WalletId, fn: (signal: unknown) => Promise<unknown>) =>
         fn({ aborted: false }),
     )
     setup([])
@@ -1106,6 +1116,265 @@ describe("runFeeJob", () => {
     })
   })
 
+  describe("wallet lock", () => {
+    const passThrough = async (
+      _id: WalletId,
+      fn: (signal: unknown) => Promise<unknown>,
+    ) => fn({ aborted: false })
+
+    it("takes the wallet lock inside the account lock, for each wallet the predicate lets through", async () => {
+      const alice = account()
+      setup([{ account: alice, btc: 250_000n, usd: 0n }])
+      let inAccountLock = false
+      lockInactivityFeeAccount.mockImplementation(
+        async (_id: AccountId, fn: (signal: unknown) => Promise<unknown>) => {
+          inAccountLock = true
+          const result = await fn({ aborted: false })
+          inAccountLock = false
+          return result
+        },
+      )
+      const heldAccountLock: boolean[] = []
+      lockWalletId.mockImplementation(
+        async (id: WalletId, fn: (signal: unknown) => Promise<unknown>) => {
+          heldAccountLock.push(inAccountLock)
+          return passThrough(id, fn)
+        },
+      )
+
+      expectRun(await runLive())
+
+      // the zero Dollar Balance is settled by the cheap predicate and never locked
+      expect(lockWalletId).toHaveBeenCalledTimes(1)
+      expect(lockWalletId).toHaveBeenCalledWith(
+        btcWalletId(alice.id),
+        expect.any(Function),
+      )
+      expect(heldAccountLock).toEqual([true])
+      expect(mockRecordFee).toHaveBeenCalledTimes(1)
+    })
+
+    it("waits for a send holding the wallet lock, then skips active on the clock its request bumped", async () => {
+      const alice = account()
+      setup([{ account: alice, btc: 250_000n }])
+      lockWalletId.mockImplementation(
+        async (id: WalletId, fn: (signal: unknown) => Promise<unknown>) => {
+          // the session middleware recorded the send request's activity before its resolver
+          // took the wallet lock; the fee waited on that lock
+          mocks.findById.mockResolvedValue({ ...alice, lastActivityAt: asOf })
+          return passThrough(id, fn)
+        },
+      )
+      const { records, onOutcome } = collect()
+
+      expectRun(await runLive({ onOutcome }))
+
+      expect(mockRecordFee).not.toHaveBeenCalled()
+      expect(records).toEqual([
+        expect.objectContaining({
+          walletId: btcWalletId(alice.id),
+          outcome: InactivityFeeChargeOutcome.Skipped,
+          reason: InactivityFeeSkipReason.Active,
+        }),
+      ])
+    })
+
+    it("re-sizes the fee from the balance a send left behind", async () => {
+      const alice = account()
+      setup([{ account: alice, btc: 250_000n }])
+      lockWalletId.mockImplementation(
+        async (id: WalletId, fn: (signal: unknown) => Promise<unknown>) => {
+          getWalletBalanceAmount.mockResolvedValue({
+            amount: 500n,
+            currency: WalletCurrency.Btc,
+          })
+          return passThrough(id, fn)
+        },
+      )
+      const { records, onOutcome } = collect()
+
+      const run = expectRun(await runLive({ onOutcome }))
+
+      expect(mockRecordFee).toHaveBeenCalledTimes(1)
+      expect(mockRecordFee.mock.calls[0][0].amount).toEqual({
+        btc: { amount: 500n, currency: WalletCurrency.Btc },
+        usd: { amount: 39n, currency: WalletCurrency.Usd },
+      })
+      expect(records[0]).toEqual(
+        expect.objectContaining({
+          outcome: InactivityFeeChargeOutcome.Charged,
+          amount: 500,
+        }),
+      )
+      expect(run.debited).toEqual({ count: 1, sats: 500, cents: 0 })
+    })
+
+    it("skips zero_balance when a send emptied the wallet", async () => {
+      const alice = account()
+      setup([{ account: alice, usd: 500n }])
+      lockWalletId.mockImplementation(
+        async (id: WalletId, fn: (signal: unknown) => Promise<unknown>) => {
+          getWalletBalanceAmount.mockResolvedValue({
+            amount: 0n,
+            currency: WalletCurrency.Usd,
+          })
+          return passThrough(id, fn)
+        },
+      )
+      const { records, onOutcome } = collect()
+
+      expectRun(await runLive({ onOutcome }))
+
+      expect(mockRecordFee).not.toHaveBeenCalled()
+      expect(records).toEqual([
+        expect.objectContaining({
+          walletId: usdWalletId(alice.id),
+          outcome: InactivityFeeChargeOutcome.Skipped,
+          reason: InactivityFeeSkipReason.ZeroBalance,
+        }),
+      ])
+    })
+
+    it("a wallet lock that cannot be taken is that wallet's error; the other wallet is still charged", async () => {
+      const alice = account()
+      setup([{ account: alice, btc: 250_000n, usd: 500n }])
+      const lockError = new ResourceAttemptsRedlockServiceError()
+      lockWalletId.mockResolvedValueOnce(lockError).mockImplementationOnce(passThrough)
+      const { records, onOutcome } = collect()
+
+      const run = expectRun(await runLive({ onOutcome }))
+
+      expect(mockRecordFee).toHaveBeenCalledTimes(1)
+      expect(mockRecordFee.mock.calls[0][0].walletDescriptor.id).toBe(
+        usdWalletId(alice.id),
+      )
+      expect(
+        records.map((record) => [record.walletId, record.outcome, record.reason]),
+      ).toEqual([
+        [
+          btcWalletId(alice.id),
+          InactivityFeeChargeOutcome.Error,
+          "ResourceAttemptsRedlockServiceError",
+        ],
+        [usdWalletId(alice.id), InactivityFeeChargeOutcome.Charged, undefined],
+      ])
+      expect(mockRecordException).toHaveBeenCalledWith(
+        expect.objectContaining({ error: lockError }),
+      )
+      expect(run.counts.byOutcome).toEqual({ error: 1, charged: 1 })
+    })
+
+    it("skips a wallet whose month key already exists as already_debited without taking its lock", async () => {
+      const alice = account()
+      setup([{ account: alice, btc: 250_000n, keys: [btcWalletId(alice.id)] }])
+      const { records, onOutcome } = collect()
+
+      expectRun(await runLive({ onOutcome }))
+
+      expect(lockWalletId).not.toHaveBeenCalled()
+      expect(mockRecordFee).not.toHaveBeenCalled()
+      expect(records).toEqual([
+        expect.objectContaining({
+          walletId: btcWalletId(alice.id),
+          outcome: InactivityFeeChargeOutcome.Skipped,
+          reason: InactivityFeeSkipReason.AlreadyDebited,
+        }),
+      ])
+    })
+
+    it("a balance read that fails under the wallet lock is that wallet's error and posts nothing", async () => {
+      const alice = account()
+      setup([{ account: alice, btc: 250_000n }])
+      const ledgerError = new UnknownLedgerError("balance read failed")
+      lockWalletId.mockImplementation(
+        async (id: WalletId, fn: (signal: unknown) => Promise<unknown>) => {
+          getWalletBalanceAmount.mockResolvedValue(ledgerError)
+          return passThrough(id, fn)
+        },
+      )
+      const { records, onOutcome } = collect()
+
+      expectRun(await runLive({ onOutcome }))
+
+      expect(mockRecordFee).not.toHaveBeenCalled()
+      expect(records).toEqual([
+        expect.objectContaining({
+          walletId: btcWalletId(alice.id),
+          outcome: InactivityFeeChargeOutcome.Error,
+          reason: "UnknownLedgerError",
+          externalId: feeKey(btcWalletId(alice.id)),
+        }),
+      ])
+      expect(mockRecordException).toHaveBeenCalledWith(
+        expect.objectContaining({ error: ledgerError }),
+      )
+    })
+
+    it("posts nothing when the wallet lock lapses before the post", async () => {
+      const alice = account()
+      setup([{ account: alice, btc: 250_000n }])
+      const walletSignal = { aborted: false, error: new Error("wallet lock expired") }
+      lockWalletId.mockImplementation(
+        async (_id: WalletId, fn: (signal: unknown) => Promise<unknown>) =>
+          fn(walletSignal),
+      )
+      // lost during the second key read, the last round trip before the post
+      findByKey.mockResolvedValueOnce(undefined).mockImplementationOnce(async () => {
+        walletSignal.aborted = true
+        return undefined
+      })
+      const { records, onOutcome } = collect()
+
+      expectRun(await runLive({ onOutcome }))
+
+      expect(mockRecordFee).not.toHaveBeenCalled()
+      expect(records[0]).toEqual(
+        expect.objectContaining({
+          outcome: InactivityFeeChargeOutcome.Error,
+          reason: "ResourceExpiredLockServiceError",
+          amount: 1289,
+          externalId: feeKey(btcWalletId(alice.id)),
+        }),
+      )
+    })
+
+    it("keeps a posted debit when the wallet lock is released late", async () => {
+      const alice = account()
+      setup([{ account: alice, btc: 250_000n }])
+      lockWalletId.mockImplementation(
+        async (_id: WalletId, fn: (signal: unknown) => Promise<unknown>) => {
+          await fn({ aborted: false })
+          return new ResourceAttemptsRedlockServiceError()
+        },
+      )
+      const { records, onOutcome } = collect()
+
+      const run = expectRun(await runLive({ onOutcome }))
+
+      expect(records[0].outcome).toBe(InactivityFeeChargeOutcome.Charged)
+      expect(run.debited).toEqual({ count: 1, sats: 1289, cents: 0 })
+    })
+
+    it("a dry run takes the wallet lock too and posts nothing", async () => {
+      mockGetInactivityFeeConfig.mockReturnValue({ ...config, liveCharging: false })
+      const alice = account()
+      setup([{ account: alice, btc: 250_000n, usd: 60n }])
+      const { records, onOutcome } = collect()
+
+      expectRun(await runFeeJob({ asOf, dryRun: true, runId, onOutcome }))
+
+      expect(lockWalletId.mock.calls.map(([id]) => id)).toEqual([
+        btcWalletId(alice.id),
+        usdWalletId(alice.id),
+      ])
+      expect(mockRecordFee).not.toHaveBeenCalled()
+      expect(records.map((record) => record.outcome)).toEqual([
+        InactivityFeeChargeOutcome.WouldCharge,
+        InactivityFeeChargeOutcome.WouldCharge,
+      ])
+    })
+  })
+
   describe("abort", () => {
     it("returns a critical InactivityFeeRunAbortedError when the scan itself fails, after persisting the partial summary", async () => {
       const alice = account()
@@ -1189,6 +1458,15 @@ describe("chargeWallet pre-post invariant guards", () => {
     jest.resetAllMocks()
     findByKey.mockResolvedValue(undefined)
     mockRecordFee.mockResolvedValue(journal)
+    lockWalletId.mockImplementation(
+      async (_id: WalletId, fn: (signal: unknown) => Promise<unknown>) =>
+        fn({ aborted: false }),
+    )
+    mocks.findById.mockResolvedValue(alice)
+    getWalletBalanceAmount.mockResolvedValue({
+      amount: 250_000n,
+      currency: WalletCurrency.Btc,
+    })
   })
 
   it("debit_over_balance: a rate that sizes the fee to nothing never posts a zero debit", async () => {
@@ -1207,11 +1485,12 @@ describe("chargeWallet pre-post invariant guards", () => {
   })
 
   it("debit_without_live_notice: a notice that stops being live after the predicate read it", async () => {
-    // the row is superseded from the second read on: the predicate sees a live notice, the guard does not
+    // the row is superseded from the third read on: both predicate runs (before and under the
+    // wallet lock) see a live notice, the guard does not
     let statusReads = 0
     const flipping = new Proxy(notice(alice.id), {
       get: (target, property, receiver) =>
-        property === "status" && ++statusReads > 1
+        property === "status" && ++statusReads > 2
           ? InactivityFeeNoticeStatus.Superseded
           : Reflect.get(target, property, receiver),
     })

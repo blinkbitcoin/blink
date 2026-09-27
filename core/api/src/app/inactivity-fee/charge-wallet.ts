@@ -16,6 +16,8 @@ import { ErrorLevel, WalletCurrency, ZERO_CENTS, ZERO_SATS } from "@/domain/shar
 
 import { LedgerService } from "@/services/ledger"
 import * as LedgerFacade from "@/services/ledger/facade"
+import { LockService } from "@/services/lock"
+import { AccountsRepository } from "@/services/mongoose"
 import { addEventToCurrentSpan, recordExceptionInCurrentSpan } from "@/services/tracing"
 
 // one price-service ratio per display currency per run; a failure is kept so it warns once
@@ -42,9 +44,11 @@ type ChargeWalletArgs = {
 }
 
 // One wallet, under the account lock, from live reads only: the cheap predicate → the month
-// key (a round trip, so only for a wallet nothing else has ruled out) → min(fee, balance) at
-// the pinned rate → post. Dry-run runs the same path and skips exactly the post. Every failure
-// is this wallet's outcome; the account's other wallet is unaffected.
+// key (a round trip, so only for a wallet nothing else has ruled out) → the wallet lock user
+// sends take, nested inside the account lock (account → wallet, never the reverse) → account
+// and balance read again and the predicate re-run → min(fee, balance) at the pinned rate →
+// post. Dry-run runs the same path, wallet lock included, and skips exactly the post. Every
+// failure is this wallet's outcome; the account's other wallet is unaffected.
 export const chargeWallet = async ({
   account,
   notice,
@@ -121,6 +125,88 @@ export const chargeWallet = async ({
   if (existing instanceof Error) return failed(existing)
   if (existing !== undefined) return skipped(InactivityFeeSkipReason.AlreadyDebited)
 
+  // A user send holds this lock across its balance check and its post; the account lock alone
+  // does not keep one out. Result kept aside so a late release cannot turn a posted debit into
+  // an error.
+  const finished: { record?: InactivityFeeChargeOutcomeRecord } = {}
+  const locked = await LockService().lockWalletId(wallet.id, async (walletSignal) => {
+    finished.record = await chargeUnderWalletLock({
+      account,
+      notice,
+      wallet,
+      ctx,
+      asOf,
+      dryRun,
+      pinned,
+      config,
+      runId,
+      displayRatios,
+      signal,
+      walletSignal,
+      externalId,
+      base,
+      failed,
+      skipped,
+    })
+    return finished.record
+  })
+  if (finished.record !== undefined) return finished.record
+  return failed(locked instanceof Error ? locked : new Error("lock returned no result"))
+}
+
+type ChargeUnderWalletLockArgs = Omit<ChargeWalletArgs, "balance" | "month"> & {
+  walletSignal: WalletIdAbortSignal
+  externalId: LedgerExternalId
+  base: Pick<
+    InactivityFeeChargeOutcomeRecord,
+    "accountId" | "walletId" | "currency" | "noticeId"
+  >
+  failed: (
+    error: Error,
+    options?: { level?: ErrorLevel; amount?: number },
+  ) => InactivityFeeChargeOutcomeRecord
+  skipped: (reason: InactivityFeeSkipReason) => InactivityFeeChargeOutcomeRecord
+}
+
+// Under both locks. What a send that held the wallet lock changed is what these reads see: a
+// fresh activity clock settles the wallet as active, a lower balance re-sizes the fee.
+const chargeUnderWalletLock = async ({
+  account: accountRead,
+  notice,
+  wallet,
+  ctx,
+  asOf,
+  dryRun,
+  pinned,
+  config,
+  runId,
+  displayRatios,
+  signal,
+  walletSignal,
+  externalId,
+  base,
+  failed,
+  skipped,
+}: ChargeUnderWalletLockArgs): Promise<InactivityFeeChargeOutcomeRecord> => {
+  const account = await AccountsRepository().findById(accountRead.id)
+  if (account instanceof Error) return failed(account)
+
+  const balance = await LedgerService().getWalletBalanceAmount(wallet)
+  if (balance instanceof Error) return failed(balance)
+
+  // the key was read before the wallet lock; it is read again below, just before the post
+  const verdict = evaluateCharge({
+    account,
+    notice,
+    balance,
+    keyExists: false,
+    asOf,
+    dryRun,
+    ctx,
+    config,
+  })
+  if (verdict.outcome === "skip") return skipped(verdict.reason)
+
   const amount = sizeInactivityFee({
     balance,
     feeAmountUsdCents: config.feeAmountUsdCents,
@@ -172,11 +258,13 @@ export const chargeWallet = async ({
   if (appeared instanceof Error) return failed(appeared, { amount: walletAmount })
   if (appeared !== undefined) return alert("second_debit_in_month")
 
-  // last before the post: the lock may have been lost during the reads above
-  if (signal.aborted) {
-    return failed(new ResourceExpiredLockServiceError(signal.error?.message), {
-      amount: walletAmount,
-    })
+  // last before the post: either lock may have been lost during the reads above
+  for (const held of [signal, walletSignal]) {
+    if (held.aborted) {
+      return failed(new ResourceExpiredLockServiceError(held.error?.message), {
+        amount: walletAmount,
+      })
+    }
   }
 
   const journal = await LedgerFacade.recordInactivityFee({
