@@ -78,14 +78,6 @@ const transactionSchema = new Schema<ILedgerTransaction>(
 
     memoPayer: String,
 
-    // inactivity fee provenance; medici drops any key not listed here
-    rate: Number,
-    rateSource: String,
-    configVersion: String,
-    noticeId: String,
-    refundReason: String,
-    runId: String,
-
     sats: Number, // TODO: should be removed?
 
     satsAmount: Number,

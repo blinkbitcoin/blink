@@ -95,7 +95,7 @@ refund_count() {
 
 refund_count_with() {
   local wallet_id=$1 external_id=$2 reason=$3 notice_id=$4 run_prefix=$5 credit=$6
-  mongo_cli "db.medici_transactions.countDocuments({accounts:'Liabilities:${wallet_id}',type:'inactivity_fee_refund',external_id:'${external_id}',refundReason:'${reason}',noticeId:'${notice_id}',runId:/^${run_prefix}-/,credit:${credit}})"
+  mongo_cli "db.medici_transactions.countDocuments({accounts:'Liabilities:${wallet_id}',type:'inactivity_fee_refund',external_id:'${external_id}','meta.refundReason':'${reason}','meta.noticeId':'${notice_id}','meta.runId':/^${run_prefix}-/,credit:${credit}})"
 }
 
 insert_live_notice() {

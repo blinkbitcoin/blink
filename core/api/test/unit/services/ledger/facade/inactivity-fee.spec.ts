@@ -72,6 +72,29 @@ const leg = (txs: ILedgerTransaction[], accounts: string): ILedgerTransaction =>
   return found
 }
 
+const provenanceKeys = [
+  "rate",
+  "rateSource",
+  "configVersion",
+  "noticeId",
+  "refundReason",
+  "runId",
+]
+
+// provenance is not a schema field, so medici keeps it under meta on every leg
+const expectProvenanceUnderMeta = ({
+  txs,
+  provenance,
+}: {
+  txs: ILedgerTransaction[]
+  provenance: Record<string, unknown>
+}) => {
+  for (const tx of txs) {
+    expect(tx.meta).toEqual(expect.objectContaining(provenance))
+    for (const key of provenanceKeys) expect(tx).not.toHaveProperty(key)
+  }
+}
+
 const expectBalanced = (txs: ILedgerTransaction[]) => {
   for (const currency of [WalletCurrency.Btc, WalletCurrency.Usd]) {
     const legs = txs.filter((tx) => tx.currency === currency)
@@ -114,12 +137,13 @@ describe("recordInactivityFee", () => {
         satsFee: 0,
         centsFee: 0,
         memoPayer: "Inactivity fee — $1.00 (1,289 sats at $77,566/BTC)",
-        ...feeProvenance,
+        meta: feeProvenance,
       }),
     )
     expect(leg(txs, "Liabilities:bank-owner")).toEqual(
       expect.objectContaining({ credit: 1289, debit: 0, external_id: externalId }),
     )
+    expectProvenanceUnderMeta({ txs, provenance: feeProvenance })
     expectBalanced(txs)
   })
 
@@ -145,6 +169,7 @@ describe("recordInactivityFee", () => {
     expect(leg(txs, "Liabilities:bank-owner")).toEqual(
       expect.objectContaining({ credit: 773, currency: WalletCurrency.Btc }),
     )
+    expectProvenanceUnderMeta({ txs, provenance: feeProvenance })
     expectBalanced(txs)
   })
 
@@ -189,14 +214,17 @@ describe("recordInactivityFeeRefund", () => {
         satsAmount: 1289,
         centsAmount: 100,
         memoPayer: "Inactivity fee refund — 1,289 sats",
-        refundReason: "activity",
-        noticeId: "notice-1",
-        runId: "reactivation-2026-10-20-x",
+        meta: {
+          refundReason: "activity",
+          noticeId: "notice-1",
+          runId: "reactivation-2026-10-20-x",
+        },
       }),
     )
     expect(leg(txs, "Liabilities:bank-owner")).toEqual(
       expect.objectContaining({ debit: 1289, credit: 0 }),
     )
+    expectProvenanceUnderMeta({ txs, provenance: refundProvenance })
     expectBalanced(txs)
   })
 
@@ -215,7 +243,7 @@ describe("recordInactivityFeeRefund", () => {
         credit: 60,
         currency: WalletCurrency.Usd,
         memoPayer: "Inactivity fee refund — $0.60",
-        refundReason: "claims",
+        meta: expect.objectContaining({ refundReason: "claims" }),
       }),
     )
     expect(leg(txs, "Liabilities:bank-owner")).toEqual(
@@ -227,7 +255,30 @@ describe("recordInactivityFeeRefund", () => {
     expect(leg(txs, "Liabilities:dealer-usd")).toEqual(
       expect.objectContaining({ debit: 60 }),
     )
+    expectProvenanceUnderMeta({
+      txs,
+      provenance: { ...refundProvenance, refundReason: "claims" },
+    })
     expectBalanced(txs)
+  })
+
+  it("leaves noticeId without a value when the debit had none", async () => {
+    await recordInactivityFeeRefund({
+      walletDescriptor: btcWallet,
+      amount: amount(1289n, 100n),
+      externalId: key(`ifee_refund_${btcWalletId}_2026-10`),
+      metadata: { ...refundProvenance, noticeId: undefined },
+    })
+
+    const txs = persistedTransactions()
+    for (const tx of txs) {
+      expect(tx.meta).not.toHaveProperty("noticeId")
+      expect(tx).not.toHaveProperty("noticeId")
+    }
+    expectProvenanceUnderMeta({
+      txs,
+      provenance: { refundReason: "activity", runId: "reactivation-2026-10-20-x" },
+    })
   })
 
   it.each([

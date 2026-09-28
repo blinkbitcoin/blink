@@ -4,6 +4,19 @@ import { InvalidTxMetadataFetchedError, toWalletId } from "@/domain/ledger"
 import { WalletCurrency } from "@/domain/shared"
 import { fromObjectId } from "@/services/mongoose/utils"
 
+type LedgerTxMeta = ILedgerTransaction["meta"]
+
+// inactivity-fee provenance is stored under meta, not as schema fields
+const metaString = ({ meta, key }: { meta: LedgerTxMeta; key: string }) => {
+  const value = meta?.[key]
+  return typeof value === "string" && value !== "" ? value : undefined
+}
+
+const metaNumber = ({ meta, key }: { meta: LedgerTxMeta; key: string }) => {
+  const value = meta?.[key]
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined
+}
+
 export const translateToLedgerTx = <S extends WalletCurrency, T extends DisplayCurrency>(
   tx: ILedgerTransaction,
 ): LedgerTransaction<S> => {
@@ -59,12 +72,12 @@ export const translateToLedgerTx = <S extends WalletCurrency, T extends DisplayC
     displayCurrency,
     displayCurrencyFractionDigits: tx.displayCurrencyFractionDigits ?? undefined,
 
-    rate: tx.rate ?? undefined,
-    rateSource: tx.rateSource || undefined,
-    configVersion: tx.configVersion || undefined,
-    noticeId: tx.noticeId || undefined,
-    refundReason: tx.refundReason || undefined,
-    runId: tx.runId || undefined,
+    rate: metaNumber({ meta: tx.meta, key: "rate" }),
+    rateSource: metaString({ meta: tx.meta, key: "rateSource" }),
+    configVersion: metaString({ meta: tx.meta, key: "configVersion" }),
+    noticeId: metaString({ meta: tx.meta, key: "noticeId" }),
+    refundReason: metaString({ meta: tx.meta, key: "refundReason" }),
+    runId: metaString({ meta: tx.meta, key: "runId" }),
 
     fee: tx.fee,
     usd: tx.usd,

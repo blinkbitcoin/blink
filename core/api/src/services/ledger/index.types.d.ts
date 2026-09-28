@@ -212,7 +212,7 @@ type InactivityFeeProvenance = {
 type InactivityFeeRefundProvenance = {
   refundReason: InactivityFeeRefundReason
   // the reversed debit's notice
-  noticeId: string | undefined
+  noticeId?: string
   runId: string
 }
 

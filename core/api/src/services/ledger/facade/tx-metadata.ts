@@ -999,6 +999,7 @@ const inactivityFeeAmountsMetadata = ({
   display: internalMetadataAmounts({ centsAmount: amount.usd.amount, centsFee: 0n }),
 })
 
+// provenance keys are not schema fields; medici stores them under meta
 export const InactivityFeeLedgerMetadata = ({
   amount,
   memo,
@@ -1045,7 +1046,8 @@ export const InactivityFeeRefundLedgerMetadata = ({
     memoPayer: memo,
     ...amounts,
     refundReason,
-    noticeId,
+    // an undefined value would be stored as null
+    ...(noticeId !== undefined ? { noticeId } : {}),
     runId,
   }
 
