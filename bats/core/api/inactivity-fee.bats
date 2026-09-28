@@ -65,13 +65,40 @@ last_activity_ms() {
   [[ "$after" -eq "$before" ]] || exit 1
 }
 
+receive_recorded() {
+  local payment_hash=$1
+  count="$(mongo_cli "db.medici_transactions.countDocuments({hash:'${payment_hash}'})")"
+  [[ "$count" -gt 0 ]] || exit 1
+}
+
 @test "inactivity-fee: receiving a payment leaves it" {
   local account_id
   account_id="$(read_value "$ALICE.account_id")"
 
+  variables=$(
+    jq -n \
+    --arg wallet_id "$(read_value "$ALICE.btc_wallet_id")" \
+    '{input: {walletId: $wallet_id}}'
+  )
+  exec_graphql "$ALICE" 'ln-no-amount-invoice-create' "$variables"
+  invoice="$(graphql_output '.data.lnNoAmountInvoiceCreate.invoice')"
+  payment_request="$(echo "$invoice" | jq -r '.paymentRequest')"
+  payment_hash="$(echo "$invoice" | jq -r '.paymentHash')"
+  [[ "$payment_request" != "null" ]] || exit 1
+  [[ "$payment_hash" != "null" ]] || exit 1
+
+  # Stale clock: any activity write from the receive would rewrite it.
+  mongo_cli "db.accounts.updateOne({id:'${account_id}'},{\$set:{last_activity_at:ISODate('2020-01-01')}})"
   before="$(last_activity_ms "$account_id")"
-  sleep 1
-  fund_user_lightning "$ALICE" "$ALICE.btc_wallet_id" 10000
+  [[ "$before" -eq "$(date -u -d '2020-01-01' +%s)000" ]] || exit 1
+
+  lnd_outside_cli payinvoice -f \
+    --pay_req "$payment_request" \
+    --amt 10000
+
+  # Anon status and a direct ledger read, so no authenticated request touches the clock.
+  retry 15 1 check_ln_payment_settled "$payment_request" "$payment_hash"
+  retry 15 1 receive_recorded "$payment_hash"
 
   after="$(last_activity_ms "$account_id")"
   [[ "$after" -eq "$before" ]] || exit 1
@@ -118,8 +145,10 @@ last_activity_ms() {
   bob_account_id="$(read_value "$BOB.account_id")"
 
   mongo_cli "db.accounts.updateOne({id:'${account_id}'},{\$set:{last_activity_at:ISODate('2020-01-01')}})"
+  mongo_cli "db.accounts.updateOne({id:'${bob_account_id}'},{\$set:{last_activity_at:ISODate('2020-01-01')}})"
   before="$(last_activity_ms "$account_id")"
   bob_before="$(last_activity_ms "$bob_account_id")"
+  [[ "$bob_before" -eq "$(date -u -d '2020-01-01' +%s)000" ]] || exit 1
   sleep 1
 
   variables=$(
