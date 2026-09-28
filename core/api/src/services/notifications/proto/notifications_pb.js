@@ -26,6 +26,7 @@ goog.exportSymbol('proto.services.notifications.v1.Action.DataCase', null, globa
 goog.exportSymbol('proto.services.notifications.v1.AddPushDeviceTokenRequest', null, global);
 goog.exportSymbol('proto.services.notifications.v1.AddPushDeviceTokenResponse', null, global);
 goog.exportSymbol('proto.services.notifications.v1.Bulletin', null, global);
+goog.exportSymbol('proto.services.notifications.v1.BulletinCloseReason', null, global);
 goog.exportSymbol('proto.services.notifications.v1.ChannelNotificationSettings', null, global);
 goog.exportSymbol('proto.services.notifications.v1.CircleGrew', null, global);
 goog.exportSymbol('proto.services.notifications.v1.CircleThresholdReached', null, global);
@@ -5720,7 +5721,8 @@ proto.services.notifications.v1.Bulletin.toObject = function(includeInstance, ms
 id: jspb.Message.getFieldWithDefault(msg, 1, ""),
 userId: jspb.Message.getFieldWithDefault(msg, 2, ""),
 createdAt: jspb.Message.getFieldWithDefault(msg, 3, 0),
-acknowledgedAt: (f = jspb.Message.getField(msg, 4)) == null ? undefined : f
+acknowledgedAt: (f = jspb.Message.getField(msg, 4)) == null ? undefined : f,
+closeReason: (f = jspb.Message.getField(msg, 5)) == null ? undefined : f
   };
 
   if (includeInstance) {
@@ -5772,6 +5774,10 @@ proto.services.notifications.v1.Bulletin.deserializeBinaryFromReader = function(
     case 4:
       var value = /** @type {number} */ (reader.readInt64());
       msg.setAcknowledgedAt(value);
+      break;
+    case 5:
+      var value = /** @type {!proto.services.notifications.v1.BulletinCloseReason} */ (reader.readEnum());
+      msg.setCloseReason(value);
       break;
     default:
       reader.skipField();
@@ -5827,6 +5833,13 @@ proto.services.notifications.v1.Bulletin.serializeBinaryToWriter = function(mess
   if (f != null) {
     writer.writeInt64(
       4,
+      f
+    );
+  }
+  f = /** @type {!proto.services.notifications.v1.BulletinCloseReason} */ (jspb.Message.getField(message, 5));
+  if (f != null) {
+    writer.writeEnum(
+      5,
       f
     );
   }
@@ -5920,6 +5933,42 @@ proto.services.notifications.v1.Bulletin.prototype.clearAcknowledgedAt = functio
  */
 proto.services.notifications.v1.Bulletin.prototype.hasAcknowledgedAt = function() {
   return jspb.Message.getField(this, 4) != null;
+};
+
+
+/**
+ * optional BulletinCloseReason close_reason = 5;
+ * @return {!proto.services.notifications.v1.BulletinCloseReason}
+ */
+proto.services.notifications.v1.Bulletin.prototype.getCloseReason = function() {
+  return /** @type {!proto.services.notifications.v1.BulletinCloseReason} */ (jspb.Message.getFieldWithDefault(this, 5, 0));
+};
+
+
+/**
+ * @param {!proto.services.notifications.v1.BulletinCloseReason} value
+ * @return {!proto.services.notifications.v1.Bulletin} returns this
+ */
+proto.services.notifications.v1.Bulletin.prototype.setCloseReason = function(value) {
+  return jspb.Message.setField(this, 5, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.services.notifications.v1.Bulletin} returns this
+ */
+proto.services.notifications.v1.Bulletin.prototype.clearCloseReason = function() {
+  return jspb.Message.setField(this, 5, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.services.notifications.v1.Bulletin.prototype.hasCloseReason = function() {
+  return jspb.Message.getField(this, 5) != null;
 };
 
 
@@ -9306,6 +9355,16 @@ proto.services.notifications.v1.NotificationCategory = {
   ADMIN_NOTIFICATION: 3,
   MARKETING: 4,
   PRICE: 5
+};
+
+/**
+ * @enum {number}
+ */
+proto.services.notifications.v1.BulletinCloseReason = {
+  ACKNOWLEDGED: 0,
+  CLOSED: 1,
+  REPLACED: 2,
+  SUPERSEDED: 3
 };
 
 /**

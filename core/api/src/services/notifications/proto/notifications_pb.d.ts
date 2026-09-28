@@ -702,6 +702,11 @@ export class Bulletin extends jspb.Message {
     getAcknowledgedAt(): number | undefined;
     setAcknowledgedAt(value: number): Bulletin;
 
+    hasCloseReason(): boolean;
+    clearCloseReason(): void;
+    getCloseReason(): BulletinCloseReason | undefined;
+    setCloseReason(value: BulletinCloseReason): Bulletin;
+
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Bulletin.AsObject;
     static toObject(includeInstance: boolean, msg: Bulletin): Bulletin.AsObject;
@@ -718,6 +723,7 @@ export namespace Bulletin {
         userId: string,
         createdAt: number,
         acknowledgedAt?: number,
+        closeReason?: BulletinCloseReason,
     }
 }
 
@@ -1208,6 +1214,13 @@ export enum NotificationCategory {
     ADMIN_NOTIFICATION = 3,
     MARKETING = 4,
     PRICE = 5,
+}
+
+export enum BulletinCloseReason {
+    ACKNOWLEDGED = 0,
+    CLOSED = 1,
+    REPLACED = 2,
+    SUPERSEDED = 3,
 }
 
 export enum CircleType {
