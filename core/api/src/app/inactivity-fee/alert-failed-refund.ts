@@ -24,3 +24,19 @@ export const alertFailedRefund = ({
     "inactivityfee.alert.message": error.message,
   })
 }
+
+// no refund was attempted: whether the account holds an issued notice is unknown until the next write
+export const alertFailedNoticeLookup = ({
+  accountId,
+  error,
+}: {
+  accountId: AccountId
+  error: Error
+}) => {
+  recordExceptionInCurrentSpan({ error, level: ErrorLevel.Warn })
+  addEventToCurrentSpan("inactivityfee.alert.notice_lookup_failed", {
+    "inactivityfee.alert.accountId": accountId,
+    "inactivityfee.alert.error": error.name,
+    "inactivityfee.alert.message": error.message,
+  })
+}

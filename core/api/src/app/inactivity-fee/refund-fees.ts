@@ -1,4 +1,7 @@
-import { InactivityFeeRefundFailedError, unpairedDebits } from "@/domain/inactivity-fee"
+import {
+  InactivityFeeRefundUnpairableError,
+  unpairedDebits,
+} from "@/domain/inactivity-fee"
 import { toSats } from "@/domain/bitcoin"
 import { toCents } from "@/domain/fiat"
 import { ResourceExpiredLockServiceError } from "@/domain/lock"
@@ -61,7 +64,7 @@ const refundUnderLock = async ({
     for (const row of malformed) {
       failures.push({
         walletId: wallet.id,
-        error: new InactivityFeeRefundFailedError(
+        error: new InactivityFeeRefundUnpairableError(
           `row ${row.id} cannot be paired safely: ${row.externalId ?? "no key"}`,
         ),
       })
@@ -126,7 +129,9 @@ const refundDebit = async ({
 
   // the amounts of the debit row itself: no config, no rate
   if (debit.satsAmount === undefined || debit.centsAmount === undefined) {
-    return new InactivityFeeRefundFailedError(`fee row ${debit.id} carries no amounts`)
+    return new InactivityFeeRefundUnpairableError(
+      `fee row ${debit.id} carries no amounts`,
+    )
   }
   const btc = paymentAmountFromNumber({
     amount: debit.satsAmount,

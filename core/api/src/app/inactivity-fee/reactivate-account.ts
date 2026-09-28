@@ -8,6 +8,7 @@ import {
   InactivityFeeReactivationTimeoutError,
   InactivityFeeRefundFailedError,
   InactivityFeeRefundReason,
+  InactivityFeeRefundUnpairableError,
   InactivityFeeSupersededReason,
   reactivationLockSettings,
   reactivationRunId,
@@ -129,10 +130,17 @@ const reactivateUnderLock = async ({
     }
   }
 
-  if (failures.length > 0) {
-    for (const { error } of failures) {
-      recordExceptionInCurrentSpan({ error, level: ErrorLevel.Critical })
-    }
+  for (const { error } of failures) {
+    recordExceptionInCurrentSpan({ error, level: ErrorLevel.Critical })
+  }
+  // an unpairable row fails every retry: its Critical above is the record, so the notice is still superseded
+  const retryable = failures.filter(
+    ({ error }) => !(error instanceof InactivityFeeRefundUnpairableError),
+  )
+  addAttributesToCurrentSpan({
+    "inactivityfee.reactivate.unpairable": String(failures.length - retryable.length),
+  })
+  if (retryable.length > 0) {
     return new InactivityFeeRefundFailedError(
       `${runId}: ${failures.length} refund(s) failed on ${accountId}: ` +
         failures

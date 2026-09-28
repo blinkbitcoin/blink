@@ -47,6 +47,9 @@ import {
 export { getNonEndUserWalletIds } from "./caching"
 export { translateToLedgerJournal } from "./helpers"
 
+// the voided original and its reversal (which carries `_original_journal`) are both absent
+const notVoided = { voided: { $ne: true }, _original_journal: { $exists: false } }
+
 export const lazyLoadLedgerAdmin = ({
   bankOwnerWalletResolver,
   dealerBtcWalletResolver,
@@ -174,8 +177,7 @@ export const LedgerService = (): ILedgerService => {
             LedgerTransactionType.InactivityFeeRefund,
           ],
         },
-        // a voided fee was already reversed by its void
-        voided: { $ne: true },
+        ...notVoided,
       })
       return entries.map((tx) => translateToLedgerTx(tx))
     } catch (err) {

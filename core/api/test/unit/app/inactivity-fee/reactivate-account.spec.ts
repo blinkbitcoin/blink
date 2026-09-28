@@ -55,6 +55,7 @@ import {
   InactivityFeeNoticeNotFoundError,
   InactivityFeeReactivationTimeoutError,
   InactivityFeeRefundFailedError,
+  InactivityFeeRefundUnpairableError,
   InactivityFeeSupersededReason,
   reactivationLockSettings,
 } from "@/domain/inactivity-fee"
@@ -65,7 +66,7 @@ import {
 } from "@/domain/lock"
 import { NotificationsServiceUnreachableServerError } from "@/domain/notifications"
 import { ErrorLevel } from "@/domain/shared"
-import { addEventToCurrentSpan } from "@/services/tracing"
+import { addEventToCurrentSpan, recordExceptionInCurrentSpan } from "@/services/tracing"
 
 const mongooseMocks = jest.requireMock("@/services/mongoose").__mocks as Record<
   string,
@@ -81,6 +82,7 @@ const mockRefund = refundInactivityFees as jest.MockedFunction<
 >
 const mockConfig = getInactivityFeeConfig as jest.Mock
 const mockAddEvent = addEventToCurrentSpan as jest.Mock
+const mockRecordException = recordExceptionInCurrentSpan as jest.Mock
 
 const accountId = "1c2b5a6e-1a2b-4c3d-8e9f-0a1b2c3d4e5f" as AccountId
 const userId = "kratos-user" as UserId
@@ -246,6 +248,49 @@ describe("reactivateAccount", () => {
       userId,
       refundedCents: 60,
     })
+  })
+
+  it("records only unpairable failures once and still supersedes, so the next write does not retry", async () => {
+    const unpairable = new InactivityFeeRefundUnpairableError("row r1 cannot be paired")
+    mockRefund.mockResolvedValue(refunded(1289, 0, [{ walletId, error: unpairable }]))
+
+    const result = await run()
+
+    expect(result).toEqual({
+      refundedSats: 1289,
+      refundedCents: 0,
+      noticeSuperseded: true,
+    })
+    expect(mongooseMocks.supersede).toHaveBeenCalledWith({
+      id: "notice-1",
+      reason: InactivityFeeSupersededReason.Reactivation,
+      supersededAt: expect.any(Date),
+    })
+    expect(mockRecordException).toHaveBeenCalledTimes(1)
+    expect(mockRecordException).toHaveBeenCalledWith({
+      error: unpairable,
+      level: ErrorLevel.Critical,
+    })
+    expect(sendInactivityFeeWelcomeBack).toHaveBeenCalledWith({
+      userId,
+      refundedSats: 1289,
+    })
+  })
+
+  it("keeps the notice when an unpairable failure comes with a retryable one", async () => {
+    const unpairable = new InactivityFeeRefundUnpairableError("row r1 cannot be paired")
+    const ledgerError = new UnknownLedgerError("commit failed")
+    mockRefund.mockResolvedValue(
+      refunded(0, 0, [
+        { walletId, error: unpairable },
+        { walletId, error: ledgerError },
+      ]),
+    )
+
+    const result = await run()
+
+    expect(result).toBeInstanceOf(InactivityFeeRefundFailedError)
+    expect(mongooseMocks.supersede).not.toHaveBeenCalled()
   })
 
   it("returns the refund function's own error and keeps the notice", async () => {

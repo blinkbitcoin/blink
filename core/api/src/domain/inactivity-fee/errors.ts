@@ -29,6 +29,11 @@ export class InactivityFeeRunInProgressError extends InactivityFeeError {
 // not `ifee_<walletId>_<YYYY-MM>` / `ifee_refund_<walletId>_<YYYY-MM>`, or another wallet's key
 export class InvalidInactivityFeeExternalIdError extends ValidationError {}
 
+// a fee or refund row that cannot be paired safely: a retry cannot fix it, someone has to look
+export class InactivityFeeRefundUnpairableError extends InactivityFeeError {
+  level = ErrorLevel.Critical
+}
+
 // a fee stayed unrefunded after a reactivation or claims run: someone has to look
 export class InactivityFeeRefundFailedError extends InactivityFeeError {
   level = ErrorLevel.Critical

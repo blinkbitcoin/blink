@@ -1,4 +1,4 @@
-import { alertFailedRefund } from "./alert-failed-refund"
+import { alertFailedNoticeLookup, alertFailedRefund } from "./alert-failed-refund"
 import { reactivateAccount } from "./reactivate-account"
 
 import { getInactivityFeeConfig } from "@/config"
@@ -98,7 +98,7 @@ export const recordActivity = async ({
   const dormant = isDormantAt({ lastActivityAt: previousActivityAt, asOf: now })
   const noticed = dormant || (await hasIssuedActiveNotice({ accountId }))
   // a failed lookup is retried by the next activity write, like a failed refund
-  if (noticed instanceof Error) alertFailedRefund({ accountId, error: noticed })
+  if (noticed instanceof Error) alertFailedNoticeLookup({ accountId, error: noticed })
   const shouldReactivate = noticed === true
   addAttributesToCurrentSpan({
     "inactivityFee.dormant": dormant,

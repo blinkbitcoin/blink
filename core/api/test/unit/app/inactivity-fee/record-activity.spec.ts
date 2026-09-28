@@ -349,18 +349,28 @@ describe("recordActivity", () => {
       expect(mockReactivateAccount).not.toHaveBeenCalled()
     })
 
-    it("contains a failed notice lookup: alert, no hook, request result intact", async () => {
+    it("contains a failed notice lookup: Warn lookup alert, no failed_refund, no hook, request result intact", async () => {
       const previousActivityAt = new Date("2026-09-14T12:00:00.000Z")
       mockRepoRecordActivity.mockResolvedValue({ written: true, previousActivityAt })
-      mockFindActiveNotice.mockResolvedValue(new UnknownRepositoryError("mongo down"))
+      const lookupError = new UnknownRepositoryError("mongo down")
+      mockFindActiveNotice.mockResolvedValue(lookupError)
 
       const result = await recordActivity({ accountId, kind: ActivityKind.Login })
 
       expect(result).toEqual({ written: true, previousActivityAt })
       expect(mockReactivateAccount).not.toHaveBeenCalled()
+      expect(mockRecordException).toHaveBeenCalledWith({
+        error: lookupError,
+        level: ErrorLevel.Warn,
+      })
+      expect(mockAddEvent).toHaveBeenCalledTimes(1)
       expect(mockAddEvent).toHaveBeenCalledWith(
-        "inactivityfee.alert.failed_refund",
-        expect.objectContaining({ "inactivityfee.alert.accountId": accountId }),
+        "inactivityfee.alert.notice_lookup_failed",
+        {
+          "inactivityfee.alert.accountId": accountId,
+          "inactivityfee.alert.error": "UnknownRepositoryError",
+          "inactivityfee.alert.message": "mongo down",
+        },
       )
     })
   })
