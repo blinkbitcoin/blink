@@ -132,7 +132,7 @@ describe("getTransactionForWalletByExternalId", () => {
     ).toBeUndefined()
   })
 
-  it("skips voided rows when asked: a void frees the key it held", async () => {
+  it("skips voided rows and their reversals when asked: a void frees the key it held", async () => {
     mockFindOne.mockResolvedValue(null)
 
     await ledgerService.getTransactionForWalletByExternalId({
@@ -145,6 +145,7 @@ describe("getTransactionForWalletByExternalId", () => {
       accounts: toLiabilitiesWalletId(walletId),
       external_id: externalId,
       voided: { $ne: true },
+      _original_journal: { $exists: false },
     })
   })
 

@@ -169,7 +169,9 @@ const refundDebit = async ({
   // the dealer covers priced at refund time, so the dealer carries no price move in between.
   const isBtc = wallet.currency === WalletCurrency.Btc
   if (debit.centsAmount === undefined || (isBtc && debit.satsAmount === undefined)) {
-    return new InactivityFeeRefundUnpairableError(`fee row ${debit.id} carries no amounts`)
+    return new InactivityFeeRefundUnpairableError(
+      `fee row ${debit.id} carries no amounts`,
+    )
   }
   const usd = paymentAmountFromNumber({
     amount: debit.centsAmount,

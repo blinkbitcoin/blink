@@ -163,8 +163,8 @@ export const LedgerService = (): ILedgerService => {
         accounts: toLiabilitiesWalletId(walletId),
         external_id: externalId,
         ...(type !== undefined ? { type } : {}),
-        // a voided row was reversed by its void: the idempotency key it holds is free again
-        ...(excludeVoided ? { voided: { $ne: true } } : {}),
+        // the voided original and its reversal are both absent: the key they hold is free again
+        ...(excludeVoided ? notVoided : {}),
       })
       return entry ? translateToLedgerTx(entry) : undefined
     } catch (err) {

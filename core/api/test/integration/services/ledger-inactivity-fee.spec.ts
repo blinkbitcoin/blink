@@ -158,3 +158,42 @@ describe("listInactivityFeeTransactionsByWalletId", () => {
     expect(unpaired).toHaveLength(1)
   })
 })
+
+describe("getTransactionForWalletByExternalId excluding voided rows", () => {
+  const feeKey = (wallet: WalletDescriptor<"BTC">) =>
+    unwrap(inactivityFeeExternalId({ walletId: wallet.id, month }))
+  const refundKey = (wallet: WalletDescriptor<"BTC">) =>
+    unwrap(inactivityFeeRefundExternalId({ walletId: wallet.id, month }))
+  const lookup = async (wallet: WalletDescriptor<"BTC">, externalId: LedgerExternalId) =>
+    unwrap(
+      await LedgerService().getTransactionForWalletByExternalId({
+        walletId: wallet.id,
+        externalId,
+        excludeVoided: true,
+      }),
+    )
+
+  it("finds a live fee under its key", async () => {
+    const wallet = newWallet()
+    const fee = await recordFee(wallet)
+
+    expect((await lookup(wallet, feeKey(wallet)))?.journalId).toBe(fee.journalId)
+  })
+
+  it("frees the month key of a voided fee: neither the original nor its reversal is found", async () => {
+    const wallet = newWallet()
+    const fee = await recordFee(wallet)
+    await MainBook.void(fee.journalId, "test void")
+
+    expect(await lookup(wallet, feeKey(wallet))).toBeUndefined()
+  })
+
+  it("frees the key of a voided refund so it can be posted again", async () => {
+    const wallet = newWallet()
+    await recordFee(wallet)
+    const refund = await recordRefund(wallet)
+    await MainBook.void(refund.journalId, "test void")
+
+    expect(await lookup(wallet, refundKey(wallet))).toBeUndefined()
+  })
+})

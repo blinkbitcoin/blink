@@ -6,6 +6,7 @@ import { ErrorLevel } from "@/domain/shared"
 import { OperationInterruptedError } from "@/domain/errors"
 import {
   feeRunId,
+  InactivityFeeChargeOutcome,
   InactivityFeeNoticeOutcome,
   InactivityFeeRunAccountErrorsError,
   isFifteenthOfMonthUtc,
@@ -114,6 +115,10 @@ export const inactivityFeeFeeJob = async () => {
     runId: feeRunId({ asOf }),
   })
   if (result instanceof Error) throw result
+  warnOnRunErrors({
+    runId: result.runId,
+    errors: result.counts.byOutcome[InactivityFeeChargeOutcome.Error],
+  })
 }
 
 const main = async () => {

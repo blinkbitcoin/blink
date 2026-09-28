@@ -138,7 +138,10 @@ describe("cron inactivityFeeNoticeJob", () => {
 describe("cron inactivityFeeFeeJob", () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockRunFeeJob.mockResolvedValue({ runId: "run" })
+    mockRunFeeJob.mockResolvedValue({
+      runId: "run",
+      counts: { scanned: 1, byOutcome: { charged: 1 }, bySkipReason: {} },
+    })
     mockGetInactivityFeeConfig.mockReturnValue({ liveCharging: false })
   })
 
@@ -192,5 +195,30 @@ describe("cron inactivityFeeFeeJob", () => {
     mockRunFeeJob.mockResolvedValue(aborted)
 
     await expect(inactivityFeeFeeJob()).rejects.toBe(aborted)
+  })
+
+  it("warns on the task span, without failing it, when wallets ended in error", async () => {
+    jest.useFakeTimers().setSystemTime(new Date("2026-10-15T02:00:00Z"))
+    mockRunFeeJob.mockResolvedValue({
+      runId: "run",
+      counts: { scanned: 2, byOutcome: { charged: 1, error: 1 }, bySkipReason: {} },
+    })
+
+    await expect(inactivityFeeFeeJob()).resolves.toBeUndefined()
+
+    expect(mockRecordException).toHaveBeenCalledTimes(1)
+    expect(mockRecordException).toHaveBeenCalledWith({
+      error: expect.any(InactivityFeeRunAccountErrorsError),
+      level: ErrorLevel.Warn,
+      attributes: { "inactivityfee.run.errors": "1" },
+    })
+  })
+
+  it("records nothing when no wallet ended in error", async () => {
+    jest.useFakeTimers().setSystemTime(new Date("2026-10-15T02:00:00Z"))
+
+    await inactivityFeeFeeJob()
+
+    expect(mockRecordException).not.toHaveBeenCalled()
   })
 })

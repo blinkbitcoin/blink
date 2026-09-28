@@ -499,7 +499,7 @@ describe("refundInactivityFees", () => {
       const result = expectResult(await run())
 
       expect(result.failures).toHaveLength(1)
-      expect(result.failures[0].error).toBeInstanceOf(InactivityFeeRefundFailedError)
+      expect(result.failures[0].error).toBeInstanceOf(InactivityFeeRefundUnpairableError)
       expect(result.refundedSats).toBe(0)
       expect(mockRecordRefund).not.toHaveBeenCalled()
     })
@@ -517,7 +517,7 @@ describe("refundInactivityFees", () => {
       const result = expectResult(await run())
 
       expect(result.failures).toHaveLength(1)
-      expect(result.failures[0].error).toBeInstanceOf(InactivityFeeRefundFailedError)
+      expect(result.failures[0].error).toBeInstanceOf(InactivityFeeRefundUnpairableError)
       expect(result.refundedCents).toBe(0)
       expect(midRate).not.toHaveBeenCalled()
       expect(mockRecordRefund).not.toHaveBeenCalled()
@@ -667,23 +667,6 @@ describe("refundInactivityFees", () => {
     expect(result.failures).toHaveLength(1)
     expect(result.failures[0].error).toBeInstanceOf(InactivityFeeRefundUnpairableError)
     expect(result.refundedSats).toBe(0)
-    expect(mockRecordRefund).not.toHaveBeenCalled()
-  })
-
-  it("reports a fee row with no amounts as unpairable and posts nothing", async () => {
-    rowsByWallet({
-      [btcWalletId]: [
-        {
-          ...fee({ walletId: btcWalletId, month: "2026-10", sats: 1289, cents: 100 }),
-          satsAmount: undefined,
-        },
-      ],
-    })
-
-    const result = expectResult(await run())
-
-    expect(result.failures).toHaveLength(1)
-    expect(result.failures[0].error).toBeInstanceOf(InactivityFeeRefundUnpairableError)
     expect(mockRecordRefund).not.toHaveBeenCalled()
   })
 
