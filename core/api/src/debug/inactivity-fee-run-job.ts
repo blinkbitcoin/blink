@@ -202,9 +202,12 @@ export const run = async (args: CliArgs): Promise<true | Error> => {
   }
 
   writeFileSync(summaryPath, JSON.stringify({ ...result, configSource }, null, 2) + "\n")
+  const withoutClock = result.counts.accountsWithoutClock
   console.log(
     `\nscanned ${result.counts.scanned} dormant account(s); ` +
-      `${result.counts.accountsWithoutClock} account(s) without an activity clock were never scanned`,
+      (withoutClock === undefined
+        ? "the count of accounts without an activity clock could not be read"
+        : `${withoutClock} account(s) without an activity clock were never scanned`),
   )
   console.log(`by outcome: ${JSON.stringify(result.counts.byOutcome)}`)
   console.log(`by skip reason: ${JSON.stringify(result.counts.bySkipReason)}`)

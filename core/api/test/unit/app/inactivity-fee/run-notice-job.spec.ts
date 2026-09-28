@@ -93,8 +93,12 @@ import {
 } from "@/domain/inactivity-fee"
 import { NotificationsServiceUnreachableServerError } from "@/domain/notifications"
 import { toSeconds } from "@/domain/primitives"
-import { WalletCurrency } from "@/domain/shared"
+import { ErrorLevel, WalletCurrency } from "@/domain/shared"
 import { WindDownStatus } from "@/domain/wind-down"
+import {
+  addAttributesToCurrentSpan,
+  recordExceptionInCurrentSpan,
+} from "@/services/tracing"
 
 const mocks = jest.requireMock("@/services/mongoose").__mocks as Record<string, jest.Mock>
 const { getWalletBalanceAmount } = jest.requireMock("@/services/ledger").__mocks as {
@@ -116,6 +120,8 @@ const mockGetAccountWindDown = getAccountWindDown as jest.MockedFunction<
 const mockGatherCohortSignals = gatherCohortSignals as jest.MockedFunction<
   typeof gatherCohortSignals
 >
+const mockAddAttributes = addAttributesToCurrentSpan as jest.Mock
+const mockRecordException = recordExceptionInCurrentSpan as jest.Mock
 
 const iso = (value: string) => new Date(value)
 const asOf = iso("2026-10-01T02:00:00Z")
@@ -794,18 +800,31 @@ describe("runNoticeJob", () => {
       )
     })
 
-    it("aborts before scanning when the clock count cannot be read", async () => {
-      mocks.countWithoutActivityClock.mockResolvedValue(
-        new UnknownRepositoryError("down"),
-      )
+    it("still scans when the clock count cannot be read, leaving the count out and warning", async () => {
+      const alice = account()
+      dormant([alice])
+      const failure = new UnknownRepositoryError("down")
+      mocks.countWithoutActivityClock.mockResolvedValue(failure)
 
-      const result = await runLive()
+      const run = expectRun(await runLive())
 
-      expect(result).toBeInstanceOf(InactivityFeeRunAbortedError)
-      expect(mocks.listDormantAccounts).not.toHaveBeenCalled()
-      expect(mocks.persistRun).toHaveBeenCalledWith(
-        expect.objectContaining({ error: "UnknownRepositoryError: down" }),
+      expect(mocks.listDormantAccounts).toHaveBeenCalled()
+      expect(run.counts).toEqual({
+        scanned: 1,
+        byOutcome: { noticed: 1 },
+        bySkipReason: {},
+      })
+      expect(run.error).toBeUndefined()
+      expect(mockRecordException).toHaveBeenCalledWith({
+        error: failure,
+        level: ErrorLevel.Warn,
+      })
+      expect(mockAddAttributes).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          "inactivityfee.run.accountsWithoutClock": expect.anything(),
+        }),
       )
+      expect(mocks.persistRun).toHaveBeenCalledWith(run)
     })
 
     it("returns the persistence error when only the summary write fails", async () => {

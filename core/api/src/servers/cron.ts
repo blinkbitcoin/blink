@@ -4,7 +4,12 @@ import { getCronConfig, TWO_MONTHS_IN_MS } from "@/config"
 
 import { ErrorLevel } from "@/domain/shared"
 import { OperationInterruptedError } from "@/domain/errors"
-import { isFirstOfMonthUtc, noticeRunId } from "@/domain/inactivity-fee"
+import {
+  InactivityFeeNoticeOutcome,
+  InactivityFeeRunAccountErrorsError,
+  isFirstOfMonthUtc,
+  noticeRunId,
+} from "@/domain/inactivity-fee"
 
 import {
   addAttributesToCurrentSpan,
@@ -75,6 +80,22 @@ export const inactivityFeeNoticeJob = async () => {
     runId: noticeRunId({ asOf }),
   })
   if (result instanceof Error) throw result
+  warnOnRunErrors({
+    runId: result.runId,
+    errors: result.counts.byOutcome[InactivityFeeNoticeOutcome.Error],
+  })
+}
+
+// a Warn, not a throw: a failed task exits 99 and OnFailure reruns every daily task
+const warnOnRunErrors = ({ runId, errors }: { runId: string; errors?: number }) => {
+  if (!errors) return
+  recordExceptionInCurrentSpan({
+    error: new InactivityFeeRunAccountErrorsError(
+      `${runId}: ${errors} outcome(s) ended in error`,
+    ),
+    level: ErrorLevel.Warn,
+    attributes: { "inactivityfee.run.errors": String(errors) },
+  })
 }
 
 const main = async () => {

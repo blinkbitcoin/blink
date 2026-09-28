@@ -108,8 +108,8 @@ type AccountEligibility =
 
 type InactivityFeeRunCounts = {
   scanned: number
-  // accounts with no activity clock at all (never backfilled): never scanned
-  accountsWithoutClock: number
+  // accounts with no activity clock at all (never backfilled): never scanned; absent if unreadable
+  accountsWithoutClock?: number
   byOutcome: Record<string, number>
   bySkipReason: Record<string, number>
 }

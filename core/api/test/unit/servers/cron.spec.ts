@@ -35,19 +35,30 @@ jest.mock("@/services/logger", () => ({
 jest.mock("@/services/mongodb", () => ({ setupMongoConnection: jest.fn() }))
 jest.mock("@/utils", () => ({ elapsedSinceTimestamp: jest.fn(), sleep: jest.fn() }))
 
-import { InactivityFeeRunAbortedError } from "@/domain/inactivity-fee"
+import {
+  InactivityFeeRunAbortedError,
+  InactivityFeeRunAccountErrorsError,
+} from "@/domain/inactivity-fee"
+import { ErrorLevel } from "@/domain/shared"
 import { inactivityFeeNoticeJob } from "@/servers/cron"
-import { addAttributesToCurrentSpan } from "@/services/tracing"
+import {
+  addAttributesToCurrentSpan,
+  recordExceptionInCurrentSpan,
+} from "@/services/tracing"
 
 const { runNoticeJob: mockRunNoticeJob } = jest.requireMock("@/app").__mocks as {
   runNoticeJob: jest.Mock
 }
 const mockAddAttributes = addAttributesToCurrentSpan as jest.Mock
+const mockRecordException = recordExceptionInCurrentSpan as jest.Mock
 
 describe("cron inactivityFeeNoticeJob", () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockRunNoticeJob.mockResolvedValue({ runId: "run" })
+    mockRunNoticeJob.mockResolvedValue({
+      runId: "run",
+      counts: { scanned: 1, byOutcome: { noticed: 1 }, bySkipReason: {} },
+    })
   })
 
   afterEach(() => {
@@ -85,5 +96,30 @@ describe("cron inactivityFeeNoticeJob", () => {
     mockRunNoticeJob.mockResolvedValue(aborted)
 
     await expect(inactivityFeeNoticeJob()).rejects.toBe(aborted)
+  })
+
+  it("warns on the task span, without failing it, when accounts ended in error", async () => {
+    jest.useFakeTimers().setSystemTime(new Date("2026-10-01T02:00:00Z"))
+    mockRunNoticeJob.mockResolvedValue({
+      runId: "run",
+      counts: { scanned: 3, byOutcome: { noticed: 1, error: 2 }, bySkipReason: {} },
+    })
+
+    await expect(inactivityFeeNoticeJob()).resolves.toBeUndefined()
+
+    expect(mockRecordException).toHaveBeenCalledTimes(1)
+    expect(mockRecordException).toHaveBeenCalledWith({
+      error: expect.any(InactivityFeeRunAccountErrorsError),
+      level: ErrorLevel.Warn,
+      attributes: { "inactivityfee.run.errors": "2" },
+    })
+  })
+
+  it("records nothing when no account ended in error", async () => {
+    jest.useFakeTimers().setSystemTime(new Date("2026-10-01T02:00:00Z"))
+
+    await inactivityFeeNoticeJob()
+
+    expect(mockRecordException).not.toHaveBeenCalled()
   })
 })

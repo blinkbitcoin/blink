@@ -303,7 +303,7 @@ interface InactivityFeeRunRecord {
   configVersion: string
   skipListHash: string
   scanned: number
-  accountsWithoutClock: number
+  accountsWithoutClock?: number
   countsByOutcome: Record<string, number>
   countsBySkipReason: Record<string, number>
   error?: string

@@ -15,3 +15,8 @@ export class InactivityFeeNoticeSentButUnflaggedError extends InactivityFeeError
 export class InactivityFeeRunAbortedError extends InactivityFeeError {
   level = ErrorLevel.Critical
 }
+
+// a completed run left some accounts or wallets in `error`; the task itself still succeeds
+export class InactivityFeeRunAccountErrorsError extends InactivityFeeError {
+  level = ErrorLevel.Warn
+}

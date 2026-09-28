@@ -849,7 +849,7 @@ const inactivityFeeRunSchema = new Schema<InactivityFeeRunRecord>(
     configVersion: { type: String, required: true },
     skipListHash: { type: String, required: true },
     scanned: { type: Number, required: true },
-    accountsWithoutClock: { type: Number, required: true },
+    accountsWithoutClock: Number,
     countsByOutcome: { type: Schema.Types.Mixed, required: true },
     countsBySkipReason: { type: Schema.Types.Mixed, required: true },
     error: String,

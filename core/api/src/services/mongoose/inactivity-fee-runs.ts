@@ -18,7 +18,9 @@ export const InactivityFeeRunsRepository = (): IInactivityFeeRunsRepository => {
         configVersion: run.configVersion,
         skipListHash: run.skipListHash,
         scanned: run.counts.scanned,
-        accountsWithoutClock: run.counts.accountsWithoutClock,
+        ...(run.counts.accountsWithoutClock !== undefined
+          ? { accountsWithoutClock: run.counts.accountsWithoutClock }
+          : {}),
         countsByOutcome: run.counts.byOutcome,
         countsBySkipReason: run.counts.bySkipReason,
         ...(run.error !== undefined ? { error: run.error } : {}),
@@ -44,7 +46,9 @@ const runFromRaw = (result: InactivityFeeRunRecord): InactivityFeeRun => ({
   skipListHash: result.skipListHash,
   counts: {
     scanned: result.scanned,
-    accountsWithoutClock: result.accountsWithoutClock,
+    ...(typeof result.accountsWithoutClock === "number"
+      ? { accountsWithoutClock: result.accountsWithoutClock }
+      : {}),
     byOutcome: { ...result.countsByOutcome },
     bySkipReason: { ...result.countsBySkipReason },
   },

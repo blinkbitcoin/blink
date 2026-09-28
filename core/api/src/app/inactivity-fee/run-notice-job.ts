@@ -53,7 +53,6 @@ export const runNoticeJob = async ({
   const cutoff = dormancyCutoffAt(asOf)
   const counts: InactivityFeeRunCounts = {
     scanned: 0,
-    accountsWithoutClock: 0,
     byOutcome: {},
     bySkipReason: {},
   }
@@ -66,21 +65,21 @@ export const runNoticeJob = async ({
     "inactivityfee.run.forcedDry": String(forcedDry),
   })
 
+  // informational only: an unreadable count is left out and the scan still runs
   const withoutClock = await AccountsRepository().countWithoutActivityClock()
-  let error: Error | undefined
   if (withoutClock instanceof Error) {
-    error = withoutClock
+    recordExceptionInCurrentSpan({ error: withoutClock, level: ErrorLevel.Warn })
   } else {
     counts.accountsWithoutClock = withoutClock
-    const scanned = await scanDormantAccounts({
-      cutoff,
-      counts,
-      onOutcome,
-      evaluate: (account) =>
-        evaluateAccountInSpan({ account, asOf, dryRun, config, windDownConfig }),
-    })
-    if (scanned instanceof Error) error = scanned
   }
+  const scanned = await scanDormantAccounts({
+    cutoff,
+    counts,
+    onOutcome,
+    evaluate: (account) =>
+      evaluateAccountInSpan({ account, asOf, dryRun, config, windDownConfig }),
+  })
+  const error = scanned instanceof Error ? scanned : undefined
 
   const run: InactivityFeeRun = {
     runId,
@@ -99,7 +98,9 @@ export const runNoticeJob = async ({
   addAttributesToCurrentSpan({
     // as strings: the span helper drops falsy values, and a zero count is a fact worth keeping
     "inactivityfee.run.scanned": String(counts.scanned),
-    "inactivityfee.run.accountsWithoutClock": String(counts.accountsWithoutClock),
+    ...(counts.accountsWithoutClock !== undefined
+      ? { "inactivityfee.run.accountsWithoutClock": String(counts.accountsWithoutClock) }
+      : {}),
     ...prefixed("inactivityfee.run.outcome.", counts.byOutcome),
     ...prefixed("inactivityfee.run.skip.", counts.bySkipReason),
   })
