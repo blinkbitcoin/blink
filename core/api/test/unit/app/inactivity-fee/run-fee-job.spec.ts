@@ -404,7 +404,6 @@ describe("runFeeJob", () => {
         lastExternalIdSeen: feeKey(btcWalletId(alice.id)),
         counts: {
           scanned: 1,
-          accountsWithoutClock: 0,
           byOutcome: { charged: 1, skipped: 1 },
           bySkipReason: { zero_balance: 1 },
         },
@@ -665,7 +664,6 @@ describe("runFeeJob", () => {
     expect(run.mode).toBe(InactivityFeeRunMode.Live)
     expect(run.counts).toEqual({
       scanned: 2,
-      accountsWithoutClock: 0,
       byOutcome: { skipped: 2 },
       bySkipReason: { flag_off: 2 },
     })

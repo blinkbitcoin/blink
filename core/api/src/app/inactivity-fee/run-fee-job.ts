@@ -91,7 +91,7 @@ const runFeeJobUnlocked = async ({
   const cutoff = feeChargeCutoff({ asOf })
   const tally: RunTally = {
     // the worklist is the notice index, so the activity-clock count is not a fact of this run
-    counts: { scanned: 0, accountsWithoutClock: 0, byOutcome: {}, bySkipReason: {} },
+    counts: { scanned: 0, byOutcome: {}, bySkipReason: {} },
     debited: { count: 0, sats: 0, cents: 0 },
   }
 

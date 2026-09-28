@@ -258,7 +258,7 @@ describe("inactivity-fee-run-job CLI", () => {
       rate: 77566,
       rateSource: "dealer-mid",
       debited: { count: 1, sats: 1289, cents: 0 },
-      counts: { scanned: 1, accountsWithoutClock: 0, byOutcome: {}, bySkipReason: {} },
+      counts: { scanned: 1, byOutcome: {}, bySkipReason: {} },
     }
 
     beforeEach(() => {

@@ -29,4 +29,9 @@ describe("inactivityfeeruns schema", () => {
   it.each(["countsByOutcome", "countsBySkipReason"])("declares %s", (path) => {
     expect(InactivityFeeRun.schema.path(path)).toBeDefined()
   })
+
+  // an unreadable clock count and a fee run both persist without it
+  it("does not require accountsWithoutClock", () => {
+    expect(InactivityFeeRun.schema.path("accountsWithoutClock").isRequired).toBeFalsy()
+  })
 })
