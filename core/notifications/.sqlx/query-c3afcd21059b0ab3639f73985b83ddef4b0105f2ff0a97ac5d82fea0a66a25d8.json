@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO stateful_notification_bulletin_closures (user_id, bulletin_key, closed_at)\n            VALUES ($1, $2, $3)\n            ON CONFLICT (user_id, bulletin_key)\n            DO UPDATE SET closed_at = GREATEST(stateful_notification_bulletin_closures.closed_at, EXCLUDED.closed_at)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c3afcd21059b0ab3639f73985b83ddef4b0105f2ff0a97ac5d82fea0a66a25d8"
+}

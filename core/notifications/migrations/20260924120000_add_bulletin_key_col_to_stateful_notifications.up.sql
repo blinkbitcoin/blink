@@ -11,8 +11,8 @@ ON stateful_notifications (galoy_user_id, bulletin_key, created_at DESC)
 WHERE bulletin_key IS NOT NULL;
 
 CREATE TABLE stateful_notification_bulletin_closures (
-  galoy_user_id VARCHAR NOT NULL,
+  user_id VARCHAR NOT NULL,
   bulletin_key VARCHAR(100) NOT NULL,
   closed_at TIMESTAMPTZ NOT NULL,
-  PRIMARY KEY (galoy_user_id, bulletin_key)
+  PRIMARY KEY (user_id, bulletin_key)
 );

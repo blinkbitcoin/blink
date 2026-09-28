@@ -87,7 +87,10 @@ pub fn persisted_bulletin(
     };
     let mut events = vec![generic_event(id, 1, initialized, created_at)];
     if let Some(acknowledged_at) = acknowledged_at {
-        let acknowledged = StatefulNotificationEvent::Acknowledged { acknowledged_at };
+        let acknowledged = StatefulNotificationEvent::Acknowledged {
+            acknowledged_at,
+            close_reason: CloseReason::Acknowledged,
+        };
         events.push(generic_event(id, 2, acknowledged, created_at));
     }
     EntityEvents::load_first(events).expect("could not load notification")

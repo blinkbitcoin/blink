@@ -416,6 +416,20 @@ impl From<history::StatefulNotification> for proto::Bulletin {
             acknowledged_at: notification
                 .acknowledged_at()
                 .map(|acknowledged_at| acknowledged_at.timestamp()),
+            close_reason: notification
+                .close_reason()
+                .map(|close_reason| proto::BulletinCloseReason::from(close_reason) as i32),
+        }
+    }
+}
+
+impl From<history::CloseReason> for proto::BulletinCloseReason {
+    fn from(close_reason: history::CloseReason) -> Self {
+        match close_reason {
+            history::CloseReason::Acknowledged => Self::Acknowledged,
+            history::CloseReason::Closed => Self::Closed,
+            history::CloseReason::Replaced => Self::Replaced,
+            history::CloseReason::Superseded => Self::Superseded,
         }
     }
 }
@@ -560,5 +574,31 @@ mod bulletin_tests {
             Some(acknowledged_at),
         ));
         assert_eq!(bulletin.acknowledged_at, Some(acknowledged_at.timestamp()));
+        assert_eq!(
+            bulletin.close_reason,
+            Some(proto::BulletinCloseReason::Acknowledged as i32)
+        );
+    }
+
+    #[test]
+    fn open_bulletin_converts_without_close_reason() {
+        let notification = persisted_bulletin(BulletinFixture::default(), chrono::Utc::now(), None);
+        assert!(proto::Bulletin::from(notification).close_reason.is_none());
+    }
+
+    #[test]
+    fn close_reasons_convert_to_proto() {
+        assert_eq!(
+            proto::BulletinCloseReason::from(history::CloseReason::Closed),
+            proto::BulletinCloseReason::Closed
+        );
+        assert_eq!(
+            proto::BulletinCloseReason::from(history::CloseReason::Replaced),
+            proto::BulletinCloseReason::Replaced
+        );
+        assert_eq!(
+            proto::BulletinCloseReason::from(history::CloseReason::Superseded),
+            proto::BulletinCloseReason::Superseded
+        );
     }
 }

@@ -7,6 +7,17 @@ use crate::primitives::*;
 
 use super::{entity::*, error::*};
 
+fn user_ids_of(
+    notifications: &[NewStatefulNotification],
+    ids: &HashSet<StatefulNotificationId>,
+) -> HashSet<GaloyUserId> {
+    notifications
+        .iter()
+        .filter(|notification| ids.contains(&notification.id))
+        .map(|notification| notification.user_id.clone())
+        .collect()
+}
+
 #[derive(Debug, Clone)]
 pub(super) struct PersistentNotifications {
     pool: PgPool,
@@ -23,14 +34,16 @@ impl PersistentNotifications {
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
         notification: NewStatefulNotification,
     ) -> Result<(), NotificationHistoryError> {
-        self.create_new_batch(tx, vec![notification]).await
+        self.create_new_batch(tx, vec![notification]).await?;
+        Ok(())
     }
 
+    // Returns the users whose new notification was stored as superseded.
     pub async fn create_new_batch(
         &self,
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
         new_notifications: Vec<NewStatefulNotification>,
-    ) -> Result<(), NotificationHistoryError> {
+    ) -> Result<HashSet<GaloyUserId>, NotificationHistoryError> {
         let superseded_ids = self
             .acknowledge_bulletins_replaced_by(tx, &new_notifications)
             .await?;
@@ -52,6 +65,7 @@ impl PersistentNotifications {
         });
         let query = query_builder.build();
         query.execute(&mut **tx).await?;
+        let superseded_user_ids = user_ids_of(&new_notifications, &superseded_ids);
         es_entity::EntityEvents::batch_persist(
             tx,
             new_notifications.into_iter().map(|notification| {
@@ -62,7 +76,7 @@ impl PersistentNotifications {
             }),
         )
         .await?;
-        Ok(())
+        Ok(superseded_user_ids)
     }
 
     pub async fn acknowledge_for_user(
@@ -81,7 +95,7 @@ impl PersistentNotifications {
         .fetch_optional(&mut *tx)
         .await?;
         let mut notification = self.find_by_id_in_tx(&mut tx, user_id, id).await?;
-        notification.acknowledge();
+        notification.acknowledge(CloseReason::Acknowledged);
         sqlx::query!(
             r#"UPDATE stateful_notifications
             SET acknowledged = $1
@@ -105,9 +119,9 @@ impl PersistentNotifications {
         let mut tx = self.pool.begin().await?;
         self.lock_bulletin_key_in_tx(&mut tx, &bulletin_key).await?;
         sqlx::query!(
-            r#"INSERT INTO stateful_notification_bulletin_closures (galoy_user_id, bulletin_key, closed_at)
+            r#"INSERT INTO stateful_notification_bulletin_closures (user_id, bulletin_key, closed_at)
             VALUES ($1, $2, $3)
-            ON CONFLICT (galoy_user_id, bulletin_key)
+            ON CONFLICT (user_id, bulletin_key)
             DO UPDATE SET closed_at = GREATEST(stateful_notification_bulletin_closures.closed_at, EXCLUDED.closed_at)"#,
             user_id.as_ref(),
             bulletin_key.as_ref(),
@@ -118,7 +132,8 @@ impl PersistentNotifications {
         let active_bulletins = self
             .find_active_bulletins_for_update_in_tx(&mut tx, &[user_id], &bulletin_key)
             .await?;
-        self.acknowledge_in_tx(&mut tx, active_bulletins).await?;
+        self.acknowledge_in_tx(&mut tx, active_bulletins, CloseReason::Closed)
+            .await?;
         tx.commit().await?;
         Ok(())
     }
@@ -165,7 +180,8 @@ impl PersistentNotifications {
             let replaced = self
                 .find_active_bulletins_for_update_in_tx(tx, &replacing_user_ids, &bulletin_key)
                 .await?;
-            self.acknowledge_in_tx(tx, replaced).await?;
+            self.acknowledge_in_tx(tx, replaced, CloseReason::Replaced)
+                .await?;
         }
         Ok(superseded_ids)
     }
@@ -202,7 +218,7 @@ impl PersistentNotifications {
                   (SELECT MAX(n.bulletin_triggered_at) FROM stateful_notifications n
                    WHERE n.galoy_user_id = u.galoy_user_id AND n.bulletin_key = $2),
                   (SELECT c.closed_at FROM stateful_notification_bulletin_closures c
-                   WHERE c.galoy_user_id = u.galoy_user_id AND c.bulletin_key = $2)
+                   WHERE c.user_id = u.galoy_user_id AND c.bulletin_key = $2)
                 ) AS latest_activity_at
             FROM UNNEST($1::VARCHAR[]) AS u(galoy_user_id)"#,
             &user_ids,
@@ -269,6 +285,7 @@ impl PersistentNotifications {
         &self,
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
         notifications: Vec<StatefulNotification>,
+        close_reason: CloseReason,
     ) -> Result<(), NotificationHistoryError> {
         if notifications.is_empty() {
             return Ok(());
@@ -291,7 +308,7 @@ impl PersistentNotifications {
             .into_iter()
             .filter(|notification| !notification.is_acknowledged())
             .map(|mut notification| {
-                notification.acknowledge();
+                notification.acknowledge(close_reason);
                 notification.events
             })
             .collect::<Vec<_>>();
@@ -469,5 +486,33 @@ impl PersistentNotifications {
         .await?;
         let res = EntityEvents::load_n::<StatefulNotification>(rows, first)?;
         Ok(res)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::history::test_support::*;
+
+    fn new_bulletin_for(user_id: &str) -> NewStatefulNotification {
+        let mut notification = new_bulletin(BulletinFixture::default());
+        notification.user_id = GaloyUserId::from(user_id.to_string());
+        notification
+    }
+
+    #[test]
+    fn user_ids_of_returns_only_the_users_of_the_given_ids() {
+        let notifications = vec![new_bulletin_for("a"), new_bulletin_for("b")];
+        let ids = HashSet::from([notifications[1].id]);
+        assert_eq!(
+            user_ids_of(&notifications, &ids),
+            HashSet::from([GaloyUserId::from("b".to_string())])
+        );
+    }
+
+    #[test]
+    fn user_ids_of_is_empty_without_ids() {
+        let notifications = vec![new_bulletin_for("a")];
+        assert!(user_ids_of(&notifications, &HashSet::new()).is_empty());
     }
 }

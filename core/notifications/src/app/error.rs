@@ -17,7 +17,7 @@ pub enum ApplicationError {
     InvalidFractionDigits(u32),
     #[error("{0}")]
     InvalidBulletinKey(String),
-    #[error("bulletin key and dismissible require the notification to be added to the bulletin")]
+    #[error("bulletin key and dismissible require the notification to be added to the bulletin and history")]
     BulletinOptionsWithoutBulletin,
     #[error("too many user ids: {0}")]
     TooManyUserIds(usize),

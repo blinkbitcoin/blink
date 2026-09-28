@@ -21,7 +21,19 @@ pub enum StatefulNotificationEvent {
     },
     Acknowledged {
         acknowledged_at: DateTime<Utc>,
+        #[serde(default)]
+        close_reason: CloseReason,
     },
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CloseReason {
+    #[default]
+    Acknowledged,
+    Closed,
+    Replaced,
+    Superseded,
 }
 
 impl EntityEvent for StatefulNotificationEvent {
@@ -55,25 +67,32 @@ impl StatefulNotification {
         })
     }
 
-    pub(super) fn acknowledge(&mut self) {
+    pub(super) fn acknowledge(&mut self, close_reason: CloseReason) {
         if self.acknowledged_at().is_none() {
             self.events.push(StatefulNotificationEvent::Acknowledged {
                 acknowledged_at: Utc::now(),
+                close_reason,
             });
         }
     }
 
-    pub fn acknowledged_at(&self) -> Option<DateTime<Utc>> {
-        self.events.iter().find_map(|event| {
-            if let StatefulNotificationEvent::Acknowledged {
-                acknowledged_at: read_at,
-            } = event
-            {
-                Some(*read_at)
-            } else {
-                None
-            }
+    fn acknowledged(&self) -> Option<(DateTime<Utc>, CloseReason)> {
+        self.events.iter().find_map(|event| match event {
+            StatefulNotificationEvent::Acknowledged {
+                acknowledged_at,
+                close_reason,
+            } => Some((*acknowledged_at, *close_reason)),
+            _ => None,
         })
+    }
+
+    pub fn acknowledged_at(&self) -> Option<DateTime<Utc>> {
+        self.acknowledged()
+            .map(|(acknowledged_at, _)| acknowledged_at)
+    }
+
+    pub fn close_reason(&self) -> Option<CloseReason> {
+        self.acknowledged().map(|(_, close_reason)| close_reason)
     }
 
     pub fn is_acknowledged(&self) -> bool {
@@ -141,6 +160,7 @@ impl NewStatefulNotification {
         let mut events = self.initial_events();
         events.push(StatefulNotificationEvent::Acknowledged {
             acknowledged_at: Utc::now(),
+            close_reason: CloseReason::Superseded,
         });
         events
     }
@@ -224,11 +244,12 @@ mod tests {
     #[test]
     fn acknowledge_is_idempotent() {
         let mut notification = notification_with(BulletinFixture::default());
-        notification.acknowledge();
+        notification.acknowledge(CloseReason::Acknowledged);
         let first_acknowledged_at = notification.acknowledged_at();
-        notification.acknowledge();
+        notification.acknowledge(CloseReason::Closed);
         assert!(notification.is_acknowledged());
         assert_eq!(notification.acknowledged_at(), first_acknowledged_at);
+        assert_eq!(notification.close_reason(), Some(CloseReason::Acknowledged));
         let n_acknowledged_events = notification
             .events
             .iter()
@@ -288,5 +309,29 @@ mod tests {
         )
         .expect("could not build notification");
         assert!(notification.is_acknowledged());
+        assert_eq!(notification.close_reason(), Some(CloseReason::Superseded));
+    }
+
+    #[test]
+    fn open_notification_has_no_close_reason() {
+        assert!(notification_with(BulletinFixture::default())
+            .close_reason()
+            .is_none());
+    }
+
+    #[test]
+    fn acknowledged_event_without_close_reason_defaults_to_acknowledged() {
+        let event: StatefulNotificationEvent = serde_json::from_value(serde_json::json!({
+            "type": "acknowledged",
+            "acknowledged_at": "2024-01-01T00:00:00Z"
+        }))
+        .expect("could not deserialize event");
+        assert!(matches!(
+            event,
+            StatefulNotificationEvent::Acknowledged {
+                close_reason: CloseReason::Acknowledged,
+                ..
+            }
+        ));
     }
 }

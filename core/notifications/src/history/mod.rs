@@ -63,9 +63,9 @@ impl NotificationHistory {
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
         user_ids: &[GaloyUserId],
         payload: NotificationEventPayload,
-    ) -> Result<(), NotificationHistoryError> {
+    ) -> Result<HashSet<GaloyUserId>, NotificationHistoryError> {
         if !payload.should_be_added_to_history() {
-            return Ok(());
+            return Ok(HashSet::new());
         }
 
         let mut seen_user_ids = HashSet::new();
@@ -90,11 +90,10 @@ impl NotificationHistory {
             new_notifications.push(notification);
         }
 
-        if !new_notifications.is_empty() {
-            self.repo.create_new_batch(tx, new_notifications).await?;
+        if new_notifications.is_empty() {
+            return Ok(HashSet::new());
         }
-
-        Ok(())
+        self.repo.create_new_batch(tx, new_notifications).await
     }
 
     pub async fn acknowledge_notification_for_user(

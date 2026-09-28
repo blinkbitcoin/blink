@@ -32,7 +32,7 @@ fn default_dismissible() -> bool {
 impl MarketingNotificationTriggered {
     pub fn has_bulletin_options_without_bulletin(&self) -> bool {
         let has_bulletin_options = self.bulletin_key.is_some() || !self.dismissible;
-        has_bulletin_options && !self.should_add_to_bulletin
+        has_bulletin_options && !(self.should_add_to_bulletin && self.should_add_to_history)
     }
 }
 
@@ -278,6 +278,22 @@ mod tests {
     fn non_dismissible_without_bulletin_is_rejected() {
         let mut event = default_event();
         event.should_add_to_bulletin = false;
+        event.dismissible = false;
+        assert!(event.has_bulletin_options_without_bulletin());
+    }
+
+    #[test]
+    fn bulletin_key_without_history_is_rejected() {
+        let mut event = default_event();
+        event.should_add_to_history = false;
+        event.bulletin_key = Some(bulletin_key("feature-rollout"));
+        assert!(event.has_bulletin_options_without_bulletin());
+    }
+
+    #[test]
+    fn non_dismissible_without_history_is_rejected() {
+        let mut event = default_event();
+        event.should_add_to_history = false;
         event.dismissible = false;
         assert!(event.has_bulletin_options_without_bulletin());
     }
