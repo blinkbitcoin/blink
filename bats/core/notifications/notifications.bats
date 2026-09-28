@@ -4,6 +4,8 @@ load "../../helpers/_common.bash"
 load "../../helpers/user.bash"
 load "../../helpers/admin.bash"
 
+NOTIFICATIONS_PG_CON="postgres://user:password@localhost:5433/pg"
+
 setup_file() {
   clear_cache
 
@@ -505,8 +507,32 @@ bulletin_with_title_is_listed() {
   [[ "$(bulletins_output "$keyed | length")" = "0" ]] || exit 1
 
   list_history 'bulletin_user'
-  replaced_acknowledged_at="$(history_output ' | map(select(.title == "Keyed first")) | .[0].acknowledgedAt')"
-  is_number "$replaced_acknowledged_at"
+  replaced=' | map(select(.title == "Keyed first")) | .[0]'
+  is_number "$(history_output "$replaced.acknowledgedAt")"
+  [[ "$(close_reason_of "$(history_output "$replaced.id")")" = "replaced" ]] || exit 1
+}
+
+close_reason_of() {
+  psql "$NOTIFICATIONS_PG_CON" -tAc \
+    "SELECT event->>'close_reason' FROM stateful_notification_events WHERE id = '$1' AND event->>'type' = 'acknowledged'"
+}
+
+query_bulletins() {
+  local bulletin_key=$1
+  shift
+  variables=$(
+    jq -n \
+    --arg bulletinKey "$bulletin_key" \
+    '{bulletinKey: $bulletinKey, userIds: $ARGS.positional}' \
+    --args "$@"
+  )
+  exec_admin_graphql "$(read_value 'admin.token')" 'notification-bulletins' "$variables"
+}
+
+create_bulletin_user() {
+  create_user "$1"
+  list_bulletins "$1"
+  cache_value "$1.user_id" "$(graphql_output '.data.me.id')"
 }
 
 history_has_titles_starting_with() {
@@ -544,39 +570,45 @@ history_has_titles_starting_with() {
 }
 
 @test "notifications: user can acknowledge a non dismissible bulletin" {
-  trigger_bulletin 'bulletin_user' 'Non dismissible' 'pending-action' false
+  trigger_bulletin 'bulletin_user' 'Non dismissible' 'system-pending-action' false
   retry 10 1 bulletin_with_title_is_listed 'bulletin_user' 'Non dismissible'
 
   list_bulletins 'bulletin_user'
   bulletin=' | map(select(.title == "Non dismissible")) | .[0]'
   [[ "$(bulletins_output "$bulletin.dismissible")" = "false" ]] || exit 1
-  [[ "$(bulletins_output "$bulletin.bulletinKey")" = "pending-action" ]] || exit 1
+  [[ "$(bulletins_output "$bulletin.bulletinKey")" = "system-pending-action" ]] || exit 1
 
   acknowledge_notification 'bulletin_user' "$(bulletins_output "$bulletin.id")"
   [[ "$(graphql_output '.data.statefulNotificationAcknowledge.notification.acknowledgedAt')" != "null" ]] || exit 1
 
   list_bulletins 'bulletin_user'
   [[ "$(bulletins_output ' | map(select(.title == "Non dismissible")) | length')" = "0" ]] || exit 1
+
+  query_bulletins 'system-pending-action' "$(read_value 'bulletin_user.user_id')"
+  [[ "$(graphql_output '.data.notificationBulletins[0].closeReason')" = "ACKNOWLEDGED" ]] || exit 1
 }
 
 @test "notifications: admin closes the active bulletin by key" {
-  trigger_bulletin 'bulletin_user' 'Closed by admin' 'admin-closed' false
+  trigger_bulletin 'bulletin_user' 'Closed by admin' 'system-admin-closed' false
   retry 10 1 bulletin_with_title_is_listed 'bulletin_user' 'Closed by admin'
 
-  close_bulletin 'bulletin_user' ' Admin-Closed '
+  close_bulletin 'bulletin_user' ' System-Admin-Closed '
   [[ "$(graphql_output '.data.notificationBulletinClose.success')" = "true" ]] || exit 1
   [[ "$(graphql_output '.data.notificationBulletinClose.errors | length')" = "0" ]] || exit 1
 
   list_bulletins 'bulletin_user'
-  [[ "$(bulletins_output ' | map(select(.bulletinKey == "admin-closed")) | length')" = "0" ]] || exit 1
+  [[ "$(bulletins_output ' | map(select(.bulletinKey == "system-admin-closed")) | length')" = "0" ]] || exit 1
 
   list_history 'bulletin_user'
   closed_acknowledged_at="$(history_output ' | map(select(.title == "Closed by admin")) | .[0].acknowledgedAt')"
   is_number "$closed_acknowledged_at"
+
+  query_bulletins 'system-admin-closed' "$(read_value 'bulletin_user.user_id')"
+  [[ "$(graphql_output '.data.notificationBulletins[0].closeReason')" = "CLOSED" ]] || exit 1
 }
 
 @test "notifications: admin close without active bulletin succeeds" {
-  close_bulletin 'bulletin_user' 'admin-closed'
+  close_bulletin 'bulletin_user' 'system-admin-closed'
   [[ "$(graphql_output '.data.notificationBulletinClose.success')" = "true" ]] || exit 1
 
   close_bulletin 'bulletin_user' 'never-sent'
@@ -642,6 +674,56 @@ history_has_titles_starting_with() {
   [[ "$(graphql_output '.data.marketingNotificationTrigger.errors | length')" = "1" ]] || exit 1
 }
 
+@test "notifications: bulletin options require history" {
+  variables=$(
+    jq -n \
+    --arg userId "$(read_value 'bulletin_user.user_id')" \
+    '{
+      input: {
+        userIdsFilter: [$userId],
+        localizedNotificationContents: [
+          {
+            language: "en",
+            title: "Not in history",
+            body: "bulletin only"
+          }
+        ],
+        shouldSendPush: false,
+        shouldAddToHistory: false,
+        shouldAddToBulletin: true,
+        bulletinKey: "feature-rollout"
+      }
+    }'
+  )
+  exec_admin_graphql "$(read_value 'admin.token')" 'marketing-notification-trigger' "$variables"
+  [[ "$(graphql_output '.data.marketingNotificationTrigger.success')" = "false" ]] || exit 1
+  [[ "$(graphql_output '.data.marketingNotificationTrigger.errors | length')" = "1" ]] || exit 1
+}
+
+@test "notifications: non dismissible bulletin requires a system key" {
+  trigger_bulletin 'bulletin_user' 'Non dismissible plain key' 'plain-key' false
+  [[ "$(graphql_output '.data.marketingNotificationTrigger.success')" = "false" ]] || exit 1
+  [[ "$(graphql_output '.data.marketingNotificationTrigger.errors | length')" = "1" ]] || exit 1
+
+  trigger_bulletin 'bulletin_user' 'Non dismissible without key' '' false
+  [[ "$(graphql_output '.data.marketingNotificationTrigger.success')" = "false" ]] || exit 1
+}
+
+@test "notifications: user cannot acknowledge another user's bulletin" {
+  create_bulletin_user 'bulletin_other_user'
+  trigger_bulletin 'bulletin_user' 'Owned bulletin' 'owned-key'
+  retry 10 1 bulletin_with_title_is_listed 'bulletin_user' 'Owned bulletin'
+  list_bulletins 'bulletin_user'
+  owned_id="$(bulletins_output ' | map(select(.title == "Owned bulletin")) | .[0].id')"
+
+  acknowledge_notification 'bulletin_other_user' "$owned_id"
+  [[ "$(graphql_output '.errors | length')" = "1" ]] || exit 1
+  [[ "$(graphql_output '.data.statefulNotificationAcknowledge')" = "null" ]] || exit 1
+
+  list_bulletins 'bulletin_user'
+  [[ "$(bulletins_output ' | map(select(.id == "'"$owned_id"'")) | length')" = "1" ]] || exit 1
+}
+
 @test "notifications: invalid bulletin key is rejected" {
   trigger_bulletin 'bulletin_user' 'Invalid key' 'invalid key!'
   [[ "$(graphql_output '.data.marketingNotificationTrigger.success')" = "false" ]] || exit 1
@@ -649,24 +731,6 @@ history_has_titles_starting_with() {
 
   close_bulletin 'bulletin_user' 'invalid key!'
   [[ "$(graphql_output '.data.notificationBulletinClose.success')" = "false" ]] || exit 1
-}
-
-query_bulletins() {
-  local bulletin_key=$1
-  shift
-  variables=$(
-    jq -n \
-    --arg bulletinKey "$bulletin_key" \
-    '{bulletinKey: $bulletinKey, userIds: $ARGS.positional}' \
-    --args "$@"
-  )
-  exec_admin_graphql "$(read_value 'admin.token')" 'notification-bulletins' "$variables"
-}
-
-create_bulletin_user() {
-  create_user "$1"
-  list_bulletins "$1"
-  cache_value "$1.user_id" "$(graphql_output '.data.me.id')"
 }
 
 @test "notifications: admin lists latest bulletin per user with its state" {
@@ -696,10 +760,12 @@ create_bulletin_user() {
   state_bulletin=".data.notificationBulletins | map(select(.userId == \"$state_user_id\")) | .[0]"
   [[ "$(graphql_output "$state_bulletin.id")" = "$latest_id" ]] || exit 1
   [[ "$(graphql_output "$state_bulletin.acknowledgedAt")" = "null" ]] || exit 1
+  [[ "$(graphql_output "$state_bulletin.closeReason")" = "null" ]] || exit 1
   is_number "$(graphql_output "$state_bulletin.createdAt")"
 
   closed_bulletin=".data.notificationBulletins | map(select(.userId == \"$closed_user_id\")) | .[0]"
   is_number "$(graphql_output "$closed_bulletin.acknowledgedAt")"
+  [[ "$(graphql_output "$closed_bulletin.closeReason")" = "CLOSED" ]] || exit 1
 }
 
 @test "notifications: admin bulletin listing ignores duplicated user ids" {

@@ -4,5 +4,6 @@ query notificationBulletins($bulletinKey: BulletinKey!, $userIds: [ID!]!) {
     userId
     createdAt
     acknowledgedAt
+    closeReason
   }
 }
