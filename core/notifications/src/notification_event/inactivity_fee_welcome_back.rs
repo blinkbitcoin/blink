@@ -11,19 +11,30 @@ pub struct InactivityFeeWelcomeBack {
 }
 
 impl InactivityFeeWelcomeBack {
-    fn refunded_amount(&self) -> String {
-        let mut parts = Vec::new();
-        if let Some(sats) = self.refunded_sats.filter(|sats| *sats > 0) {
-            parts.push(format_minor_units("BTC", sats));
-        }
-        if let Some(cents) = self.refunded_cents.filter(|cents| *cents > 0) {
-            parts.push(format_minor_units("USD", cents));
-        }
-        if parts.is_empty() {
+    fn localized_body(&self, locale: &GaloyLocale) -> String {
+        let sats = self.refunded_sats.filter(|sats| *sats > 0);
+        let cents = self.refunded_cents.filter(|cents| *cents > 0);
+        let single = |amount: String| {
+            t!(
+                "inactivity_fee_welcome_back.body",
+                locale = locale.as_ref(),
+                amount = amount
+            )
+            .to_string()
+        };
+        match (sats, cents) {
+            (Some(sats), Some(cents)) => t!(
+                "inactivity_fee_welcome_back.body_both_amounts",
+                locale = locale.as_ref(),
+                btcAmount = format_minor_units("BTC", sats),
+                usdAmount = format_minor_units("USD", cents)
+            )
+            .to_string(),
+            (Some(sats), None) => single(format_minor_units("BTC", sats)),
+            (None, Some(cents)) => single(format_minor_units("USD", cents)),
             // unreachable through the gRPC boundary (it rejects an event with no amount)
-            return format_minor_units("USD", 0);
+            (None, None) => single(format_minor_units("USD", 0)),
         }
-        parts.join(" and ")
     }
 }
 
@@ -58,12 +69,7 @@ impl NotificationEvent for InactivityFeeWelcomeBack {
             locale = locale.as_ref()
         )
         .to_string();
-        let body = t!(
-            "inactivity_fee_welcome_back.body",
-            locale = locale.as_ref(),
-            amount = self.refunded_amount()
-        )
-        .to_string();
+        let body = self.localized_body(&locale);
         LocalizedStatefulMessage {
             locale,
             title,
@@ -107,6 +113,36 @@ mod tests {
             body(Some(300), Some(60)),
             "Welcome back. Your account is active again and the inactivity fee of 300 sats and $0.60 has been refunded to your balance."
         );
+    }
+
+    #[test]
+    fn renders_both_amounts_with_the_locales_own_conjunction() {
+        let event = InactivityFeeWelcomeBack {
+            refunded_sats: Some(300),
+            refunded_cents: Some(60),
+        };
+        for (locale, conjunction) in [
+            ("en", "and"),
+            ("ca", "i"),
+            ("de", "und"),
+            ("el", "και"),
+            ("es", "y"),
+            ("hu", "és"),
+            ("ro", "și"),
+            ("sw", "na"),
+        ] {
+            let body = event
+                .to_localized_persistent_message(GaloyLocale::from(locale.to_string()))
+                .body;
+            assert!(
+                body.contains(&format!("300 sats {conjunction} $0.60")),
+                "both amounts not joined by '{conjunction}' for {locale}: {body}"
+            );
+            assert!(!body.contains('%'), "unfilled placeholder for {locale}");
+            if locale != "en" {
+                assert!(!body.contains(" and "), "English conjunction in {locale}");
+            }
+        }
     }
 
     #[test]

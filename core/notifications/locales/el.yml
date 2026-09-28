@@ -77,3 +77,4 @@ inactivity_fee_notice.bulletin.body: "Χρέωση αδράνειας: από %{
 
 inactivity_fee_welcome_back.title: "Καλώς ήρθατε ξανά"
 inactivity_fee_welcome_back.body: "Καλώς ήρθατε ξανά. Ο λογαριασμός σας είναι και πάλι ενεργός και η χρέωση αδράνειας %{amount} επιστράφηκε στο υπόλοιπό σας."
+inactivity_fee_welcome_back.body_both_amounts: "Καλώς ήρθατε ξανά. Ο λογαριασμός σας είναι και πάλι ενεργός και η χρέωση αδράνειας %{btcAmount} και %{usdAmount} επιστράφηκε στο υπόλοιπό σας."

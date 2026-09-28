@@ -25,3 +25,4 @@ inactivity_fee_notice.bulletin.body: "Inaktivitási díj: %{date} napjától err
 
 inactivity_fee_welcome_back.title: "Üdvözlünk újra"
 inactivity_fee_welcome_back.body: "Üdvözlünk újra. A fiókod ismét aktív, és a(z) %{amount} összegű inaktivitási díjat visszatérítettük az egyenlegedre."
+inactivity_fee_welcome_back.body_both_amounts: "Üdvözlünk újra. A fiókod ismét aktív, és a(z) %{btcAmount} és %{usdAmount} összegű inaktivitási díjat visszatérítettük az egyenlegedre."

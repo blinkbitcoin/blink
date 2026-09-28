@@ -74,3 +74,4 @@ inactivity_fee_notice.bulletin.body: "Comissió per inactivitat: a partir del %{
 
 inactivity_fee_welcome_back.title: "Et donem la benvinguda de nou"
 inactivity_fee_welcome_back.body: "Et donem la benvinguda de nou. El teu compte torna a estar actiu i la comissió per inactivitat de %{amount} s'ha reemborsat al teu saldo."
+inactivity_fee_welcome_back.body_both_amounts: "Et donem la benvinguda de nou. El teu compte torna a estar actiu i la comissió per inactivitat de %{btcAmount} i %{usdAmount} s'ha reemborsat al teu saldo."

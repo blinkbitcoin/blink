@@ -40,3 +40,4 @@ inactivity_fee_notice.bulletin.body: "Ada ya kutotumika: kuanzia %{date}, ada ya
 
 inactivity_fee_welcome_back.title: "Karibu tena"
 inactivity_fee_welcome_back.body: "Karibu tena. Akaunti yako inatumika tena na ada ya kutotumika ya %{amount} imerejeshwa kwenye salio lako."
+inactivity_fee_welcome_back.body_both_amounts: "Karibu tena. Akaunti yako inatumika tena na ada ya kutotumika ya %{btcAmount} na %{usdAmount} imerejeshwa kwenye salio lako."

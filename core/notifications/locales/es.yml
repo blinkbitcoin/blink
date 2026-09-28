@@ -77,3 +77,4 @@ inactivity_fee_notice.bulletin.body: "Comisión por inactividad: a partir del %{
 
 inactivity_fee_welcome_back.title: "Te damos la bienvenida de nuevo"
 inactivity_fee_welcome_back.body: "Te damos la bienvenida de nuevo. Tu cuenta vuelve a estar activa y la comisión por inactividad de %{amount} se ha reembolsado a tu saldo."
+inactivity_fee_welcome_back.body_both_amounts: "Te damos la bienvenida de nuevo. Tu cuenta vuelve a estar activa y la comisión por inactividad de %{btcAmount} y %{usdAmount} se ha reembolsado a tu saldo."

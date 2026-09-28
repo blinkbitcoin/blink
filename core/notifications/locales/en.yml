@@ -77,3 +77,4 @@ inactivity_fee_notice.bulletin.body: "Inactivity fee: from %{date}, %{amount} pe
 
 inactivity_fee_welcome_back.title: "Welcome back"
 inactivity_fee_welcome_back.body: "Welcome back. Your account is active again and the inactivity fee of %{amount} has been refunded to your balance."
+inactivity_fee_welcome_back.body_both_amounts: "Welcome back. Your account is active again and the inactivity fee of %{btcAmount} and %{usdAmount} has been refunded to your balance."

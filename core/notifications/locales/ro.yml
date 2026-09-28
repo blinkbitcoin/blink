@@ -71,3 +71,4 @@ inactivity_fee_notice.bulletin.body: "Comision de inactivitate: începând cu %{
 
 inactivity_fee_welcome_back.title: "Bine ai revenit"
 inactivity_fee_welcome_back.body: "Bine ai revenit. Contul tău este din nou activ, iar comisionul de inactivitate de %{amount} a fost rambursat în soldul tău."
+inactivity_fee_welcome_back.body_both_amounts: "Bine ai revenit. Contul tău este din nou activ, iar comisionul de inactivitate de %{btcAmount} și %{usdAmount} a fost rambursat în soldul tău."

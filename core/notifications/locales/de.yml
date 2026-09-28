@@ -25,3 +25,4 @@ inactivity_fee_notice.bulletin.body: "Inaktivitätsgebühr: Ab dem %{date} gilt 
 
 inactivity_fee_welcome_back.title: "Willkommen zurück"
 inactivity_fee_welcome_back.body: "Willkommen zurück. Dein Konto ist wieder aktiv und die Inaktivitätsgebühr von %{amount} wurde deinem Guthaben zurückerstattet."
+inactivity_fee_welcome_back.body_both_amounts: "Willkommen zurück. Dein Konto ist wieder aktiv und die Inaktivitätsgebühr von %{btcAmount} und %{usdAmount} wurde deinem Guthaben zurückerstattet."
