@@ -23,6 +23,19 @@ describe("Access Rights - Multiple Roles Support", () => {
     })
   })
 
+  describe("MANAGE_BULLETINS is ADMIN-only", () => {
+    test.each(["VIEWER", "MARKETING_GLOBAL", "SUPPORTLV1", "SUPPORTLV2"] as AdminRole[])(
+      "%s does not hold it",
+      (role) => {
+        expect(hasAccessRight(role, AdminAccessRight.MANAGE_BULLETINS)).toBe(false)
+      },
+    )
+
+    test("ADMIN holds it", () => {
+      expect(hasAccessRight("ADMIN", AdminAccessRight.MANAGE_BULLETINS)).toBe(true)
+    })
+  })
+
   describe("Single Role Functions (existing functionality)", () => {
     test("getAccessRightsForRole returns correct rights for VIEWER", () => {
       const rights = getAccessRightsForRole("VIEWER")
@@ -85,9 +98,11 @@ describe("Access Rights - Multiple Roles Support", () => {
           AdminAccessRight.CHANGELEVEL_ACCOUNT,
           AdminAccessRight.LOCK_ACCOUNT,
           AdminAccessRight.VIEW_MERCHANTS,
+          AdminAccessRight.MIGRATION_RETRY_GRANT,
+          AdminAccessRight.MANAGE_BULLETINS,
         ]),
       )
-      expect(rights).toHaveLength(11) // All rights
+      expect(rights).toHaveLength(12) // All rights
     })
 
     test("hasAccessRight works correctly", () => {
@@ -157,9 +172,11 @@ describe("Access Rights - Multiple Roles Support", () => {
           AdminAccessRight.CHANGELEVEL_ACCOUNT,
           AdminAccessRight.LOCK_ACCOUNT,
           AdminAccessRight.VIEW_MERCHANTS,
+          AdminAccessRight.MIGRATION_RETRY_GRANT,
+          AdminAccessRight.MANAGE_BULLETINS,
         ]),
       )
-      expect(rights).toHaveLength(11) // All unique rights
+      expect(rights).toHaveLength(12) // All unique rights
     })
 
     test("getAccessRightsForRoles handles empty array", () => {
