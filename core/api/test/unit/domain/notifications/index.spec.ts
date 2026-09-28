@@ -10,9 +10,12 @@ import {
   BulletinKeyMaxLength,
   BulletinOptionsWithoutBulletinError,
   InvalidBulletinKeyError,
+  NonDismissibleBulletinWithoutSystemKeyError,
   checkedBulletinOptions,
   checkedToBulletinKey,
   checkedToBulletinUserIds,
+  isSystemBulletinKey,
+  requiresBulletinManagement,
   NotificationBulletinsMaxUserIds,
   TooManyBulletinUserIdsError,
 } from "@/domain/notifications"
@@ -150,6 +153,7 @@ describe("checkedBulletinOptions", () => {
     expect(
       checkedBulletinOptions({
         shouldAddToBulletin: false,
+        shouldAddToHistory: true,
         bulletinKey: undefined,
         dismissible: true,
       }),
@@ -160,26 +164,62 @@ describe("checkedBulletinOptions", () => {
     expect(
       checkedBulletinOptions({
         shouldAddToBulletin: false,
+        shouldAddToHistory: true,
         bulletinKey: null,
         dismissible: true,
       }),
     ).toEqual({ bulletinKey: undefined, dismissible: true })
   })
 
-  it("passes with a normalized key and non dismissible bulletin", () => {
+  it("passes with a normalized key and dismissible bulletin", () => {
     expect(
       checkedBulletinOptions({
         shouldAddToBulletin: true,
+        shouldAddToHistory: true,
         bulletinKey: " Feature-Rollout ",
+        dismissible: true,
+      }),
+    ).toEqual({ bulletinKey: "feature-rollout", dismissible: true })
+  })
+
+  it("passes with a system key and non dismissible bulletin", () => {
+    expect(
+      checkedBulletinOptions({
+        shouldAddToBulletin: true,
+        shouldAddToHistory: true,
+        bulletinKey: " System-Flow ",
         dismissible: false,
       }),
-    ).toEqual({ bulletinKey: "feature-rollout", dismissible: false })
+    ).toEqual({ bulletinKey: "system-flow", dismissible: false })
+  })
+
+  it("fails when non dismissible is set with a non system key", () => {
+    expect(
+      checkedBulletinOptions({
+        shouldAddToBulletin: true,
+        shouldAddToHistory: true,
+        bulletinKey: "feature-rollout",
+        dismissible: false,
+      }),
+    ).toBeInstanceOf(NonDismissibleBulletinWithoutSystemKeyError)
+  })
+
+  it("fails when non dismissible is set without key", () => {
+    expect(
+      checkedBulletinOptions({
+        shouldAddToBulletin: true,
+        shouldAddToHistory: true,
+        bulletinKey: undefined,
+        dismissible: false,
+      }),
+    ).toBeInstanceOf(NonDismissibleBulletinWithoutSystemKeyError)
   })
 
   it("fails when key is set without bulletin", () => {
     expect(
       checkedBulletinOptions({
         shouldAddToBulletin: false,
+        shouldAddToHistory: true,
         bulletinKey: "feature-rollout",
         dismissible: true,
       }),
@@ -190,6 +230,29 @@ describe("checkedBulletinOptions", () => {
     expect(
       checkedBulletinOptions({
         shouldAddToBulletin: false,
+        shouldAddToHistory: true,
+        bulletinKey: undefined,
+        dismissible: false,
+      }),
+    ).toBeInstanceOf(BulletinOptionsWithoutBulletinError)
+  })
+
+  it("fails when key is set without history", () => {
+    expect(
+      checkedBulletinOptions({
+        shouldAddToBulletin: true,
+        shouldAddToHistory: false,
+        bulletinKey: "feature-rollout",
+        dismissible: true,
+      }),
+    ).toBeInstanceOf(BulletinOptionsWithoutBulletinError)
+  })
+
+  it("fails when non dismissible is set without history", () => {
+    expect(
+      checkedBulletinOptions({
+        shouldAddToBulletin: true,
+        shouldAddToHistory: false,
         bulletinKey: undefined,
         dismissible: false,
       }),
@@ -200,6 +263,7 @@ describe("checkedBulletinOptions", () => {
     expect(
       checkedBulletinOptions({
         shouldAddToBulletin: true,
+        shouldAddToHistory: true,
         bulletinKey: "invalid key",
         dismissible: true,
       }),
@@ -240,5 +304,59 @@ describe("checkedToBulletinUserIds", () => {
     expect(checkedToBulletinUserIds([userIdAt(1), "invalid"])).toBeInstanceOf(
       InvalidUserId,
     )
+  })
+})
+
+describe("isSystemBulletinKey", () => {
+  it("passes for a key with the system prefix", () => {
+    expect(isSystemBulletinKey("system-flow" as BulletinKey)).toBe(true)
+  })
+
+  it("fails for a key without the system prefix", () => {
+    expect(isSystemBulletinKey("feature-rollout" as BulletinKey)).toBe(false)
+  })
+
+  it("passes for a key with the system prefix and an underscore", () => {
+    expect(isSystemBulletinKey("system_flow" as BulletinKey)).toBe(true)
+  })
+
+  it("passes for the bare system key", () => {
+    expect(isSystemBulletinKey("system" as BulletinKey)).toBe(true)
+  })
+
+  it("fails for a key that only starts with the word system", () => {
+    expect(isSystemBulletinKey("systemflow" as BulletinKey)).toBe(false)
+  })
+})
+
+describe("requiresBulletinManagement", () => {
+  it("does not require it for a dismissible bulletin without key", () => {
+    expect(
+      requiresBulletinManagement({ bulletinKey: undefined, dismissible: true }),
+    ).toBe(false)
+  })
+
+  it("does not require it for a dismissible bulletin with a non system key", () => {
+    expect(
+      requiresBulletinManagement({
+        bulletinKey: "feature-rollout" as BulletinKey,
+        dismissible: true,
+      }),
+    ).toBe(false)
+  })
+
+  it("requires it for a system key", () => {
+    expect(
+      requiresBulletinManagement({
+        bulletinKey: "system-flow" as BulletinKey,
+        dismissible: true,
+      }),
+    ).toBe(true)
+  })
+
+  it("requires it for a non dismissible bulletin", () => {
+    expect(
+      requiresBulletinManagement({ bulletinKey: undefined, dismissible: false }),
+    ).toBe(true)
   })
 })

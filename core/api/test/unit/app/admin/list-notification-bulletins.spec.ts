@@ -23,6 +23,7 @@ describe("listNotificationBulletins", () => {
     userId,
     createdAt: new Date(),
     acknowledgedAt: undefined,
+    closeReason: undefined,
   }
 
   beforeEach(() => {

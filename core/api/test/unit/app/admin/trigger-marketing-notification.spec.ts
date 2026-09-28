@@ -50,7 +50,7 @@ describe("triggerMarketingNotification", () => {
   it("sends bulletin options with the normalized key", async () => {
     const result = await triggerMarketingNotification({
       ...baseArgs,
-      bulletinKey: " Feature-Rollout ",
+      bulletinKey: " System-Feature-Rollout ",
       dismissible: false,
     })
 
@@ -58,7 +58,7 @@ describe("triggerMarketingNotification", () => {
     expect(mockTriggerMarketingNotification).toHaveBeenCalledWith(
       expect.objectContaining({
         userIds: [userId],
-        bulletinKey: "feature-rollout",
+        bulletinKey: "system-feature-rollout",
         dismissible: false,
       }),
     )
