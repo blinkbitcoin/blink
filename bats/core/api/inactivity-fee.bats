@@ -67,6 +67,7 @@ last_activity_ms() {
 
 receive_recorded() {
   local payment_hash=$1
+  local count
   count="$(mongo_cli "db.medici_transactions.countDocuments({hash:'${payment_hash}'})")"
   [[ "$count" -gt 0 ]] || exit 1
 }
@@ -99,6 +100,8 @@ receive_recorded() {
   # Anon status and a direct ledger read, so no authenticated request touches the clock.
   retry 15 1 check_ln_payment_settled "$payment_request" "$payment_hash"
   retry 15 1 receive_recorded "$payment_hash"
+  # room for a late activity write in the settle path
+  sleep 2
 
   after="$(last_activity_ms "$account_id")"
   [[ "$after" -eq "$before" ]] || exit 1
