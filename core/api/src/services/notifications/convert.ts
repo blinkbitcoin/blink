@@ -9,6 +9,8 @@ import {
   InvalidDisplayAmountError,
   InvalidNotificationCategoryError,
   InvalidPushNotificationSettingError,
+  InvalidBulletinCloseReasonNotificationsServiceError,
+  BulletinCloseReason,
   NotificationCategory,
   NotificationChannel,
   DeepLinkScreen,
@@ -155,13 +157,38 @@ const unixSecondsToDate = (seconds: number): Date => new Date(seconds * 1000)
 
 export const grpcBulletinToNotificationBulletin = (
   bulletin: Grpc.Bulletin,
-): NotificationBulletin => {
+): NotificationBulletin | InvalidBulletinCloseReasonNotificationsServiceError => {
+  const closeReason = bulletin.hasCloseReason()
+    ? grpcBulletinCloseReasonToBulletinCloseReason(bulletin.getCloseReason())
+    : undefined
+  if (closeReason instanceof Error) return closeReason
+
   const acknowledgedAt = bulletin.getAcknowledgedAt()
   return {
     id: bulletin.getId() as NotificationBulletinId,
     userId: bulletin.getUserId() as UserId,
     createdAt: unixSecondsToDate(bulletin.getCreatedAt()),
     acknowledgedAt: acknowledgedAt ? unixSecondsToDate(acknowledgedAt) : undefined,
+    closeReason,
+  }
+}
+
+export const grpcBulletinCloseReasonToBulletinCloseReason = (
+  closeReason: Grpc.BulletinCloseReason | undefined,
+): BulletinCloseReason | InvalidBulletinCloseReasonNotificationsServiceError => {
+  switch (closeReason) {
+    case Grpc.BulletinCloseReason.ACKNOWLEDGED:
+      return BulletinCloseReason.Acknowledged
+    case Grpc.BulletinCloseReason.CLOSED:
+      return BulletinCloseReason.Closed
+    case Grpc.BulletinCloseReason.REPLACED:
+      return BulletinCloseReason.Replaced
+    case Grpc.BulletinCloseReason.SUPERSEDED:
+      return BulletinCloseReason.Superseded
+    default:
+      return new InvalidBulletinCloseReasonNotificationsServiceError(
+        `Invalid bulletin close reason: ${closeReason}`,
+      )
   }
 }
 

@@ -73,13 +73,13 @@ const MarketingNotificationTriggerInput = GT.Input({
     bulletinKey: {
       type: BulletinKey,
       description:
-        "Replaces the active bulletin with the same key, so a user has at most one per key. Requires shouldAddToBulletin",
+        "Replaces the active bulletin with the same key, so a user has at most one per key. Requires shouldAddToBulletin and shouldAddToHistory. Keys starting with system- also require the MANAGE_BULLETINS right",
     },
     dismissible: {
       type: GT.NonNull(GT.Boolean),
       defaultValue: true,
       description:
-        "Whether the user can close the bulletin. Setting it to false requires shouldAddToBulletin",
+        "Whether the user can close the bulletin. Setting it to false requires shouldAddToBulletin, shouldAddToHistory, a bulletinKey starting with system- and the MANAGE_BULLETINS right",
     },
     openDeepLink: {
       type: OpenDeepLinkInput,

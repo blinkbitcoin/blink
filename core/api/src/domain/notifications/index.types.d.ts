@@ -181,11 +181,15 @@ type BulletinKey = string & { readonly brand: unique symbol }
 
 type NotificationBulletinId = string & { readonly brand: unique symbol }
 
+type BulletinCloseReason =
+  (typeof import("./index").BulletinCloseReason)[keyof typeof import("./index").BulletinCloseReason]
+
 type NotificationBulletin = {
   id: NotificationBulletinId
   userId: UserId
   createdAt: Date
   acknowledgedAt: Date | undefined
+  closeReason: BulletinCloseReason | undefined
 }
 
 type BulletinOptions = {

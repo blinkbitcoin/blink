@@ -35,7 +35,10 @@ import {
 
 import * as notificationsGrpc from "./grpc-client"
 
-import { handleCommonNotificationErrors } from "./errors"
+import {
+  handleBulletinNotificationErrors,
+  handleCommonNotificationErrors,
+} from "./errors"
 
 import {
   getCallbackServiceConfig,
@@ -702,7 +705,7 @@ export const NotificationsService = (): INotificationsService => {
 
       return true
     } catch (err) {
-      return handleCommonNotificationErrors(err)
+      return handleBulletinNotificationErrors(err)
     }
   }
 
@@ -724,7 +727,7 @@ export const NotificationsService = (): INotificationsService => {
       )
       return true
     } catch (err) {
-      return handleCommonNotificationErrors(err)
+      return handleBulletinNotificationErrors(err)
     }
   }
 
@@ -744,9 +747,17 @@ export const NotificationsService = (): INotificationsService => {
         request,
         notificationsGrpc.notificationsMetadata,
       )
-      return response.getBulletinsList().map(grpcBulletinToNotificationBulletin)
+      const bulletins = response
+        .getBulletinsList()
+        .map(grpcBulletinToNotificationBulletin)
+      const invalidBulletin = bulletins.find((bulletin) => bulletin instanceof Error)
+      if (invalidBulletin instanceof Error) return invalidBulletin
+
+      return bulletins.filter(
+        (bulletin): bulletin is NotificationBulletin => !(bulletin instanceof Error),
+      )
     } catch (err) {
-      return handleCommonNotificationErrors(err)
+      return handleBulletinNotificationErrors(err)
     }
   }
 

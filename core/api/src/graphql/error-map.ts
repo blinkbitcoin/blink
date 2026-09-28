@@ -814,6 +814,7 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "NotificationsError":
     case "NotificationsServiceError":
     case "InvalidDeviceNotificationsServiceError":
+    case "InvalidBulletinCloseReasonNotificationsServiceError":
     case "ConcurrentModificationNotificationsServiceError":
     case "DeviceTokensNotRegisteredNotificationsServiceError":
     case "AccountError":
@@ -979,7 +980,9 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       return new ValidationInternalError({ message, logger: baseLogger })
     case "InvalidBulletinKeyError":
     case "BulletinOptionsWithoutBulletinError":
+    case "NonDismissibleBulletinWithoutSystemKeyError":
     case "TooManyBulletinUserIdsError":
+    case "InvalidArgumentNotificationsServiceError":
       message = error.message
       return new ValidationInternalError({ message, logger: baseLogger })
 

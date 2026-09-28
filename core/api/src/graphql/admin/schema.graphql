@@ -327,12 +327,12 @@ input LocalizedNotificationContentInput {
 
 input MarketingNotificationTriggerInput {
   """
-  Replaces the active bulletin with the same key, so a user has at most one per key. Requires shouldAddToBulletin
+  Replaces the active bulletin with the same key, so a user has at most one per key. Requires shouldAddToBulletin and shouldAddToHistory. Keys starting with system- also require the MANAGE_BULLETINS right
   """
   bulletinKey: BulletinKey
 
   """
-  Whether the user can close the bulletin. Setting it to false requires shouldAddToBulletin
+  Whether the user can close the bulletin. Setting it to false requires shouldAddToBulletin, shouldAddToHistory, a bulletinKey starting with system- and the MANAGE_BULLETINS right
   """
   dismissible: Boolean! = true
   icon: NotificationIcon
@@ -433,6 +433,9 @@ type Mutation {
 type NotificationBulletin {
   """Null while the bulletin is still active for the user"""
   acknowledgedAt: Timestamp
+
+  """Null while the bulletin is still active for the user"""
+  closeReason: NotificationBulletinCloseReason
   createdAt: Timestamp!
   id: ID!
   userId: ID!
@@ -441,6 +444,23 @@ type NotificationBulletin {
 input NotificationBulletinCloseInput {
   bulletinKey: BulletinKey!
   userId: ID!
+}
+
+"""Why a bulletin is no longer active for the user"""
+enum NotificationBulletinCloseReason {
+  """The user dismissed the bulletin"""
+  ACKNOWLEDGED
+
+  """An admin closed the bulletin"""
+  CLOSED
+
+  """A newer bulletin with the same key replaced it"""
+  REPLACED
+
+  """
+  It arrived after a newer bulletin or a close for the same key, so it was never shown
+  """
+  SUPERSEDED
 }
 
 enum NotificationIcon {

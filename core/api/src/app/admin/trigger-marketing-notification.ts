@@ -30,6 +30,7 @@ export const triggerMarketingNotification = async ({
 
   const bulletinOptions = checkedBulletinOptions({
     shouldAddToBulletin,
+    shouldAddToHistory,
     bulletinKey: bulletinKeyRaw,
     dismissible,
   })

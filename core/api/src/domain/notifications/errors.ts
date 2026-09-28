@@ -5,12 +5,17 @@ export class InvalidNotificationBodyError extends ValidationError {}
 export class DuplicateLocalizedNotificationContentError extends ValidationError {}
 export class InvalidBulletinKeyError extends ValidationError {}
 export class BulletinOptionsWithoutBulletinError extends ValidationError {}
+export class NonDismissibleBulletinWithoutSystemKeyError extends ValidationError {}
 export class TooManyBulletinUserIdsError extends ValidationError {}
 
 export class NotificationsError extends DomainError {}
 
 export class NotificationsServiceError extends NotificationsError {}
 export class InvalidDeviceNotificationsServiceError extends NotificationsServiceError {}
+export class InvalidArgumentNotificationsServiceError extends NotificationsServiceError {}
+export class InvalidBulletinCloseReasonNotificationsServiceError extends NotificationsServiceError {
+  level = ErrorLevel.Critical
+}
 export class ConcurrentModificationNotificationsServiceError extends NotificationsServiceError {}
 export class DeviceTokensNotRegisteredNotificationsServiceError extends NotificationsServiceError {
   tokens: DeviceToken[]

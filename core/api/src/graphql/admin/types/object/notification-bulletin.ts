@@ -1,5 +1,6 @@
 import { GT } from "@/graphql/index"
 import Timestamp from "@/graphql/shared/types/scalar/timestamp"
+import NotificationBulletinCloseReason from "@/graphql/admin/types/scalar/notification-bulletin-close-reason"
 
 const NotificationBulletin = GT.Object<NotificationBulletin>({
   name: "NotificationBulletin",
@@ -16,6 +17,10 @@ const NotificationBulletin = GT.Object<NotificationBulletin>({
     },
     acknowledgedAt: {
       type: Timestamp,
+      description: "Null while the bulletin is still active for the user",
+    },
+    closeReason: {
+      type: NotificationBulletinCloseReason,
       description: "Null while the bulletin is still active for the user",
     },
   }),

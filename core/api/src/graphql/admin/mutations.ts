@@ -62,11 +62,11 @@ export const mutationFields = {
     },
     marketingNotificationTrigger: {
       field: TriggerMarketingNotificationMutation,
-      rule: accessRules.sendNotifications,
+      rule: accessRules.triggerMarketingNotification,
     },
     notificationBulletinClose: {
       field: NotificationBulletinCloseMutation,
-      rule: accessRules.sendNotifications,
+      rule: accessRules.manageBulletins,
     },
   },
 }
