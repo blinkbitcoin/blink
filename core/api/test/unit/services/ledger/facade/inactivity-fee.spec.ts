@@ -350,6 +350,42 @@ describe("recordInactivityFeeRefund", () => {
     })
   })
 
+  it("stamps the refund-time rate on a repriced Dollar Balance refund", async () => {
+    await recordInactivityFeeRefund({
+      walletDescriptor: usdWallet,
+      amount: amount(1500n, 100n),
+      externalId: key(`ifee_refund_${usdWalletId}_2026-10`),
+      metadata: { ...refundProvenance, rate: 66_666, rateSource: "dealer-mid" },
+    })
+
+    const txs = persistedTransactions()
+    expectProvenanceUnderMeta({
+      txs,
+      provenance: { ...refundProvenance, rate: 66_666, rateSource: "dealer-mid" },
+    })
+    expect(leg(txs, `Liabilities:${usdWalletId}`)).toEqual(
+      expect.objectContaining({ credit: 100, satsAmount: 1500, centsAmount: 100 }),
+    )
+    expect(leg(txs, "Liabilities:bank-owner")).toEqual(
+      expect.objectContaining({ debit: 1500 }),
+    )
+    expectBalanced(txs)
+  })
+
+  it("stamps no rate on a refund given none", async () => {
+    await recordInactivityFeeRefund({
+      walletDescriptor: btcWallet,
+      amount: amount(1289n, 100n),
+      externalId: key(`ifee_refund_${btcWalletId}_2026-10`),
+      metadata: refundProvenance,
+    })
+
+    for (const tx of persistedTransactions()) {
+      expect(tx.meta).not.toHaveProperty("rate")
+      expect(tx.meta).not.toHaveProperty("rateSource")
+    }
+  })
+
   it.each([
     ["a debit key", `ifee_${btcWalletId}_2026-10`],
     ["a malformed month", `ifee_refund_${btcWalletId}_2026-00`],

@@ -122,7 +122,7 @@ fee_count() {
 
 fee_count_with() {
   local wallet_id=$1 external_id=$2 debit=$3 notice_id=$4
-  mongo_cli "db.medici_transactions.countDocuments({accounts:'Liabilities:${wallet_id}',type:'inactivity_fee',external_id:'${external_id}',debit:${debit},rateSource:'dealer-mid',configVersion:'dev',noticeId:'${notice_id}',runId:/^fee-/,rate:{\$gt:0}})"
+  mongo_cli "db.medici_transactions.countDocuments({accounts:'Liabilities:${wallet_id}',type:'inactivity_fee',external_id:'${external_id}',debit:${debit},'meta.rateSource':'dealer-mid','meta.configVersion':'dev','meta.noticeId':'${notice_id}','meta.runId':/^fee-/,'meta.rate':{\$gt:0}})"
 }
 
 fee_memo() {
