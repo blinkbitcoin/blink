@@ -18,12 +18,22 @@ export const alertFailedRefund = ({
         ? ErrorLevel.Warn
         : ErrorLevel.Critical,
   })
+  addFailedRefundEvent({ accountId, error })
+}
+
+// the alert event alone, for a caller that already recorded the exception
+export const addFailedRefundEvent = ({
+  accountId,
+  error,
+}: {
+  accountId: AccountId
+  error: Error
+}) =>
   addEventToCurrentSpan("inactivityfee.alert.failed_refund", {
     "inactivityfee.alert.accountId": accountId,
     "inactivityfee.alert.error": error.name,
     "inactivityfee.alert.message": error.message,
   })
-}
 
 // no refund was attempted: whether the account holds an issued notice is unknown until the next write
 export const alertFailedNoticeLookup = ({

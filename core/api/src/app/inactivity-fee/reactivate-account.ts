@@ -1,4 +1,4 @@
-import { alertFailedRefund } from "./alert-failed-refund"
+import { addFailedRefundEvent, alertFailedRefund } from "./alert-failed-refund"
 import { refundInactivityFees } from "./refund-fees"
 
 import { getInactivityFeeConfig } from "@/config"
@@ -140,15 +140,19 @@ const reactivateUnderLock = async ({
   addAttributesToCurrentSpan({
     "inactivityfee.reactivate.unpairable": String(failures.length - retryable.length),
   })
-  if (retryable.length > 0) {
-    return new InactivityFeeRefundFailedError(
-      `${runId}: ${failures.length} refund(s) failed on ${accountId}: ` +
-        failures
-          .map(({ walletId, externalId, error }) =>
-            [walletId, externalId, error.name].filter(Boolean).join(" "),
-          )
-          .join("; "),
-    )
+  const summary =
+    `${runId}: ${failures.length} refund(s) failed on ${accountId}: ` +
+    failures
+      .map(({ walletId, externalId, error }) =>
+        [walletId, externalId, error.name].filter(Boolean).join(" "),
+      )
+      .join("; ")
+  if (retryable.length > 0) return new InactivityFeeRefundFailedError(summary)
+  if (failures.length > 0) {
+    addFailedRefundEvent({
+      accountId,
+      error: new InactivityFeeRefundUnpairableError(summary),
+    })
   }
 
   const superseded = await supersedeIssuedNotice({ accountId })

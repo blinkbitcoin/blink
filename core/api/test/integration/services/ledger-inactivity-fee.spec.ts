@@ -141,4 +141,20 @@ describe("listInactivityFeeTransactionsByWalletId", () => {
       unwrap(inactivityFeeRefundExternalId({ walletId: wallet.id, month })),
     ])
   })
+
+  it("pairs a fee re-posted under the key a void freed as one unpaired debit", async () => {
+    const wallet = newWallet()
+    const voided = await recordFee(wallet)
+    await MainBook.void(voided.journalId, "test void")
+    const reposted = await recordFee(wallet)
+
+    const rows = await scan(wallet)
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0].type).toBe(LedgerTransactionType.InactivityFee)
+    expect(rows[0].journalId).toBe(reposted.journalId)
+    const { unpaired, malformed } = unpairedDebits({ transactions: rows })
+    expect(malformed).toEqual([])
+    expect(unpaired).toHaveLength(1)
+  })
 })

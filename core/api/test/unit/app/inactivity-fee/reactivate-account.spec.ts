@@ -271,6 +271,14 @@ describe("reactivateAccount", () => {
       error: unpairable,
       level: ErrorLevel.Critical,
     })
+    expect(mockAddEvent).toHaveBeenCalledTimes(1)
+    expect(mockAddEvent).toHaveBeenCalledWith("inactivityfee.alert.failed_refund", {
+      "inactivityfee.alert.accountId": accountId,
+      "inactivityfee.alert.error": "InactivityFeeRefundUnpairableError",
+      "inactivityfee.alert.message": expect.stringContaining(
+        "InactivityFeeRefundUnpairableError",
+      ),
+    })
     expect(sendInactivityFeeWelcomeBack).toHaveBeenCalledWith({
       userId,
       refundedSats: 1289,
@@ -291,6 +299,8 @@ describe("reactivateAccount", () => {
 
     expect(result).toBeInstanceOf(InactivityFeeRefundFailedError)
     expect(mongooseMocks.supersede).not.toHaveBeenCalled()
+    // the caller alerts the returned error
+    expect(mockAddEvent).not.toHaveBeenCalled()
   })
 
   it("returns the refund function's own error and keeps the notice", async () => {
