@@ -10,6 +10,7 @@ import {
   isNoticeLive,
   sizeInactivityFee,
 } from "@/domain/inactivity-fee"
+import { LedgerTransactionType } from "@/domain/ledger"
 import { ResourceExpiredLockServiceError } from "@/domain/lock"
 import { toDisplayBaseAmount } from "@/domain/payments"
 import { ErrorLevel, WalletCurrency, ZERO_CENTS, ZERO_SATS } from "@/domain/shared"
@@ -121,6 +122,8 @@ export const chargeWallet = async ({
     externalId,
     // a voided debit was reversed: this month is chargeable again
     excludeVoided: true,
+    // external ids are caller-supplied on invoices: only a fee row holds the month
+    type: LedgerTransactionType.InactivityFee,
   })
   if (existing instanceof Error) return failed(existing)
   if (existing !== undefined) return skipped(InactivityFeeSkipReason.AlreadyDebited)
@@ -254,6 +257,7 @@ const chargeUnderWalletLock = async ({
     walletId: wallet.id,
     externalId,
     excludeVoided: true,
+    type: LedgerTransactionType.InactivityFee,
   })
   if (appeared instanceof Error) return failed(appeared, { amount: walletAmount })
   if (appeared !== undefined) return alert("second_debit_in_month")

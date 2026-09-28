@@ -555,6 +555,7 @@ describe("refundInactivityFees", () => {
       walletId: btcWalletId,
       externalId: `ifee_refund_${btcWalletId}_2026-10`,
       excludeVoided: true,
+      type: LedgerTransactionType.InactivityFeeRefund,
     })
     expect(result).toEqual({ refundedSats: 0, refundedCents: 0, failures: [] })
     expect(mockRecordRefund).not.toHaveBeenCalled()
@@ -576,6 +577,7 @@ describe("refundInactivityFees", () => {
       walletId: btcWalletId,
       externalId: `ifee_refund_${btcWalletId}_2026-10`,
       excludeVoided: true,
+      type: LedgerTransactionType.InactivityFeeRefund,
     })
     expect(result).toEqual({ refundedSats: 1289, refundedCents: 0, failures: [] })
     expect(mockRecordRefund).toHaveBeenCalledTimes(1)

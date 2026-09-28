@@ -251,3 +251,44 @@ this_month() {
   refund_through_debug_path "$account_id"
   ok test "$(refund_count "$btc_wallet_id")" -eq 2
 }
+
+planted_row_landed() {
+  local wallet_id=$1 external_id=$2
+  [[ "$(mongo_cli "db.medici_transactions.countDocuments({accounts:'Liabilities:${wallet_id}',external_id:'${external_id}'})")" -ge 1 ]]
+}
+
+@test "inactivity-fee-refunds: an invoice paid under a refund key does not stand in for the refund" {
+  local carol='carol' account_id btc_wallet_id month key variables payment_request
+  # a fresh user: bob is closed by the case above
+  create_user "$carol"
+  fund_user_lightning "$carol" "$carol.btc_wallet_id" 10000
+  account_id="$(read_value "$carol.account_id")"
+  btc_wallet_id="$(read_value "$carol.btc_wallet_id")"
+  month="$(this_month)"
+  key="ifee_refund_${btc_wallet_id}_${month}"
+  DIAG_WALLET_ID="$btc_wallet_id"
+
+  # anyone can put an external id on an invoice for someone else's wallet
+  variables=$(
+    jq -n \
+    --arg wallet_id "$btc_wallet_id" \
+    --arg external_id "$key" \
+    '{input: {recipientWalletId: $wallet_id, amount: 100, externalId: $external_id}}'
+  )
+  exec_graphql 'anon' 'ln-invoice-create-on-behalf-of-recipient' "$variables"
+  payment_request="$(graphql_output '.data.lnInvoiceCreateOnBehalfOfRecipient.invoice.paymentRequest')"
+  [[ "$payment_request" != "null" ]] || exit 1
+  lnd_outside_cli payinvoice -f --pay_req "$payment_request"
+  retry 15 1 planted_row_landed "$btc_wallet_id" "$key"
+  ok test "$(refund_count_for_key "$btc_wallet_id" "$key")" -eq 0
+
+  btc_before="$(ledger_balance "$btc_wallet_id")"
+  seed_debit "$btc_wallet_id" "$month" "$BTC_FEE_SATS" "$BTC_FEE_CENTS" 'notice-planted'
+  insert_live_notice "$account_id"
+  back_date_clock_13_months "$account_id"
+
+  # the returning user's first request refunds the fee; the paid invoice is not its pair
+  ok test "$(balance_for_wallet "$carol" 'BTC')" -eq "$btc_before"
+  ok test "$(refund_count_for_key "$btc_wallet_id" "$key")" -eq 1
+  ok test "$(notice_count "$account_id" "status:'superseded',supersededReason:'reactivation'")" -eq 1
+}

@@ -151,15 +151,18 @@ export const LedgerService = (): ILedgerService => {
     walletId,
     externalId,
     excludeVoided = false,
+    type,
   }: {
     walletId: WalletId
     externalId: LedgerExternalId
     excludeVoided?: boolean
+    type?: LedgerTransactionType
   }): Promise<LedgerTransaction<WalletCurrency> | undefined | LedgerServiceError> => {
     try {
       const entry = await Transaction.findOne({
         accounts: toLiabilitiesWalletId(walletId),
         external_id: externalId,
+        ...(type !== undefined ? { type } : {}),
         // a voided row was reversed by its void: the idempotency key it holds is free again
         ...(excludeVoided ? { voided: { $ne: true } } : {}),
       })

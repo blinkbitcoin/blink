@@ -118,7 +118,7 @@ import {
   InactivityFeeSkipReason,
   InactivityFeeTemplateVersion,
 } from "@/domain/inactivity-fee"
-import { UnknownLedgerError } from "@/domain/ledger"
+import { LedgerTransactionType, UnknownLedgerError } from "@/domain/ledger"
 import { ResourceAttemptsRedlockServiceError } from "@/domain/lock"
 import { toDisplayPriceRatio, toWalletPriceRatio } from "@/domain/payments"
 import { PriceNotAvailableError } from "@/domain/price"
@@ -501,6 +501,24 @@ describe("runFeeJob", () => {
     expect(run.counts.bySkipReason).toEqual({ no_live_notice: 2 })
   })
 
+  it("reads the month key for fee rows only, before and under the wallet lock", async () => {
+    // an invoice's external id is caller-supplied: a non-fee row under the key must not hold the month
+    const alice = account()
+    setup([{ account: alice, btc: 250_000n, usd: 500n }])
+
+    expectRun(await runLive())
+
+    const keyReads = findByKey.mock.calls.map(([args]) => args)
+    expect(keyReads.length).toBeGreaterThanOrEqual(4)
+    for (const args of keyReads) {
+      expect(args).toMatchObject({
+        excludeVoided: true,
+        type: LedgerTransactionType.InactivityFee,
+      })
+    }
+    expect(mockRecordFee).toHaveBeenCalledTimes(2)
+  })
+
   it("re-runs post nothing already posted and finish the remainder (10/A2)", async () => {
     const alice = account()
     setup([{ account: alice, btc: 250_000n, usd: 500n, keys: [btcWalletId(alice.id)] }])
@@ -513,6 +531,7 @@ describe("runFeeJob", () => {
       walletId: btcWalletId(alice.id),
       externalId: feeKey(btcWalletId(alice.id)),
       excludeVoided: true,
+      type: LedgerTransactionType.InactivityFee,
     })
     expect(mockRecordFee).toHaveBeenCalledTimes(1)
     expect(mockRecordFee.mock.calls[0][0].walletDescriptor.id).toBe(usdWalletId(alice.id))

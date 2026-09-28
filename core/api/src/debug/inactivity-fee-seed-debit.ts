@@ -26,6 +26,7 @@ import {
   InactivityFeeRefundReason,
 } from "@/domain/inactivity-fee"
 import { checkedToAccountId } from "@/domain/accounts"
+import { LedgerTransactionType } from "@/domain/ledger"
 import { paymentAmountFromNumber, WalletCurrency } from "@/domain/shared"
 import { checkedToWalletId } from "@/domain/wallets"
 
@@ -77,6 +78,7 @@ const seedDebit = async ({ argv }: { argv: string[] }): Promise<true | Error> =>
       const existing = await LedgerService().getTransactionForWalletByExternalId({
         walletId,
         externalId,
+        type: LedgerTransactionType.InactivityFee,
       })
       if (existing instanceof Error) return existing
       if (existing !== undefined) return new Error(`${externalId} already exists`)

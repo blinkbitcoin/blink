@@ -5,6 +5,7 @@ import {
 } from "@/domain/inactivity-fee"
 import { toSats } from "@/domain/bitcoin"
 import { toCents } from "@/domain/fiat"
+import { LedgerTransactionType } from "@/domain/ledger"
 import { ResourceExpiredLockServiceError } from "@/domain/lock"
 import { usdPerBtcFromRatio } from "@/domain/payments"
 import { paymentAmountFromNumber, WalletCurrency } from "@/domain/shared"
@@ -183,6 +184,8 @@ const refundDebit = async ({
     walletId: wallet.id,
     externalId: refundExternalId,
     excludeVoided: true,
+    // external ids are caller-supplied on invoices: only a refund row pairs the debit
+    type: LedgerTransactionType.InactivityFeeRefund,
   })
   if (existing instanceof Error) return existing
   if (existing !== undefined) return false
