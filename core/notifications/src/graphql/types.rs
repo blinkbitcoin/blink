@@ -67,6 +67,10 @@ pub(super) struct StatefulNotification {
     pub acknowledged_at: Option<Timestamp>,
     pub bulletin_enabled: bool,
     pub icon: Option<Icon>,
+    /// Groups bulletins so that at most one bulletin per key is active at a time
+    pub bulletin_key: Option<String>,
+    /// Whether the user can close the bulletin from the app
+    pub dismissible: bool,
 }
 
 #[derive(Enum, Copy, Clone, Eq, PartialEq)]

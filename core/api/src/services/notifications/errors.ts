@@ -1,5 +1,6 @@
 import {
   ConcurrentModificationNotificationsServiceError,
+  InvalidArgumentNotificationsServiceError,
   NotificationsServiceUnreachableServerError,
   UnknownNotificationsServiceError,
 } from "@/domain/notifications"
@@ -24,8 +25,21 @@ export const handleCommonNotificationErrors = (err: Error | string | unknown) =>
   }
 }
 
+// Bulletin requests are validated by the notifications service, so its invalid
+// argument responses are input errors and not unexpected failures
+export const handleBulletinNotificationErrors = (err: Error | string | unknown) => {
+  const errMsg = parseErrorMessageFromUnknown(err)
+  if (KnownNotificationErrorMessages.InvalidArgumentError.test(errMsg)) {
+    return new InvalidArgumentNotificationsServiceError(
+      errMsg.replace(KnownNotificationErrorMessages.InvalidArgumentError, ""),
+    )
+  }
+  return handleCommonNotificationErrors(err)
+}
+
 export const KnownNotificationErrorMessages = {
   ConcurrentModificationError: /ConcurrentModification/,
+  InvalidArgumentError: /^\d+ INVALID_ARGUMENT: /,
   GoogleBadGatewayError: /Raw server response .* Error 502/,
   GoogleInternalServerError: /Raw server response .* Error 500/,
   NoConnectionError: /UNAVAILABLE: No connection established/,

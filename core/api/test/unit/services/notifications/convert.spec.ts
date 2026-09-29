@@ -1,7 +1,25 @@
-import { InvalidDisplayAmountError } from "@/domain/notifications"
+import {
+  BulletinCloseReason,
+  InvalidArgumentNotificationsServiceError,
+  InvalidBulletinCloseReasonNotificationsServiceError,
+  InvalidDisplayAmountError,
+  UnknownNotificationsServiceError,
+} from "@/domain/notifications"
 import { WalletCurrency } from "@/domain/shared"
-import { walletTransactionToNotificationEventRequest } from "@/services/notifications/convert"
-import { TransactionType } from "@/services/notifications/proto/notifications_pb"
+import {
+  grpcBulletinCloseReasonToBulletinCloseReason,
+  grpcBulletinToNotificationBulletin,
+  walletTransactionToNotificationEventRequest,
+} from "@/services/notifications/convert"
+import {
+  handleBulletinNotificationErrors,
+  handleCommonNotificationErrors,
+} from "@/services/notifications/errors"
+import {
+  Bulletin,
+  BulletinCloseReason as GrpcBulletinCloseReason,
+  TransactionType,
+} from "@/services/notifications/proto/notifications_pb"
 import { recordExceptionInCurrentSpan } from "@/services/tracing"
 
 jest.mock("@/services/tracing", () => ({
@@ -121,4 +139,81 @@ describe("walletTransactionToNotificationEventRequest", () => {
       expect(request).toBeInstanceOf(InvalidDisplayAmountError)
     },
   )
+})
+
+describe("grpcBulletinToNotificationBulletin", () => {
+  const buildBulletin = (acknowledgedAt?: number) => {
+    const bulletin = new Bulletin()
+    bulletin.setId("bulletin-id")
+    bulletin.setUserId("user-id")
+    bulletin.setCreatedAt(1700000000)
+    if (acknowledgedAt) bulletin.setAcknowledgedAt(acknowledgedAt)
+    return bulletin
+  }
+
+  it("translates an open bulletin", () => {
+    expect(grpcBulletinToNotificationBulletin(buildBulletin())).toEqual({
+      id: "bulletin-id",
+      userId: "user-id",
+      createdAt: new Date(1700000000 * 1000),
+      acknowledgedAt: undefined,
+      closeReason: undefined,
+    })
+  })
+
+  it("translates an acknowledged bulletin", () => {
+    const bulletin = buildBulletin(1700000100)
+    bulletin.setCloseReason(GrpcBulletinCloseReason.CLOSED)
+    const result = grpcBulletinToNotificationBulletin(bulletin)
+    expect(result).toHaveProperty("acknowledgedAt", new Date(1700000100 * 1000))
+    expect(result).toHaveProperty("closeReason", BulletinCloseReason.Closed)
+  })
+
+  it("fails to translate a bulletin - unknown close reason", () => {
+    const bulletin = buildBulletin(1700000100)
+    bulletin.setCloseReason(99 as GrpcBulletinCloseReason)
+    expect(grpcBulletinToNotificationBulletin(bulletin)).toBeInstanceOf(
+      InvalidBulletinCloseReasonNotificationsServiceError,
+    )
+  })
+})
+
+describe("grpcBulletinCloseReasonToBulletinCloseReason", () => {
+  it.each([
+    [GrpcBulletinCloseReason.ACKNOWLEDGED, BulletinCloseReason.Acknowledged],
+    [GrpcBulletinCloseReason.CLOSED, BulletinCloseReason.Closed],
+    [GrpcBulletinCloseReason.REPLACED, BulletinCloseReason.Replaced],
+    [GrpcBulletinCloseReason.SUPERSEDED, BulletinCloseReason.Superseded],
+  ])("translates %s", (grpcCloseReason, closeReason) => {
+    expect(grpcBulletinCloseReasonToBulletinCloseReason(grpcCloseReason)).toEqual(
+      closeReason,
+    )
+  })
+})
+
+describe("handleBulletinNotificationErrors", () => {
+  it("maps an invalid argument to a validation error without the grpc prefix", () => {
+    const error = handleBulletinNotificationErrors(
+      new Error("3 INVALID_ARGUMENT: too many user ids: 101"),
+    )
+    expect(error).toBeInstanceOf(InvalidArgumentNotificationsServiceError)
+    expect(error.message).toEqual("too many user ids: 101")
+    expect(error.level).not.toEqual("critical")
+  })
+
+  it("maps an unknown error to an unknown service error", () => {
+    expect(
+      handleBulletinNotificationErrors(new Error("13 INTERNAL: boom")),
+    ).toBeInstanceOf(UnknownNotificationsServiceError)
+  })
+})
+
+describe("handleCommonNotificationErrors", () => {
+  it("keeps an invalid argument as an unknown service error", () => {
+    expect(
+      handleCommonNotificationErrors(
+        new Error("3 INVALID_ARGUMENT: invalid fraction digits"),
+      ),
+    ).toBeInstanceOf(UnknownNotificationsServiceError)
+  })
 })

@@ -9,7 +9,7 @@ use sqlxmq::{job, CurrentJob, JobBuilder, JobRegistry, JobRunnerHandle};
 use tracing::instrument;
 use uuid::{uuid, Uuid};
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use job_executor::{JobExecutor, JobResult};
 
@@ -24,6 +24,17 @@ use send_email_notification::SendEmailNotificationData;
 use send_push_notification::SendPushNotificationData;
 
 const KICKOFF_LINK_EMAIL_REMINDER_ID: Uuid = uuid!("00000000-0000-0000-0000-000000000001");
+
+// Users whose notification was stored as superseded already have a newer send or a close
+// for the same bulletin key, so they must not get a push or email for the stale one.
+fn users_to_notify<'a>(
+    user_ids: &'a [GaloyUserId],
+    superseded_user_ids: &'a HashSet<GaloyUserId>,
+) -> impl Iterator<Item = &'a GaloyUserId> {
+    user_ids
+        .iter()
+        .filter(move |user_id| !superseded_user_ids.contains(*user_id))
+}
 
 pub async fn start_job_runner(
     pool: &sqlx::PgPool,
@@ -97,15 +108,16 @@ async fn all_user_event_dispatch(
             }
             let payload = data.payload.clone();
 
-            history.add_events(&mut tx, &ids, payload.clone()).await?;
+            let superseded_user_ids = history.add_events(&mut tx, &ids, payload.clone()).await?;
 
-            for user_id in ids {
+            for user_id in users_to_notify(&ids, &superseded_user_ids) {
                 if payload.should_send_email() {
                     spawn_send_email_notification(&mut tx, (user_id.clone(), payload.clone()))
                         .await?;
                 }
                 if payload.should_send_push() {
-                    spawn_send_push_notification(&mut tx, (user_id, payload.clone())).await?;
+                    spawn_send_push_notification(&mut tx, (user_id.clone(), payload.clone()))
+                        .await?;
                 }
             }
             Ok::<_, JobError>(JobResult::CompleteWithTx(tx))
@@ -224,9 +236,9 @@ async fn multi_user_event_dispatch(
 
             let payload = data.payload.clone();
 
-            history.add_events(&mut tx, ids, payload.clone()).await?;
+            let superseded_user_ids = history.add_events(&mut tx, ids, payload.clone()).await?;
 
-            for user_id in ids {
+            for user_id in users_to_notify(ids, &superseded_user_ids) {
                 if payload.should_send_email() {
                     spawn_send_email_notification(&mut tx, (user_id.clone(), payload.clone()))
                         .await?;
@@ -453,5 +465,30 @@ impl From<(Vec<GaloyUserId>, NotificationEventPayload)> for MultiUserEventDispat
             payload,
             tracing_data: HashMap::default(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn user_id(id: &str) -> GaloyUserId {
+        GaloyUserId::from(id.to_string())
+    }
+
+    #[test]
+    fn notifies_every_user_when_nothing_is_superseded() {
+        let user_ids = vec![user_id("a"), user_id("b")];
+        let superseded_user_ids = HashSet::new();
+        let notified = users_to_notify(&user_ids, &superseded_user_ids).collect::<Vec<_>>();
+        assert_eq!(notified, vec![&user_ids[0], &user_ids[1]]);
+    }
+
+    #[test]
+    fn skips_superseded_users() {
+        let user_ids = vec![user_id("a"), user_id("b"), user_id("c")];
+        let superseded_user_ids = HashSet::from([user_id("b")]);
+        let notified = users_to_notify(&user_ids, &superseded_user_ids).collect::<Vec<_>>();
+        assert_eq!(notified, vec![&user_ids[0], &user_ids[2]]);
     }
 }

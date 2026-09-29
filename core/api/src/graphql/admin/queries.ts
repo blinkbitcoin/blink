@@ -14,6 +14,7 @@ import MerchantsPendingApprovalQuery from "./root/query/merchants-pending-approv
 import InactiveMerchantsQuery from "./root/query/inactive-merchants-listing"
 import FilteredUserCountQuery from "./root/query/filtered-user-count"
 import MigrationFlowQuery from "./root/query/migration-flow"
+import NotificationBulletinsQuery from "./root/query/notification-bulletins"
 
 import { accessRules, extractFields, buildPermissionMappings } from "./access-rules"
 
@@ -49,6 +50,10 @@ export const queryFields = {
     },
     migrationFlow: {
       field: MigrationFlowQuery,
+      rule: accessRules.viewAccounts,
+    },
+    notificationBulletins: {
+      field: NotificationBulletinsQuery,
       rule: accessRules.viewAccounts,
     },
     wallet: {

@@ -15,6 +15,7 @@ export enum AdminAccessRight {
 
   // ADMIN-only: widen by adding it to a role, never by relaxing the mutation
   MIGRATION_RETRY_GRANT = "MIGRATION_RETRY_GRANT",
+  MANAGE_BULLETINS = "MANAGE_BULLETINS",
 }
 
 // Role types

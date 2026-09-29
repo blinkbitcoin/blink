@@ -84,6 +84,12 @@ getEmailCode() {
 
   exec_admin_graphql "" 'migration-retry-grant' '{"input": {"accountId": "test-id"}}'
   [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
+
+  exec_admin_graphql "" 'notification-bulletin-close' '{"input": {"userId": "test-id", "bulletinKey": "test-key"}}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
+
+  exec_admin_graphql "" 'notification-bulletins' '{"bulletinKey": "test-key", "userIds": ["test-id"]}'
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" || "$(graphql_output '.error.message')" == "Access credentials are invalid" ]] || exit 1
 }
 
 @test "empty_scope: access denied with empty scope token" {
@@ -481,3 +487,111 @@ getEmailCode() {
 
 # TODO: add check by email
 # TODO: business update map info
+
+marketing_bulletin_variables() {
+  jq -n \
+  --arg userId "$(read_value 'tester.user_id')" \
+  --arg bulletinKey "$1" \
+  --argjson dismissible "$2" \
+  '{
+    input: {
+      userIdsFilter: [$userId],
+      localizedNotificationContents: [
+        {
+          language: "en",
+          title: "Test title",
+          body: "test body"
+        }
+      ],
+      shouldSendPush: false,
+      shouldAddToHistory: true,
+      shouldAddToBulletin: true,
+      bulletinKey: $bulletinKey,
+      dismissible: $dismissible
+    }
+  }'
+}
+
+list_admin_check_bulletins() {
+  variables=$(
+    jq -n \
+    --arg userId "$(read_value 'tester.user_id')" \
+    '{bulletinKey: "system-admin-check", userIds: [$userId]}'
+  )
+  exec_admin_graphql "$(read_value 'admin.token')" 'notification-bulletins' "$variables"
+}
+
+admin_check_bulletin_is_listed() {
+  list_admin_check_bulletins
+  [[ "$(graphql_output '.data.notificationBulletins | length')" == "1" ]] || exit 1
+}
+
+@test "admin: can send a non dismissible bulletin with a system key" {
+  variables="$(marketing_bulletin_variables 'system-admin-check' false)"
+  exec_admin_graphql "$(read_value 'admin.token')" 'marketing-notification-trigger' "$variables"
+  [[ "$(graphql_output '.data.marketingNotificationTrigger.success')" == "true" ]] || exit 1
+}
+
+@test "admin: can list notification bulletins" {
+  retry 10 1 admin_check_bulletin_is_listed
+
+  list_admin_check_bulletins
+  [[ "$(graphql_output '.errors')" == "null" ]] || exit 1
+  [[ "$(graphql_output '.data.notificationBulletins[0].userId')" == "$(read_value 'tester.user_id')" ]] || exit 1
+  [[ "$(graphql_output '.data.notificationBulletins[0].closeReason')" == "null" ]] || exit 1
+}
+
+@test "admin: can close a notification bulletin" {
+  variables=$(
+    jq -n \
+    --arg userId "$(read_value 'tester.user_id')" \
+    '{input: {userId: $userId, bulletinKey: "system-admin-check"}}'
+  )
+  exec_admin_graphql "$(read_value 'admin.token')" 'notification-bulletin-close' "$variables"
+  [[ "$(graphql_output '.data.notificationBulletinClose.success')" == "true" ]] || exit 1
+
+  list_admin_check_bulletins
+  [[ "$(graphql_output '.data.notificationBulletins[0].closeReason')" == "CLOSED" ]] || exit 1
+}
+
+# MARKETING role - cannot close bulletins (missing MANAGE_BULLETINS)
+@test "marketing_user: cannot close notification bulletins (MANAGE_BULLETINS scope)" {
+  variables=$(
+    jq -n \
+    --arg userId "$(read_value 'tester.user_id')" \
+    '{input: {userId: $userId, bulletinKey: "marketing-check"}}'
+  )
+  exec_admin_graphql "$(read_value 'marketing_user.token')" 'notification-bulletin-close' "$variables"
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" ]] || exit 1
+}
+
+# MARKETING role - cannot list bulletins (missing VIEW_ACCOUNTS)
+@test "marketing_user: cannot list notification bulletins (VIEW_ACCOUNTS scope)" {
+  variables=$(
+    jq -n \
+    --arg userId "$(read_value 'tester.user_id')" \
+    '{bulletinKey: "marketing-check", userIds: [$userId]}'
+  )
+  exec_admin_graphql "$(read_value 'marketing_user.token')" 'notification-bulletins' "$variables"
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" ]] || exit 1
+}
+
+# MARKETING role - cannot use a system key (missing MANAGE_BULLETINS)
+@test "marketing_user: cannot send a bulletin with a system key (MANAGE_BULLETINS scope)" {
+  variables="$(marketing_bulletin_variables 'SYSTEM-marketing-check' true)"
+  exec_admin_graphql "$(read_value 'marketing_user.token')" 'marketing-notification-trigger' "$variables"
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" ]] || exit 1
+}
+
+# MARKETING role - cannot send non dismissible bulletins (missing MANAGE_BULLETINS)
+@test "marketing_user: cannot send a non dismissible bulletin (MANAGE_BULLETINS scope)" {
+  variables="$(marketing_bulletin_variables 'marketing-check' false)"
+  exec_admin_graphql "$(read_value 'marketing_user.token')" 'marketing-notification-trigger' "$variables"
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" ]] || exit 1
+}
+
+@test "marketing_user: can send a dismissible bulletin with a non system key" {
+  variables="$(marketing_bulletin_variables 'marketing-check' true)"
+  exec_admin_graphql "$(read_value 'marketing_user.token')" 'marketing-notification-trigger' "$variables"
+  [[ "$(graphql_output '.data.marketingNotificationTrigger.success')" == "true" ]] || exit 1
+}

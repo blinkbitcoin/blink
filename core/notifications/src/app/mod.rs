@@ -267,6 +267,9 @@ impl NotificationsApp {
         user_ids: HashSet<GaloyUserId>,
         marketing_notification: MarketingNotificationTriggered,
     ) -> Result<(), ApplicationError> {
+        if marketing_notification.has_bulletin_options_without_bulletin() {
+            return Err(ApplicationError::BulletinOptionsWithoutBulletin);
+        }
         let mut tx = self.pool.begin().await?;
         job::spawn_multi_user_event_dispatch(
             &mut tx,
@@ -341,6 +344,37 @@ impl NotificationsApp {
             .acknowledge_notification_for_user(user_id, notification_id)
             .await?;
         Ok(notification)
+    }
+
+    #[instrument(name = "app.close_bulletin", skip(self), err)]
+    pub async fn close_bulletin(
+        &self,
+        user_id: GaloyUserId,
+        bulletin_key: BulletinKey,
+    ) -> Result<(), ApplicationError> {
+        self.history
+            .close_bulletin_for_user(user_id, bulletin_key)
+            .await?;
+        Ok(())
+    }
+
+    #[instrument(name = "app.list_latest_bulletins", skip(self), err)]
+    pub async fn list_latest_bulletins(
+        &self,
+        user_ids: Vec<GaloyUserId>,
+        bulletin_key: BulletinKey,
+    ) -> Result<Vec<StatefulNotification>, ApplicationError> {
+        if user_ids.len() > LATEST_BULLETINS_MAX_USER_IDS {
+            return Err(ApplicationError::TooManyUserIds(user_ids.len()));
+        }
+        if user_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        let bulletins = self
+            .history
+            .list_latest_bulletins_for_users(&user_ids, &bulletin_key)
+            .await?;
+        Ok(bulletins)
     }
 
     #[instrument(
