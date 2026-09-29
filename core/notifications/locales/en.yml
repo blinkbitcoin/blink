@@ -1,0 +1,80 @@
+_version: 1
+
+circle_time_frame.month: " this month"
+circle_time_frame.all_time: ""
+
+circle_type.inner: "inner circle"
+circle_type.outer: "outer circle"
+
+circle_grew.title: "Your Blink Circles are growing!"
+circle_grew.body: "Somebody was just added to your %{circle_type}."
+
+circle_threshold_reached.inner.title: "Nice Inner Circle! 🤙"
+circle_threshold_reached.inner.body: "You have welcomed %{threshold} people to Blink%{time_frame}. Keep it up!"
+
+circle_threshold_reached.outer.title: "Outer Circle gains 💪"
+circle_threshold_reached.outer.body: "Your Outer Circle reached %{threshold} people. You are driving Bitcoin adoption!"
+
+identity_verification_approved.title: "Your identity has been verified!"
+identity_verification_approved.body: "The documents for your verification have been processed."
+
+identity_verification_declined.reason.documents_not_clear: "the uploaded documents were not clear"
+identity_verification_declined.reason.photo_not_clear: "the picture you submitted was not clear"
+identity_verification_declined.reason.documents_do_not_match: "the documents you submitted did not match your selfie and/or the information you provided"
+identity_verification_declined.reason.documents_expired: "the documents you submitted were expired"
+identity_verification_declined.reason.documents_not_supported: "the documents you submitted are not supported"
+identity_verification_declined.reason.other: "an error occurred, please contact support"
+identity_verification_declined.title: "Your identity could not be verified!"
+identity_verification_declined.body: "We were not able to process your documents because %{reason}."
+
+identity_verification_review_started.title: "Your verification is in process!"
+identity_verification_review_started.body: "We have received your documents and are processing them."
+
+transaction.intra_ledger_payment.title: "%{walletCurrency} Transaction"
+transaction.intra_ledger_payment.body: "Sent payment of %{formattedCurrencyAmount}"
+transaction.intra_ledger_payment.body_display_currency: "Sent payment of %{displayCurrencyAmount}  | %{formattedCurrencyAmount}"
+
+transaction.intra_ledger_receipt.title: "%{walletCurrency} Transaction"
+transaction.intra_ledger_receipt.body: "+%{formattedCurrencyAmount}"
+transaction.intra_ledger_receipt.body_display_currency: "+%{displayCurrencyAmount} | %{formattedCurrencyAmount}"
+
+transaction.onchain_payment.title: "%{walletCurrency} Transaction"
+transaction.onchain_payment.body_display_currency: "Sent onchain payment of %{displayCurrencyAmount} | %{formattedCurrencyAmount} confirmed"
+transaction.onchain_payment.body: "Sent onchain payment of %{formattedCurrencyAmount} confirmed"
+
+transaction.onchain_receipt.title: "%{walletCurrency} Transaction"
+transaction.onchain_receipt.body_display_currency: "+%{displayCurrencyAmount} | %{formattedCurrencyAmount}"
+transaction.onchain_receipt.body: "+%{formattedCurrencyAmount}"
+
+transaction.lightning_receipt.title: "%{walletCurrency} Transaction"
+transaction.lightning_receipt.body_display_currency: "+%{displayCurrencyAmount} | %{formattedCurrencyAmount}"
+transaction.lightning_receipt.body: "+%{formattedCurrencyAmount}"
+
+transaction.onchain_receipt_pending.title: "%{walletCurrency} Transaction | Pending"
+transaction.onchain_receipt_pending.body_display_currency: "pending +%{displayCurrencyAmount} | %{formattedCurrencyAmount}"
+transaction.onchain_receipt_pending.body: "pending +%{formattedCurrencyAmount}"
+
+transaction.paid_invoice.title: "%{walletCurrency} Transaction"
+transaction.paid_invoice.body: "+%{formattedCurrencyAmount}"
+transaction.paid_invoice.body_display_currency: "+%{displayCurrencyAmount} | %{formattedCurrencyAmount}"
+
+price_changed.up.title: "Bitcoin is on the move!"
+price_changed.up.body: "Bitcoin is up %{change_percent}% in the last day to %{price}!"
+
+price_changed.down.title: "Bitcoin is on the move!"
+price_changed.down.body: "Bitcoin is down %{change_percent}% in the last day to %{price}!"
+
+security.link_email_reminder.title: "Link Email to Secure Account"
+security.link_email_reminder.body: "Link your email to secure your account and receive important updates"
+
+migration_retry_ready.title: "Your migration is ready to retry"
+migration_retry_ready.body: "We've reset your migration so you can try again. Tap to continue moving your funds."
+
+inactivity_fee_notice.push.title: "Inactivity fee notice"
+inactivity_fee_notice.push.body: "Your Blink account has had no activity for 12 months. From %{date}, %{amount} per balance per month applies. Open Blink once to stay active — any fee charged is refunded in full."
+inactivity_fee_notice.bulletin.title: "Inactivity fee notice"
+inactivity_fee_notice.bulletin.body: "Inactivity fee: from %{date}, %{amount} per balance per month applies to this account. Use it once to stay active — any fee charged is refunded in full."
+
+inactivity_fee_welcome_back.title: "Welcome back"
+inactivity_fee_welcome_back.body: "Welcome back. Your account is active again and the inactivity fee of %{amount} has been refunded to your balance."
+inactivity_fee_welcome_back.body_both_amounts: "Welcome back. Your account is active again and the inactivity fee of %{btcAmount} and %{usdAmount} has been refunded to your balance."
