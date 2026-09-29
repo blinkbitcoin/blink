@@ -1,9 +1,15 @@
-import { OnChain, Lightning, Wallets, Payments, Merchants } from "@/app"
+import { OnChain, Lightning, Wallets, Payments, Merchants, InactivityFee } from "@/app"
 
 import { getCronConfig, TWO_MONTHS_IN_MS } from "@/config"
 
 import { ErrorLevel } from "@/domain/shared"
 import { OperationInterruptedError } from "@/domain/errors"
+import {
+  InactivityFeeNoticeOutcome,
+  InactivityFeeRunAccountErrorsError,
+  isFirstOfMonthUtc,
+  noticeRunId,
+} from "@/domain/inactivity-fee"
 
 import {
   addAttributesToCurrentSpan,
@@ -59,6 +65,39 @@ const removeInactiveMerchants = async () => {
   if (result instanceof Error) throw result
 }
 
+// Monthly, from the daily container: the UTC-1st gate lives here so no schedule changes.
+// Live whenever the task is registered (cronConfig.inactivityFeeJobsEnabled); dry-run is only
+// reachable through the on-demand runner in src/debug.
+export const inactivityFeeNoticeJob = async () => {
+  const asOf = new Date()
+  if (!isFirstOfMonthUtc({ date: asOf })) {
+    addAttributesToCurrentSpan({ "inactivityfee.notice.skipped": "not_first_of_month" })
+    return
+  }
+  const result = await InactivityFee.runNoticeJob({
+    asOf,
+    dryRun: false,
+    runId: noticeRunId({ asOf }),
+  })
+  if (result instanceof Error) throw result
+  warnOnRunErrors({
+    runId: result.runId,
+    errors: result.counts.byOutcome[InactivityFeeNoticeOutcome.Error],
+  })
+}
+
+// a Warn, not a throw: a failed task exits 99 and OnFailure reruns every daily task
+const warnOnRunErrors = ({ runId, errors }: { runId: string; errors?: number }) => {
+  if (!errors) return
+  recordExceptionInCurrentSpan({
+    error: new InactivityFeeRunAccountErrorsError(
+      `${runId}: ${errors} outcome(s) ended in error`,
+    ),
+    level: ErrorLevel.Warn,
+    attributes: { "inactivityfee.run.errors": String(errors) },
+  })
+}
+
 const main = async () => {
   console.log("cronjob started")
   const start = new Date()
@@ -82,6 +121,7 @@ const main = async () => {
     deleteLndPaymentsBefore2Months,
     deleteFailedPaymentsAttemptAllLnds,
     ...(cronConfig.removeInactiveMerchantsEnabled ? [removeInactiveMerchants] : []),
+    ...(cronConfig.inactivityFeeJobsEnabled ? [inactivityFeeNoticeJob] : []),
   ]
 
   const PROCESS_KILL_EVENTS = ["SIGTERM", "SIGINT"]
@@ -165,9 +205,11 @@ const main = async () => {
   process.exit(results.every((r) => r) ? 0 : 99)
 }
 
-try {
-  activateLndHealthCheck()
-  main()
-} catch (err) {
-  logger.warn({ err }, "error in the cron job")
+if (require.main === module) {
+  try {
+    activateLndHealthCheck()
+    main()
+  } catch (err) {
+    logger.warn({ err }, "error in the cron job")
+  }
 }

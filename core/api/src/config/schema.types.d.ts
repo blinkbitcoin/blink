@@ -263,6 +263,7 @@ type YamlSchema = {
   cronConfig: {
     rebalanceEnabled: boolean
     removeInactiveMerchantsEnabled: boolean
+    inactivityFeeJobsEnabled: boolean
   }
   captcha: {
     mandatory: boolean
