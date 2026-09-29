@@ -17,6 +17,8 @@ type AdminTriggerMarketingNotificationArgs = {
   shouldSendPush: boolean
   shouldAddToHistory: boolean
   shouldAddToBulletin: boolean
+  bulletinKey: string | undefined
+  dismissible: boolean
   icon?: Icon
   localizedNotificationContents: {
     title: string
@@ -28,4 +30,14 @@ type AdminTriggerMarketingNotificationArgs = {
 type AdminFilteredUserCountArgs = {
   userIdsFilter: string[] | undefined
   phoneCountryCodesFilter: string[] | undefined
+}
+
+type AdminCloseNotificationBulletinArgs = {
+  userId: string
+  bulletinKey: string
+}
+
+type AdminListNotificationBulletinsArgs = {
+  userIds: string[]
+  bulletinKey: string
 }

@@ -27,6 +27,10 @@ import {
   RemoveEmailAddressResponse,
   HandleNotificationEventRequest,
   HandleNotificationEventResponse,
+  CloseBulletinRequest,
+  CloseBulletinResponse,
+  ListLatestBulletinsRequest,
+  ListLatestBulletinsResponse,
 } from "./proto/notifications_pb"
 
 import { NOTIFICATIONS_HOST, NOTIFICATIONS_PORT } from "@/config"
@@ -107,3 +111,15 @@ export const handleNotificationEvent = promisify<
   Partial<CallOptions>,
   HandleNotificationEventResponse
 >(notificationsClient.handleNotificationEvent.bind(notificationsClient))
+
+export const closeBulletin = promisify<
+  CloseBulletinRequest,
+  Metadata,
+  CloseBulletinResponse
+>(notificationsClient.closeBulletin.bind(notificationsClient))
+
+export const listLatestBulletins = promisify<
+  ListLatestBulletinsRequest,
+  Metadata,
+  ListLatestBulletinsResponse
+>(notificationsClient.listLatestBulletins.bind(notificationsClient))

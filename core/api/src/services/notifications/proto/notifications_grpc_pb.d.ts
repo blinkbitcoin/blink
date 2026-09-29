@@ -19,6 +19,8 @@ interface INotificationsServiceService extends grpc.ServiceDefinition<grpc.Untyp
     updateEmailAddress: INotificationsServiceService_IUpdateEmailAddress;
     removeEmailAddress: INotificationsServiceService_IRemoveEmailAddress;
     handleNotificationEvent: INotificationsServiceService_IHandleNotificationEvent;
+    closeBulletin: INotificationsServiceService_ICloseBulletin;
+    listLatestBulletins: INotificationsServiceService_IListLatestBulletins;
 }
 
 interface INotificationsServiceService_IEnableNotificationChannel extends grpc.MethodDefinition<notifications_pb.EnableNotificationChannelRequest, notifications_pb.EnableNotificationChannelResponse> {
@@ -120,6 +122,24 @@ interface INotificationsServiceService_IHandleNotificationEvent extends grpc.Met
     responseSerialize: grpc.serialize<notifications_pb.HandleNotificationEventResponse>;
     responseDeserialize: grpc.deserialize<notifications_pb.HandleNotificationEventResponse>;
 }
+interface INotificationsServiceService_ICloseBulletin extends grpc.MethodDefinition<notifications_pb.CloseBulletinRequest, notifications_pb.CloseBulletinResponse> {
+    path: "/services.notifications.v1.NotificationsService/CloseBulletin";
+    requestStream: false;
+    responseStream: false;
+    requestSerialize: grpc.serialize<notifications_pb.CloseBulletinRequest>;
+    requestDeserialize: grpc.deserialize<notifications_pb.CloseBulletinRequest>;
+    responseSerialize: grpc.serialize<notifications_pb.CloseBulletinResponse>;
+    responseDeserialize: grpc.deserialize<notifications_pb.CloseBulletinResponse>;
+}
+interface INotificationsServiceService_IListLatestBulletins extends grpc.MethodDefinition<notifications_pb.ListLatestBulletinsRequest, notifications_pb.ListLatestBulletinsResponse> {
+    path: "/services.notifications.v1.NotificationsService/ListLatestBulletins";
+    requestStream: false;
+    responseStream: false;
+    requestSerialize: grpc.serialize<notifications_pb.ListLatestBulletinsRequest>;
+    requestDeserialize: grpc.deserialize<notifications_pb.ListLatestBulletinsRequest>;
+    responseSerialize: grpc.serialize<notifications_pb.ListLatestBulletinsResponse>;
+    responseDeserialize: grpc.deserialize<notifications_pb.ListLatestBulletinsResponse>;
+}
 
 export const NotificationsServiceService: INotificationsServiceService;
 
@@ -135,6 +155,8 @@ export interface INotificationsServiceServer extends grpc.UntypedServiceImplemen
     updateEmailAddress: grpc.handleUnaryCall<notifications_pb.UpdateEmailAddressRequest, notifications_pb.UpdateEmailAddressResponse>;
     removeEmailAddress: grpc.handleUnaryCall<notifications_pb.RemoveEmailAddressRequest, notifications_pb.RemoveEmailAddressResponse>;
     handleNotificationEvent: grpc.handleUnaryCall<notifications_pb.HandleNotificationEventRequest, notifications_pb.HandleNotificationEventResponse>;
+    closeBulletin: grpc.handleUnaryCall<notifications_pb.CloseBulletinRequest, notifications_pb.CloseBulletinResponse>;
+    listLatestBulletins: grpc.handleUnaryCall<notifications_pb.ListLatestBulletinsRequest, notifications_pb.ListLatestBulletinsResponse>;
 }
 
 export interface INotificationsServiceClient {
@@ -171,6 +193,12 @@ export interface INotificationsServiceClient {
     handleNotificationEvent(request: notifications_pb.HandleNotificationEventRequest, callback: (error: grpc.ServiceError | null, response: notifications_pb.HandleNotificationEventResponse) => void): grpc.ClientUnaryCall;
     handleNotificationEvent(request: notifications_pb.HandleNotificationEventRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: notifications_pb.HandleNotificationEventResponse) => void): grpc.ClientUnaryCall;
     handleNotificationEvent(request: notifications_pb.HandleNotificationEventRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: notifications_pb.HandleNotificationEventResponse) => void): grpc.ClientUnaryCall;
+    closeBulletin(request: notifications_pb.CloseBulletinRequest, callback: (error: grpc.ServiceError | null, response: notifications_pb.CloseBulletinResponse) => void): grpc.ClientUnaryCall;
+    closeBulletin(request: notifications_pb.CloseBulletinRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: notifications_pb.CloseBulletinResponse) => void): grpc.ClientUnaryCall;
+    closeBulletin(request: notifications_pb.CloseBulletinRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: notifications_pb.CloseBulletinResponse) => void): grpc.ClientUnaryCall;
+    listLatestBulletins(request: notifications_pb.ListLatestBulletinsRequest, callback: (error: grpc.ServiceError | null, response: notifications_pb.ListLatestBulletinsResponse) => void): grpc.ClientUnaryCall;
+    listLatestBulletins(request: notifications_pb.ListLatestBulletinsRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: notifications_pb.ListLatestBulletinsResponse) => void): grpc.ClientUnaryCall;
+    listLatestBulletins(request: notifications_pb.ListLatestBulletinsRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: notifications_pb.ListLatestBulletinsResponse) => void): grpc.ClientUnaryCall;
 }
 
 export class NotificationsServiceClient extends grpc.Client implements INotificationsServiceClient {
@@ -208,4 +236,10 @@ export class NotificationsServiceClient extends grpc.Client implements INotifica
     public handleNotificationEvent(request: notifications_pb.HandleNotificationEventRequest, callback: (error: grpc.ServiceError | null, response: notifications_pb.HandleNotificationEventResponse) => void): grpc.ClientUnaryCall;
     public handleNotificationEvent(request: notifications_pb.HandleNotificationEventRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: notifications_pb.HandleNotificationEventResponse) => void): grpc.ClientUnaryCall;
     public handleNotificationEvent(request: notifications_pb.HandleNotificationEventRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: notifications_pb.HandleNotificationEventResponse) => void): grpc.ClientUnaryCall;
+    public closeBulletin(request: notifications_pb.CloseBulletinRequest, callback: (error: grpc.ServiceError | null, response: notifications_pb.CloseBulletinResponse) => void): grpc.ClientUnaryCall;
+    public closeBulletin(request: notifications_pb.CloseBulletinRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: notifications_pb.CloseBulletinResponse) => void): grpc.ClientUnaryCall;
+    public closeBulletin(request: notifications_pb.CloseBulletinRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: notifications_pb.CloseBulletinResponse) => void): grpc.ClientUnaryCall;
+    public listLatestBulletins(request: notifications_pb.ListLatestBulletinsRequest, callback: (error: grpc.ServiceError | null, response: notifications_pb.ListLatestBulletinsResponse) => void): grpc.ClientUnaryCall;
+    public listLatestBulletins(request: notifications_pb.ListLatestBulletinsRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: notifications_pb.ListLatestBulletinsResponse) => void): grpc.ClientUnaryCall;
+    public listLatestBulletins(request: notifications_pb.ListLatestBulletinsRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: notifications_pb.ListLatestBulletinsResponse) => void): grpc.ClientUnaryCall;
 }

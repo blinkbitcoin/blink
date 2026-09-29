@@ -1,11 +1,16 @@
 export * from "./errors"
 import { checkedToNonEmptyLanguage } from "../users"
+import { checkedToUserId } from "../accounts"
 
 import {
   InvalidNotificationBodyError,
   InvalidNotificationCategoryError,
   InvalidNotificationTitleError,
   DuplicateLocalizedNotificationContentError,
+  InvalidBulletinKeyError,
+  BulletinOptionsWithoutBulletinError,
+  NonDismissibleBulletinWithoutSystemKeyError,
+  TooManyBulletinUserIdsError,
 } from "./errors"
 
 export const NotificationType = {
@@ -200,4 +205,96 @@ export const checkedToLocalizedNotificationContentsMap = (
   }
 
   return map
+}
+
+export const BulletinCloseReason = {
+  Acknowledged: "Acknowledged",
+  Closed: "Closed",
+  Replaced: "Replaced",
+  Superseded: "Superseded",
+} as const
+
+// Mirrored in core/notifications/src/primitives.rs (BULLETIN_KEY_MAX_LENGTH)
+export const BulletinKeyMaxLength = 100
+// Mirrored in core/notifications/src/primitives.rs (LATEST_BULLETINS_MAX_USER_IDS)
+export const NotificationBulletinsMaxUserIds = 100
+export const BulletinKeyRegex = /^[a-z0-9]+(?:[-_][a-z0-9]+)*$/
+export const SystemBulletinKeyRegex = /^system(?:[-_]|$)/
+
+export const isSystemBulletinKey = (bulletinKey: BulletinKey): boolean =>
+  SystemBulletinKeyRegex.test(bulletinKey)
+
+export const requiresBulletinManagement = ({
+  bulletinKey,
+  dismissible,
+}: {
+  bulletinKey: BulletinKey | undefined
+  dismissible: boolean
+}): boolean => {
+  const hasSystemBulletinKey = !!bulletinKey && isSystemBulletinKey(bulletinKey)
+  return hasSystemBulletinKey || !dismissible
+}
+
+export const checkedToBulletinKey = (key: string): BulletinKey | ValidationError => {
+  const normalizedKey = (key || "").trim().toLowerCase()
+  const hasValidLength = normalizedKey.length <= BulletinKeyMaxLength
+  const isValidKey = hasValidLength && BulletinKeyRegex.test(normalizedKey)
+  if (!isValidKey) {
+    return new InvalidBulletinKeyError(`Invalid bulletin key: ${key}`)
+  }
+  return normalizedKey as BulletinKey
+}
+
+export const checkedBulletinOptions = ({
+  shouldAddToBulletin,
+  shouldAddToHistory,
+  bulletinKey,
+  dismissible,
+}: {
+  shouldAddToBulletin: boolean
+  shouldAddToHistory: boolean
+  bulletinKey: string | undefined | null
+  dismissible: boolean
+}): BulletinOptions | ValidationError => {
+  const hasBulletinOptions = !!bulletinKey || !dismissible
+  const isStoredAsBulletin = shouldAddToBulletin && shouldAddToHistory
+  if (hasBulletinOptions && !isStoredAsBulletin) {
+    return new BulletinOptionsWithoutBulletinError(
+      "bulletinKey and dismissible require shouldAddToBulletin and shouldAddToHistory",
+    )
+  }
+
+  const checkedBulletinKey = bulletinKey ? checkedToBulletinKey(bulletinKey) : undefined
+  if (checkedBulletinKey instanceof Error) return checkedBulletinKey
+
+  // Only system keys are out of reach of marketing sends, so a bulletin the user cannot
+  // dismiss must use one, or a marketing send with the same key could replace it
+  const hasSystemBulletinKey =
+    !!checkedBulletinKey && isSystemBulletinKey(checkedBulletinKey)
+  if (!dismissible && !hasSystemBulletinKey) {
+    return new NonDismissibleBulletinWithoutSystemKeyError(
+      `dismissible false requires a bulletin key starting with system-, got: ${bulletinKey}`,
+    )
+  }
+
+  return { bulletinKey: checkedBulletinKey, dismissible }
+}
+
+export const checkedToBulletinUserIds = (
+  userIds: string[],
+): UserId[] | ValidationError => {
+  const uniqueUserIds = [...new Set(userIds)]
+  if (uniqueUserIds.length > NotificationBulletinsMaxUserIds) {
+    return new TooManyBulletinUserIdsError(
+      `At most ${NotificationBulletinsMaxUserIds} user ids are allowed, got ${uniqueUserIds.length}`,
+    )
+  }
+
+  const checkedUserIds: UserId[] = []
+  for (const userId of uniqueUserIds) {
+    const checkedUserId = checkedToUserId(userId)
+    if (checkedUserId instanceof Error) return checkedUserId
+    checkedUserIds.push(checkedUserId)
+  }
+  return checkedUserIds
 }

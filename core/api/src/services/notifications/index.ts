@@ -1,6 +1,7 @@
 import {
   deepLinkActionToGrpcDeepLinkAction,
   deepLinkScreenToGrpcDeepLinkScreen,
+  grpcBulletinToNotificationBulletin,
   grpcNotificationSettingsToNotificationSettings,
   iconToGrpcIcon,
   notificationCategoryToGrpcNotificationCategory,
@@ -30,11 +31,16 @@ import {
   DeepLink as ProtoDeepLink,
   HandleNotificationEventResponse,
   Action,
+  CloseBulletinRequest,
+  ListLatestBulletinsRequest,
 } from "./proto/notifications_pb"
 
 import * as notificationsGrpc from "./grpc-client"
 
-import { handleCommonNotificationErrors } from "./errors"
+import {
+  handleBulletinNotificationErrors,
+  handleCommonNotificationErrors,
+} from "./errors"
 
 import {
   getCallbackServiceConfig,
@@ -634,6 +640,8 @@ export const NotificationsService = (): INotificationsService => {
     shouldSendPush,
     shouldAddToHistory,
     shouldAddToBulletin,
+    bulletinKey,
+    dismissible,
     icon,
   }: TriggerMarketingNotificationArgs): Promise<true | NotificationsServiceError> => {
     try {
@@ -680,6 +688,8 @@ export const NotificationsService = (): INotificationsService => {
         marketingNotification.setShouldSendPush(shouldSendPush)
         marketingNotification.setShouldAddToHistory(shouldAddToHistory)
         marketingNotification.setShouldAddToBulletin(shouldAddToBulletin)
+        if (bulletinKey) marketingNotification.setBulletinKey(bulletinKey)
+        marketingNotification.setDismissible(dismissible)
 
         const event = new NotificationEvent()
         event.setMarketingNotificationTriggered(marketingNotification)
@@ -700,7 +710,59 @@ export const NotificationsService = (): INotificationsService => {
 
       return true
     } catch (err) {
-      return handleCommonNotificationErrors(err)
+      return handleBulletinNotificationErrors(err)
+    }
+  }
+
+  const closeBulletin = async ({
+    userId,
+    bulletinKey,
+  }: {
+    userId: UserId
+    bulletinKey: BulletinKey
+  }): Promise<true | NotificationsServiceError> => {
+    try {
+      const request = new CloseBulletinRequest()
+      request.setUserId(userId)
+      request.setBulletinKey(bulletinKey)
+
+      await notificationsGrpc.closeBulletin(
+        request,
+        notificationsGrpc.notificationsMetadata,
+      )
+      return true
+    } catch (err) {
+      return handleBulletinNotificationErrors(err)
+    }
+  }
+
+  const listLatestBulletins = async ({
+    userIds,
+    bulletinKey,
+  }: {
+    userIds: UserId[]
+    bulletinKey: BulletinKey
+  }): Promise<NotificationBulletin[] | NotificationsServiceError> => {
+    try {
+      const request = new ListLatestBulletinsRequest()
+      request.setUserIdsList(userIds)
+      request.setBulletinKey(bulletinKey)
+
+      const response = await notificationsGrpc.listLatestBulletins(
+        request,
+        notificationsGrpc.notificationsMetadata,
+      )
+      const bulletins = response
+        .getBulletinsList()
+        .map(grpcBulletinToNotificationBulletin)
+      const invalidBulletin = bulletins.find((bulletin) => bulletin instanceof Error)
+      if (invalidBulletin instanceof Error) return invalidBulletin
+
+      return bulletins.filter(
+        (bulletin): bulletin is NotificationBulletin => !(bulletin instanceof Error),
+      )
+    } catch (err) {
+      return handleBulletinNotificationErrors(err)
     }
   }
 
@@ -825,6 +887,8 @@ export const NotificationsService = (): INotificationsService => {
         removeEmailAddress,
         removePushDeviceToken,
         sendMigrationRetryReady,
+        closeBulletin,
+        listLatestBulletins,
         sendInactivityFeeNotice,
         sendInactivityFeeWelcomeBack,
       },

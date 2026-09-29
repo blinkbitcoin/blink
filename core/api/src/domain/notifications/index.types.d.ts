@@ -153,6 +153,16 @@ interface INotificationsService {
   triggerMarketingNotification(
     args: TriggerMarketingNotificationArgs,
   ): Promise<true | NotificationsServiceError>
+
+  closeBulletin(args: {
+    userId: UserId
+    bulletinKey: BulletinKey
+  }): Promise<true | NotificationsServiceError>
+
+  listLatestBulletins(args: {
+    userIds: UserId[]
+    bulletinKey: BulletinKey
+  }): Promise<NotificationBulletin[] | NotificationsServiceError>
 }
 
 type TriggerMarketingNotificationArgs = {
@@ -173,6 +183,28 @@ type TriggerMarketingNotificationArgs = {
   shouldSendPush: boolean
   shouldAddToHistory: boolean
   shouldAddToBulletin: boolean
+  bulletinKey: BulletinKey | undefined
+  dismissible: boolean
   icon?: Icon
   localizedContents: Map<UserLanguage, LocalizedNotificationContent>
+}
+
+type BulletinKey = string & { readonly brand: unique symbol }
+
+type NotificationBulletinId = string & { readonly brand: unique symbol }
+
+type BulletinCloseReason =
+  (typeof import("./index").BulletinCloseReason)[keyof typeof import("./index").BulletinCloseReason]
+
+type NotificationBulletin = {
+  id: NotificationBulletinId
+  userId: UserId
+  createdAt: Date
+  acknowledgedAt: Date | undefined
+  closeReason: BulletinCloseReason | undefined
+}
+
+type BulletinOptions = {
+  bulletinKey: BulletinKey | undefined
+  dismissible: boolean
 }
