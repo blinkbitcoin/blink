@@ -1,9 +1,9 @@
 #@ load("@ytt:data", "data")
 
-#@ galoy_api_image_digest = "sha256@c4337dbeec6f996a343e8840c0b93fd891c4799c8cf4fa7f7812b861bc242f27"
-#@ galoy_trigger_image_digest = "sha256@01fdfc81a40713e60e4b9987aef0fdc4d3ed782da52a3d1cbb25499f9dfc4416"
-#@ mongodb_migrate_image_digest = "sha256@fd79588ddda1cb51bdcf58d28c3aa928e21fc08e2a5184c6b34b54d0b825d74f"
-#@ galoy_notifications_image_digest = "sha256@fb53a501512c1a6ad7921f7432d1e107c562bdf12ee762de5dcc0479b747d704"
+#@ galoy_api_image_digest = "sha256@33e15a7db294c433761ad202fcdb7ba771a5c7c2e2bda5a3b3a1da442ecffe59"
+#@ galoy_trigger_image_digest = "sha256@4f12202130019c716927e405e7b45a144c66a3804c0cffe3b582d78aaed64aed"
+#@ mongodb_migrate_image_digest = "sha256@30a598b3e20d4fb5bb34441cb5b9af11f88c4a25b9ec0c907d4ac045cf3b3170"
+#@ galoy_notifications_image_digest = "sha256@2614f37a34eebc871e9aae7eb5be668b9e89cd36fdddc76c628ce46d01fc9bf2"
 #@ galoy_api_keys_image_digest = "sha256@4b0b7bee8441dfaf623a1693dd60e24669db0b9e37baa30ecd8925cbe6590a1e"
 
 #@ core_env = [
