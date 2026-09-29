@@ -197,7 +197,6 @@ jobs:
             params:
               skip_download: true
           - get: charts-repo
-            params: { skip_download: true }
       - task: bump-image-digest-in-values
         config:
           platform: linux
