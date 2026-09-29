@@ -5,7 +5,9 @@
 # zero-balance skip. The runner bypasses the cron gate, which is pinned by unit tests.
 #
 # Every authenticated call runs the session middleware, which rewrites the caller's
-# last_activity_at to now: back-date the clock again right before each run that must scan alice.
+# last_activity_at to now and, when the previous value was dormant, reactivates the account
+# (retiring its notice): back-date the clock right before each run that must scan alice, and
+# expect no active row to survive her first authenticated call.
 
 load "../../helpers/_common.bash"
 load "../../helpers/cli.bash"
@@ -106,6 +108,12 @@ csv_outcome_for() {
   [[ -z "$(csv_outcome_for "$csv" "$bob_account_id")" ]] || exit 1
   [[ "$(active_notice_count "$bob_account_id")" -eq 0 ]] || exit 1
 
+  # a second run the same day finds the live row and writes nothing
+  csv="$(run_notice_job_live)"
+  [[ "$(csv_outcome_for "$csv" "$account_id")" = "already_noticed" ]] || exit 1
+  [[ "$(active_notice_count "$account_id")" -eq 1 ]] || exit 1
+
+  # the poll below is alice's first authenticated request since the notice: it reactivates her
   local title
   for i in {1..15}; do
     exec_graphql "$ALICE" 'list-unacknowledged-stateful-notifications-with-bulletin-enabled'
@@ -118,22 +126,19 @@ csv_outcome_for() {
   body=$(graphql_output '.data.me.unacknowledgedStatefulNotificationsWithBulletinEnabled.nodes[0].body')
   [[ "$body" == "Inactivity fee: from "* ]] || exit 1
 
-  # the bulletin poll above refreshed alice's clock; today's issuedAt is still newer than the
-  # back-dated value, so a second run the same day finds the live row and writes nothing
-  back_date_clock_13_months "$account_id"
-  csv="$(run_notice_job_live)"
-  [[ "$(csv_outcome_for "$csv" "$account_id")" = "already_noticed" ]] || exit 1
-  [[ "$(active_notice_count "$account_id")" -eq 1 ]] || exit 1
+  # noticed, never charged: the notice is retired on return and nothing is refunded
+  [[ "$(active_notice_count "$account_id")" -eq 0 ]] || exit 1
+  [[ "$(mongo_cli "db.inactivityfeenotices.countDocuments({accountId:'${account_id}',status:'superseded',supersededReason:'reactivation'})")" -eq 1 ]] || exit 1
 }
 
 @test "inactivity-fee-notices: a stale active row is superseded and a fresh one inserted" {
   local account_id
   account_id="$(read_value "$ALICE.account_id")"
 
-  # older than the 13-month-old clock: isNoticeLive rejects it
+  # an issued active row older than the 13-month-old clock: isNoticeLive rejects it
   local fourteen_months_ago
   fourteen_months_ago="$(date -u -d '14 months ago' +%Y-%m-%dT%H:%M:%SZ)"
-  mongo_cli "db.inactivityfeenotices.updateOne({accountId:'${account_id}',status:'active'},{\$set:{issuedAt:ISODate('${fourteen_months_ago}')}})"
+  mongo_cli "db.inactivityfeenotices.insertOne({accountId:'${account_id}',issuedAt:ISODate('${fourteen_months_ago}'),templateVersion:'notice-v1',bulletinIssued:true,pushSent:false,status:'active',source:'notice-job',createdAt:ISODate(),updatedAt:ISODate()})"
   back_date_clock_13_months "$account_id"
 
   csv="$(run_notice_job_live)"

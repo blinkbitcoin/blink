@@ -358,6 +358,23 @@ const toRegistrationDeny = (config = yamlConfig) =>
       .filter((c): c is RestrictedCountry => c !== undefined),
   })
 
+// a wait at or above the budget would turn every contended reactivation into a budget timeout
+const reactivationLockWaitBelowBudget = ({
+  reactivationLockWaitMs,
+  reactivationBudgetMs,
+}: {
+  reactivationLockWaitMs: number
+  reactivationBudgetMs: number
+}): number => {
+  if (reactivationLockWaitMs >= reactivationBudgetMs) {
+    throw new ConfigError(
+      "inactivityFee.reactivationLockWaitMs must be below reactivationBudgetMs",
+      { reactivationLockWaitMs, reactivationBudgetMs },
+    )
+  }
+  return reactivationLockWaitMs
+}
+
 const toInactivityFeeConfig = (config: YamlSchema): InactivityFeeConfig => ({
   activityRefreshIntervalSec: toSeconds(config.inactivityFee.activityRefreshIntervalSec),
   liveCharging: config.inactivityFee.liveCharging,
@@ -376,6 +393,8 @@ const toInactivityFeeConfig = (config: YamlSchema): InactivityFeeConfig => ({
     "inactivityFee.level0Deadline",
     config.inactivityFee.level0Deadline,
   ),
+  reactivationLockWaitMs: reactivationLockWaitBelowBudget(config.inactivityFee),
+  reactivationBudgetMs: config.inactivityFee.reactivationBudgetMs,
 })
 
 // resolved once at startup so an invalid value fails the process, not a request

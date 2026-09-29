@@ -27,6 +27,7 @@
     "dev:api-ws-server": "tsx src/servers/ws-server.ts",
     "dev:cron": "tsx src/servers/cron.ts",
     "dev:inactivity-fee-job": "tsx src/debug/inactivity-fee-run-job.ts",
+    "dev:inactivity-fee-seed-debit": "tsx src/debug/inactivity-fee-seed-debit.ts",
     "migrate:create": "migrate-mongo create $MIGRATION_NAME -f src/migrations/migrate-mongo-config.js",
     "migrate:status": "migrate-mongo status -f src/migrations/migrate-mongo-config.js",
     "migrate:up": "migrate-mongo up -f src/migrations/migrate-mongo-config.js",

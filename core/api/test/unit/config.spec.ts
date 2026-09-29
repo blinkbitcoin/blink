@@ -121,7 +121,63 @@ describe("config.ts", () => {
         skipAccountIds: [],
         notPermittedCountries: [],
         level0Deadline: new Date("2026-10-31T22:59:59Z"),
+        reactivationLockWaitMs: 1500,
+        reactivationBudgetMs: 5000,
       })
+    })
+
+    it("reads the reactivation lock wait and time budget", () => {
+      withCustomYaml(
+        { inactivityFee: { reactivationLockWaitMs: 0, reactivationBudgetMs: 30000 } },
+        () => {
+          const {
+            getInactivityFeeConfig: getConfiguredInactivityFeeConfig,
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+          } = require("@/config")
+          const configured = getConfiguredInactivityFeeConfig()
+          expect(configured.reactivationLockWaitMs).toBe(0)
+          expect(configured.reactivationBudgetMs).toBe(30000)
+        },
+      )
+    })
+
+    it.each([
+      [5000, 5000],
+      [6000, 5000],
+    ])(
+      "refuses a lock wait of %i ms against a budget of %i ms at startup",
+      (wait, budget) => {
+        expect(() =>
+          withCustomYaml(
+            {
+              inactivityFee: {
+                reactivationLockWaitMs: wait,
+                reactivationBudgetMs: budget,
+              },
+            },
+            () => {
+              // eslint-disable-next-line @typescript-eslint/no-require-imports
+              const loaded = require("@/config")
+              expect(loaded).toBeDefined()
+            },
+          ),
+        ).toThrow("reactivationLockWaitMs must be below reactivationBudgetMs")
+      },
+    )
+
+    it.each([
+      ["reactivationLockWaitMs", -1],
+      ["reactivationLockWaitMs", 10001],
+      ["reactivationBudgetMs", 99],
+      ["reactivationBudgetMs", 30001],
+    ])("refuses %s = %i at startup", (key, value) => {
+      expect(() =>
+        withCustomYaml({ inactivityFee: { [key]: value } }, () => {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const loaded = require("@/config")
+          expect(loaded).toBeDefined()
+        }),
+      ).toThrow("Invalid yaml configuration")
     })
 
     it("refuses an inactivity fee above 500 cents at startup", () => {

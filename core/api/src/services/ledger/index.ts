@@ -47,6 +47,9 @@ import {
 export { getNonEndUserWalletIds } from "./caching"
 export { translateToLedgerJournal } from "./helpers"
 
+// the voided original and its reversal (which carries `_original_journal`) are both absent
+const notVoided = { voided: { $ne: true }, _original_journal: { $exists: false } }
+
 export const lazyLoadLedgerAdmin = ({
   bankOwnerWalletResolver,
   dealerBtcWalletResolver,
@@ -157,6 +160,26 @@ export const LedgerService = (): ILedgerService => {
         external_id: externalId,
       })
       return entry ? translateToLedgerTx(entry) : undefined
+    } catch (err) {
+      return new UnknownLedgerError(err)
+    }
+  }
+
+  const listInactivityFeeTransactionsByWalletId = async (
+    walletId: WalletId,
+  ): Promise<LedgerTransaction<WalletCurrency>[] | LedgerServiceError> => {
+    try {
+      const entries = await Transaction.find({
+        accounts: toLiabilitiesWalletId(walletId),
+        type: {
+          $in: [
+            LedgerTransactionType.InactivityFee,
+            LedgerTransactionType.InactivityFeeRefund,
+          ],
+        },
+        ...notVoided,
+      })
+      return entries.map((tx) => translateToLedgerTx(tx))
     } catch (err) {
       return new UnknownLedgerError(err)
     }
@@ -574,6 +597,7 @@ export const LedgerService = (): ILedgerService => {
       getTransactionForWalletById,
       getTransactionForWalletByJournalId,
       getTransactionForWalletByExternalId,
+      listInactivityFeeTransactionsByWalletId,
       getTransactionsByHash,
       getTransactionsForWalletByPaymentHash,
       getTransactionsByWalletId,

@@ -1,5 +1,6 @@
 export * from "./get-transactions"
 export * from "./intraledger"
+export * from "./inactivity-fee"
 export * from "./offchain-receive"
 export * from "./offchain-send"
 export * from "./onchain-receive"

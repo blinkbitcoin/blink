@@ -308,6 +308,16 @@ dev_pnpm_task_binary(
   env_json = "//dev:serve_env",
 )
 
+# test fixture: seeds inactivity-fee debits for the refund e2e; regtest only
+dev_pnpm_task_binary(
+  name = "dev-inactivity-fee-seed-debit",
+  command = "dev:inactivity-fee-seed-debit",
+  srcs = [":src"],
+  deps = ["//:node_modules"],
+  visibility = ["PUBLIC"],
+  env_json = "//dev:serve_env",
+)
+
 dev_pnpm_task_binary(
   name = "watch-compile",
   command = "watch:compile",
