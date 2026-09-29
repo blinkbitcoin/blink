@@ -32,6 +32,7 @@ export const recordInactivityFee = async ({
   amount,
   externalId,
   metadata: provenance,
+  display,
 }: RecordInactivityFeeArgs): Promise<
   LedgerJournal | ValidationError | LedgerServiceError
 > => {
@@ -56,7 +57,7 @@ export const recordInactivityFee = async ({
     debitAccountAdditionalMetadata,
     creditAccountAdditionalMetadata,
     internalAccountsAdditionalMetadata,
-  } = InactivityFeeLedgerMetadata({ amount, memo, provenance })
+  } = InactivityFeeLedgerMetadata({ amount, memo, display, provenance })
 
   return recordIntraledger({
     description: memo,
@@ -71,12 +72,14 @@ export const recordInactivityFee = async ({
   })
 }
 
-// the only poster of `inactivity_fee_refund`: bankowner → user wallet, the debit's exact amounts
+// the only poster of `inactivity_fee_refund`: bankowner → user wallet, in the amounts the caller
+// sizes (the debit's own, or its cents repriced at refund time for a Dollar Balance)
 export const recordInactivityFeeRefund = async ({
   walletDescriptor,
   amount,
   externalId,
   metadata: provenance,
+  display,
 }: RecordInactivityFeeRefundArgs): Promise<
   LedgerJournal | ValidationError | LedgerServiceError
 > => {
@@ -100,7 +103,7 @@ export const recordInactivityFeeRefund = async ({
     debitAccountAdditionalMetadata,
     creditAccountAdditionalMetadata,
     internalAccountsAdditionalMetadata,
-  } = InactivityFeeRefundLedgerMetadata({ amount, memo, provenance })
+  } = InactivityFeeRefundLedgerMetadata({ amount, memo, display, provenance })
 
   return recordIntraledger({
     description: memo,

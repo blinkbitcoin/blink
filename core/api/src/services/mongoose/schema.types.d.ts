@@ -307,6 +307,13 @@ interface InactivityFeeRunRecord {
   countsByOutcome: Record<string, number>
   countsBySkipReason: Record<string, number>
   error?: string
+  rate?: number
+  rateSource?: string
+  debitedCount?: number
+  debitedSats?: number
+  debitedCents?: number
+  firstExternalIdSeen?: string
+  lastExternalIdSeen?: string
   createdAt: Date
 }
 

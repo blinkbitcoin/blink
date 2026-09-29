@@ -25,19 +25,27 @@ const tx = (args: {
   wallet?: WalletId | undefined
   satsAmount?: number
   centsAmount?: number
+  currency?: WalletCurrency
 }): LedgerTransaction<WalletCurrency> => {
-  const { type, externalId, satsAmount = 1289, centsAmount = 100 } = args
+  const {
+    type,
+    externalId,
+    satsAmount = 1289,
+    centsAmount = 100,
+    currency = WalletCurrency.Btc,
+  } = args
   // an explicit undefined is a row with no wallet, not the default
   const wallet = "wallet" in args ? args.wallet : walletId
   nextId += 1
   const isDebit = type === LedgerTransactionType.InactivityFee
+  const walletUnits = currency === WalletCurrency.Btc ? satsAmount : centsAmount
   return {
     id: `tx-${nextId}` as LedgerTransactionId,
     walletId: wallet,
     type,
-    debit: (isDebit ? satsAmount : 0) as Satoshis,
-    credit: (isDebit ? 0 : satsAmount) as Satoshis,
-    currency: WalletCurrency.Btc,
+    debit: (isDebit ? walletUnits : 0) as Satoshis,
+    credit: (isDebit ? 0 : walletUnits) as Satoshis,
+    currency,
     timestamp: new Date("2026-10-15T00:00:00Z"),
     pendingConfirmation: false,
     journalId: `journal-${nextId}` as LedgerJournalId,
@@ -366,6 +374,82 @@ describe("unpairedDebits", () => {
     expect(unpairedDebits({ transactions: [debit, partial] })).toEqual({
       unpaired: [],
       malformed: [debit],
+    })
+  })
+
+  describe("a Dollar Balance, whose refund is repriced at refund time", () => {
+    const usdRow = (
+      type: LedgerTransactionType,
+      { satsAmount, centsAmount }: { satsAmount: number; centsAmount: number },
+    ) =>
+      tx({
+        type,
+        externalId:
+          type === LedgerTransactionType.InactivityFee
+            ? `ifee_${walletId}_2026-10`
+            : `ifee_refund_${walletId}_2026-10`,
+        satsAmount,
+        centsAmount,
+        currency: WalletCurrency.Usd,
+      })
+
+    it("pairs a refund of the debit's cents whatever sats it was priced at", () => {
+      const debit = usdRow(LedgerTransactionType.InactivityFee, {
+        satsAmount: 1289,
+        centsAmount: 100,
+      })
+      const repriced = usdRow(LedgerTransactionType.InactivityFeeRefund, {
+        satsAmount: 1500,
+        centsAmount: 100,
+      })
+
+      expect(unpairedDebits({ transactions: [debit, repriced] })).toEqual({
+        unpaired: [],
+        malformed: [],
+      })
+    })
+
+    it("hands the debit back when its refund carries other cents", () => {
+      const debit = usdRow(LedgerTransactionType.InactivityFee, {
+        satsAmount: 1289,
+        centsAmount: 100,
+      })
+      const partial = usdRow(LedgerTransactionType.InactivityFeeRefund, {
+        satsAmount: 1289,
+        centsAmount: 60,
+      })
+
+      expect(unpairedDebits({ transactions: [debit, partial] })).toEqual({
+        unpaired: [],
+        malformed: [debit],
+      })
+    })
+
+    it("still holds a Bitcoin Balance refund to the debit's sats", () => {
+      const debit = fee("2026-10")
+      const repriced = tx({
+        type: LedgerTransactionType.InactivityFeeRefund,
+        externalId: `ifee_refund_${walletId}_2026-10`,
+        satsAmount: 1500,
+        centsAmount: 100,
+      })
+
+      expect(unpairedDebits({ transactions: [debit, repriced] }).malformed).toEqual([
+        debit,
+      ])
+    })
+
+    it("hands the debit back when its refund is in another currency", () => {
+      const debit = fee("2026-10")
+      const foreign = tx({
+        type: LedgerTransactionType.InactivityFeeRefund,
+        externalId: `ifee_refund_${walletId}_2026-10`,
+        currency: WalletCurrency.Usd,
+      })
+
+      expect(unpairedDebits({ transactions: [debit, foreign] }).malformed).toEqual([
+        debit,
+      ])
     })
   })
 

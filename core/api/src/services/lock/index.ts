@@ -203,6 +203,7 @@ export const LockService = (): ILockService => {
   }
 
   // shared by the reactivation handler and the fee job: a debit never lands after a refund run
+  // taken before any wallet lock, never while holding one
   const lockInactivityFeeAccount = async <Res>(
     accountId: AccountId,
     asyncFn: (signal: InactivityFeeAccountAbortSignal) => Promise<Res>,

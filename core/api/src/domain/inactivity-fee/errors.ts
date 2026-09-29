@@ -21,6 +21,16 @@ export class InactivityFeeRunAccountErrorsError extends InactivityFeeError {
   level = ErrorLevel.Warn
 }
 
+// the dealer's mid-rate cannot size a debit (the fee floors to 0 sats): the fee run aborts at pin time
+export class InactivityFeeInvalidRateError extends InactivityFeeError {
+  level = ErrorLevel.Critical
+}
+
+// a debit was about to break an invariant the predicate guarantees: unreachable by construction, pages on regression
+export class InactivityFeeDebitInvariantError extends InactivityFeeError {
+  level = ErrorLevel.Critical
+}
+
 // a second live run for the same kind and day; the first one keeps going
 export class InactivityFeeRunInProgressError extends InactivityFeeError {
   level = ErrorLevel.Warn

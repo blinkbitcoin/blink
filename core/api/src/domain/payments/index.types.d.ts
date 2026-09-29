@@ -1,5 +1,6 @@
 type PriceRatio<S extends WalletCurrency> = {
   convertFromOther(other: bigint): PaymentAmount<S>
+  convertFromOtherToFloor(other: bigint): PaymentAmount<S>
   convertFromWallet(btcWalletAmount: PaymentAmount<S>): bigint
   convertFromWalletToFloor(btcWalletAmount: PaymentAmount<S>): bigint
   convertFromWalletToCeil(btcWalletAmount: PaymentAmount<S>): bigint
@@ -8,6 +9,7 @@ type PriceRatio<S extends WalletCurrency> = {
 
 type WalletPriceRatio = {
   convertFromUsd(convert: UsdPaymentAmount): BtcPaymentAmount
+  convertFromUsdToFloor(convert: UsdPaymentAmount): BtcPaymentAmount
   convertFromBtc(convert: BtcPaymentAmount): UsdPaymentAmount
   convertFromBtcToFloor(convert: BtcPaymentAmount): UsdPaymentAmount
   convertFromBtcToCeil(convert: BtcPaymentAmount): UsdPaymentAmount

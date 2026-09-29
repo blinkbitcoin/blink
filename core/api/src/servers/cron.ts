@@ -1,12 +1,15 @@
 import { OnChain, Lightning, Wallets, Payments, Merchants, InactivityFee } from "@/app"
 
-import { getCronConfig, TWO_MONTHS_IN_MS } from "@/config"
+import { getCronConfig, getInactivityFeeConfig, TWO_MONTHS_IN_MS } from "@/config"
 
 import { ErrorLevel } from "@/domain/shared"
 import { OperationInterruptedError } from "@/domain/errors"
 import {
+  feeRunId,
+  InactivityFeeChargeOutcome,
   InactivityFeeNoticeOutcome,
   InactivityFeeRunAccountErrorsError,
+  isFifteenthOfMonthUtc,
   isFirstOfMonthUtc,
   noticeRunId,
 } from "@/domain/inactivity-fee"
@@ -98,6 +101,26 @@ const warnOnRunErrors = ({ runId, errors }: { runId: string; errors?: number }) 
   })
 }
 
+// Monthly, from the daily container: the UTC-15th gate lives here. Dry until the CCO switch
+// (inactivityFee.liveCharging) is on; a 15th missed or run dry is never charged for later.
+export const inactivityFeeFeeJob = async () => {
+  const asOf = new Date()
+  if (!isFifteenthOfMonthUtc({ date: asOf })) {
+    addAttributesToCurrentSpan({ "inactivityfee.fee.skipped": "not_fifteenth_of_month" })
+    return
+  }
+  const result = await InactivityFee.runFeeJob({
+    asOf,
+    dryRun: !getInactivityFeeConfig().liveCharging,
+    runId: feeRunId({ asOf }),
+  })
+  if (result instanceof Error) throw result
+  warnOnRunErrors({
+    runId: result.runId,
+    errors: result.counts.byOutcome[InactivityFeeChargeOutcome.Error],
+  })
+}
+
 const main = async () => {
   console.log("cronjob started")
   const start = new Date()
@@ -121,7 +144,9 @@ const main = async () => {
     deleteLndPaymentsBefore2Months,
     deleteFailedPaymentsAttemptAllLnds,
     ...(cronConfig.removeInactiveMerchantsEnabled ? [removeInactiveMerchants] : []),
-    ...(cronConfig.inactivityFeeJobsEnabled ? [inactivityFeeNoticeJob] : []),
+    ...(cronConfig.inactivityFeeJobsEnabled
+      ? [inactivityFeeNoticeJob, inactivityFeeFeeJob]
+      : []),
   ]
 
   const PROCESS_KILL_EVENTS = ["SIGTERM", "SIGINT"]

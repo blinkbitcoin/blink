@@ -145,7 +145,7 @@ export const unpairedDebits = ({
       unpaired.push({ debit, walletId, month, refundExternalId })
       continue
     }
-    // one refund per key, for exactly the debit's amounts; anything else is for someone to look at
+    // one refund per key, mirroring the debit's amounts; anything else is for someone to look at
     if (paired.length !== 1 || !mirrors({ debit, refund: paired[0] }))
       malformed.push(debit)
   }
@@ -164,14 +164,23 @@ const refundKeyOf = (
         walletId: refund.walletId,
       })
 
+// A Bitcoin Balance refund copies both amounts. A Dollar Balance refund copies the cents and
+// prices its sats at refund time, so only the cents can mirror.
 const mirrors = ({
   debit,
   refund,
 }: {
   debit: LedgerTransaction<WalletCurrency>
   refund: LedgerTransaction<WalletCurrency>
-}): boolean =>
-  refund.satsAmount === debit.satsAmount && refund.centsAmount === debit.centsAmount
+}): boolean => {
+  if (refund.currency !== debit.currency) return false
+  if (debit.currency === WalletCurrency.Usd) {
+    return refund.centsAmount === debit.centsAmount
+  }
+  return (
+    refund.satsAmount === debit.satsAmount && refund.centsAmount === debit.centsAmount
+  )
+}
 
 const wholeNumber = (value: number | bigint): string =>
   new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value)

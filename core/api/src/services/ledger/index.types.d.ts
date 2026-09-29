@@ -214,6 +214,9 @@ type InactivityFeeRefundProvenance = {
   // the reversed debit's notice
   noticeId?: string
   runId: string
+  // Dollar Balance refunds only: USD per BTC the sats were priced at, at refund time
+  rate?: number
+  rateSource?: string
 }
 
 type InactivityFeeLedgerMetadata = LedgerMetadata &
@@ -238,6 +241,8 @@ type RecordInactivityFeeArgs = {
   }
   externalId: LedgerExternalId
   metadata: InactivityFeeProvenance
+  // the user's leg in the account's display currency; USD when absent
+  display?: DisplayTxnAmounts
 }
 
 type RecordInactivityFeeRefundArgs = {
@@ -248,6 +253,8 @@ type RecordInactivityFeeRefundArgs = {
   }
   externalId: LedgerExternalId
   metadata: InactivityFeeRefundProvenance
+  // copied from the debit row so both rows agree
+  display?: DisplayTxnAmounts
 }
 
 type LnRoutingRevenueLedgerMetadata = LedgerMetadata & {

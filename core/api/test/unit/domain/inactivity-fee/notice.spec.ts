@@ -1,12 +1,15 @@
 import { AccountLevel, AccountStatus } from "@/domain/accounts"
 import {
   checkImportCandidate,
+  feeChargeCutoff,
+  feeRunId,
   firstChargeableFifteenth,
   formatIsoDate,
   InactivityFeeImportVerdict,
   InactivityFeeNoticeSource,
   InactivityFeeNoticeStatus,
   InactivityFeeTemplateVersion,
+  isFifteenthOfMonthUtc,
   isFirstOfMonthUtc,
   isNoticeLive,
   noticeEffectiveDate,
@@ -157,6 +160,37 @@ describe("skipListHash", () => {
     expect(skipListHash({ skipAccountIds: ["b", "a"] })).toBe(ab)
     expect(skipListHash({ skipAccountIds: ["a"] })).not.toBe(ab)
     expect(skipListHash({ skipAccountIds: [] })).toMatch(/^[0-9a-f]{64}$/)
+  })
+})
+
+describe("feeRunId", () => {
+  it("carries the asOf day and a unique suffix", () => {
+    const a = feeRunId({ asOf: iso("2026-10-15T02:00:00Z") })
+    const b = feeRunId({ asOf: iso("2026-10-15T02:00:00Z") })
+    expect(a).toMatch(/^fee-2026-10-15-[0-9a-f-]{36}$/)
+    expect(a).not.toBe(b)
+  })
+})
+
+describe("feeChargeCutoff", () => {
+  it("is exactly 31 days before asOf, to the millisecond", () => {
+    expect(feeChargeCutoff({ asOf: iso("2026-11-15T02:00:00Z") })).toEqual(
+      iso("2026-10-15T02:00:00Z"),
+    )
+    expect(feeChargeCutoff({ asOf: iso("2026-03-15T00:00:00Z") })).toEqual(
+      iso("2026-02-12T00:00:00Z"),
+    )
+  })
+})
+
+describe("isFifteenthOfMonthUtc", () => {
+  it("opens the cron gate only on the 15th, in UTC", () => {
+    expect(isFifteenthOfMonthUtc({ date: iso("2026-10-15T02:00:00Z") })).toBe(true)
+    expect(isFifteenthOfMonthUtc({ date: iso("2026-10-15T00:00:00Z") })).toBe(true)
+    expect(isFifteenthOfMonthUtc({ date: iso("2026-10-16T02:00:00Z") })).toBe(false)
+    expect(isFifteenthOfMonthUtc({ date: iso("2026-10-01T02:00:00Z") })).toBe(false)
+    // 15th local time in UTC+7 is still the 14th in UTC
+    expect(isFifteenthOfMonthUtc({ date: iso("2026-10-14T23:30:00Z") })).toBe(false)
   })
 })
 
