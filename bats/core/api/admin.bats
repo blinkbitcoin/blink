@@ -108,6 +108,46 @@ getEmailCode() {
   [[ "$(graphql_output '.errors[0].message')" == "Not authorized" ]] || exit 1
 }
 
+# The jwt_audience tests call the admin API upstream directly so the API's own
+# token validation is exercised without oathkeeper.
+
+@test "jwt_audience: admin API rejects a token without an audience" {
+  sub="$(random_uuid)"
+  token="$(mint_admin_jwt "$sub" "$ALL_ADMIN_SCOPES")"
+
+  exec_admin_graphql_direct "$token" 'all-levels' '{}'
+  [[ "$http_code" == "401" ]] || exit 1
+
+  # Mutations fail on the audience check as well, before any resolver or shield
+  # rule runs.
+  exec_admin_graphql_direct "$token" 'user-update-email' \
+    '{"input": {"email": "updated@example.com", "accountId": "test-id"}}'
+  [[ "$http_code" == "401" ]] || exit 1
+}
+
+@test "jwt_audience: admin API rejects a token with a different audience" {
+  sub="$(random_uuid)"
+  token="$(mint_admin_jwt "$sub" "$ALL_ADMIN_SCOPES" "galoy-public")"
+
+  exec_admin_graphql_direct "$token" 'all-levels' '{}'
+  [[ "$http_code" == "401" ]] || exit 1
+
+  exec_admin_graphql_direct "$token" 'user-update-email' \
+    '{"input": {"email": "updated@example.com", "accountId": "test-id"}}'
+  [[ "$http_code" == "401" ]] || exit 1
+}
+
+@test "jwt_audience: admin API accepts a token with the admin audience" {
+  # Confirms the rejections above come from the audience check.
+  sub="$(random_uuid)"
+  token="$(mint_admin_jwt "$sub" "$ALL_ADMIN_SCOPES" "$ADMIN_JWT_AUDIENCE")"
+
+  exec_admin_graphql_direct "$token" 'all-levels' '{}'
+  [[ "$http_code" == "200" ]] || exit 1
+  levels="$(graphql_output '.data.allLevels')"
+  [[ "$levels" != "null" && "$levels" != "" ]] || exit 1
+}
+
 @test "viewer_user: can query account details by phone" {
   token="$(read_value 'viewer_user.token')"
   variables=$(
