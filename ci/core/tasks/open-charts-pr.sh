@@ -33,7 +33,10 @@ git remote set-url origin ${github_url}
 git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
 
 git checkout ${ref}
-app_src_files=($(buck2 uquery 'inputs(deps("'"//core/${COMPONENT}:"'"))' 2>/dev/null))
+# CI checkouts only need a filesystem scan, not OS file watches on shared workers.
+# Isolate the query from a daemon that may already have failed with OS file watches.
+# Keep query errors visible and let set -e stop before publishing a partial result.
+app_src_files=($(buck2 --isolation-dir chart-pr-query uquery -c buck2.file_watcher=fs_hash_crawler 'inputs(deps("'"//core/${COMPONENT}:"'"))'))
 
 declare -A relevant_commits
 relevant_commits=()
