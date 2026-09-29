@@ -176,8 +176,6 @@ plan:
           - #@ build_edge_image_name(app)
         params: { skip_download: true }
       - get: charts-repo
-        params:
-          branch: #@ data.values.git_charts_branch
       - get: pipeline-tasks
   - task: bump-image-digest-in-values
     config:
