@@ -109,9 +109,20 @@ type Account = {
   contactEnabled: boolean
   kratosUserId: UserId
   displayCurrency: DisplayCurrency
+  lastActivityAt?: Date
   // temp
   role?: string
 }
+
+type RecordAccountActivityArgs = {
+  id: AccountId
+  now: Date
+  onlyIfOlderThan?: Date
+}
+
+type RecordAccountActivityResult =
+  | { written: false }
+  | { written: true; previousActivityAt: Date | undefined }
 
 type AccountWithContacts = Account & {
   contacts: AccountContact[]
@@ -158,6 +169,12 @@ interface IAccountsRepository {
 
   findByUsername(username: Username): Promise<Account | RepositoryError>
   update(account: Account): Promise<Account | RepositoryError>
+  recordActivity(
+    args: RecordAccountActivityArgs,
+  ): Promise<RecordAccountActivityResult | RepositoryError>
+  // last activity at or before `cutoff`; accounts without a clock are never yielded
+  listDormantAccounts(args: { cutoff: Date }): AsyncGenerator<Account>
+  countWithoutActivityClock(): Promise<number | RepositoryError>
 }
 
 type AdminRole = "dealer" | "funder" | "bankowner"

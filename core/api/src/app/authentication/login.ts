@@ -5,6 +5,7 @@ import {
 } from "./ratelimits"
 
 import { activateInvitedAccount } from "./activate-invited-account"
+import { recordLoginActivity } from "./record-login-activity"
 import { getPhoneMetadata } from "./get-phone-metadata"
 
 import { upgradeAccountFromDeviceToPhone } from "@/app/accounts"
@@ -150,6 +151,8 @@ export const loginWithPhoneToken = async ({
   const totpRequired = !kratosResult.kratosUserId
   const id = kratosResult.kratosUserId as UserId
 
+  if (!totpRequired) await recordLoginActivity({ userId })
+
   return {
     authToken: kratosResult.authToken,
     totpRequired,
@@ -193,6 +196,10 @@ export const loginWithEmailToken = async ({
 
   const res = await authServiceEmail.loginToken({ email })
   if (res instanceof Error) return res
+
+  // no kratosUserId while totp is pending
+  if (res.kratosUserId) await recordLoginActivity({ userId: res.kratosUserId })
+
   return { authToken: res.authToken, totpRequired, id: res.kratosUserId }
 }
 
@@ -244,6 +251,9 @@ export const loginDeviceUpgradeWithPhone = async ({
       phoneMetadata,
     })
     if (res instanceof Error) return res
+
+    await recordLoginActivity({ accountId: account.id })
+
     return { success }
   }
 
@@ -351,6 +361,8 @@ export const loginTelegramPassportNonceWithPhone = async ({
   const totpRequired = !kratosResult.kratosUserId
   const id = kratosResult.kratosUserId as UserId
 
+  if (!totpRequired) await recordLoginActivity({ userId })
+
   return {
     authToken: kratosResult.authToken,
     totpRequired,
@@ -427,6 +439,8 @@ export const loginDeviceUpgradeWithTelegramPassportNonce = async ({
       phoneMetadata,
     })
     if (res instanceof Error) return res
+
+    await recordLoginActivity({ accountId: account.id })
 
     return { success: true }
   }
@@ -508,6 +522,8 @@ export const loginWithDevice = async ({
       deviceId,
     })
     if (account instanceof Error) return account
+  } else {
+    await recordLoginActivity({ userId: res.kratosUserId })
   }
 
   return res.authToken

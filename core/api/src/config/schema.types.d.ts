@@ -263,6 +263,7 @@ type YamlSchema = {
   cronConfig: {
     rebalanceEnabled: boolean
     removeInactiveMerchantsEnabled: boolean
+    inactivityFeeJobsEnabled: boolean
   }
   captcha: {
     mandatory: boolean
@@ -281,5 +282,6 @@ type YamlSchema = {
     transactional: "prelude" | "twilio"
   }
   windDown: WindDownYamlConfig
+  inactivityFee: InactivityFeeYamlConfig
   regionRestrictions: RegionRestrictionsYamlConfig
 }

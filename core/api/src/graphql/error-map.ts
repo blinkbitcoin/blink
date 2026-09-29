@@ -1017,6 +1017,18 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "CouldNotFindAccountError":
     case "CouldNotFindMigrationFlowStateError":
     case "CouldNotFindWindDownCohortAssessmentError":
+    case "InactivityFeeError":
+    case "InactivityFeeNoticeNotFoundError":
+    case "InactivityFeeNoticeSentButUnflaggedError":
+    case "InactivityFeeRunAbortedError":
+    case "InactivityFeeRunAccountErrorsError":
+    case "InactivityFeeRunInProgressError":
+    case "InvalidInactivityFeeExternalIdError":
+    case "InactivityFeeRefundUnpairableError":
+    case "InactivityFeeRefundFailedError":
+    case "InactivityFeeReactivationTimeoutError":
+    case "InactivityFeeInvalidRateError":
+    case "InactivityFeeDebitInvariantError":
     case "OathkeeperError":
     case "OathkeeperUnauthorizedServiceError":
     case "OathkeeperMissingAuthorizationHeaderError":

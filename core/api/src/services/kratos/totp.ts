@@ -4,7 +4,7 @@ import { UiNodeTextAttributes } from "@ory/client"
 
 import { handleKratosErrors } from "./errors"
 
-import { kratosAdmin, kratosPublic } from "./private"
+import { kratosAdmin, kratosPublic, toDomainSession } from "./private"
 
 import { LikelyBadCoreError } from "@/domain/authentication/errors"
 import { MissingTotpKratosError } from "@/domain/kratos"
@@ -62,7 +62,7 @@ export const kratosElevatingSessionWithTotp = async ({
 }: {
   authToken: AuthToken
   totpCode: TotpCode
-}): Promise<true | KratosError> => {
+}): Promise<UserId | KratosError> => {
   const flow = await kratosPublic.createNativeLoginFlow({
     refresh: false,
     aal: "aal2",
@@ -72,7 +72,7 @@ export const kratosElevatingSessionWithTotp = async ({
   const method = "totp"
 
   try {
-    await kratosPublic.updateLoginFlow({
+    const { data } = await kratosPublic.updateLoginFlow({
       flow: flow.data.id,
       updateLoginFlowBody: {
         method,
@@ -80,11 +80,10 @@ export const kratosElevatingSessionWithTotp = async ({
       },
       xSessionToken: authToken,
     })
+    return toDomainSession(data.session).identity.id
   } catch (err) {
     return handleKratosErrors(err)
   }
-
-  return true
 }
 
 export const kratosRemoveTotp = async (userId: UserId) => {

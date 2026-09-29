@@ -5,6 +5,7 @@ import {
   PriceRatio,
   toDisplayPriceRatio,
   toWalletPriceRatio,
+  usdPerBtcFromRatio,
   WalletPriceRatio,
 } from "@/domain/payments"
 import { UsdDisplayCurrency } from "@/domain/fiat"
@@ -383,6 +384,54 @@ describe("WalletPriceRatio", () => {
   })
 
   it("usdPerSat", () => expect(walletPriceRatio.usdPerSat()).toEqual(0.1))
+
+  describe("convertFromUsdToFloor", () => {
+    // $41,000/BTC
+    const ratio = WalletPriceRatio({
+      usd: { amount: 4_100_000n, currency: WalletCurrency.Usd },
+      btc: { amount: 100_000_000n, currency: WalletCurrency.Btc },
+    })
+    if (ratio instanceof Error) throw ratio
+
+    it("floors where convertFromUsd rounds", () => {
+      const cents = { amount: 105n, currency: WalletCurrency.Usd }
+      expect(ratio.convertFromUsd(cents)).toStrictEqual({
+        amount: 2561n,
+        currency: WalletCurrency.Btc,
+      })
+      expect(ratio.convertFromUsdToFloor(cents)).toStrictEqual({
+        amount: 2560n,
+        currency: WalletCurrency.Btc,
+      })
+    })
+
+    it("has no 1-sat minimum", () => {
+      // $41,000,000/BTC: one cent is 0.024 sats
+      const steep = WalletPriceRatio({
+        usd: { amount: 4_100_000_000n, currency: WalletCurrency.Usd },
+        btc: { amount: 100_000_000n, currency: WalletCurrency.Btc },
+      })
+      if (steep instanceof Error) throw steep
+      const cent = { amount: 1n, currency: WalletCurrency.Usd }
+      expect(steep.convertFromUsd(cent).amount).toBe(1n)
+      expect(steep.convertFromUsdToFloor(cent).amount).toBe(0n)
+    })
+  })
+})
+
+describe("usdPerBtcFromRatio", () => {
+  it("derives USD per BTC from a cents-per-sat ratio", () => {
+    const ratio = WalletPriceRatio({
+      usd: { amount: 7_756_600n, currency: WalletCurrency.Usd },
+      btc: { amount: 100_000_000n, currency: WalletCurrency.Btc },
+    })
+    if (ratio instanceof Error) throw ratio
+    expect(usdPerBtcFromRatio(ratio)).toBeCloseTo(77_566, 6)
+
+    const dealer = toWalletPriceRatio(0.077566)
+    if (dealer instanceof Error) throw dealer
+    expect(usdPerBtcFromRatio(dealer)).toBeCloseTo(77_566, 6)
+  })
 })
 
 describe("DisplayPriceRatio", () => {
