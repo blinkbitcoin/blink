@@ -30,5 +30,14 @@ fi
   git merge --no-edit "${BRANCH}"
   git add -A
   git status
+  if git diff --cached --quiet; then
+    echo "No chart changes to commit."
+    exit 0
+  else
+    diff_status=$?
+    if [[ "$diff_status" -ne 1 ]]; then
+      exit "$diff_status"
+    fi
+  fi
   git commit -m "chore(deps): bump '${COMPONENT}' image to '${digest}'"
 )

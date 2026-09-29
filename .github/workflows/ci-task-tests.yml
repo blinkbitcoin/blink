@@ -3,6 +3,7 @@ name: CI task tests
 on:
   pull_request:
     paths:
+      - ci/core/tasks/bump-image-digest.sh
       - ci/core/tasks/open-charts-pr.sh
       - ci/core/tasks/tests/**
       - .github/workflows/ci-task-tests.yml
@@ -15,5 +16,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Test chart PR query success and failure
+      - name: Test chart bump and PR tasks
         run: python3 -m unittest discover -s ci/core/tasks/tests -v

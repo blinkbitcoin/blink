@@ -30,7 +30,10 @@ if name == "buck2":
         print("dependency query failed", file=sys.stderr)
         sys.exit(2)
 elif name == "git":
-    if args[:2] == ["config", "--global"]:
+    if args[:1] == ["diff"]:
+        assert args == ["diff", "--quiet", "main", "HEAD"], args
+        sys.exit(int(os.environ["CHART_DIFF_STATUS"]))
+    elif args[:2] == ["config", "--global"]:
         print("test-user")
     elif args[:1] == ["log"]:
         if "--format=%H" in args:
@@ -51,7 +54,7 @@ elif name == "jq":
 
 
 class OpenChartsPrTest(unittest.TestCase):
-    def run_task(self, fail=False):
+    def run_task(self, fail=False, chart_diff_status=1):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             for path in ("bin", "repo/.git", "charts-repo/charts/galoy", "edge-image"):
@@ -71,6 +74,7 @@ class OpenChartsPrTest(unittest.TestCase):
                 "PATH": f"{root / 'bin'}:{os.environ['PATH']}",
                 "CALLS": str(root / "calls.jsonl"),
                 "QUERY_FAIL": "1" if fail else "0",
+                "CHART_DIFF_STATUS": str(chart_diff_status),
                 "BRANCH": "main",
                 "BOT_BRANCH": "bump-notifications-component",
                 "COMPONENT": "notifications",
@@ -102,6 +106,19 @@ class OpenChartsPrTest(unittest.TestCase):
         self.assertEqual(result.returncode, 2, result.stderr)
         self.assertIn("dependency query failed", result.stderr)
         self.assertEqual(calls[-1][0], "buck2")
+        self.assertEqual(body, "")
+
+    def test_unchanged_chart_skips_pr_and_external_operations(self):
+        result, calls, body = self.run_task(chart_diff_status=0)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("no PR needed", result.stdout)
+        self.assertEqual(calls, [["git", "diff", "--quiet", "main", "HEAD"]])
+        self.assertEqual(body, "")
+
+    def test_chart_comparison_failure_stops_the_task(self):
+        result, calls, body = self.run_task(chart_diff_status=128)
+        self.assertEqual(result.returncode, 128, result.stderr)
+        self.assertEqual(calls, [["git", "diff", "--quiet", "main", "HEAD"]])
         self.assertEqual(body, "")
 
 

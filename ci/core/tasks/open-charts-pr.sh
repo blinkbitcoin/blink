@@ -7,6 +7,16 @@ export ref=$(cat ./repo/.git/short_ref)
 
 pushd charts-repo
 
+if git diff --quiet "${BRANCH}" HEAD; then
+  echo "Chart already matches ${BRANCH}; no PR needed."
+  exit 0
+else
+  diff_status=$?
+  if [[ "$diff_status" -ne 1 ]]; then
+    exit "$diff_status"
+  fi
+fi
+
 git checkout "${BRANCH}"
 
 old_digest=$(yq e "${YAML_PATH}" "./charts/${CHART}/values.yaml")
