@@ -1269,6 +1269,20 @@ export const configSchema = {
         ],
       },
     },
+    inactivityFee: {
+      type: "object",
+      properties: {
+        activityRefreshIntervalSec: {
+          type: "integer",
+          minimum: 0,
+          maximum: 86400,
+          default: 3600,
+        },
+      },
+      required: ["activityRefreshIntervalSec"],
+      additionalProperties: false,
+      default: { activityRefreshIntervalSec: 3600 },
+    },
     regionRestrictions: {
       type: "object",
       properties: {
@@ -1329,6 +1343,7 @@ export const configSchema = {
     "telegramAuthUnsupportedCountries",
     "phoneProvider",
     "windDown",
+    "inactivityFee",
     "regionRestrictions",
   ],
   additionalProperties: false,

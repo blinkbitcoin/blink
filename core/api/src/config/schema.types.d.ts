@@ -281,5 +281,6 @@ type YamlSchema = {
     transactional: "prelude" | "twilio"
   }
   windDown: WindDownYamlConfig
+  inactivityFee: InactivityFeeYamlConfig
   regionRestrictions: RegionRestrictionsYamlConfig
 }

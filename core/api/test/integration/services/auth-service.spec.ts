@@ -148,7 +148,7 @@ describe("phoneNoPassword schema", () => {
             totpCode,
           })
           if (res instanceof Error) throw res
-          expect(res).toBe(true)
+          expect(res).toBe(kratosUserId)
 
           await kratosRemoveTotp(kratosUserId)
 

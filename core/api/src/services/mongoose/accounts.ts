@@ -98,9 +98,51 @@ export const AccountsRepository = (): IAccountsRepository => {
   const persistNew = async (kratosUserId: UserId): Promise<Account | RepositoryError> => {
     try {
       const account = new Account()
+      account.last_activity_at = new Date()
       account.kratosUserId = kratosUserId
       await account.save()
       return translateToAccount(account)
+    } catch (err) {
+      return parseRepositoryError(err)
+    }
+  }
+
+  // lean: return the raw stored value, never a hydrated default
+  const recordActivity = async ({
+    id,
+    now,
+    onlyIfOlderThan,
+  }: RecordAccountActivityArgs): Promise<
+    RecordAccountActivityResult | RepositoryError
+  > => {
+    try {
+      const filter =
+        onlyIfOlderThan === undefined
+          ? { id }
+          : {
+              id,
+              $or: [
+                { last_activity_at: null }, // missing or null
+                { last_activity_at: { $lt: onlyIfOlderThan } },
+              ],
+            }
+      // $max: writes that reach Mongo out of order can never move the value backward
+      const previous = await Account.findOneAndUpdate(
+        filter,
+        { $max: { last_activity_at: now } },
+        { returnDocument: "before", projection: { last_activity_at: 1 }, lean: true },
+      )
+      if (!previous) {
+        if (onlyIfOlderThan !== undefined) return { written: false }
+        return new CouldNotFindAccountFromIdError(id)
+      }
+      const previousActivityAt = previous.last_activity_at
+        ? new Date(previous.last_activity_at)
+        : undefined
+      if (previousActivityAt && previousActivityAt.getTime() >= now.getTime()) {
+        return { written: false }
+      }
+      return { written: true, previousActivityAt }
     } catch (err) {
       return parseRepositoryError(err)
     }
@@ -130,6 +172,7 @@ export const AccountsRepository = (): IAccountsRepository => {
     findById,
     findByUsername,
     update,
+    recordActivity,
   }
 }
 
@@ -145,4 +188,5 @@ const translateToAccount = (result: AccountRecord): Account => ({
   withdrawFee: result.withdrawFee as Satoshis,
   kratosUserId: result.kratosUserId as UserId,
   displayCurrency: (result.displayCurrency || UsdDisplayCurrency) as DisplayCurrency,
+  lastActivityAt: result.last_activity_at ? new Date(result.last_activity_at) : undefined,
 })
