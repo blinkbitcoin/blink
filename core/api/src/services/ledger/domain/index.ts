@@ -6,7 +6,7 @@ export const toLedgerAccountId = (walletId: WalletId): LedgerAccountId =>
   `${liabilitiesMainAccount}:${walletId}` as LedgerAccountId
 
 export const toLedgerAccountDescriptor = <T extends WalletCurrency>(
-  walletDescriptor: WalletDescriptor<T>,
+  walletDescriptor: LedgerWalletDescriptor<T>,
 ): LedgerAccountDescriptor<T> => {
   return {
     id: toLedgerAccountId(walletDescriptor.id),

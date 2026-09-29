@@ -983,3 +983,106 @@ export const LnReserveRetained = ({
 
   return metadata
 }
+
+// system entries, fees are zero: the user's leg shows the account's display currency when
+// given (USD otherwise), bankowner and dealer legs always show USD
+const inactivityFeeAmountsMetadata = ({
+  amount,
+  display,
+}: {
+  amount: { btc: BtcPaymentAmount; usd: UsdPaymentAmount }
+  display?: DisplayTxnAmounts
+}) => {
+  const centsAmount = amount.usd.amount
+  const centsFee = 0n
+  const { debitOrCreditAdditionalMetadata: userLeg, internalAccountsAdditionalMetadata } =
+    debitOrCreditMetadataAmounts({
+      centsAmount,
+      centsFee,
+      ...(display ?? internalMetadataAmounts({ centsAmount, centsFee })),
+    })
+  return {
+    amounts: {
+      satsAmount: toSats(amount.btc.amount),
+      centsAmount: toCents(centsAmount),
+      satsFee: toSats(0),
+      centsFee: toCents(0),
+    },
+    userLeg,
+    internalLeg: internalAccountsAdditionalMetadata,
+  }
+}
+
+// provenance keys are not schema fields; medici stores them under meta
+export const InactivityFeeLedgerMetadata = ({
+  amount,
+  memo,
+  display,
+  provenance: { rate, rateSource, configVersion, noticeId, runId },
+}: {
+  amount: { btc: BtcPaymentAmount; usd: UsdPaymentAmount }
+  memo: string
+  display?: DisplayTxnAmounts
+  provenance: InactivityFeeProvenance
+}) => {
+  const { amounts, userLeg, internalLeg } = inactivityFeeAmountsMetadata({
+    amount,
+    display,
+  })
+  const metadata: InactivityFeeLedgerMetadata = {
+    type: LedgerTransactionType.InactivityFee,
+    pending: false,
+    memoPayer: memo,
+    ...amounts,
+    rate,
+    rateSource,
+    configVersion,
+    noticeId,
+    runId,
+  }
+
+  // the user's wallet is the debit side
+  return {
+    metadata,
+    debitAccountAdditionalMetadata: userLeg,
+    creditAccountAdditionalMetadata: internalLeg,
+    internalAccountsAdditionalMetadata: internalLeg,
+  }
+}
+
+export const InactivityFeeRefundLedgerMetadata = ({
+  amount,
+  memo,
+  display,
+  provenance: { refundReason, noticeId, runId, rate, rateSource },
+}: {
+  amount: { btc: BtcPaymentAmount; usd: UsdPaymentAmount }
+  memo: string
+  display?: DisplayTxnAmounts
+  provenance: InactivityFeeRefundProvenance
+}) => {
+  const { amounts, userLeg, internalLeg } = inactivityFeeAmountsMetadata({
+    amount,
+    display,
+  })
+  const metadata: InactivityFeeRefundLedgerMetadata = {
+    type: LedgerTransactionType.InactivityFeeRefund,
+    pending: false,
+    memoPayer: memo,
+    ...amounts,
+    refundReason,
+    // an undefined value would be stored as null
+    ...(noticeId !== undefined ? { noticeId } : {}),
+    runId,
+    ...(rate !== undefined ? { rate } : {}),
+    ...(rateSource !== undefined ? { rateSource } : {}),
+  }
+
+  // the user's wallet is the credit side
+  return {
+    metadata,
+    debitAccountAdditionalMetadata: internalLeg,
+    creditAccountAdditionalMetadata: userLeg,
+    internalAccountsAdditionalMetadata: internalLeg,
+  }
+}

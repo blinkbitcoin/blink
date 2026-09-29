@@ -2,7 +2,8 @@ import { InvalidZeroAmountPriceRatioInputError } from "./errors"
 
 import { RATIO_PRECISION } from "@/config"
 
-import { getCurrencyMajorExponent } from "@/domain/fiat"
+import { SATS_PER_BTC } from "@/domain/bitcoin"
+import { CENTS_PER_USD, getCurrencyMajorExponent } from "@/domain/fiat"
 import { AmountCalculator, safeBigInt, WalletCurrency } from "@/domain/shared"
 
 const calc = AmountCalculator()
@@ -33,6 +34,10 @@ export const PriceRatio = <S extends WalletCurrency>({
     return { amount: amount || 1n, currency }
   }
 
+  // no 1-unit minimum: a value below one wallet unit is 0
+  const convertFromOtherToFloor = (otherToConvert: bigint): PaymentAmount<S> =>
+    calc.divFloor({ amount: otherToConvert * walletAmount.amount, currency }, other)
+
   const convertFromWallet = (walletAmountToConvert: PaymentAmount<S>): bigint => {
     if (walletAmountToConvert.amount === 0n) return 0n
 
@@ -58,6 +63,7 @@ export const PriceRatio = <S extends WalletCurrency>({
 
   return {
     convertFromOther,
+    convertFromOtherToFloor,
     convertFromWallet,
     convertFromWalletToFloor,
     convertFromWalletToCeil,
@@ -81,6 +87,9 @@ export const WalletPriceRatio = ({
   return {
     convertFromUsd: (usdWalletAmount: UsdPaymentAmount): BtcPaymentAmount =>
       priceRatio.convertFromOther(usdWalletAmount.amount),
+
+    convertFromUsdToFloor: (usdWalletAmount: UsdPaymentAmount): BtcPaymentAmount =>
+      priceRatio.convertFromOtherToFloor(usdWalletAmount.amount),
 
     convertFromBtc: (btcWalletAmount: BtcPaymentAmount): UsdPaymentAmount => ({
       amount: priceRatio.convertFromWallet(btcWalletAmount),
@@ -184,6 +193,10 @@ export const DisplayPriceRatio = <S extends WalletCurrency, T extends DisplayCur
     fractionDigits: displayCurrencyFractionDigits,
   }
 }
+
+// USD per BTC as a plain number, from a cents-per-sat ratio; for memos and provenance
+export const usdPerBtcFromRatio = (ratio: WalletPriceRatio): number =>
+  (ratio.usdPerSat() * SATS_PER_BTC) / CENTS_PER_USD
 
 export const toWalletPriceRatio = (ratio: number): WalletPriceRatio | ValidationError => {
   const precision = RATIO_PRECISION

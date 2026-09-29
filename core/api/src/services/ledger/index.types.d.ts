@@ -54,10 +54,16 @@ type RecordLnFailedUsdSendRefundArgs = {
   txMetadata?: LnLedgerTransactionMetadataUpdate
 }
 
+// the ledger addresses a wallet by id and currency only; bankowner has no account id here
+type LedgerWalletDescriptor<T extends WalletCurrency> = Pick<
+  WalletDescriptor<T>,
+  "id" | "currency"
+>
+
 type RecordIntraledgerArgs = {
   description: string
-  senderWalletDescriptor: WalletDescriptor<WalletCurrency>
-  recipientWalletDescriptor: WalletDescriptor<WalletCurrency>
+  senderWalletDescriptor: LedgerWalletDescriptor<WalletCurrency>
+  recipientWalletDescriptor: LedgerWalletDescriptor<WalletCurrency>
   amount: {
     usd: UsdPaymentAmount
     btc: BtcPaymentAmount
@@ -194,6 +200,63 @@ type FailedPaymentLedgerMetadata = ReimbursementLedgerMetadata & {
   type: LedgerTransactionTypeObject["Payment"]
 }
 
+type InactivityFeeProvenance = {
+  // USD per BTC used to size the debit
+  rate: number
+  rateSource: string
+  configVersion: string
+  noticeId: string
+  runId: string
+}
+
+type InactivityFeeRefundProvenance = {
+  refundReason: InactivityFeeRefundReason
+  // the reversed debit's notice
+  noticeId?: string
+  runId: string
+  // Dollar Balance refunds only: USD per BTC the sats were priced at, at refund time
+  rate?: number
+  rateSource?: string
+}
+
+type InactivityFeeLedgerMetadata = LedgerMetadata &
+  LedgerSendMetadata &
+  IntraLedgerSendAmountsMetadata &
+  InactivityFeeProvenance & {
+    type: LedgerTransactionTypeObject["InactivityFee"]
+  }
+
+type InactivityFeeRefundLedgerMetadata = LedgerMetadata &
+  LedgerSendMetadata &
+  IntraLedgerSendAmountsMetadata &
+  InactivityFeeRefundProvenance & {
+    type: LedgerTransactionTypeObject["InactivityFeeRefund"]
+  }
+
+type RecordInactivityFeeArgs = {
+  walletDescriptor: WalletDescriptor<WalletCurrency>
+  amount: {
+    usd: UsdPaymentAmount
+    btc: BtcPaymentAmount
+  }
+  externalId: LedgerExternalId
+  metadata: InactivityFeeProvenance
+  // the user's leg in the account's display currency; USD when absent
+  display?: DisplayTxnAmounts
+}
+
+type RecordInactivityFeeRefundArgs = {
+  walletDescriptor: WalletDescriptor<WalletCurrency>
+  amount: {
+    usd: UsdPaymentAmount
+    btc: BtcPaymentAmount
+  }
+  externalId: LedgerExternalId
+  metadata: InactivityFeeRefundProvenance
+  // copied from the debit row so both rows agree
+  display?: DisplayTxnAmounts
+}
+
 type LnRoutingRevenueLedgerMetadata = LedgerMetadata & {
   feesCollectedOn: string
 }
@@ -224,6 +287,8 @@ type IntraledgerLedgerMetadata =
   | AddOnChainIntraledgerSendLedgerMetadata
   | AddLnIntraledgerSendLedgerMetadata
   | AddWalletIdIntraledgerSendLedgerMetadata
+  | InactivityFeeLedgerMetadata
+  | InactivityFeeRefundLedgerMetadata
 
 type SendLedgerMetadata = AddOnchainSendLedgerMetadata | AddLnSendLedgerMetadata
 

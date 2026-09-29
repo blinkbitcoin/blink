@@ -1,0 +1,19 @@
+name: CI task tests
+
+on:
+  pull_request:
+    paths:
+      - ci/core/tasks/open-charts-pr.sh
+      - ci/core/tasks/tests/**
+      - .github/workflows/ci-task-tests.yml
+
+permissions:
+  contents: read
+
+jobs:
+  chart-pr-task:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test chart PR query success and failure
+        run: python3 -m unittest discover -s ci/core/tasks/tests -v

@@ -9,7 +9,15 @@ import { SettlementAmounts } from "./settlement-amounts"
 import { UsdDisplayCurrency, priceAmountFromNumber, toCents } from "@/domain/fiat"
 import { toSats } from "@/domain/bitcoin"
 import { WalletCurrency } from "@/domain/shared"
-import { AdminLedgerTransactionType, LedgerTransactionType } from "@/domain/ledger"
+import {
+  AdminLedgerTransactionType,
+  InactivityFeeLedgerTransactionType,
+  LedgerTransactionType,
+} from "@/domain/ledger"
+
+const inactivityFeeTypes: LedgerTransactionType[] = Object.values(
+  InactivityFeeLedgerTransactionType,
+)
 
 const translateLedgerTxnToWalletTxn = <S extends WalletCurrency>({
   txn,
@@ -65,6 +73,7 @@ const translateLedgerTxnToWalletTxn = <S extends WalletCurrency>({
   }
 
   const memo = translateMemo({
+    type,
     memoFromPayer,
     lnMemo,
     credit,
@@ -253,6 +262,7 @@ const statusFromTxn = (txn: LedgerTransaction<WalletCurrency>): TxStatus => {
 }
 
 export const translateMemo = ({
+  type,
   memoFromPayer,
   lnMemo,
   credit,
@@ -262,6 +272,7 @@ export const translateMemo = ({
   journalId,
   memoSharingConfig,
 }: {
+  type?: LedgerTransactionType
   memoFromPayer?: string
   lnMemo?: string
   credit: CurrencyBaseAmount
@@ -276,6 +287,8 @@ export const translateMemo = ({
   }
 
   const memo = memoFromPayer || lnMemo
+  // server-composed label, not a payer's memo: the spam thresholds do not apply
+  if (type !== undefined && inactivityFeeTypes.includes(type)) return memo || null
   if (shouldDisplayMemo({ memo, credit, currency, memoSharingConfig })) {
     return memo || null
   }
