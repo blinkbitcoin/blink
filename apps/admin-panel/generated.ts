@@ -227,6 +227,7 @@ export const DeepLinkScreen = {
   AccountMigration: 'ACCOUNT_MIGRATION',
   CardOnboarding: 'CARD_ONBOARDING',
   CardOnboardingApproved: 'CARD_ONBOARDING_APPROVED',
+  CardOnboardingInvestment: 'CARD_ONBOARDING_INVESTMENT',
   CardOnboardingLoading: 'CARD_ONBOARDING_LOADING',
   CardOnboardingPersonalInfo: 'CARD_ONBOARDING_PERSONAL_INFO',
   CardOnboardingPreapproved: 'CARD_ONBOARDING_PREAPPROVED',
