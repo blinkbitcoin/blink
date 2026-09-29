@@ -135,6 +135,22 @@
         "type": "github"
       }
     },
+    "nixpkgs-ytt": {
+      "locked": {
+        "lastModified": 1771892004,
+        "narHash": "sha256-V96pa9awm6hjnf8yGJeoC4uOirYDEPsaBbuU0stROQI=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "5e4522be6bdf1600682a6f383434b057b2d77a37",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "5e4522be6bdf1600682a6f383434b057b2d77a37",
+        "type": "github"
+      }
+    },
     "nixpkgs_2": {
       "locked": {
         "lastModified": 1712666087,
@@ -160,6 +176,7 @@
         "nixpkgs-node": "nixpkgs-node",
         "nixpkgs-reindeer": "nixpkgs-reindeer",
         "nixpkgs-tilt": "nixpkgs-tilt",
+        "nixpkgs-ytt": "nixpkgs-ytt",
         "rust-overlay": "rust-overlay"
       }
     },
