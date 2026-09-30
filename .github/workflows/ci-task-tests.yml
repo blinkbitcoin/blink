@@ -6,6 +6,8 @@ on:
       - ci/core/tasks/bump-image-digest.sh
       - ci/core/tasks/open-charts-pr.sh
       - ci/core/tasks/tests/**
+      - toolchains/workspace-pnpm/build_node_modules.py
+      - toolchains/workspace-pnpm/test_build_node_modules.py
       - .github/workflows/ci-task-tests.yml
 
 permissions:
@@ -18,3 +20,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: Test chart bump and PR tasks
         run: python3 -m unittest discover -s ci/core/tasks/tests -v
+
+  pnpm-subprocess:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test pnpm subprocess handling
+        run: python3 -m unittest discover -s toolchains/workspace-pnpm -p test_build_node_modules.py -v
