@@ -3,6 +3,8 @@ name: CI task tests
 on:
   pull_request:
     paths:
+      - ci/apps/tasks/buck-task.sh
+      - ci/apps/tasks/tests/**
       - ci/core/tasks/bump-image-digest.sh
       - ci/core/tasks/open-charts-pr.sh
       - ci/core/tasks/tests/**
@@ -18,3 +20,5 @@ jobs:
       - uses: actions/checkout@v4
       - name: Test chart bump and PR tasks
         run: python3 -m unittest discover -s ci/core/tasks/tests -v
+      - name: Test app Buck task
+        run: python3 -m unittest discover -s ci/apps/tasks/tests -v
