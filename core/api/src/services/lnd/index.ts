@@ -98,12 +98,9 @@ import { timeoutWithCancel } from "@/utils"
 
 const TIMEOUT_PAYMENT = NETWORK !== "regtest" ? 45000 : 3000
 
-// The lightning lib's max_paths option maps to lnd's max_parts: the maximum
-// number of shards a payment may be split into (MPP). When unset, lnd uses a
-// single part, so a payment must fit in one route. Each in-flight part
-// consumes an HTLC slot on its channel, so a higher value trades success rate
-// on large payouts for slot pressure under concurrent load. Configurable via
-// LND_MAX_PAYMENT_PATHS (default 4); set to 1 to disable MPP at runtime.
+// max_paths maps to lnd's max_parts: the maximum number of MPP shards.
+// More shards can help large payouts but consume more HTLC slots under load.
+// LND_MAX_PAYMENT_PATHS defaults to 1 (MPP off); changes require a restart.
 const MAX_PAYMENT_PATHS = LND_MAX_PAYMENT_PATHS
 
 export const LndService = (): ILightningService | LightningServiceError => {

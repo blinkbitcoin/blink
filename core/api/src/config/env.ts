@@ -110,14 +110,14 @@ export const env = createEnv({
     // LND PRIMARY
     LND_PRIORITY: z.enum(["lnd1", "lnd2"]).default("lnd1"),
 
-    // Maximum number of paths lnd may split a payment across (MPP).
-    // Set to 1 to disable multipath payments without a code deploy.
+    // Keep single-path payments by default; opt into MPP with e.g. 4.
+    // Set to 1 and restart the service to disable MPP without a code change.
     LND_MAX_PAYMENT_PATHS: z
       .number()
       .min(1)
       .or(z.string())
       .pipe(z.coerce.number().min(1))
-      .default(4),
+      .default(1),
 
     LND1_PUBKEY: z
       .string()
