@@ -12,6 +12,7 @@ describe("LND_MAX_PAYMENT_PATHS", () => {
   it.each([
     ["1", 1],
     ["4", 4],
+    ["16", 16],
   ])("honors the explicit setting %s", (value, expected) => {
     process.env.LND_MAX_PAYMENT_PATHS = value
 
@@ -22,17 +23,20 @@ describe("LND_MAX_PAYMENT_PATHS", () => {
     })
   })
 
-  it.each(["0", "-1", "invalid"])("rejects the invalid setting %s", (value) => {
-    process.env.LND_MAX_PAYMENT_PATHS = value
+  it.each(["0", "-1", "invalid", "2.5", "Infinity", "4294967296", "17"])(
+    "rejects the invalid setting %s",
+    (value) => {
+      process.env.LND_MAX_PAYMENT_PATHS = value
 
-    expect(() => {
-      jest.isolateModules(() => {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { LND_MAX_PAYMENT_PATHS } = require("@/config")
-        return LND_MAX_PAYMENT_PATHS
-      })
-    }).toThrow("Invalid environment variables")
-  })
+      expect(() => {
+        jest.isolateModules(() => {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const { LND_MAX_PAYMENT_PATHS } = require("@/config")
+          return LND_MAX_PAYMENT_PATHS
+        })
+      }).toThrow("Invalid environment variables")
+    },
+  )
 
   it("defaults to single-path payments when unset", () => {
     delete process.env.LND_MAX_PAYMENT_PATHS

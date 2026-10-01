@@ -92,16 +92,14 @@ import { IncomingOnChainTransaction } from "@/domain/bitcoin/onchain"
 import { WalletCurrency, paymentAmountFromNumber } from "@/domain/shared"
 
 import { LocalCacheService } from "@/services/cache"
-import { wrapAsyncFunctionsToRunInSpan } from "@/services/tracing"
+import {
+  addAttributesToCurrentSpan,
+  wrapAsyncFunctionsToRunInSpan,
+} from "@/services/tracing"
 
 import { timeoutWithCancel } from "@/utils"
 
 const TIMEOUT_PAYMENT = NETWORK !== "regtest" ? 45000 : 3000
-
-// max_paths maps to lnd's max_parts: the maximum number of MPP shards.
-// More shards can help large payouts but consume more HTLC slots under load.
-// LND_MAX_PAYMENT_PATHS defaults to 1 (MPP off); changes require a restart.
-const MAX_PAYMENT_PATHS = LND_MAX_PAYMENT_PATHS
 
 export const LndService = (): ILightningService | LightningServiceError => {
   const activeNode = getActiveLnd()
@@ -855,6 +853,17 @@ export const LndService = (): ILightningService | LightningServiceError => {
       )
     }
 
+    // Preserve the 25s single-path budget; allow 5s per additional path, capped
+    // below the application deadline. In-flight HTLCs can still outlive it.
+    const pathfindingTimeout = Math.min(
+      25_000 + 5_000 * (LND_MAX_PAYMENT_PATHS - 1),
+      TIMEOUT_PAYMENT - Math.min(5_000, TIMEOUT_PAYMENT / 3),
+    )
+    addAttributesToCurrentSpan({
+      "lightning.payment.max_paths": LND_MAX_PAYMENT_PATHS,
+      "lightning.payment.pathfinding_timeout_ms": pathfindingTimeout,
+    })
+
     const paymentDetailsArgs: PayViaPaymentDetailsArgs = {
       lnd,
       id: decodedInvoice.paymentHash,
@@ -862,7 +871,10 @@ export const LndService = (): ILightningService | LightningServiceError => {
       mtokens: milliSatsAmount.toString(),
       payment: decodedInvoice.paymentSecret as string,
       max_fee: maxFee,
-      max_paths: MAX_PAYMENT_PATHS,
+      // max_paths maps to lnd's max_parts (MPP shards). More shards consume more
+      // HTLC slots. Default 1 keeps MPP off; config changes require a restart.
+      max_paths: LND_MAX_PAYMENT_PATHS,
+      pathfinding_timeout: pathfindingTimeout,
       cltv_delta: decodedInvoice.cltvDelta || undefined,
       features: decodedInvoice.features
         ? decodedInvoice.features.map((f) => ({
@@ -890,6 +902,9 @@ export const LndService = (): ILightningService | LightningServiceError => {
         timeoutPromise,
       ])) as PayViaPaymentDetailsResult
       cancelTimeout()
+      addAttributesToCurrentSpan({
+        "lightning.payment.shard_count": paymentResult.paths.length,
+      })
 
       return {
         roundedUpFee: toSats(paymentResult.safe_fee),

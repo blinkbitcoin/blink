@@ -116,7 +116,7 @@ export const env = createEnv({
       .number()
       .min(1)
       .or(z.string())
-      .pipe(z.coerce.number().min(1))
+      .pipe(z.coerce.number().int().min(1).max(16))
       .default(1),
 
     LND1_PUBKEY: z
