@@ -43,7 +43,12 @@ import { checkAllLndHealth } from "./health"
 
 import { KnownLndErrorDetails } from "./errors"
 
-import { NETWORK, SECS_PER_5_MINS, getHistoricalLndPubkeys } from "@/config"
+import {
+  LND_MAX_PAYMENT_PATHS,
+  NETWORK,
+  SECS_PER_5_MINS,
+  getHistoricalLndPubkeys,
+} from "@/config"
 
 import {
   BadPaymentDataError,
@@ -87,7 +92,10 @@ import { IncomingOnChainTransaction } from "@/domain/bitcoin/onchain"
 import { WalletCurrency, paymentAmountFromNumber } from "@/domain/shared"
 
 import { LocalCacheService } from "@/services/cache"
-import { wrapAsyncFunctionsToRunInSpan } from "@/services/tracing"
+import {
+  addAttributesToCurrentSpan,
+  wrapAsyncFunctionsToRunInSpan,
+} from "@/services/tracing"
 
 import { timeoutWithCancel } from "@/utils"
 
@@ -845,6 +853,17 @@ export const LndService = (): ILightningService | LightningServiceError => {
       )
     }
 
+    // Preserve the 25s single-path budget; allow 5s per additional path, capped
+    // below the application deadline. In-flight HTLCs can still outlive it.
+    const pathfindingTimeout = Math.min(
+      25_000 + 5_000 * (LND_MAX_PAYMENT_PATHS - 1),
+      TIMEOUT_PAYMENT - Math.min(5_000, TIMEOUT_PAYMENT / 3),
+    )
+    addAttributesToCurrentSpan({
+      "lightning.payment.max_paths": LND_MAX_PAYMENT_PATHS,
+      "lightning.payment.pathfinding_timeout_ms": pathfindingTimeout,
+    })
+
     const paymentDetailsArgs: PayViaPaymentDetailsArgs = {
       lnd,
       id: decodedInvoice.paymentHash,
@@ -852,6 +871,10 @@ export const LndService = (): ILightningService | LightningServiceError => {
       mtokens: milliSatsAmount.toString(),
       payment: decodedInvoice.paymentSecret as string,
       max_fee: maxFee,
+      // max_paths maps to lnd's max_parts (MPP shards). More shards consume more
+      // HTLC slots. Default 1 keeps MPP off; config changes require a restart.
+      max_paths: LND_MAX_PAYMENT_PATHS,
+      pathfinding_timeout: pathfindingTimeout,
       cltv_delta: decodedInvoice.cltvDelta || undefined,
       features: decodedInvoice.features
         ? decodedInvoice.features.map((f) => ({
@@ -879,6 +902,9 @@ export const LndService = (): ILightningService | LightningServiceError => {
         timeoutPromise,
       ])) as PayViaPaymentDetailsResult
       cancelTimeout()
+      addAttributesToCurrentSpan({
+        "lightning.payment.shard_count": paymentResult.paths.length,
+      })
 
       return {
         roundedUpFee: toSats(paymentResult.safe_fee),
