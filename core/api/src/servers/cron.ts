@@ -105,8 +105,6 @@ const warnOnRunErrors = ({ runId, errors }: { runId: string; errors?: number }) 
   })
 }
 
-// a failed run pages instead of throwing, for the same reason: the rerun would repeat the
-// cold-wallet sweep before its first payout is batched
 const recordRunFailure = (error: Error) =>
   recordExceptionInCurrentSpan({ error, level: ErrorLevel.Critical })
 
@@ -239,7 +237,6 @@ const main = async () => {
 
   await mongoose.connection.close()
 
-  // without a flush the last tasks' spans are dropped on exit
   await shutdownTracing().catch((err) => logger.warn({ err }, "tracing flush failed"))
 
   process.exit(results.every((r) => r) ? 0 : 99)
