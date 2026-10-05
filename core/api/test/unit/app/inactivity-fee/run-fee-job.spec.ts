@@ -1422,13 +1422,11 @@ describe("runFeeJob", () => {
   })
 
   describe("concurrency", () => {
-    // lets every pending promise chain run to its next real wait; no wall-clock involved
     const flush = async () => {
       for (let i = 0; i < 10; i += 1)
         await new Promise((resolve) => setImmediate(resolve))
     }
 
-    // each account waits for its lock until the test releases it, in the order the test picks
     const gatedLocks = () => {
       const opens = new Map<AccountId, () => void>()
       const gates = new Map<AccountId, Promise<void>>()
@@ -1490,7 +1488,6 @@ describe("runFeeJob", () => {
       expect(overlapped).toBe(false)
       expect(run.counts).toEqual(serial.counts)
       expect(run.debited).toEqual({ count: 12, sats: 6 * 1289, cents: 600 })
-      // completion order, each account's two rows adjacent
       const [a0, a1, a2, a3, a4, a5] = accounts.map((acct) => acct.id)
       expect(records.map((record) => record.accountId)).toEqual(
         [a3, a4, a5, a2, a1, a0].flatMap((id) => [id, id]),
@@ -1535,7 +1532,6 @@ describe("runFeeJob", () => {
 
       const pending = runLive({ onOutcome })
       await flush()
-      // the first account to finish fails the sink; the other three drain
       await release(accounts[3], accounts[0], accounts[1], accounts[2])
       const result = await pending
 

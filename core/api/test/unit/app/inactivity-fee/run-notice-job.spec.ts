@@ -989,13 +989,11 @@ describe("runNoticeJob", () => {
   })
 
   describe("concurrency", () => {
-    // lets every pending promise chain run to its next real wait; no wall-clock involved
     const flush = async () => {
       for (let i = 0; i < 10; i += 1)
         await new Promise((resolve) => setImmediate(resolve))
     }
 
-    // each account's send waits until the test releases it, in the order the test picks
     const gatedSends = (onSend: () => void = () => undefined) => {
       const opens = new Map<UserId, () => void>()
       const gates = new Map<UserId, Promise<void>>()
@@ -1098,7 +1096,6 @@ describe("runNoticeJob", () => {
 
       const pending = runLive({ onOutcome })
       await flush()
-      // the first account to finish fails the sink; the other three drain
       await release(accounts[3], accounts[0], accounts[1], accounts[2])
       const result = await pending
 

@@ -67,15 +67,7 @@ export const runInParallel = <U, T extends AsyncGenerator<U>>({
   return Promise.allSettled(jobWorkers)
 }
 
-/**
- * Process an async iterable with at most `concurrency` items in flight, pulled by a single pump.
- * Prefer it to `runInParallel` (log-and-continue, allSettled) when an error must stop the scan,
- * drain and rethrow, and results must be handled one at a time.
- * `onResult` calls are serialised (completion order) and made for every item whose `process`
- * resolved, even after a failure, so the caller can account for work that already happened.
- * An iterator, `process`, `onResult` or `shouldStop` error, or `shouldStop()` returning true,
- * stops new starts; in-flight items always drain, then the first error is rethrown.
- */
+// at most `concurrency` in flight, results one at a time; on error or stop, drains then rethrows
 export const forEachConcurrent = async <T, R>({
   items,
   concurrency,
@@ -95,7 +87,6 @@ export const forEachConcurrent = async <T, R>({
   const fail = (error: unknown) => {
     failure ??= { error }
   }
-  // the tail of the serialised onResult chain; never rejects
   let delivered: Promise<void> = Promise.resolve()
 
   const start = (item: T) => {
@@ -124,7 +115,6 @@ export const forEachConcurrent = async <T, R>({
       try {
         next = await iterator.next()
       } catch (err) {
-        // a throwing iterator is finished
         exhausted = true
         throw err
       }

@@ -191,9 +191,7 @@ const prefixed = (prefix: string, values: Record<string, number>) =>
   )
 
 // the worklist: accounts with an active row issued at or before the cutoff, a superset that
-// decides nothing; every decision is re-made under the account lock. Up to `concurrency`
-// accounts are evaluated at once; the tally and the sink are fed one account at a time, its
-// records together. Once the sink fails no account is started, those in flight still count.
+// decides nothing; every decision is re-made under the account lock
 const scanNoticedAccounts = async ({
   cutoff,
   tally,

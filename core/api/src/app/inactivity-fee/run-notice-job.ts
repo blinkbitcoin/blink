@@ -164,8 +164,6 @@ const prefixed = (prefix: string, values: Record<string, number>) =>
     Object.entries(values).map(([key, value]) => [prefix + key, String(value)]),
   )
 
-// Up to `concurrency` accounts are evaluated at once; counts and the sink are fed one account
-// at a time. Once the sink fails no account is started, those in flight still count.
 const scanDormantAccounts = async ({
   cutoff,
   counts,
@@ -186,7 +184,7 @@ const scanDormantAccounts = async ({
     await forEachConcurrent({
       items: AccountsRepository().listDormantAccounts({ cutoff }),
       concurrency,
-      // the run lock lapsed: the accounts in flight are accounted for, no further one is started
+      // the run lock lapsed: no further account is started
       shouldStop: () => signal?.aborted === true,
       process: evaluate,
       onResult: async (record) => {

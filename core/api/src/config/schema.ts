@@ -1334,7 +1334,6 @@ export const configSchema = {
           maximum: 30000,
           default: 5000,
         },
-        // accounts evaluated at once by the notice and fee runs; 1 is a serial scan
         runConcurrency: { type: "integer", minimum: 1, maximum: 16, default: 4 },
       },
       required: [

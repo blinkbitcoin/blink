@@ -16,12 +16,10 @@ const deferred = <T = void>(): Deferred<T> => {
   return { promise, resolve, reject }
 }
 
-// lets every pending promise chain run to its next real wait; no wall-clock involved
 const flush = async () => {
   for (let i = 0; i < 10; i += 1) await new Promise((resolve) => setImmediate(resolve))
 }
 
-// the run's error, or undefined; attached up front so a rejection is never unhandled
 const settled = (run: Promise<void>) =>
   run.then(
     () => undefined,
@@ -38,7 +36,6 @@ async function* from<T>(values: T[], { throwAfter }: { throwAfter?: number } = {
   if (throwAfter !== undefined && pulled === throwAfter) throw new Error("cursor died")
 }
 
-// each item's processing waits on a gate the test opens, in the order it chooses
 const gated = () => {
   const gates = new Map<number, Deferred<void>>()
   const gate = (item: number) => {

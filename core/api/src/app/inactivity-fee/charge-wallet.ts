@@ -21,8 +21,7 @@ import { LockService } from "@/services/lock"
 import { AccountsRepository } from "@/services/mongoose"
 import { addEventToCurrentSpan, recordExceptionInCurrentSpan } from "@/services/tracing"
 
-// one price-service lookup per display currency per run, cached while pending so concurrent
-// accounts share it; a failure is kept so it warns once
+// one price-service lookup per display currency per run; a failure is kept so it warns once
 export type DisplayRatioCache = Map<
   DisplayCurrency,
   Promise<DisplayPriceRatio<"BTC", DisplayCurrency> | ApplicationError>
@@ -323,7 +322,7 @@ const displayAmountsFor = async ({
         return looked
       },
       (err) => {
-        // a throw is not cached: the next wallet looks up again
+        // a throw is not cached
         displayRatios.delete(currency)
         throw err
       },
