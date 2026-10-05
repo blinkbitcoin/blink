@@ -69,10 +69,12 @@ export const runInParallel = <U, T extends AsyncGenerator<U>>({
 
 /**
  * Process an async iterable with at most `concurrency` items in flight, pulled by a single pump.
- * `onResult` calls are serialised (completion order) and made for every processed item, even
- * after a failure, so the caller can account for work that already happened. An iterator,
- * `process` or `onResult` error, or `shouldStop()` returning true, stops new starts; in-flight
- * items always drain, then the first error is rethrown.
+ * Prefer it to `runInParallel` (log-and-continue, allSettled) when an error must stop the scan,
+ * drain and rethrow, and results must be handled one at a time.
+ * `onResult` calls are serialised (completion order) and made for every item whose `process`
+ * resolved, even after a failure, so the caller can account for work that already happened.
+ * An iterator, `process`, `onResult` or `shouldStop` error, or `shouldStop()` returning true,
+ * stops new starts; in-flight items always drain, then the first error is rethrown.
  */
 export const forEachConcurrent = async <T, R>({
   items,
@@ -87,7 +89,7 @@ export const forEachConcurrent = async <T, R>({
   process: (item: T) => Promise<R>
   onResult: (result: R, item: T) => void | Promise<void>
 }): Promise<void> => {
-  const limit = Math.max(1, Math.floor(concurrency))
+  const limit = Number.isFinite(concurrency) ? Math.max(1, Math.floor(concurrency)) : 1
   const inFlight = new Set<Promise<void>>()
   let failure: { error: unknown } | undefined
   const fail = (error: unknown) => {
@@ -118,7 +120,14 @@ export const forEachConcurrent = async <T, R>({
         await Promise.race(inFlight)
         continue
       }
-      const next = await iterator.next()
+      let next: IteratorResult<T>
+      try {
+        next = await iterator.next()
+      } catch (err) {
+        // a throwing iterator is finished
+        exhausted = true
+        throw err
+      }
       if (next.done) {
         exhausted = true
         break
@@ -127,8 +136,6 @@ export const forEachConcurrent = async <T, R>({
       start(next.value)
     }
   } catch (err) {
-    // a throwing iterator is finished
-    exhausted = true
     fail(err)
   }
   if (!exhausted) {

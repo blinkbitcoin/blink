@@ -989,7 +989,37 @@ describe("runNoticeJob", () => {
   })
 
   describe("concurrency", () => {
-    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+    // lets every pending promise chain run to its next real wait; no wall-clock involved
+    const flush = async () => {
+      for (let i = 0; i < 10; i += 1)
+        await new Promise((resolve) => setImmediate(resolve))
+    }
+
+    // each account's send waits until the test releases it, in the order the test picks
+    const gatedSends = (onSend: () => void = () => undefined) => {
+      const opens = new Map<UserId, () => void>()
+      const gates = new Map<UserId, Promise<void>>()
+      const gate = (userId: UserId) => {
+        let found = gates.get(userId)
+        if (found === undefined) {
+          found = new Promise<void>((resolve) => opens.set(userId, resolve))
+          gates.set(userId, found)
+        }
+        return found
+      }
+      sendInactivityFeeNotice.mockImplementation(async ({ userId }) => {
+        await gate(userId)
+        onSend()
+        return true
+      })
+      return async (...accounts: Account[]) => {
+        for (const acct of accounts) {
+          gate(acct.kratosUserId)
+          opens.get(acct.kratosUserId)?.()
+          await flush()
+        }
+      }
+    }
 
     it("at runConcurrency 4 counts what a serial run counts and never overlaps two sink calls", async () => {
       const accounts = [...Array(6)].map(() => account())
@@ -997,36 +1027,30 @@ describe("runNoticeJob", () => {
       const serial = expectRun(await runLive())
 
       mockGetInactivityFeeConfig.mockReturnValue({ ...config, runConcurrency: 4 })
-      // later accounts finish first, so completion order differs from cursor order
-      const delays = new Map(
-        accounts.map((acct, i) => [acct.id, (accounts.length - i) * 2]),
-      )
-      sendInactivityFeeNotice.mockImplementation(async ({ userId }) => {
-        const owner = accounts.find((acct) => acct.kratosUserId === userId)
-        await sleep(owner ? (delays.get(owner.id) ?? 0) : 0)
-        return true
-      })
+      const release = gatedSends()
       const outcomes: InactivityFeeNoticeOutcomeRecord[] = []
       let delivering = 0
       let overlapped = false
 
-      const run = expectRun(
-        await runLive({
-          onOutcome: async (record) => {
-            delivering += 1
-            if (delivering > 1) overlapped = true
-            await sleep(1)
-            outcomes.push(record)
-            delivering -= 1
-          },
-        }),
-      )
+      const pending = runLive({
+        onOutcome: async (record) => {
+          delivering += 1
+          if (delivering > 1) overlapped = true
+          await new Promise((resolve) => setImmediate(resolve))
+          outcomes.push(record)
+          delivering -= 1
+        },
+      })
+      await flush()
+      expect(sendInactivityFeeNotice).toHaveBeenCalledTimes(serial.counts.scanned + 4)
+      await release(...[...accounts].reverse())
+      const run = expectRun(await pending)
 
       expect(overlapped).toBe(false)
       expect(run.counts).toEqual(serial.counts)
       expect(run.counts.byOutcome).toEqual({ noticed: 6 })
-      expect(new Set(outcomes.map((record) => record.accountId)).size).toBe(6)
-      expect(outcomes[0].accountId).not.toBe(accounts[0].id)
+      const [a0, a1, a2, a3, a4, a5] = accounts.map((acct) => acct.id)
+      expect(outcomes.map((record) => record.accountId)).toEqual([a3, a4, a5, a2, a1, a0])
     })
 
     it("at runConcurrency 4 starts no account once the lock lapses, drains those in flight and aborts", async () => {
@@ -1037,19 +1061,20 @@ describe("runNoticeJob", () => {
       lockInactivityFeeRun.mockImplementation(
         async (_key: unknown, fn: (signal: unknown) => Promise<unknown>) => fn(signal),
       )
-      sendInactivityFeeNotice.mockImplementation(async () => {
-        await sleep(2)
+      const release = gatedSends(() => {
         signal.aborted = true
         signal.error = new Error("lock expired")
-        return true
       })
       const outcomes: InactivityFeeNoticeOutcomeRecord[] = []
 
-      const result = await runLive({
+      const pending = runLive({
         onOutcome: (record) => {
           outcomes.push(record)
         },
       })
+      await flush()
+      await release(accounts[2], accounts[0], accounts[1], accounts[3])
+      const result = await pending
 
       expect(result).toBeInstanceOf(InactivityFeeRunAbortedError)
       expect(mocks.findActiveByAccountId).toHaveBeenCalledTimes(4)
@@ -1058,6 +1083,32 @@ describe("runNoticeJob", () => {
         expect.objectContaining({
           counts: expect.objectContaining({ scanned: 4 }),
           error: "ResourceExpiredLockServiceError: lock expired",
+        }),
+      )
+    })
+
+    it("at runConcurrency 4 starts nothing after a sink failure and still counts the accounts in flight", async () => {
+      mockGetInactivityFeeConfig.mockReturnValue({ ...config, runConcurrency: 4 })
+      const accounts = [...Array(6)].map(() => account())
+      dormant(accounts)
+      const release = gatedSends()
+      const onOutcome = jest.fn(async () => {
+        throw new Error("disk full")
+      })
+
+      const pending = runLive({ onOutcome })
+      await flush()
+      // the first account to finish fails the sink; the other three drain
+      await release(accounts[3], accounts[0], accounts[1], accounts[2])
+      const result = await pending
+
+      expect(result).toBeInstanceOf(InactivityFeeRunAbortedError)
+      expect(onOutcome).toHaveBeenCalledTimes(1)
+      expect(mocks.findActiveByAccountId).toHaveBeenCalledTimes(4)
+      expect(mocks.persistRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          counts: expect.objectContaining({ scanned: 4, byOutcome: { noticed: 4 } }),
+          error: "Error: disk full",
         }),
       )
     })

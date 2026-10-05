@@ -101,6 +101,7 @@ const runNoticeJobUnlocked = async ({
     "inactivityfee.run.cutoff": cutoff.toISOString(),
     "inactivityfee.run.mode": mode,
     "inactivityfee.run.forcedDry": String(forcedDry),
+    "inactivityfee.run.concurrency": String(config.runConcurrency),
   })
 
   // informational only: an unreadable count is left out and the scan still runs

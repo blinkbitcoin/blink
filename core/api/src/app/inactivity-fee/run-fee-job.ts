@@ -104,6 +104,7 @@ const runFeeJobUnlocked = async ({
     "inactivityfee.run.cutoff": cutoff.toISOString(),
     "inactivityfee.run.mode": mode,
     "inactivityfee.run.forcedDry": String(forcedDry),
+    "inactivityfee.run.concurrency": String(config.runConcurrency),
   })
 
   let error: Error | undefined

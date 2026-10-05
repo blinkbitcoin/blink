@@ -1059,6 +1059,34 @@ describe("runFeeJob", () => {
       expect(run.debited).toEqual({ count: 2, sats: 1289, cents: 100 })
     })
 
+    it("looks up again after a lookup that threw, rather than keeping the throw", async () => {
+      const alice = account({ displayCurrency: "NGN" as DisplayCurrency })
+      const bob = account({ displayCurrency: "NGN" as DisplayCurrency })
+      setup([
+        { account: alice, btc: 250_000n },
+        { account: bob, btc: 250_000n },
+      ])
+      mockDisplayRatio
+        .mockRejectedValueOnce(new Error("price service down"))
+        .mockResolvedValueOnce(ngn())
+      const { records, onOutcome } = collect()
+
+      expectRun(await runLive({ onOutcome }))
+
+      expect(mockDisplayRatio).toHaveBeenCalledTimes(2)
+      expect(mockRecordFee).toHaveBeenCalledTimes(1)
+      expect(mockRecordFee.mock.calls[0][0]).toEqual(
+        expect.objectContaining({
+          walletDescriptor: expect.objectContaining({ accountId: bob.id }),
+          display: expect.objectContaining({ displayCurrency: "NGN" }),
+        }),
+      )
+      expect(records.map((record) => [record.accountId, record.outcome])).toEqual([
+        [alice.id, InactivityFeeChargeOutcome.Error],
+        [bob.id, InactivityFeeChargeOutcome.Charged],
+      ])
+    })
+
     it("asks nothing for a USD account", async () => {
       setup([{ account: account(), btc: 250_000n }])
 
@@ -1394,19 +1422,37 @@ describe("runFeeJob", () => {
   })
 
   describe("concurrency", () => {
-    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+    // lets every pending promise chain run to its next real wait; no wall-clock involved
+    const flush = async () => {
+      for (let i = 0; i < 10; i += 1)
+        await new Promise((resolve) => setImmediate(resolve))
+    }
 
-    // later accounts finish first, so completion order differs from cursor order
-    const slowLocks = (accounts: Account[]) => {
-      const delays = new Map(
-        accounts.map((acct, i) => [acct.id, (accounts.length - i) * 2]),
-      )
+    // each account waits for its lock until the test releases it, in the order the test picks
+    const gatedLocks = () => {
+      const opens = new Map<AccountId, () => void>()
+      const gates = new Map<AccountId, Promise<void>>()
+      const gate = (id: AccountId) => {
+        let found = gates.get(id)
+        if (found === undefined) {
+          found = new Promise<void>((resolve) => opens.set(id, resolve))
+          gates.set(id, found)
+        }
+        return found
+      }
       lockInactivityFeeAccount.mockImplementation(
         async (id: AccountId, fn: (signal: unknown) => Promise<unknown>) => {
-          await sleep(delays.get(id) ?? 0)
+          await gate(id)
           return fn({ aborted: false })
         },
       )
+      return async (...accounts: Account[]) => {
+        for (const acct of accounts) {
+          gate(acct.id)
+          opens.get(acct.id)?.()
+          await flush()
+        }
+      }
     }
 
     it("at runConcurrency 4 counts what a serial run counts and delivers each account's rows together, one at a time", async () => {
@@ -1422,7 +1468,7 @@ describe("runFeeJob", () => {
       const onOutcome = async (record: InactivityFeeChargeOutcomeRecord) => {
         delivering += 1
         if (delivering > 1) overlapped = true
-        await sleep(1)
+        await new Promise((resolve) => setImmediate(resolve))
         records.push(record)
         delivering -= 1
       }
@@ -1434,32 +1480,38 @@ describe("runFeeJob", () => {
       mocks.persistRun.mockImplementation(async (run: InactivityFeeRun) => run)
       mockGetInactivityFeeConfig.mockReturnValue({ ...config, runConcurrency: 4 })
       setup(fixtures)
-      slowLocks(accounts)
-      const run = expectRun(await runLive({ onOutcome }))
+      const release = gatedLocks()
+      const pending = runLive({ onOutcome })
+      await flush()
+      expect(lockInactivityFeeAccount).toHaveBeenCalledTimes(4)
+      await release(...[...accounts].reverse())
+      const run = expectRun(await pending)
 
       expect(overlapped).toBe(false)
       expect(run.counts).toEqual(serial.counts)
       expect(run.debited).toEqual({ count: 12, sats: 6 * 1289, cents: 600 })
-      expect(records).toHaveLength(12)
-      for (let i = 0; i < records.length; i += 2) {
-        expect(records[i].accountId).toBe(records[i + 1].accountId)
-      }
-      // completion order, not cursor order
-      expect(records[0].accountId).not.toBe(accounts[0].id)
-      expect(new Set(records.map((record) => record.accountId)).size).toBe(6)
+      // completion order, each account's two rows adjacent
+      const [a0, a1, a2, a3, a4, a5] = accounts.map((acct) => acct.id)
+      expect(records.map((record) => record.accountId)).toEqual(
+        [a3, a4, a5, a2, a1, a0].flatMap((id) => [id, id]),
+      )
     })
 
     it("at runConcurrency 4 starts nothing after a cursor failure, drains the accounts in flight and persists their debits", async () => {
       mockGetInactivityFeeConfig.mockReturnValue({ ...config, runConcurrency: 4 })
       const accounts = [...Array(3)].map(() => account())
       setup(accounts.map((acct) => ({ account: acct, btc: 250_000n })))
-      slowLocks(accounts)
+      const release = gatedLocks()
       mocks.listActiveIssuedBefore.mockImplementation(async function* () {
         for (const acct of accounts) yield notice(acct.id)
         throw new Error("cursor died")
       })
 
-      const result = await runLive()
+      const pending = runLive()
+      await flush()
+      expect(lockInactivityFeeAccount).toHaveBeenCalledTimes(3)
+      await release(...[...accounts].reverse())
+      const result = await pending
 
       expect(result).toBeInstanceOf(InactivityFeeRunAbortedError)
       expect(mockRecordFee).toHaveBeenCalledTimes(3)
@@ -1476,12 +1528,16 @@ describe("runFeeJob", () => {
       mockGetInactivityFeeConfig.mockReturnValue({ ...config, runConcurrency: 4 })
       const accounts = [...Array(6)].map(() => account())
       setup(accounts.map((acct) => ({ account: acct, btc: 250_000n })))
-      slowLocks(accounts)
+      const release = gatedLocks()
       const onOutcome = jest.fn(async () => {
         throw new Error("disk full")
       })
 
-      const result = await runLive({ onOutcome })
+      const pending = runLive({ onOutcome })
+      await flush()
+      // the first account to finish fails the sink; the other three drain
+      await release(accounts[3], accounts[0], accounts[1], accounts[2])
+      const result = await pending
 
       expect(result).toBeInstanceOf(InactivityFeeRunAbortedError)
       expect(onOutcome).toHaveBeenCalledTimes(1)
@@ -1501,12 +1557,19 @@ describe("runFeeJob", () => {
         account({ displayCurrency: "NGN" as DisplayCurrency }),
       )
       setup(accounts.map((acct) => ({ account: acct, btc: 250_000n })))
-      mockDisplayRatio.mockImplementation(async () => {
-        await sleep(5)
-        return new PriceNotAvailableError()
-      })
+      let answer: (ratio: PriceNotAvailableError) => void = () => undefined
+      mockDisplayRatio.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            answer = resolve
+          }),
+      )
 
-      expectRun(await runLive())
+      const pending = runLive()
+      await flush()
+      expect(mockDisplayRatio).toHaveBeenCalledTimes(1)
+      answer(new PriceNotAvailableError())
+      expectRun(await pending)
 
       expect(mockDisplayRatio).toHaveBeenCalledTimes(1)
       expect(mockRecordFee).toHaveBeenCalledTimes(4)
