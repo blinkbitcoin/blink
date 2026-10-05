@@ -155,6 +155,7 @@ const config: InactivityFeeConfig = {
   level0Deadline: iso("2026-10-31T22:59:59Z"),
   reactivationLockWaitMs: 1500,
   reactivationBudgetMs: 5000,
+  runConcurrency: 1,
 }
 
 const region = (overrides: Partial<WindDownRegionConfig> = {}): WindDownRegionConfig => ({
@@ -982,6 +983,81 @@ describe("runNoticeJob", () => {
       expect(mocks.persistRun).toHaveBeenCalledWith(
         expect.objectContaining({
           counts: expect.objectContaining({ scanned: 1, byOutcome: { noticed: 1 } }),
+        }),
+      )
+    })
+  })
+
+  describe("concurrency", () => {
+    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+    it("at runConcurrency 4 counts what a serial run counts and never overlaps two sink calls", async () => {
+      const accounts = [...Array(6)].map(() => account())
+      dormant(accounts)
+      const serial = expectRun(await runLive())
+
+      mockGetInactivityFeeConfig.mockReturnValue({ ...config, runConcurrency: 4 })
+      // later accounts finish first, so completion order differs from cursor order
+      const delays = new Map(
+        accounts.map((acct, i) => [acct.id, (accounts.length - i) * 2]),
+      )
+      sendInactivityFeeNotice.mockImplementation(async ({ userId }) => {
+        const owner = accounts.find((acct) => acct.kratosUserId === userId)
+        await sleep(owner ? (delays.get(owner.id) ?? 0) : 0)
+        return true
+      })
+      const outcomes: InactivityFeeNoticeOutcomeRecord[] = []
+      let delivering = 0
+      let overlapped = false
+
+      const run = expectRun(
+        await runLive({
+          onOutcome: async (record) => {
+            delivering += 1
+            if (delivering > 1) overlapped = true
+            await sleep(1)
+            outcomes.push(record)
+            delivering -= 1
+          },
+        }),
+      )
+
+      expect(overlapped).toBe(false)
+      expect(run.counts).toEqual(serial.counts)
+      expect(run.counts.byOutcome).toEqual({ noticed: 6 })
+      expect(new Set(outcomes.map((record) => record.accountId)).size).toBe(6)
+      expect(outcomes[0].accountId).not.toBe(accounts[0].id)
+    })
+
+    it("at runConcurrency 4 starts no account once the lock lapses, drains those in flight and aborts", async () => {
+      mockGetInactivityFeeConfig.mockReturnValue({ ...config, runConcurrency: 4 })
+      const accounts = [...Array(6)].map(() => account())
+      dormant(accounts)
+      const signal = { aborted: false, error: undefined as Error | undefined }
+      lockInactivityFeeRun.mockImplementation(
+        async (_key: unknown, fn: (signal: unknown) => Promise<unknown>) => fn(signal),
+      )
+      sendInactivityFeeNotice.mockImplementation(async () => {
+        await sleep(2)
+        signal.aborted = true
+        signal.error = new Error("lock expired")
+        return true
+      })
+      const outcomes: InactivityFeeNoticeOutcomeRecord[] = []
+
+      const result = await runLive({
+        onOutcome: (record) => {
+          outcomes.push(record)
+        },
+      })
+
+      expect(result).toBeInstanceOf(InactivityFeeRunAbortedError)
+      expect(mocks.findActiveByAccountId).toHaveBeenCalledTimes(4)
+      expect(outcomes).toHaveLength(4)
+      expect(mocks.persistRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          counts: expect.objectContaining({ scanned: 4 }),
+          error: "ResourceExpiredLockServiceError: lock expired",
         }),
       )
     })

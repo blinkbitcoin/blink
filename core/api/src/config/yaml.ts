@@ -395,6 +395,7 @@ const toInactivityFeeConfig = (config: YamlSchema): InactivityFeeConfig => ({
   ),
   reactivationLockWaitMs: reactivationLockWaitBelowBudget(config.inactivityFee),
   reactivationBudgetMs: config.inactivityFee.reactivationBudgetMs,
+  runConcurrency: config.inactivityFee.runConcurrency,
 })
 
 // resolved once at startup so an invalid value fails the process, not a request

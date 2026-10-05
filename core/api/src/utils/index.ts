@@ -67,6 +67,83 @@ export const runInParallel = <U, T extends AsyncGenerator<U>>({
   return Promise.allSettled(jobWorkers)
 }
 
+/**
+ * Process an async iterable with at most `concurrency` items in flight, pulled by a single pump.
+ * `onResult` calls are serialised (completion order) and made for every processed item, even
+ * after a failure, so the caller can account for work that already happened. An iterator,
+ * `process` or `onResult` error, or `shouldStop()` returning true, stops new starts; in-flight
+ * items always drain, then the first error is rethrown.
+ */
+export const forEachConcurrent = async <T, R>({
+  items,
+  concurrency,
+  shouldStop = () => false,
+  process: processItem,
+  onResult,
+}: {
+  items: AsyncIterable<T>
+  concurrency: number
+  shouldStop?: () => boolean
+  process: (item: T) => Promise<R>
+  onResult: (result: R, item: T) => void | Promise<void>
+}): Promise<void> => {
+  const limit = Math.max(1, Math.floor(concurrency))
+  const inFlight = new Set<Promise<void>>()
+  let failure: { error: unknown } | undefined
+  const fail = (error: unknown) => {
+    failure ??= { error }
+  }
+  // the tail of the serialised onResult chain; never rejects
+  let delivered: Promise<void> = Promise.resolve()
+
+  const start = (item: T) => {
+    const task: Promise<void> = (async () => {
+      let result: R
+      try {
+        result = await processItem(item)
+      } catch (err) {
+        return fail(err)
+      }
+      delivered = delivered.then(() => onResult(result, item)).catch(fail)
+      await delivered
+    })().finally(() => inFlight.delete(task))
+    inFlight.add(task)
+  }
+
+  const iterator = items[Symbol.asyncIterator]()
+  let exhausted = false
+  try {
+    while (failure === undefined && !shouldStop()) {
+      if (inFlight.size >= limit) {
+        await Promise.race(inFlight)
+        continue
+      }
+      const next = await iterator.next()
+      if (next.done) {
+        exhausted = true
+        break
+      }
+      if (failure !== undefined || shouldStop()) break
+      start(next.value)
+    }
+  } catch (err) {
+    // a throwing iterator is finished
+    exhausted = true
+    fail(err)
+  }
+  if (!exhausted) {
+    try {
+      await iterator.return?.()
+    } catch (err) {
+      fail(err)
+    }
+  }
+
+  await Promise.all(inFlight)
+  await delivered
+  if (failure !== undefined) throw failure.error
+}
+
 export const mapObj = <T, R>(
   obj: T,
   fn: (arg: T[keyof T]) => R,
