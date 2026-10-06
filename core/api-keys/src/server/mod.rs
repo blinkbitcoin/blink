@@ -103,7 +103,7 @@ pub async fn graphql_handler(
     req: GraphQLRequest,
 ) -> GraphQLResponse {
     let req = req.into_inner();
-    let auth = crate::scope::authorize(
+    let can_manage_keys = crate::scope::can_manage_keys(
         &jwt_claims.scope,
         &jwt_claims.session_id,
         &jwt_claims.client_id,
@@ -111,8 +111,7 @@ pub async fn graphql_handler(
     schema
         .execute(req.data(graphql::AuthSubject {
             id: jwt_claims.sub,
-            can_write: auth.can_write,
-            can_manage_keys: auth.can_manage_keys,
+            can_manage_keys,
         }))
         .await
         .into()

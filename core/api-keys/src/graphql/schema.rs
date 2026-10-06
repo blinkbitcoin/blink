@@ -5,7 +5,6 @@ use crate::{app::ApiKeysApp, identity::IdentityApiKeyId, scope::*};
 
 pub struct AuthSubject {
     pub id: String,
-    pub can_write: bool,
     pub can_manage_keys: bool,
 }
 

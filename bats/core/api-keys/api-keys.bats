@@ -2,6 +2,7 @@
 
 load "../../helpers/user.bash"
 load "../../helpers/subscriber.bash"
+load "../../helpers/admin.bash"
 
 random_uuid() {
   if [[ -e /proc/sys/kernel/random/uuid ]]; then
@@ -664,6 +665,13 @@ expect_permission_denied() {
   [[ "${message}" == *"Permission denied"* ]] || exit 1
 }
 
+expect_key_authenticates() {
+  secret="$(read_value 'api-key-secret')"
+  [[ -n "${secret}" && "${secret}" != "null" ]] || exit 1
+  exec_graphql 'api-key-secret' 'api-keys'
+  [[ "$(graphql_output '.data.me.apiKeys | type')" = "array" ]] || exit 1
+}
+
 @test "api-keys: write key cannot manage api keys" {
   key_name="$(new_key_name)"
   variables="{\"input\":{\"name\":\"${key_name}\",\"scopes\": [\"READ\",\"WRITE\"]}}"
@@ -671,6 +679,7 @@ expect_permission_denied() {
   key_id="$(graphql_output '.data.apiKeyCreate.apiKey.id')"
   secret="$(graphql_output '.data.apiKeyCreate.apiKeySecret')"
   cache_value "api-key-secret" "$secret"
+  expect_key_authenticates
 
   variables=$(jq -n --arg id "$key_id" '{input: {id: $id, limitTimeWindow: "DAILY", limitSats: 100000}}')
   exec_graphql 'alice' 'api-key-set-limit' "$variables"
@@ -714,6 +723,7 @@ expect_permission_denied() {
   variables="{\"input\":{\"name\":\"$(new_key_name)\",\"scopes\": [\"READ\"]}}"
   exec_graphql 'alice' 'api-key-create' "$variables"
   cache_value "api-key-secret" "$(graphql_output '.data.apiKeyCreate.apiKeySecret')"
+  expect_key_authenticates
 
   variables=$(jq -n --arg id "$target_id" '{input: {id: $id}}')
   exec_graphql 'api-key-secret' 'revoke-api-key' "$variables"
@@ -722,4 +732,17 @@ expect_permission_denied() {
   exec_graphql 'alice' 'api-keys'
   revoked="$(graphql_output '.data.me.apiKeys[] | select(.id == "'${target_id}'") | .revoked')"
   [[ "${revoked}" = "false" ]] || exit 1
+}
+
+@test "api-keys: oauth token needs write scope to manage keys" {
+  _create_admin_client_and_token "read write" "oauth-rw.token"
+  _create_admin_client_and_token "read" "oauth-r.token"
+
+  variables="{\"input\":{\"name\":\"$(new_key_name)\"}}"
+  exec_graphql 'oauth-rw.token' 'api-key-create' "$variables"
+  secret="$(graphql_output '.data.apiKeyCreate.apiKeySecret')"
+  [[ -n "${secret}" && "${secret}" != "null" ]] || exit 1
+
+  exec_graphql 'oauth-r.token' 'api-key-create' "$variables"
+  expect_permission_denied
 }
