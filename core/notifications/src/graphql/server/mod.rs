@@ -19,6 +19,8 @@ pub struct JwtClaims {
     exp: u64,
     #[serde(default)]
     scope: String,
+    #[serde(default)]
+    session_id: String,
 }
 
 pub async fn run_server(
@@ -57,7 +59,7 @@ pub async fn graphql_handler(
     req: GraphQLRequest,
 ) -> GraphQLResponse {
     let req = req.into_inner();
-    let can_write = can_write(&jwt_claims.scope);
+    let can_write = can_write(&jwt_claims.scope, &jwt_claims.session_id);
     schema
         .execute(req.data(graphql::AuthSubject {
             id: jwt_claims.sub,
@@ -75,6 +77,25 @@ async fn playground() -> impl axum::response::IntoResponse {
 
 pub const WRITE_SCOPE: &str = "write";
 
-pub fn can_write(scope: &str) -> bool {
-    scope.split(' ').any(|s| s == WRITE_SCOPE) || scope.is_empty()
+// Empty scope is trusted only for Kratos sessions.
+pub fn can_write(scope: &str, session_id: &str) -> bool {
+    scope.split(' ').any(|s| s == WRITE_SCOPE) || (scope.is_empty() && !session_id.is_empty())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::can_write;
+
+    #[test]
+    fn empty_scope_needs_session() {
+        assert!(can_write("", "session"));
+        assert!(!can_write("", ""));
+    }
+
+    #[test]
+    fn write_scope_allows_write() {
+        assert!(can_write("read write", ""));
+        assert!(!can_write("read", ""));
+        assert!(!can_write("receive", ""));
+    }
 }

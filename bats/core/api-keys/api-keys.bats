@@ -658,3 +658,68 @@ exec_graphql_to_file() {
   errors="$(graphql_output '.errors | length')"
   [[ "${errors}" = "1" ]] || exit 1
 }
+
+expect_permission_denied() {
+  message="$(graphql_output '.errors[0].message')"
+  [[ "${message}" == *"Permission denied"* ]] || exit 1
+}
+
+@test "api-keys: write key cannot manage api keys" {
+  key_name="$(new_key_name)"
+  variables="{\"input\":{\"name\":\"${key_name}\",\"scopes\": [\"READ\",\"WRITE\"]}}"
+  exec_graphql 'alice' 'api-key-create' "$variables"
+  key_id="$(graphql_output '.data.apiKeyCreate.apiKey.id')"
+  secret="$(graphql_output '.data.apiKeyCreate.apiKeySecret')"
+  cache_value "api-key-secret" "$secret"
+
+  variables=$(jq -n --arg id "$key_id" '{input: {id: $id, limitTimeWindow: "DAILY", limitSats: 100000}}')
+  exec_graphql 'alice' 'api-key-set-limit' "$variables"
+  daily_limit="$(graphql_output '.data.apiKeySetLimit.apiKey.limits.dailyLimitSats')"
+  [[ "${daily_limit}" = "100000" ]] || exit 1
+
+  variables="{\"input\":{\"name\":\"$(new_key_name)\"}}"
+  exec_graphql 'api-key-secret' 'api-key-create' "$variables"
+  expect_permission_denied
+
+  variables=$(jq -n --arg id "$key_id" '{input: {id: $id, limitTimeWindow: "DAILY", limitSats: 999999999}}')
+  exec_graphql 'api-key-secret' 'api-key-set-limit' "$variables"
+  expect_permission_denied
+
+  variables=$(jq -n --arg id "$key_id" '{input: {id: $id, limitTimeWindow: "DAILY"}}')
+  exec_graphql 'api-key-secret' 'api-key-remove-limit' "$variables"
+  expect_permission_denied
+
+  variables=$(jq -n --arg id "$key_id" '{input: {id: $id}}')
+  exec_graphql 'api-key-secret' 'revoke-api-key' "$variables"
+  expect_permission_denied
+
+  exec_graphql 'alice' 'api-keys'
+  key="$(graphql_output '.data.me.apiKeys[] | select(.id == "'${key_id}'")')"
+  [[ "$(echo "$key" | jq -r '.revoked')" = "false" ]] || exit 1
+  [[ "$(echo "$key" | jq -r '.limits.dailyLimitSats')" = "100000" ]] || exit 1
+}
+
+@test "api-keys: anonymous caller cannot create key" {
+  variables="{\"input\":{\"name\":\"$(new_key_name)\"}}"
+  exec_graphql 'anon' 'api-key-create' "$variables"
+  expect_permission_denied
+  [[ "$(graphql_output '.data.apiKeyCreate')" = "null" ]] || exit 1
+}
+
+@test "api-keys: read-only key cannot revoke keys" {
+  variables="{\"input\":{\"name\":\"$(new_key_name)\",\"scopes\": [\"READ\",\"WRITE\"]}}"
+  exec_graphql 'alice' 'api-key-create' "$variables"
+  target_id="$(graphql_output '.data.apiKeyCreate.apiKey.id')"
+
+  variables="{\"input\":{\"name\":\"$(new_key_name)\",\"scopes\": [\"READ\"]}}"
+  exec_graphql 'alice' 'api-key-create' "$variables"
+  cache_value "api-key-secret" "$(graphql_output '.data.apiKeyCreate.apiKeySecret')"
+
+  variables=$(jq -n --arg id "$target_id" '{input: {id: $id}}')
+  exec_graphql 'api-key-secret' 'revoke-api-key' "$variables"
+  expect_permission_denied
+
+  exec_graphql 'alice' 'api-keys'
+  revoked="$(graphql_output '.data.me.apiKeys[] | select(.id == "'${target_id}'") | .revoked')"
+  [[ "${revoked}" = "false" ]] || exit 1
+}

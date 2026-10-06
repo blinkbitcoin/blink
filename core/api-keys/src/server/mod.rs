@@ -23,6 +23,10 @@ pub struct JwtClaims {
     exp: u64,
     #[serde(default)]
     scope: String,
+    #[serde(default)]
+    session_id: String,
+    #[serde(default)]
+    client_id: String,
 }
 
 pub async fn run_server(config: ServerConfig, api_keys_app: ApiKeysApp) -> anyhow::Result<()> {
@@ -99,11 +103,16 @@ pub async fn graphql_handler(
     req: GraphQLRequest,
 ) -> GraphQLResponse {
     let req = req.into_inner();
-    let can_write = crate::scope::can_write(&jwt_claims.scope);
+    let auth = crate::scope::authorize(
+        &jwt_claims.scope,
+        &jwt_claims.session_id,
+        &jwt_claims.client_id,
+    );
     schema
         .execute(req.data(graphql::AuthSubject {
             id: jwt_claims.sub,
-            can_write,
+            can_write: auth.can_write,
+            can_manage_keys: auth.can_manage_keys,
         }))
         .await
         .into()
