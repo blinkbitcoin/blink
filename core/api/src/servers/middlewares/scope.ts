@@ -15,9 +15,11 @@ const readAuthorize = async (
 ) => {
   const scope = context.scope
 
-  // not a token with scope
+  // empty scope is trusted only for kratos sessions
   if (scope === undefined || scope.length === 0) {
-    return resolve(parent, args, context, info)
+    return context.sessionId
+      ? resolve(parent, args, context, info)
+      : mapError(new AuthorizationError("not authorized to read data"))
   }
 
   if (scope.find((s) => s === ScopesOauth2.Read)) {
@@ -36,9 +38,10 @@ const writeAuthorize = async (
 ) => {
   const scope = context.scope
 
-  // not a token with scope
   if (scope === undefined || scope.length === 0) {
-    return resolve(parent, args, context, info)
+    return context.sessionId
+      ? resolve(parent, args, context, info)
+      : mapError(new AuthorizationError("not authorized to execute mutations"))
   }
 
   if (scope.find((s) => s === ScopesOauth2.Write) !== undefined) {
@@ -57,9 +60,10 @@ const receiveAuthorize = async (
 ) => {
   const scope = context.scope
 
-  // not a token with scope
-  if (!scope || scope.length === 0) {
-    return resolve(parent, args, context, info)
+  if (scope === undefined || scope.length === 0) {
+    return context.sessionId
+      ? resolve(parent, args, context, info)
+      : mapError(new AuthorizationError("not authorized to execute mutations"))
   }
 
   if (scope.find((s) => s === ScopesOauth2.Receive)) {
