@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id FROM stateful_notifications\n            WHERE galoy_user_id = ANY($1)\n            AND bulletin_key = $2\n            AND acknowledged IS NOT TRUE\n            FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "TextArray",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "642f8d6a211b94e67724d635790bf6c29868344259c22c75be857deca8fbd226"
+}

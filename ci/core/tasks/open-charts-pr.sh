@@ -7,6 +7,16 @@ export ref=$(cat ./repo/.git/short_ref)
 
 pushd charts-repo
 
+if git diff --quiet "${BRANCH}" HEAD; then
+  echo "Chart already matches ${BRANCH}; no PR needed."
+  exit 0
+else
+  diff_status=$?
+  if [[ "$diff_status" -ne 1 ]]; then
+    exit "$diff_status"
+  fi
+fi
+
 git checkout "${BRANCH}"
 
 old_digest=$(yq e "${YAML_PATH}" "./charts/${CHART}/values.yaml")
@@ -33,7 +43,10 @@ git remote set-url origin ${github_url}
 git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
 
 git checkout ${ref}
-app_src_files=($(buck2 uquery 'inputs(deps("'"//core/${COMPONENT}:"'"))' 2>/dev/null))
+# CI checkouts only need a filesystem scan, not OS file watches on shared workers.
+# Isolate the query from a daemon that may already have failed with OS file watches.
+# Keep query errors visible and let set -e stop before publishing a partial result.
+app_src_files=($(buck2 --isolation-dir chart-pr-query uquery -c buck2.file_watcher=fs_hash_crawler 'inputs(deps("'"//core/${COMPONENT}:"'"))'))
 
 declare -A relevant_commits
 relevant_commits=()

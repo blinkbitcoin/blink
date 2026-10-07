@@ -14,6 +14,8 @@ service NotificationsService {
   rpc UpdateEmailAddress (UpdateEmailAddressRequest) returns (UpdateEmailAddressResponse) {}
   rpc RemoveEmailAddress (RemoveEmailAddressRequest) returns (RemoveEmailAddressResponse) {}
   rpc HandleNotificationEvent (HandleNotificationEventRequest) returns (HandleNotificationEventResponse) {}
+  rpc CloseBulletin (CloseBulletinRequest) returns (CloseBulletinResponse) {}
+  rpc ListLatestBulletins (ListLatestBulletinsRequest) returns (ListLatestBulletinsResponse) {}
 }
 
 enum NotificationChannel {
@@ -143,6 +145,38 @@ message HandleNotificationEventRequest {
 
 message HandleNotificationEventResponse { }
 
+message CloseBulletinRequest {
+  string user_id = 1;
+  string bulletin_key = 2;
+}
+
+message CloseBulletinResponse { }
+
+message ListLatestBulletinsRequest {
+  repeated string user_ids = 1;
+  string bulletin_key = 2;
+}
+
+message ListLatestBulletinsResponse {
+  repeated Bulletin bulletins = 1;
+}
+
+// Timestamps are unix epoch seconds
+enum BulletinCloseReason {
+  ACKNOWLEDGED = 0;
+  CLOSED = 1;
+  REPLACED = 2;
+  SUPERSEDED = 3;
+}
+
+message Bulletin {
+  string id = 1;
+  string user_id = 2;
+  int64 created_at = 3;
+  optional int64 acknowledged_at = 4;
+  optional BulletinCloseReason close_reason = 5;
+}
+
 message NotificationEvent {
   oneof data {
     CircleGrew circle_grew = 1;
@@ -154,6 +188,8 @@ message NotificationEvent {
     PriceChanged price = 7;
     MarketingNotificationTriggered marketing_notification_triggered = 8;
     MigrationRetryReady migration_retry_ready = 9;
+    InactivityFeeNotice inactivity_fee_notice = 10;
+    InactivityFeeWelcomeBack inactivity_fee_welcome_back = 11;
   }
 }
 
@@ -187,6 +223,18 @@ message IdentityVerificationApproved {
 
 message MigrationRetryReady {
   string user_id = 1;
+}
+
+message InactivityFeeNotice {
+  string user_id = 1;
+  string effective_date = 2;
+  uint64 fee_amount_cents = 3;
+}
+
+message InactivityFeeWelcomeBack {
+  string user_id = 1;
+  optional uint64 refunded_sats = 2;
+  optional uint64 refunded_cents = 3;
 }
 
 enum DeclinedReason {
@@ -249,6 +297,8 @@ message MarketingNotificationTriggered {
   bool should_add_to_bulletin = 5;
   optional Action action = 6;
   optional Icon icon = 7;
+  optional string bulletin_key = 8;
+  optional bool dismissible = 9;
 }
 
 message LocalizedContent {

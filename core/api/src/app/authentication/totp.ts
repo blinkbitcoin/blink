@@ -1,6 +1,7 @@
 import { createHash } from "crypto"
 
 import { checkLoginAttemptPerLoginIdentifierLimits } from "./ratelimits"
+import { recordLoginActivity } from "./record-login-activity"
 
 import {
   AuthTokenUserIdMismatchError,
@@ -143,7 +144,12 @@ export const elevatingSessionWithTotp = async ({
     if (limitOk instanceof Error) return limitOk
   }
 
-  return kratosElevatingSessionWithTotp({ authToken, totpCode })
+  const userId = await kratosElevatingSessionWithTotp({ authToken, totpCode })
+  if (userId instanceof Error) return userId
+
+  // the first factor skips this while a second factor is pending
+  await recordLoginActivity({ userId })
+  return true
 }
 
 export const removeTotp = async ({

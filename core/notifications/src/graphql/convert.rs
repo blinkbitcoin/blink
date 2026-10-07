@@ -2,8 +2,10 @@ use async_graphql::ID;
 
 use super::types;
 use crate::{
-    history, notification_event::Action, notification_event::Icon,
-    primitives::StatefulNotificationId,
+    history,
+    notification_event::Action,
+    notification_event::Icon,
+    primitives::{BulletinKey, StatefulNotificationId},
 };
 
 impl From<history::StatefulNotification> for types::StatefulNotification {
@@ -36,6 +38,8 @@ impl From<history::StatefulNotification> for types::StatefulNotification {
                 }
             }),
             icon: notification.icon().map(Into::into),
+            bulletin_key: notification.bulletin_key().map(BulletinKey::into_inner),
+            dismissible: notification.is_dismissible(),
         }
     }
 }
@@ -101,5 +105,41 @@ impl From<Icon> for types::Icon {
             Icon::Bell => types::Icon::Bell,
             Icon::Refresh => types::Icon::Refresh,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::history::test_support::*;
+
+    #[test]
+    fn exposes_bulletin_key_and_dismissible() {
+        let key = BulletinKey::try_from("feature-rollout".to_string()).expect("valid key");
+        let notification = types::StatefulNotification::from(persisted_bulletin(
+            BulletinFixture {
+                bulletin_key: Some(key),
+                dismissible: false,
+                ..Default::default()
+            },
+            chrono::Utc::now(),
+            None,
+        ));
+        assert_eq!(
+            notification.bulletin_key.as_deref(),
+            Some("feature-rollout")
+        );
+        assert!(!notification.dismissible);
+    }
+
+    #[test]
+    fn defaults_to_null_bulletin_key_and_dismissible() {
+        let notification = types::StatefulNotification::from(persisted_bulletin(
+            BulletinFixture::default(),
+            chrono::Utc::now(),
+            None,
+        ));
+        assert!(notification.bulletin_key.is_none());
+        assert!(notification.dismissible);
     }
 }

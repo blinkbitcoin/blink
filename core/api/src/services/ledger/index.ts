@@ -47,6 +47,9 @@ import {
 export { getNonEndUserWalletIds } from "./caching"
 export { translateToLedgerJournal } from "./helpers"
 
+// the voided original and its reversal (which carries `_original_journal`) are both absent
+const notVoided = { voided: { $ne: true }, _original_journal: { $exists: false } }
+
 export const lazyLoadLedgerAdmin = ({
   bankOwnerWalletResolver,
   dealerBtcWalletResolver,
@@ -147,16 +150,43 @@ export const LedgerService = (): ILedgerService => {
   const getTransactionForWalletByExternalId = async ({
     walletId,
     externalId,
+    excludeVoided = false,
+    type,
   }: {
     walletId: WalletId
     externalId: LedgerExternalId
+    excludeVoided?: boolean
+    type?: LedgerTransactionType
   }): Promise<LedgerTransaction<WalletCurrency> | undefined | LedgerServiceError> => {
     try {
       const entry = await Transaction.findOne({
         accounts: toLiabilitiesWalletId(walletId),
         external_id: externalId,
+        ...(type !== undefined ? { type } : {}),
+        // the voided original and its reversal are both absent: the key they hold is free again
+        ...(excludeVoided ? notVoided : {}),
       })
       return entry ? translateToLedgerTx(entry) : undefined
+    } catch (err) {
+      return new UnknownLedgerError(err)
+    }
+  }
+
+  const listInactivityFeeTransactionsByWalletId = async (
+    walletId: WalletId,
+  ): Promise<LedgerTransaction<WalletCurrency>[] | LedgerServiceError> => {
+    try {
+      const entries = await Transaction.find({
+        accounts: toLiabilitiesWalletId(walletId),
+        type: {
+          $in: [
+            LedgerTransactionType.InactivityFee,
+            LedgerTransactionType.InactivityFeeRefund,
+          ],
+        },
+        ...notVoided,
+      })
+      return entries.map((tx) => translateToLedgerTx(tx))
     } catch (err) {
       return new UnknownLedgerError(err)
     }
@@ -574,6 +604,7 @@ export const LedgerService = (): ILedgerService => {
       getTransactionForWalletById,
       getTransactionForWalletByJournalId,
       getTransactionForWalletByExternalId,
+      listInactivityFeeTransactionsByWalletId,
       getTransactionsByHash,
       getTransactionsForWalletByPaymentHash,
       getTransactionsByWalletId,

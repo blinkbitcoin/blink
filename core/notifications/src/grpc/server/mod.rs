@@ -15,7 +15,7 @@ use self::proto::{notifications_service_server::NotificationsService, *};
 
 use super::config::*;
 use crate::{
-    app::*,
+    app::{error::ApplicationError, *},
     messages::LocalizedStatefulMessage,
     notification_event,
     primitives::{
@@ -327,6 +327,61 @@ impl NotificationsService for Notifications {
             }
             Some(proto::NotificationEvent {
                 data:
+                    Some(proto::notification_event::Data::InactivityFeeNotice(
+                        proto::InactivityFeeNotice {
+                            user_id,
+                            effective_date,
+                            fee_amount_cents,
+                        },
+                    )),
+            }) => {
+                if !is_iso_date(&effective_date) {
+                    return Err(Status::invalid_argument(
+                        "effective_date must be a calendar date, YYYY-MM-DD",
+                    ));
+                }
+                if fee_amount_cents == 0 {
+                    return Err(Status::invalid_argument(
+                        "fee_amount_cents must be positive",
+                    ));
+                }
+                let user_id = GaloyUserId::from(user_id);
+                self.app
+                    .handle_single_user_event(
+                        user_id,
+                        notification_event::InactivityFeeNotice {
+                            effective_date,
+                            fee_amount_cents,
+                        },
+                    )
+                    .await?;
+            }
+            Some(proto::NotificationEvent {
+                data:
+                    Some(proto::notification_event::Data::InactivityFeeWelcomeBack(
+                        proto::InactivityFeeWelcomeBack {
+                            user_id,
+                            refunded_sats,
+                            refunded_cents,
+                        },
+                    )),
+            }) => {
+                if !has_refund_amount(refunded_sats, refunded_cents) {
+                    return Err(Status::invalid_argument("a refunded amount is required"));
+                }
+                let user_id = GaloyUserId::from(user_id);
+                self.app
+                    .handle_single_user_event(
+                        user_id,
+                        notification_event::InactivityFeeWelcomeBack {
+                            refunded_sats,
+                            refunded_cents,
+                        },
+                    )
+                    .await?;
+            }
+            Some(proto::NotificationEvent {
+                data:
                     Some(proto::notification_event::Data::IdentityVerificationDeclined(
                         proto::IdentityVerificationDeclined {
                             user_id,
@@ -421,6 +476,8 @@ impl NotificationsService for Notifications {
                             user_ids,
                             action,
                             icon,
+                            bulletin_key,
+                            dismissible,
                         },
                     )),
             }) => {
@@ -462,6 +519,11 @@ impl NotificationsService for Notifications {
                     None
                 };
 
+                let bulletin_key = bulletin_key
+                    .map(primitives::BulletinKey::try_from)
+                    .transpose()
+                    .map_err(ApplicationError::InvalidBulletinKey)?;
+
                 self.app
                     .handle_marketing_notification_triggered_event(
                         user_ids,
@@ -473,6 +535,9 @@ impl NotificationsService for Notifications {
                             should_send_push,
                             action,
                             icon,
+                            bulletin_key,
+                            dismissible: dismissible.unwrap_or(true),
+                            triggered_at: Some(chrono::Utc::now()),
                         },
                     )
                     .await?;
@@ -481,6 +546,99 @@ impl NotificationsService for Notifications {
         }
 
         Ok(Response::new(HandleNotificationEventResponse {}))
+    }
+
+    #[instrument(name = "notifications.close_bulletin", skip_all, err)]
+    async fn close_bulletin(
+        &self,
+        request: Request<CloseBulletinRequest>,
+    ) -> Result<Response<CloseBulletinResponse>, Status> {
+        grpc::extract_tracing(&request);
+        let request = request.into_inner();
+        let CloseBulletinRequest {
+            user_id,
+            bulletin_key,
+        } = request;
+        if user_id.is_empty() {
+            return Err(Status::invalid_argument("user_id is required"));
+        }
+        let user_id = GaloyUserId::from(user_id);
+        let bulletin_key = primitives::BulletinKey::try_from(bulletin_key)
+            .map_err(ApplicationError::InvalidBulletinKey)?;
+        self.app.close_bulletin(user_id, bulletin_key).await?;
+
+        Ok(Response::new(CloseBulletinResponse {}))
+    }
+
+    #[instrument(name = "notifications.list_latest_bulletins", skip_all, err)]
+    async fn list_latest_bulletins(
+        &self,
+        request: Request<ListLatestBulletinsRequest>,
+    ) -> Result<Response<ListLatestBulletinsResponse>, Status> {
+        grpc::extract_tracing(&request);
+        let request = request.into_inner();
+        let ListLatestBulletinsRequest {
+            user_ids,
+            bulletin_key,
+        } = request;
+        let has_empty_user_id = user_ids.iter().any(String::is_empty);
+        if has_empty_user_id {
+            return Err(Status::invalid_argument("user_ids must not be empty"));
+        }
+        let user_ids = user_ids.into_iter().map(GaloyUserId::from).collect();
+        let bulletin_key = primitives::BulletinKey::try_from(bulletin_key)
+            .map_err(ApplicationError::InvalidBulletinKey)?;
+        let bulletins = self
+            .app
+            .list_latest_bulletins(user_ids, bulletin_key)
+            .await?;
+
+        Ok(Response::new(ListLatestBulletinsResponse {
+            bulletins: bulletins.into_iter().map(proto::Bulletin::from).collect(),
+        }))
+    }
+}
+
+fn is_iso_date(value: &str) -> bool {
+    value.len() == 10 && chrono::NaiveDate::parse_from_str(value, "%Y-%m-%d").is_ok()
+}
+
+fn has_refund_amount(refunded_sats: Option<u64>, refunded_cents: Option<u64>) -> bool {
+    refunded_sats.unwrap_or(0) > 0 || refunded_cents.unwrap_or(0) > 0
+}
+
+#[cfg(test)]
+mod inactivity_fee_guards {
+    use super::*;
+
+    #[test]
+    fn accepts_a_real_calendar_date_in_the_expected_shape() {
+        assert!(is_iso_date("2026-10-15"));
+        assert!(is_iso_date("2028-02-29"));
+    }
+
+    #[test]
+    fn rejects_the_wrong_shape_and_impossible_dates() {
+        for bad in [
+            "2026-99-99",
+            "2026-02-30",
+            "2027-02-29",
+            "2026-10-15T00:00:00Z",
+            "15-10-2026",
+            "2026-1-5",
+            "",
+        ] {
+            assert!(!is_iso_date(bad), "accepted {bad:?}");
+        }
+    }
+
+    #[test]
+    fn a_refund_needs_at_least_one_positive_amount() {
+        assert!(has_refund_amount(Some(300), None));
+        assert!(has_refund_amount(None, Some(60)));
+        assert!(has_refund_amount(Some(0), Some(1)));
+        assert!(!has_refund_amount(None, None));
+        assert!(!has_refund_amount(Some(0), Some(0)));
     }
 }
 

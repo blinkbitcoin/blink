@@ -25,6 +25,8 @@ query listStatefulNotifications($first: Int = 2, $after: String = null) {
           }
         }
         icon
+        bulletinKey
+        dismissible
       }
     }
   }

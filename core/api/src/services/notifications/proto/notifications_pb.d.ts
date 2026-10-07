@@ -602,6 +602,131 @@ export namespace HandleNotificationEventResponse {
     }
 }
 
+export class CloseBulletinRequest extends jspb.Message { 
+    getUserId(): string;
+    setUserId(value: string): CloseBulletinRequest;
+    getBulletinKey(): string;
+    setBulletinKey(value: string): CloseBulletinRequest;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): CloseBulletinRequest.AsObject;
+    static toObject(includeInstance: boolean, msg: CloseBulletinRequest): CloseBulletinRequest.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: CloseBulletinRequest, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): CloseBulletinRequest;
+    static deserializeBinaryFromReader(message: CloseBulletinRequest, reader: jspb.BinaryReader): CloseBulletinRequest;
+}
+
+export namespace CloseBulletinRequest {
+    export type AsObject = {
+        userId: string,
+        bulletinKey: string,
+    }
+}
+
+export class CloseBulletinResponse extends jspb.Message { 
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): CloseBulletinResponse.AsObject;
+    static toObject(includeInstance: boolean, msg: CloseBulletinResponse): CloseBulletinResponse.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: CloseBulletinResponse, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): CloseBulletinResponse;
+    static deserializeBinaryFromReader(message: CloseBulletinResponse, reader: jspb.BinaryReader): CloseBulletinResponse;
+}
+
+export namespace CloseBulletinResponse {
+    export type AsObject = {
+    }
+}
+
+export class ListLatestBulletinsRequest extends jspb.Message { 
+    clearUserIdsList(): void;
+    getUserIdsList(): Array<string>;
+    setUserIdsList(value: Array<string>): ListLatestBulletinsRequest;
+    addUserIds(value: string, index?: number): string;
+    getBulletinKey(): string;
+    setBulletinKey(value: string): ListLatestBulletinsRequest;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): ListLatestBulletinsRequest.AsObject;
+    static toObject(includeInstance: boolean, msg: ListLatestBulletinsRequest): ListLatestBulletinsRequest.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: ListLatestBulletinsRequest, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): ListLatestBulletinsRequest;
+    static deserializeBinaryFromReader(message: ListLatestBulletinsRequest, reader: jspb.BinaryReader): ListLatestBulletinsRequest;
+}
+
+export namespace ListLatestBulletinsRequest {
+    export type AsObject = {
+        userIdsList: Array<string>,
+        bulletinKey: string,
+    }
+}
+
+export class ListLatestBulletinsResponse extends jspb.Message { 
+    clearBulletinsList(): void;
+    getBulletinsList(): Array<Bulletin>;
+    setBulletinsList(value: Array<Bulletin>): ListLatestBulletinsResponse;
+    addBulletins(value?: Bulletin, index?: number): Bulletin;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): ListLatestBulletinsResponse.AsObject;
+    static toObject(includeInstance: boolean, msg: ListLatestBulletinsResponse): ListLatestBulletinsResponse.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: ListLatestBulletinsResponse, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): ListLatestBulletinsResponse;
+    static deserializeBinaryFromReader(message: ListLatestBulletinsResponse, reader: jspb.BinaryReader): ListLatestBulletinsResponse;
+}
+
+export namespace ListLatestBulletinsResponse {
+    export type AsObject = {
+        bulletinsList: Array<Bulletin.AsObject>,
+    }
+}
+
+export class Bulletin extends jspb.Message { 
+    getId(): string;
+    setId(value: string): Bulletin;
+    getUserId(): string;
+    setUserId(value: string): Bulletin;
+    getCreatedAt(): number;
+    setCreatedAt(value: number): Bulletin;
+
+    hasAcknowledgedAt(): boolean;
+    clearAcknowledgedAt(): void;
+    getAcknowledgedAt(): number | undefined;
+    setAcknowledgedAt(value: number): Bulletin;
+
+    hasCloseReason(): boolean;
+    clearCloseReason(): void;
+    getCloseReason(): BulletinCloseReason | undefined;
+    setCloseReason(value: BulletinCloseReason): Bulletin;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): Bulletin.AsObject;
+    static toObject(includeInstance: boolean, msg: Bulletin): Bulletin.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: Bulletin, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): Bulletin;
+    static deserializeBinaryFromReader(message: Bulletin, reader: jspb.BinaryReader): Bulletin;
+}
+
+export namespace Bulletin {
+    export type AsObject = {
+        id: string,
+        userId: string,
+        createdAt: number,
+        acknowledgedAt?: number,
+        closeReason?: BulletinCloseReason,
+    }
+}
+
 export class NotificationEvent extends jspb.Message { 
 
     hasCircleGrew(): boolean;
@@ -649,6 +774,16 @@ export class NotificationEvent extends jspb.Message {
     getMigrationRetryReady(): MigrationRetryReady | undefined;
     setMigrationRetryReady(value?: MigrationRetryReady): NotificationEvent;
 
+    hasInactivityFeeNotice(): boolean;
+    clearInactivityFeeNotice(): void;
+    getInactivityFeeNotice(): InactivityFeeNotice | undefined;
+    setInactivityFeeNotice(value?: InactivityFeeNotice): NotificationEvent;
+
+    hasInactivityFeeWelcomeBack(): boolean;
+    clearInactivityFeeWelcomeBack(): void;
+    getInactivityFeeWelcomeBack(): InactivityFeeWelcomeBack | undefined;
+    setInactivityFeeWelcomeBack(value?: InactivityFeeWelcomeBack): NotificationEvent;
+
     getDataCase(): NotificationEvent.DataCase;
 
     serializeBinary(): Uint8Array;
@@ -672,6 +807,8 @@ export namespace NotificationEvent {
         price?: PriceChanged.AsObject,
         marketingNotificationTriggered?: MarketingNotificationTriggered.AsObject,
         migrationRetryReady?: MigrationRetryReady.AsObject,
+        inactivityFeeNotice?: InactivityFeeNotice.AsObject,
+        inactivityFeeWelcomeBack?: InactivityFeeWelcomeBack.AsObject,
     }
 
     export enum DataCase {
@@ -685,6 +822,8 @@ export namespace NotificationEvent {
         PRICE = 7,
         MARKETING_NOTIFICATION_TRIGGERED = 8,
         MIGRATION_RETRY_READY = 9,
+        INACTIVITY_FEE_NOTICE = 10,
+        INACTIVITY_FEE_WELCOME_BACK = 11,
     }
 
 }
@@ -784,6 +923,64 @@ export class MigrationRetryReady extends jspb.Message {
 export namespace MigrationRetryReady {
     export type AsObject = {
         userId: string,
+    }
+}
+
+export class InactivityFeeNotice extends jspb.Message { 
+    getUserId(): string;
+    setUserId(value: string): InactivityFeeNotice;
+    getEffectiveDate(): string;
+    setEffectiveDate(value: string): InactivityFeeNotice;
+    getFeeAmountCents(): number;
+    setFeeAmountCents(value: number): InactivityFeeNotice;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): InactivityFeeNotice.AsObject;
+    static toObject(includeInstance: boolean, msg: InactivityFeeNotice): InactivityFeeNotice.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: InactivityFeeNotice, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): InactivityFeeNotice;
+    static deserializeBinaryFromReader(message: InactivityFeeNotice, reader: jspb.BinaryReader): InactivityFeeNotice;
+}
+
+export namespace InactivityFeeNotice {
+    export type AsObject = {
+        userId: string,
+        effectiveDate: string,
+        feeAmountCents: number,
+    }
+}
+
+export class InactivityFeeWelcomeBack extends jspb.Message { 
+    getUserId(): string;
+    setUserId(value: string): InactivityFeeWelcomeBack;
+
+    hasRefundedSats(): boolean;
+    clearRefundedSats(): void;
+    getRefundedSats(): number | undefined;
+    setRefundedSats(value: number): InactivityFeeWelcomeBack;
+
+    hasRefundedCents(): boolean;
+    clearRefundedCents(): void;
+    getRefundedCents(): number | undefined;
+    setRefundedCents(value: number): InactivityFeeWelcomeBack;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): InactivityFeeWelcomeBack.AsObject;
+    static toObject(includeInstance: boolean, msg: InactivityFeeWelcomeBack): InactivityFeeWelcomeBack.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: InactivityFeeWelcomeBack, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): InactivityFeeWelcomeBack;
+    static deserializeBinaryFromReader(message: InactivityFeeWelcomeBack, reader: jspb.BinaryReader): InactivityFeeWelcomeBack;
+}
+
+export namespace InactivityFeeWelcomeBack {
+    export type AsObject = {
+        userId: string,
+        refundedSats?: number,
+        refundedCents?: number,
     }
 }
 
@@ -948,6 +1145,16 @@ export class MarketingNotificationTriggered extends jspb.Message {
     getIcon(): Icon | undefined;
     setIcon(value: Icon): MarketingNotificationTriggered;
 
+    hasBulletinKey(): boolean;
+    clearBulletinKey(): void;
+    getBulletinKey(): string | undefined;
+    setBulletinKey(value: string): MarketingNotificationTriggered;
+
+    hasDismissible(): boolean;
+    clearDismissible(): void;
+    getDismissible(): boolean | undefined;
+    setDismissible(value: boolean): MarketingNotificationTriggered;
+
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): MarketingNotificationTriggered.AsObject;
     static toObject(includeInstance: boolean, msg: MarketingNotificationTriggered): MarketingNotificationTriggered.AsObject;
@@ -968,6 +1175,8 @@ export namespace MarketingNotificationTriggered {
         shouldAddToBulletin: boolean,
         action?: Action.AsObject,
         icon?: Icon,
+        bulletinKey?: string,
+        dismissible?: boolean,
     }
 }
 
@@ -1077,6 +1286,13 @@ export enum NotificationCategory {
     ADMIN_NOTIFICATION = 3,
     MARKETING = 4,
     PRICE = 5,
+}
+
+export enum BulletinCloseReason {
+    ACKNOWLEDGED = 0,
+    CLOSED = 1,
+    REPLACED = 2,
+    SUPERSEDED = 3,
 }
 
 export enum CircleType {

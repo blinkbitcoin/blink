@@ -814,6 +814,7 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "NotificationsError":
     case "NotificationsServiceError":
     case "InvalidDeviceNotificationsServiceError":
+    case "InvalidBulletinCloseReasonNotificationsServiceError":
     case "ConcurrentModificationNotificationsServiceError":
     case "DeviceTokensNotRegisteredNotificationsServiceError":
     case "AccountError":
@@ -977,6 +978,13 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "DuplicateLocalizedNotificationContentError":
       message = "Multiple localized push contents with the same language"
       return new ValidationInternalError({ message, logger: baseLogger })
+    case "InvalidBulletinKeyError":
+    case "BulletinOptionsWithoutBulletinError":
+    case "NonDismissibleBulletinWithoutSystemKeyError":
+    case "TooManyBulletinUserIdsError":
+    case "InvalidArgumentNotificationsServiceError":
+      message = error.message
+      return new ValidationInternalError({ message, logger: baseLogger })
 
     // ----------
     // Unknown below here
@@ -1017,6 +1025,18 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "CouldNotFindAccountError":
     case "CouldNotFindMigrationFlowStateError":
     case "CouldNotFindWindDownCohortAssessmentError":
+    case "InactivityFeeError":
+    case "InactivityFeeNoticeNotFoundError":
+    case "InactivityFeeNoticeSentButUnflaggedError":
+    case "InactivityFeeRunAbortedError":
+    case "InactivityFeeRunAccountErrorsError":
+    case "InactivityFeeRunInProgressError":
+    case "InvalidInactivityFeeExternalIdError":
+    case "InactivityFeeRefundUnpairableError":
+    case "InactivityFeeRefundFailedError":
+    case "InactivityFeeReactivationTimeoutError":
+    case "InactivityFeeInvalidRateError":
+    case "InactivityFeeDebitInvariantError":
     case "OathkeeperError":
     case "OathkeeperUnauthorizedServiceError":
     case "OathkeeperMissingAuthorizationHeaderError":

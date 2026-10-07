@@ -2,24 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat(core): allow freezing admin api mutations via config (#861)'
-      sha: ceb47afcf87b60496d7918c22942e69924c4bf55
+      commitTitle: 'fix(ci): avoid file watch limits in core chart PR queries (#875)...'
+      sha: e0a7671ea751f4e25e2b1edeb9060b749bfd63f5
       tags:
-      - 0.22.65
+      - 0.22.67-3-ge0a7671ea
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat(core): allow freezing admin api mutations via config (#861)'
-      sha: ceb47afcf87b60496d7918c22942e69924c4bf55
+      commitTitle: 'fix(ci): avoid file watch limits in core chart PR queries (#875)...'
+      sha: e0a7671ea751f4e25e2b1edeb9060b749bfd63f5
       tags:
-      - 0.22.65
+      - 0.22.67-3-ge0a7671ea
     path: schemas
   - git:
-      commitTitle: 'feat(core): allow freezing admin api mutations via config (#861)'
-      sha: ceb47afcf87b60496d7918c22942e69924c4bf55
+      commitTitle: 'fix(ci): avoid file watch limits in core chart PR queries (#875)...'
+      sha: e0a7671ea751f4e25e2b1edeb9060b749bfd63f5
       tags:
-      - 0.22.65
+      - 0.22.67-3-ge0a7671ea
     path: gql
   path: graphql
 kind: LockConfig

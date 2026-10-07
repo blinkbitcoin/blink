@@ -7,6 +7,8 @@
     nixpkgs-node.url = "github:nixos/nixpkgs/06a1bc65f61c040137db4529ba74756c2d110da3";
     nixpkgs-docker.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     nixpkgs-tilt.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+    # Use a modern Go-built ytt with LC_UUID support for recent macOS loaders.
+    nixpkgs-ytt.url = "github:nixos/nixpkgs/5e4522be6bdf1600682a6f383434b057b2d77a37";
     # reindeer >= 2024.03.29 downloads crates from static.crates.io (CDN) instead of the
     # rate-limited crates.io API; later versions require cargo >= 1.79 metadata semantics,
     # so this stays pinned until the rust toolchain is bumped
@@ -29,6 +31,7 @@
     nixpkgs-node,
     nixpkgs-docker,
     nixpkgs-tilt,
+    nixpkgs-ytt,
     nixpkgs-reindeer,
     flake-utils,
     concourse-shared,
@@ -38,6 +41,7 @@
       nodePkgs = import nixpkgs-node {inherit system;};
       dockerPkgs = import nixpkgs-docker {inherit system;};
       tiltPkgs = import nixpkgs-tilt {inherit system;};
+      yttPkgs = import nixpkgs-ytt {inherit system;};
       reindeerPkgs = import nixpkgs-reindeer {inherit system;};
       # Node 24 LTS "Krypton" (24.19.0); includes the async_hooks stack overflow fix.
       # Kept out of the pkgs overlay on purpose: the main nixpkgs' npm build
@@ -86,7 +90,7 @@
           shfmt
           vendir
           jq
-          ytt
+          yttPkgs.ytt
           sqlx-cli
           cargo-nextest
           cargo-audit

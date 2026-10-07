@@ -138,9 +138,31 @@ interface INotificationsService {
     userId: UserId
   }): Promise<true | NotificationsServiceError>
 
+  sendInactivityFeeNotice(args: {
+    userId: UserId
+    effectiveDate: Date
+    feeAmountCents: UsdCents
+  }): Promise<true | NotificationsServiceError>
+
+  sendInactivityFeeWelcomeBack(args: {
+    userId: UserId
+    refundedSats?: Satoshis
+    refundedCents?: UsdCents
+  }): Promise<true | NotificationsServiceError>
+
   triggerMarketingNotification(
     args: TriggerMarketingNotificationArgs,
   ): Promise<true | NotificationsServiceError>
+
+  closeBulletin(args: {
+    userId: UserId
+    bulletinKey: BulletinKey
+  }): Promise<true | NotificationsServiceError>
+
+  listLatestBulletins(args: {
+    userIds: UserId[]
+    bulletinKey: BulletinKey
+  }): Promise<NotificationBulletin[] | NotificationsServiceError>
 }
 
 type TriggerMarketingNotificationArgs = {
@@ -161,6 +183,28 @@ type TriggerMarketingNotificationArgs = {
   shouldSendPush: boolean
   shouldAddToHistory: boolean
   shouldAddToBulletin: boolean
+  bulletinKey: BulletinKey | undefined
+  dismissible: boolean
   icon?: Icon
   localizedContents: Map<UserLanguage, LocalizedNotificationContent>
+}
+
+type BulletinKey = string & { readonly brand: unique symbol }
+
+type NotificationBulletinId = string & { readonly brand: unique symbol }
+
+type BulletinCloseReason =
+  (typeof import("./index").BulletinCloseReason)[keyof typeof import("./index").BulletinCloseReason]
+
+type NotificationBulletin = {
+  id: NotificationBulletinId
+  userId: UserId
+  createdAt: Date
+  acknowledgedAt: Date | undefined
+  closeReason: BulletinCloseReason | undefined
+}
+
+type BulletinOptions = {
+  bulletinKey: BulletinKey | undefined
+  dismissible: boolean
 }

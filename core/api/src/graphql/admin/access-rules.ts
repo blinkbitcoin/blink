@@ -5,6 +5,8 @@ import { AdminFieldDefinitions, AdminGraphQLFieldConfig } from "./types"
 
 import { OperationRestrictedError } from "@/graphql/error"
 
+import { requiresBulletinManagement } from "@/domain/notifications"
+
 import { baseLogger } from "@/services/logger"
 import { addAttributesToCurrentSpan } from "@/services/tracing"
 
@@ -29,14 +31,38 @@ enum AdminAccessRight {
   LOCK_ACCOUNT = "LOCK_ACCOUNT",
   VIEW_MERCHANTS = "VIEW_MERCHANTS",
   MIGRATION_RETRY_GRANT = "MIGRATION_RETRY_GRANT",
+  MANAGE_BULLETINS = "MANAGE_BULLETINS",
+}
+
+const hasAccessRight = (ctx: GraphQLAdminContext, accessRight: AdminAccessRight) => {
+  if (!ctx.privilegedClientId || !ctx.scope) return false
+  return ctx.scope.includes(accessRight)
 }
 
 // Helper function to create access right rules
 const createAccessRightRule = (accessRight: AdminAccessRight) =>
-  rule({ cache: "contextual" })(async (_parent, _args, ctx: GraphQLAdminContext) => {
-    if (!ctx.privilegedClientId || !ctx.scope) return false
-    return ctx.scope.includes(accessRight)
+  rule({ cache: "contextual" })(async (_parent, _args, ctx: GraphQLAdminContext) =>
+    hasAccessRight(ctx, accessRight),
+  )
+
+// System bulletin keys and bulletins the user cannot dismiss need MANAGE_BULLETINS
+// on top of SEND_NOTIFICATIONS, so marketing sends cannot take over a system flow
+const triggerMarketingNotificationRule = rule({ cache: "no_cache" })(async (
+  _parent,
+  args: { input: { bulletinKey?: BulletinKey | Error | null; dismissible: boolean } },
+  ctx: GraphQLAdminContext,
+) => {
+  if (!hasAccessRight(ctx, AdminAccessRight.SEND_NOTIFICATIONS)) return false
+
+  const { bulletinKey, dismissible } = args.input
+  const checkedBulletinKey = bulletinKey instanceof Error ? undefined : bulletinKey
+  const isRestricted = requiresBulletinManagement({
+    bulletinKey: checkedBulletinKey || undefined,
+    dismissible,
   })
+  if (!isRestricted) return true
+  return hasAccessRight(ctx, AdminAccessRight.MANAGE_BULLETINS)
+})
 
 // Export the actual GraphQL Shield rules that can be used directly
 export const accessRules = {
@@ -51,6 +77,8 @@ export const accessRules = {
   lockAccount: createAccessRightRule(AdminAccessRight.LOCK_ACCOUNT),
   viewMerchants: createAccessRightRule(AdminAccessRight.VIEW_MERCHANTS),
   migrationRetryGrant: createAccessRightRule(AdminAccessRight.MIGRATION_RETRY_GRANT),
+  manageBulletins: createAccessRightRule(AdminAccessRight.MANAGE_BULLETINS),
+  triggerMarketingNotification: triggerMarketingNotificationRule,
 }
 
 /**

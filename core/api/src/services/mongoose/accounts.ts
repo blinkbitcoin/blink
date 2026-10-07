@@ -98,9 +98,51 @@ export const AccountsRepository = (): IAccountsRepository => {
   const persistNew = async (kratosUserId: UserId): Promise<Account | RepositoryError> => {
     try {
       const account = new Account()
+      account.last_activity_at = new Date()
       account.kratosUserId = kratosUserId
       await account.save()
       return translateToAccount(account)
+    } catch (err) {
+      return parseRepositoryError(err)
+    }
+  }
+
+  // lean: return the raw stored value, never a hydrated default
+  const recordActivity = async ({
+    id,
+    now,
+    onlyIfOlderThan,
+  }: RecordAccountActivityArgs): Promise<
+    RecordAccountActivityResult | RepositoryError
+  > => {
+    try {
+      const filter =
+        onlyIfOlderThan === undefined
+          ? { id }
+          : {
+              id,
+              $or: [
+                { last_activity_at: null }, // missing or null
+                { last_activity_at: { $lt: onlyIfOlderThan } },
+              ],
+            }
+      // $max: writes that reach Mongo out of order can never move the value backward
+      const previous = await Account.findOneAndUpdate(
+        filter,
+        { $max: { last_activity_at: now } },
+        { returnDocument: "before", projection: { last_activity_at: 1 }, lean: true },
+      )
+      if (!previous) {
+        if (onlyIfOlderThan !== undefined) return { written: false }
+        return new CouldNotFindAccountFromIdError(id)
+      }
+      const previousActivityAt = previous.last_activity_at
+        ? new Date(previous.last_activity_at)
+        : undefined
+      if (previousActivityAt && previousActivityAt.getTime() >= now.getTime()) {
+        return { written: false }
+      }
+      return { written: true, previousActivityAt }
     } catch (err) {
       return parseRepositoryError(err)
     }
@@ -122,14 +164,44 @@ export const AccountsRepository = (): IAccountsRepository => {
     }
   }
 
+  // Every account whose last activity is at or before the cutoff, via the last_activity_at
+  // index. Accounts without the field (not backfilled) never match. A driver error while
+  // iterating surfaces as a thrown error from the `for await`: a scan cannot half-succeed.
+  const listDormantAccounts = async function* ({
+    cutoff,
+  }: {
+    cutoff: Date
+  }): AsyncGenerator<Account> {
+    // small batches: at tens of ms per account a size-bound default batch could sit longer than
+    // Mongo's cursor idle timeout on a six-figure scan
+    const cursor = Account.find({ last_activity_at: { $lte: cutoff } }).cursor({
+      batchSize: 200,
+    })
+    for await (const account of cursor) {
+      yield translateToAccount(account)
+    }
+  }
+
+  const countWithoutActivityClock = async (): Promise<number | RepositoryError> => {
+    try {
+      // matches a missing field as well as an explicit null
+      return await Account.countDocuments({ last_activity_at: null })
+    } catch (err) {
+      return parseRepositoryError(err)
+    }
+  }
+
   return {
     persistNew,
     findByUserId,
     listUnlockedAccounts: listAccountsByStatus(AccountStatus.Active),
     listLockedAccounts: listAccountsByStatus(AccountStatus.Locked),
+    listDormantAccounts,
+    countWithoutActivityClock,
     findById,
     findByUsername,
     update,
+    recordActivity,
   }
 }
 
@@ -145,4 +217,5 @@ const translateToAccount = (result: AccountRecord): Account => ({
   withdrawFee: result.withdrawFee as Satoshis,
   kratosUserId: result.kratosUserId as UserId,
   displayCurrency: (result.displayCurrency || UsdDisplayCurrency) as DisplayCurrency,
+  lastActivityAt: result.last_activity_at ? new Date(result.last_activity_at) : undefined,
 })
