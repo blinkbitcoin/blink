@@ -38,7 +38,6 @@ const writeAuthorize = async (
 ) => {
   const scope = context.scope
 
-  // empty scope is trusted only for kratos sessions
   if (scope === undefined || scope.length === 0) {
     return context.sessionId
       ? resolve(parent, args, context, info)
@@ -61,7 +60,6 @@ const receiveAuthorize = async (
 ) => {
   const scope = context.scope
 
-  // empty scope is trusted only for kratos sessions
   if (scope === undefined || scope.length === 0) {
     return context.sessionId
       ? resolve(parent, args, context, info)

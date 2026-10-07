@@ -77,7 +77,6 @@ async fn playground() -> impl axum::response::IntoResponse {
 
 pub const WRITE_SCOPE: &str = "write";
 
-// Empty scope is trusted only for Kratos sessions.
 pub fn can_write(scope: &str, session_id: &str) -> bool {
     scope.split(' ').any(|s| s == WRITE_SCOPE) || (scope.is_empty() && !session_id.is_empty())
 }

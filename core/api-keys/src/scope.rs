@@ -36,7 +36,6 @@ pub fn is_read_only(scope: &[Scope]) -> bool {
     scope.len() == 1 && scope[0] == Scope::Read
 }
 
-// Key management needs a Kratos session or an OAuth token with write scope.
 pub fn can_manage_keys(scope: &str, session_id: &str, client_id: &str) -> bool {
     if !session_id.is_empty() {
         return true;
