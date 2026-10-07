@@ -103,6 +103,8 @@ exec_graphql() {
     AUTH_HEADER=""
   elif [[ ${token_name} == api-key* ]]; then
     AUTH_HEADER="X-API-KEY: $(read_value "$token_name")"
+  elif [[ ${token_name} == oauth* ]]; then
+    AUTH_HEADER="Oauth2-Token: $(read_value "$token_name")"
   else
     AUTH_HEADER="Authorization: Bearer $(read_value "$token_name")"
   fi

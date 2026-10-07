@@ -5,7 +5,7 @@ use crate::{app::ApiKeysApp, identity::IdentityApiKeyId, scope::*};
 
 pub struct AuthSubject {
     pub id: String,
-    pub can_write: bool,
+    pub can_manage_keys: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -196,7 +196,7 @@ impl Mutation {
     ) -> async_graphql::Result<ApiKeyCreatePayload> {
         let app = ctx.data_unchecked::<ApiKeysApp>();
         let subject = ctx.data::<AuthSubject>()?;
-        if !subject.can_write {
+        if !subject.can_manage_keys {
             return Err("Permission denied".into());
         }
         let key = app
@@ -211,8 +211,11 @@ impl Mutation {
         input: ApiKeyRevokeInput,
     ) -> async_graphql::Result<ApiKeyRevokePayload> {
         let app = ctx.data_unchecked::<ApiKeysApp>();
-        let api_key_id = input.id.parse::<IdentityApiKeyId>()?;
         let subject = ctx.data::<AuthSubject>()?;
+        if !subject.can_manage_keys {
+            return Err("Permission denied".into());
+        }
+        let api_key_id = input.id.parse::<IdentityApiKeyId>()?;
         let api_key = app
             .revoke_api_key_for_subject(&subject.id, api_key_id)
             .await?;
@@ -226,7 +229,7 @@ impl Mutation {
     ) -> async_graphql::Result<ApiKeySetLimitPayload> {
         let app = ctx.data_unchecked::<ApiKeysApp>();
         let subject = ctx.data::<AuthSubject>()?;
-        if !subject.can_write {
+        if !subject.can_manage_keys {
             return Err("Permission denied".into());
         }
 
@@ -252,7 +255,7 @@ impl Mutation {
     ) -> async_graphql::Result<ApiKeySetLimitPayload> {
         let app = ctx.data_unchecked::<ApiKeysApp>();
         let subject = ctx.data::<AuthSubject>()?;
-        if !subject.can_write {
+        if !subject.can_manage_keys {
             return Err("Permission denied".into());
         }
 
