@@ -36,6 +36,53 @@ pub fn is_read_only(scope: &[Scope]) -> bool {
     scope.len() == 1 && scope[0] == Scope::Read
 }
 
-pub fn can_write(scope: &str) -> bool {
-    scope.split(' ').any(|s| s == WRITE_SCOPE) || scope.is_empty()
+pub fn can_manage_keys(scope: &str, session_id: &str, client_id: &str) -> bool {
+    if !session_id.is_empty() {
+        return true;
+    }
+    !client_id.is_empty() && scope.split(' ').any(|s| s == WRITE_SCOPE)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const SESSION: &str = "9b8c7d6e-session";
+    const CLIENT: &str = "dashboard-client";
+
+    #[test]
+    fn mobile_session() {
+        assert!(can_manage_keys("", SESSION, ""));
+    }
+
+    #[test]
+    fn dashboard_oauth_with_write() {
+        assert!(can_manage_keys("read write", "", CLIENT));
+    }
+
+    #[test]
+    fn oauth_read_only() {
+        assert!(!can_manage_keys("read", "", CLIENT));
+    }
+
+    #[test]
+    fn oauth_empty_scope() {
+        assert!(!can_manage_keys("", "", CLIENT));
+    }
+
+    #[test]
+    fn write_api_key() {
+        assert!(!can_manage_keys("read write", "", ""));
+    }
+
+    #[test]
+    fn read_or_receive_api_key() {
+        assert!(!can_manage_keys("read", "", ""));
+        assert!(!can_manage_keys("receive", "", ""));
+    }
+
+    #[test]
+    fn anonymous() {
+        assert!(!can_manage_keys("", "", ""));
+    }
 }
