@@ -2,24 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix(ci): avoid file watch limits in core chart PR queries (#875)...'
-      sha: e0a7671ea751f4e25e2b1edeb9060b749bfd63f5
+      commitTitle: 'fix(core): tighten token scope checks (#891)'
+      sha: 475ec47f934bafefe4d780ebb1ba94b7fd6cceb6
       tags:
-      - 0.22.67-3-ge0a7671ea
+      - 0.22.68-1-g475ec47f9
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'fix(ci): avoid file watch limits in core chart PR queries (#875)...'
-      sha: e0a7671ea751f4e25e2b1edeb9060b749bfd63f5
+      commitTitle: 'fix(core): tighten token scope checks (#891)'
+      sha: 475ec47f934bafefe4d780ebb1ba94b7fd6cceb6
       tags:
-      - 0.22.67-3-ge0a7671ea
+      - 0.22.68-1-g475ec47f9
     path: schemas
   - git:
-      commitTitle: 'fix(ci): avoid file watch limits in core chart PR queries (#875)...'
-      sha: e0a7671ea751f4e25e2b1edeb9060b749bfd63f5
+      commitTitle: 'fix(core): tighten token scope checks (#891)'
+      sha: 475ec47f934bafefe4d780ebb1ba94b7fd6cceb6
       tags:
-      - 0.22.67-3-ge0a7671ea
+      - 0.22.68-1-g475ec47f9
     path: gql
   path: graphql
 kind: LockConfig
