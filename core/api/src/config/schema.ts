@@ -1334,6 +1334,7 @@ export const configSchema = {
           maximum: 30000,
           default: 5000,
         },
+        runConcurrency: { type: "integer", minimum: 1, maximum: 16, default: 4 },
       },
       required: [
         "activityRefreshIntervalSec",
@@ -1346,6 +1347,7 @@ export const configSchema = {
         "level0Deadline",
         "reactivationLockWaitMs",
         "reactivationBudgetMs",
+        "runConcurrency",
       ],
       additionalProperties: false,
       default: {
@@ -1359,6 +1361,7 @@ export const configSchema = {
         level0Deadline: "2026-10-31T22:59:59Z",
         reactivationLockWaitMs: 1500,
         reactivationBudgetMs: 5000,
+        runConcurrency: 4,
       },
     },
     regionRestrictions: {

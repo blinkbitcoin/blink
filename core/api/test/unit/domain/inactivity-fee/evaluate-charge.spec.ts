@@ -31,6 +31,7 @@ const config: InactivityFeeConfig = {
   level0Deadline: iso("2026-10-31T22:59:59Z"),
   reactivationLockWaitMs: 1500,
   reactivationBudgetMs: 5000,
+  runConcurrency: 1,
 }
 
 const account = (overrides: Partial<Account> = {}): Account => ({

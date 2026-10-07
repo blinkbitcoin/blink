@@ -21,10 +21,10 @@ import { LockService } from "@/services/lock"
 import { AccountsRepository } from "@/services/mongoose"
 import { addEventToCurrentSpan, recordExceptionInCurrentSpan } from "@/services/tracing"
 
-// one price-service ratio per display currency per run; a failure is kept so it warns once
-type DisplayRatioCache = Map<
+// one price-service lookup per display currency per run; a failure is kept so it warns once
+export type DisplayRatioCache = Map<
   DisplayCurrency,
-  DisplayPriceRatio<"BTC", DisplayCurrency> | ApplicationError
+  Promise<DisplayPriceRatio<"BTC", DisplayCurrency> | ApplicationError>
 >
 
 type ChargeWalletArgs = {
@@ -312,14 +312,24 @@ const displayAmountsFor = async ({
   const currency = account.displayCurrency
   if (currency === UsdDisplayCurrency) return undefined
 
-  let ratio = displayRatios.get(currency)
-  if (ratio === undefined) {
-    ratio = await getCurrentPriceAsDisplayPriceRatio({ currency })
-    displayRatios.set(currency, ratio)
-    if (ratio instanceof Error) {
-      recordExceptionInCurrentSpan({ error: ratio, level: ErrorLevel.Warn })
-    }
+  let pending = displayRatios.get(currency)
+  if (pending === undefined) {
+    pending = getCurrentPriceAsDisplayPriceRatio({ currency }).then(
+      (looked) => {
+        if (looked instanceof Error) {
+          recordExceptionInCurrentSpan({ error: looked, level: ErrorLevel.Warn })
+        }
+        return looked
+      },
+      (err) => {
+        // a throw is not cached
+        displayRatios.delete(currency)
+        throw err
+      },
+    )
+    displayRatios.set(currency, pending)
   }
+  const ratio = await pending
   if (ratio instanceof Error) return undefined
 
   const converted = DisplayAmountsConverter(ratio).convert({
