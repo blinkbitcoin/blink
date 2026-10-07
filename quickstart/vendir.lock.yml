@@ -2,24 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix(core): tighten token scope checks (#891)'
-      sha: 475ec47f934bafefe4d780ebb1ba94b7fd6cceb6
+      commitTitle: 'fix(deps): bump proxy-addr and shell-quote for critical advisories
+        (#892)'
+      sha: 85f11784b633a4419c4089a16a33670f9fc3c2ce
       tags:
-      - 0.22.68-1-g475ec47f9
+      - 0.22.68-3-g85f11784b
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'fix(core): tighten token scope checks (#891)'
-      sha: 475ec47f934bafefe4d780ebb1ba94b7fd6cceb6
+      commitTitle: 'fix(deps): bump proxy-addr and shell-quote for critical advisories
+        (#892)'
+      sha: 85f11784b633a4419c4089a16a33670f9fc3c2ce
       tags:
-      - 0.22.68-1-g475ec47f9
+      - 0.22.68-3-g85f11784b
     path: schemas
   - git:
-      commitTitle: 'fix(core): tighten token scope checks (#891)'
-      sha: 475ec47f934bafefe4d780ebb1ba94b7fd6cceb6
+      commitTitle: 'fix(deps): bump proxy-addr and shell-quote for critical advisories
+        (#892)'
+      sha: 85f11784b633a4419c4089a16a33670f9fc3c2ce
       tags:
-      - 0.22.68-1-g475ec47f9
+      - 0.22.68-3-g85f11784b
     path: gql
   path: graphql
 kind: LockConfig
