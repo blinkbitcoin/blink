@@ -15,6 +15,8 @@ import {
   TelegramPassportNonceAttemptPhoneRateLimiterExceededError,
   RegionCheckIpResolutionBudgetExceededError,
   BtcMapPlaceSubmitPerAccountRateLimiterExceededError,
+  CaptchaRequestCodePerCountryRateLimiterExceededError,
+  CaptchaRequestCodeGlobalRateLimiterExceededError,
 } from "./errors"
 
 import {
@@ -34,12 +36,16 @@ import {
   getRequestCodePerPhoneNumberLimits,
   getRegionCheckIpResolutionLimits,
   getBtcMapPlaceSubmitPerAccountLimits,
+  getRequestCodeCaptchaPerCountryLimits,
+  getRequestCodeCaptchaGlobalLimits,
 } from "@/config"
 
 export const RateLimitPrefix = {
   requestCodeAttemptPerEmail: "request_code_attempt_id",
   requestCodeAttemptPerPhoneNumber: "request_phone_number_id",
   requestCodeAttemptPerIp: "request_code_attempt_ip",
+  requestCodeCaptchaPerCountry: "request_code_captcha_country",
+  requestCodeCaptchaGlobal: "request_code_captcha_global",
   requestTelegramPassportNonceAttemptPerPhoneNumber:
     "request_tg_passport_nonce_attempt_phone_number",
   requestTelegramPassportNonceAttemptPerIp: "request_tg_passport_nonce_attempt_ip",
@@ -73,6 +79,16 @@ export const RateLimitConfig: { [key in RateLimitPrefixKey]: RateLimitConfig } =
     key: RateLimitPrefix.requestCodeAttemptPerIp,
     limits: getRequestCodePerIpLimits(),
     error: UserCodeAttemptIpRateLimiterExceededError,
+  },
+  requestCodeCaptchaPerCountry: {
+    key: RateLimitPrefix.requestCodeCaptchaPerCountry,
+    limits: getRequestCodeCaptchaPerCountryLimits(),
+    error: CaptchaRequestCodePerCountryRateLimiterExceededError,
+  },
+  requestCodeCaptchaGlobal: {
+    key: RateLimitPrefix.requestCodeCaptchaGlobal,
+    limits: getRequestCodeCaptchaGlobalLimits(),
+    error: CaptchaRequestCodeGlobalRateLimiterExceededError,
   },
   requestTelegramPassportNonceAttemptPerPhoneNumber: {
     key: RateLimitPrefix.requestTelegramPassportNonceAttemptPerPhoneNumber,

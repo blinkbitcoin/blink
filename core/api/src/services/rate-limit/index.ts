@@ -50,7 +50,14 @@ export const consumeLimiter = async ({
   keyToConsume,
 }: {
   rateLimitConfig: RateLimitConfig
-  keyToConsume: IpAddress | LoginIdentifier | AccountId | AppcheckJti | ""
+  keyToConsume:
+    | IpAddress
+    | LoginIdentifier
+    | AccountId
+    | AppcheckJti
+    | CountryCode
+    | "global"
+    | ""
 }) => {
   const limiter = RedisRateLimitService({
     keyPrefix: rateLimitConfig.key,

@@ -213,6 +213,8 @@ type YamlSchema = {
     requestCodePerEmail: RateLimitInput
     requestCodePerPhoneNumber: RateLimitInput
     requestCodePerIp: RateLimitInput
+    requestCodeCaptchaPerCountry: RateLimitInput
+    requestCodeCaptchaGlobal: RateLimitInput
     requestTelegramPassportNoncePerPhoneNumber: RateLimitInput
     requestTelegramPassportNoncePerIp: RateLimitInput
     loginAttemptPerLoginIdentifier: RateLimitInput

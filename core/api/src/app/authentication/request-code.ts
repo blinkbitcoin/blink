@@ -1,3 +1,5 @@
+import { parsePhoneNumberFromString } from "libphonenumber-js"
+
 import {
   TWILIO_ACCOUNT_SID,
   UNSECURE_DEFAULT_LOGIN_CODE,
@@ -23,6 +25,7 @@ import { IPMetadataAuthorizer } from "@/domain/accounts-ips/ip-metadata-authoriz
 
 import {
   addAttributesToCurrentSpan,
+  addEventToCurrentSpan,
   recordExceptionInCurrentSpan,
 } from "@/services/tracing"
 import Geetest from "@/services/geetest"
@@ -94,6 +97,19 @@ export const requestPhoneCodeWithCaptcha = async ({
 
   const verifyService = getPhoneProviderVerifyService()
   if (verifyService instanceof Error) return verifyService
+
+  // cap code sends on the captcha path
+  const country = (parsePhoneNumberFromString(phone)?.country || "unknown") as CountryCode
+
+  {
+    const limitOk = await checkCaptchaRequestCodePerCountryLimits(country)
+    if (limitOk instanceof Error) return limitOk
+  }
+
+  if (!phoneExists) {
+    const limitOk = await checkCaptchaRequestCodeGlobalLimits(country)
+    if (limitOk instanceof Error) return limitOk
+  }
 
   return verifyService.initiateVerify({
     to: phone,
@@ -313,3 +329,29 @@ const checkRequestCodeAttemptPerAppcheckJtiLimits = async (
     rateLimitConfig: RateLimitConfig.requestCodeAttemptPerAppcheckJti,
     keyToConsume: appcheckJti,
   })
+
+const checkCaptchaRequestCodePerCountryLimits = async (
+  country: CountryCode,
+): Promise<true | RateLimiterExceededError> => {
+  const limitOk = await consumeLimiter({
+    rateLimitConfig: RateLimitConfig.requestCodeCaptchaPerCountry,
+    keyToConsume: country,
+  })
+  if (limitOk instanceof Error) {
+    addEventToCurrentSpan("captchaRequestCodeCapExceeded", { scope: "country", country })
+  }
+  return limitOk
+}
+
+const checkCaptchaRequestCodeGlobalLimits = async (
+  country: CountryCode,
+): Promise<true | RateLimiterExceededError> => {
+  const limitOk = await consumeLimiter({
+    rateLimitConfig: RateLimitConfig.requestCodeCaptchaGlobal,
+    keyToConsume: "global",
+  })
+  if (limitOk instanceof Error) {
+    addEventToCurrentSpan("captchaRequestCodeCapExceeded", { scope: "global", country })
+  }
+  return limitOk
+}
