@@ -1014,6 +1014,7 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "UnknownNotificationsServiceError":
     case "UnknownIpFetcherServiceError":
     case "UnknownLnurlServiceError":
+    case "UnknownLnurlServerServiceError":
     case "UnknownCacheServiceError":
     case "UnknownPhoneProviderServiceError":
     case "UnknownDealerPriceServiceError":
