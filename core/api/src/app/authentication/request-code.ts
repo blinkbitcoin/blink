@@ -345,7 +345,10 @@ const checkCaptchaRequestCodePerCountryLimits = async (
     keyToConsume: country,
   })
   if (limitOk instanceof Error) {
-    addEventToCurrentSpan("captchaRequestCodeCapExceeded", { scope: "country", country })
+    addEventToCurrentSpan("captchaRequestCodeCapExceeded", {
+      "captcha.cap.scope": "country",
+      "captcha.cap.country": country,
+    })
   }
   return limitOk
 }
@@ -358,7 +361,10 @@ const checkCaptchaRequestCodeGlobalLimits = async (
     keyToConsume: "global",
   })
   if (limitOk instanceof Error) {
-    addEventToCurrentSpan("captchaRequestCodeCapExceeded", { scope: "global", country })
+    addEventToCurrentSpan("captchaRequestCodeCapExceeded", {
+      "captcha.cap.scope": "global",
+      "captcha.cap.country": country,
+    })
   }
   return limitOk
 }

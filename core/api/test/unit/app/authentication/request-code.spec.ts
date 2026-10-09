@@ -254,7 +254,7 @@ describe("requestPhoneCodeWithCaptcha code-send caps", () => {
     expect(buckets.get(`${GLOBAL_KEY}:global`)).toBe(5)
     expect(mockAddEventToCurrentSpan).toHaveBeenCalledWith(
       "captchaRequestCodeCapExceeded",
-      { scope: "country", country: "GT" },
+      { "captcha.cap.scope": "country", "captcha.cap.country": "GT" },
     )
   })
 
@@ -310,7 +310,7 @@ describe("requestPhoneCodeWithCaptcha code-send caps", () => {
     expect(buckets.get(`${COUNTRY_KEY}:ES`)).toBe(0)
     expect(mockAddEventToCurrentSpan).toHaveBeenCalledWith(
       "captchaRequestCodeCapExceeded",
-      { scope: "global", country: "ES" },
+      { "captcha.cap.scope": "global", "captcha.cap.country": "ES" },
     )
   })
 
