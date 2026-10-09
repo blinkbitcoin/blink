@@ -105,7 +105,6 @@ export const requestPhoneCodeWithCaptcha = async ({
     if (limitOk instanceof Error) return limitOk
   }
 
-  // existing users skip the global cap so new-number floods can't lock them out
   if (!phoneExists) {
     const limitOk = await checkCaptchaRequestCodeGlobalLimits(country)
     if (limitOk instanceof Error) return limitOk
