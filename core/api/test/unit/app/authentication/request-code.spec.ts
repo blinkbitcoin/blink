@@ -127,7 +127,6 @@ const GLOBAL_KEY = "request_code_captcha_global"
 const IP_KEY = "request_code_attempt_ip"
 const PHONE_KEY = "request_phone_number_id"
 
-// prefixes that parse to the given ISO country for any trailing digit
 const PREFIX: Record<string, string> = {
   GT: "+5021234567",
   TJ: "+99291712345",

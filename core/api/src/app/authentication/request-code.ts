@@ -98,7 +98,6 @@ export const requestPhoneCodeWithCaptcha = async ({
   const verifyService = getPhoneProviderVerifyService()
   if (verifyService instanceof Error) return verifyService
 
-  // cap code sends on the captcha path
   const country = (parsePhoneNumberFromString(phone)?.country || "unknown") as CountryCode
 
   {
@@ -106,6 +105,7 @@ export const requestPhoneCodeWithCaptcha = async ({
     if (limitOk instanceof Error) return limitOk
   }
 
+  // existing users skip the global cap so new-number floods can't lock them out
   if (!phoneExists) {
     const limitOk = await checkCaptchaRequestCodeGlobalLimits(country)
     if (limitOk instanceof Error) return limitOk
