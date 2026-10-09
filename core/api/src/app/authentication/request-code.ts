@@ -107,13 +107,16 @@ export const requestPhoneCodeWithCaptcha = async ({
     if (limitOk instanceof Error) return limitOk
   }
 
-  if (!phoneExists) {
+  {
     const limitOk = await checkCaptchaRequestCodeGlobalLimits(country)
     if (limitOk instanceof Error) {
-      await rewardLimiter({
+      const rewarded = await rewardLimiter({
         rateLimitConfig: RateLimitConfig.requestCodeCaptchaPerCountry,
         keyToConsume: country,
       })
+      if (rewarded instanceof Error) {
+        recordExceptionInCurrentSpan({ error: rewarded, level: ErrorLevel.Warn })
+      }
       return limitOk
     }
   }

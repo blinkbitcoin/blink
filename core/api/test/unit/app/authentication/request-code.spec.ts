@@ -121,9 +121,13 @@ const { getPhoneProviderVerifyService: mockGetPhoneProviderVerifyService } =
     getPhoneProviderVerifyService: jest.Mock
   }
 
-const { addEventToCurrentSpan: mockAddEventToCurrentSpan } = jest.requireMock(
-  "@/services/tracing",
-) as { addEventToCurrentSpan: jest.Mock }
+const {
+  addEventToCurrentSpan: mockAddEventToCurrentSpan,
+  recordExceptionInCurrentSpan: mockRecordExceptionInCurrentSpan,
+} = jest.requireMock("@/services/tracing") as {
+  addEventToCurrentSpan: jest.Mock
+  recordExceptionInCurrentSpan: jest.Mock
+}
 
 const COUNTRY_KEY = "request_code_captcha_country"
 const GLOBAL_KEY = "request_code_captcha_global"
@@ -286,7 +290,7 @@ describe("requestPhoneCodeWithCaptcha code-send caps", () => {
     expect(buckets.get(`${COUNTRY_KEY}:US`)).toBe(1)
   })
 
-  it("blocks the 31st new-number send across countries on the global cap", async () => {
+  it("blocks the 31st send across countries on the global cap", async () => {
     for (const country of ["GT", "TJ", "JM", "US", "DE", "FR"]) {
       await sendNumbers(country, 5)
     }
@@ -314,48 +318,39 @@ describe("requestPhoneCodeWithCaptcha code-send caps", () => {
     )
   })
 
-  it("does not let globally rejected new numbers use up existing users' country capacity", async () => {
+  it("does not let globally rejected requests use up country capacity", async () => {
     for (const country of ["GT", "TJ", "JM", "US", "DE", "FR"]) {
       await sendNumbers(country, 5)
     }
+
     for (let i = 0; i < 6; i++) {
       const blocked = await requestPhoneCodeWithCaptcha(captchaArgs(number("IT", i)))
       expect(blocked).toBeInstanceOf(CaptchaRequestCodeGlobalRateLimiterExceededError)
     }
+
     expect(buckets.get(`${COUNTRY_KEY}:IT`)).toBe(0)
-    resetCallHistory()
-
-    existingPhones.add(number("IT", 9))
-    const result = await requestPhoneCodeWithCaptcha(captchaArgs(number("IT", 9)))
-
-    expect(result).toBe(true)
-    expect(mockInitiateVerify).toHaveBeenCalledTimes(1)
-    expect(buckets.get(`${COUNTRY_KEY}:IT`)).toBe(1)
   })
 
-  it("sends to an existing user when the global cap is full, consuming only the country", async () => {
+  it("applies the global cap to existing users the same way as new numbers", async () => {
     for (const country of ["GT", "TJ", "JM", "US", "DE", "FR"]) {
       await sendNumbers(country, 5)
     }
-    const blocked = await requestPhoneCodeWithCaptcha(captchaArgs(number("ES", 0)))
-    expect(blocked).toBeInstanceOf(CaptchaRequestCodeGlobalRateLimiterExceededError)
-    const globalBefore = buckets.get(`${GLOBAL_KEY}:global`)
+    const newNumber = await requestPhoneCodeWithCaptcha(captchaArgs(number("IT", 0)))
     resetCallHistory()
 
-    existingPhones.add(number("IT", 0))
-    const result = await requestPhoneCodeWithCaptcha(captchaArgs(number("IT", 0)))
+    existingPhones.add(number("IT", 1))
+    const existingUser = await requestPhoneCodeWithCaptcha(captchaArgs(number("IT", 1)))
 
-    expect(result).toBe(true)
-    expect(mockInitiateVerify).toHaveBeenCalledTimes(1)
-    expect(mockInitiateVerify).toHaveBeenCalledWith(
-      expect.objectContaining({ phoneExists: true }),
-    )
-    expect(cappedCalls()).toEqual([[COUNTRY_KEY, "IT"]])
-    expect(buckets.get(`${GLOBAL_KEY}:global`)).toBe(globalBefore)
-    expect(mockAddEventToCurrentSpan).not.toHaveBeenCalled()
+    expect(newNumber).toBeInstanceOf(CaptchaRequestCodeGlobalRateLimiterExceededError)
+    expect(existingUser).toBeInstanceOf(CaptchaRequestCodeGlobalRateLimiterExceededError)
+    expect(mockInitiateVerify).not.toHaveBeenCalled()
+    expect(cappedCalls()).toEqual([
+      [COUNTRY_KEY, "IT"],
+      [GLOBAL_KEY, "global"],
+    ])
   })
 
-  it("still applies the country cap to existing users", async () => {
+  it("applies the country cap to existing users", async () => {
     existingPhones = new Set([0, 1, 2, 3, 4, 5].map((i) => number("GT", i)))
     await sendNumbers("GT", 5)
     resetCallHistory()
@@ -364,7 +359,22 @@ describe("requestPhoneCodeWithCaptcha code-send caps", () => {
 
     expect(result).toBeInstanceOf(CaptchaRequestCodePerCountryRateLimiterExceededError)
     expect(mockInitiateVerify).not.toHaveBeenCalled()
-    expect(buckets.get(`${GLOBAL_KEY}:global`)).toBeUndefined()
+  })
+
+  it("records a failed country refund and still returns the global error", async () => {
+    for (const country of ["GT", "TJ", "JM", "US", "DE", "FR"]) {
+      await sendNumbers(country, 5)
+    }
+    const rewardError = new Error("redis down")
+    mockRewardLimiter.mockResolvedValue(rewardError)
+
+    const result = await requestPhoneCodeWithCaptcha(captchaArgs(number("IT", 0)))
+
+    expect(result).toBeInstanceOf(CaptchaRequestCodeGlobalRateLimiterExceededError)
+    expect(mockRecordExceptionInCurrentSpan).toHaveBeenCalledWith({
+      error: rewardError,
+      level: "warn",
+    })
   })
 
   it("rejects a number with no country before consuming the caps", async () => {
