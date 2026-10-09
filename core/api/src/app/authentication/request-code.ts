@@ -14,6 +14,7 @@ import { PhoneAlreadyExistsError } from "@/domain/authentication/errors"
 import {
   InvalidChannel,
   InvalidIpMetadataError,
+  InvalidPhoneNumber,
   MissingIPMetadataError,
   NotImplementedError,
   UnauthorizedIPForOnboardingError,
@@ -33,7 +34,7 @@ import { IpFetcher } from "@/services/ipfetcher"
 import { AuthWithEmailPasswordlessService } from "@/services/kratos"
 import { baseLogger } from "@/services/logger"
 import { UsersRepository } from "@/services/mongoose"
-import { consumeLimiter } from "@/services/rate-limit"
+import { consumeLimiter, rewardLimiter } from "@/services/rate-limit"
 import { TWILIO_ACCOUNT_TEST } from "@/services/phone-provider/twilio-service"
 import { getPhoneProviderVerifyService } from "@/services/phone-provider"
 
@@ -98,7 +99,8 @@ export const requestPhoneCodeWithCaptcha = async ({
   const verifyService = getPhoneProviderVerifyService()
   if (verifyService instanceof Error) return verifyService
 
-  const country = (parsePhoneNumberFromString(phone)?.country || "unknown") as CountryCode
+  const country = parsePhoneNumberFromString(phone)?.country as CountryCode | undefined
+  if (!country) return new InvalidPhoneNumber(phone)
 
   {
     const limitOk = await checkCaptchaRequestCodePerCountryLimits(country)
@@ -107,7 +109,13 @@ export const requestPhoneCodeWithCaptcha = async ({
 
   if (!phoneExists) {
     const limitOk = await checkCaptchaRequestCodeGlobalLimits(country)
-    if (limitOk instanceof Error) return limitOk
+    if (limitOk instanceof Error) {
+      await rewardLimiter({
+        rateLimitConfig: RateLimitConfig.requestCodeCaptchaPerCountry,
+        keyToConsume: country,
+      })
+      return limitOk
+    }
   }
 
   return verifyService.initiateVerify({

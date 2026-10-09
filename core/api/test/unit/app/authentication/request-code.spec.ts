@@ -61,6 +61,7 @@ jest.mock("@/services/mongoose", () => ({
 
 jest.mock("@/services/rate-limit", () => ({
   consumeLimiter: jest.fn(),
+  rewardLimiter: jest.fn(),
 }))
 
 jest.mock("@/services/phone-provider/twilio-service", () => ({
@@ -81,7 +82,7 @@ import {
   requestPhoneCodeWithAppcheckJti,
   requestPhoneCodeWithCaptcha,
 } from "@/app/authentication/request-code"
-import { InvalidChannel, NotImplementedError } from "@/domain/errors"
+import { InvalidChannel, InvalidPhoneNumber, NotImplementedError } from "@/domain/errors"
 import {
   CaptchaRequestCodeGlobalRateLimiterExceededError,
   CaptchaRequestCodePerCountryRateLimiterExceededError,
@@ -109,9 +110,11 @@ const { __mockFindByPhone: mockFindByPhone } = jest.requireMock(
   "@/services/mongoose",
 ) as { __mockFindByPhone: jest.Mock }
 
-const { consumeLimiter: mockConsumeLimiter } = jest.requireMock(
-  "@/services/rate-limit",
-) as { consumeLimiter: jest.Mock }
+const { consumeLimiter: mockConsumeLimiter, rewardLimiter: mockRewardLimiter } =
+  jest.requireMock("@/services/rate-limit") as {
+    consumeLimiter: jest.Mock
+    rewardLimiter: jest.Mock
+  }
 
 const { getPhoneProviderVerifyService: mockGetPhoneProviderVerifyService } =
   jest.requireMock("@/services/phone-provider") as {
@@ -162,6 +165,18 @@ const fakeConsumeLimiter = async ({
   return consumed > rateLimitConfig.limits.points ? new rateLimitConfig.error() : true
 }
 
+const fakeRewardLimiter = async ({
+  rateLimitConfig,
+  keyToConsume,
+}: {
+  rateLimitConfig: { key: string }
+  keyToConsume: string
+}) => {
+  const bucket = `${rateLimitConfig.key}:${keyToConsume}`
+  buckets.set(bucket, Math.max((buckets.get(bucket) ?? 0) - 1, 0))
+  return true
+}
+
 const captchaArgs = (phone: string, ip = "127.0.0.1") => ({
   phone: phone as PhoneNumber,
   geetestChallenge: "challenge",
@@ -208,6 +223,7 @@ describe("requestPhoneCodeWithCaptcha code-send caps", () => {
       existingPhones.has(phone) ? { phone } : new Error("not found"),
     )
     mockConsumeLimiter.mockImplementation(fakeConsumeLimiter)
+    mockRewardLimiter.mockImplementation(fakeRewardLimiter)
     mockInitiateVerify.mockResolvedValue(true)
     mockGetPhoneProviderVerifyService.mockReturnValue({
       initiateVerify: mockInitiateVerify,
@@ -285,11 +301,36 @@ describe("requestPhoneCodeWithCaptcha code-send caps", () => {
       [COUNTRY_KEY, "ES"],
       [GLOBAL_KEY, "global"],
     ])
-    expect(buckets.get(`${COUNTRY_KEY}:ES`)).toBe(1)
+    expect(mockRewardLimiter).toHaveBeenCalledWith(
+      expect.objectContaining({
+        rateLimitConfig: expect.objectContaining({ key: COUNTRY_KEY }),
+        keyToConsume: "ES",
+      }),
+    )
+    expect(buckets.get(`${COUNTRY_KEY}:ES`)).toBe(0)
     expect(mockAddEventToCurrentSpan).toHaveBeenCalledWith(
       "captchaRequestCodeCapExceeded",
       { scope: "global", country: "ES" },
     )
+  })
+
+  it("does not let globally rejected new numbers use up existing users' country capacity", async () => {
+    for (const country of ["GT", "TJ", "JM", "US", "DE", "FR"]) {
+      await sendNumbers(country, 5)
+    }
+    for (let i = 0; i < 6; i++) {
+      const blocked = await requestPhoneCodeWithCaptcha(captchaArgs(number("IT", i)))
+      expect(blocked).toBeInstanceOf(CaptchaRequestCodeGlobalRateLimiterExceededError)
+    }
+    expect(buckets.get(`${COUNTRY_KEY}:IT`)).toBe(0)
+    resetCallHistory()
+
+    existingPhones.add(number("IT", 9))
+    const result = await requestPhoneCodeWithCaptcha(captchaArgs(number("IT", 9)))
+
+    expect(result).toBe(true)
+    expect(mockInitiateVerify).toHaveBeenCalledTimes(1)
+    expect(buckets.get(`${COUNTRY_KEY}:IT`)).toBe(1)
   })
 
   it("sends to an existing user when the global cap is full, consuming only the country", async () => {
@@ -326,14 +367,12 @@ describe("requestPhoneCodeWithCaptcha code-send caps", () => {
     expect(buckets.get(`${GLOBAL_KEY}:global`)).toBeUndefined()
   })
 
-  it("uses the 'unknown' country key for an unparseable number", async () => {
+  it("rejects a number with no country before consuming the caps", async () => {
     const result = await requestPhoneCodeWithCaptcha(captchaArgs("+000"))
 
-    expect(result).toBe(true)
-    expect(cappedCalls()).toEqual([
-      [COUNTRY_KEY, "unknown"],
-      [GLOBAL_KEY, "global"],
-    ])
+    expect(result).toBeInstanceOf(InvalidPhoneNumber)
+    expect(mockInitiateVerify).not.toHaveBeenCalled()
+    expect(cappedCalls()).toEqual([])
   })
 
   it("does not consume the caps when GeeTest rejects the challenge", async () => {

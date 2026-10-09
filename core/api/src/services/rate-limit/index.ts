@@ -86,7 +86,7 @@ export const rewardLimiter = async ({
   keyToConsume,
 }: {
   rateLimitConfig: RateLimitConfig
-  keyToConsume: IpAddress | LoginIdentifier | AccountId
+  keyToConsume: IpAddress | LoginIdentifier | AccountId | CountryCode
 }) => {
   const limiter = RedisRateLimitService({
     keyPrefix: rateLimitConfig.key,
