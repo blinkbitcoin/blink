@@ -73,11 +73,17 @@ for (const key of Object.keys(queryFields.authed.atWalletLevel)) {
   walletIdQueryFields[key] = validateWalletIdQuery
 }
 
+// Mutations addressed to a recipient lightning address rather than a caller
+// wallet; they have no walletId input. Scope enforcement still applies via
+// the scope middleware.
+const walletIdExemptFields = new Set(["lnAddressInvoiceCreate"])
+
 const walletIdMutationFields: { [key: string]: ValidateWalletIdFn } = {}
 for (const key of Object.keys({
   ...mutationFields.authed.atWalletLevel.send,
   ...mutationFields.authed.atWalletLevel.receive,
 })) {
+  if (walletIdExemptFields.has(key)) continue
   walletIdMutationFields[key] = validateWalletIdMutation
 }
 

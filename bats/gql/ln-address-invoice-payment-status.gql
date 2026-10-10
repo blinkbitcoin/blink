@@ -1,0 +1,6 @@
+query LnAddressInvoicePaymentStatus($input: LnAddressInvoicePaymentStatusInput!) {
+  lnAddressInvoicePaymentStatus(input: $input) {
+    settled
+    preimage
+  }
+}
