@@ -7,6 +7,7 @@ ci:
 dashboard:
   - changed-files:
       - any-glob-to-any-file:
+          - docs/dev-notes/**/*
           - apps/dashboard/**/*
           - flake.lock
           - pnpm-lock.yaml
