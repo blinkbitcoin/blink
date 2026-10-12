@@ -220,6 +220,12 @@ export const getRequestCodePerPhoneNumberLimits = () =>
 export const getRequestCodePerIpLimits = () =>
   getRateLimits(yamlConfig.rateLimits.requestCodePerIp)
 
+export const getRequestCodeCaptchaPerCountryLimits = () =>
+  getRateLimits(yamlConfig.rateLimits.requestCodeCaptchaPerCountry)
+
+export const getRequestCodeCaptchaGlobalLimits = () =>
+  getRateLimits(yamlConfig.rateLimits.requestCodeCaptchaGlobal)
+
 export const getRequestTelegramPassportNoncePerPhoneNumberLimits = () =>
   getRateLimits(yamlConfig.rateLimits.requestTelegramPassportNoncePerPhoneNumber)
 

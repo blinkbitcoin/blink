@@ -1,3 +1,5 @@
+import { parsePhoneNumberFromString } from "libphonenumber-js"
+
 import {
   TWILIO_ACCOUNT_SID,
   UNSECURE_DEFAULT_LOGIN_CODE,
@@ -12,17 +14,19 @@ import { PhoneAlreadyExistsError } from "@/domain/authentication/errors"
 import {
   InvalidChannel,
   InvalidIpMetadataError,
+  InvalidPhoneNumber,
   MissingIPMetadataError,
   NotImplementedError,
   UnauthorizedIPForOnboardingError,
 } from "@/domain/errors"
-import { RateLimitConfig } from "@/domain/rate-limit"
+import { RateLimitConfig, REQUEST_CODE_CAPTCHA_GLOBAL_KEY } from "@/domain/rate-limit"
 import { IpFetcherServiceError } from "@/domain/ipfetcher"
 import { RateLimiterExceededError } from "@/domain/rate-limit/errors"
 import { IPMetadataAuthorizer } from "@/domain/accounts-ips/ip-metadata-authorizer"
 
 import {
   addAttributesToCurrentSpan,
+  addEventToCurrentSpan,
   recordExceptionInCurrentSpan,
 } from "@/services/tracing"
 import Geetest from "@/services/geetest"
@@ -30,7 +34,7 @@ import { IpFetcher } from "@/services/ipfetcher"
 import { AuthWithEmailPasswordlessService } from "@/services/kratos"
 import { baseLogger } from "@/services/logger"
 import { UsersRepository } from "@/services/mongoose"
-import { consumeLimiter } from "@/services/rate-limit"
+import { consumeLimiter, rewardLimiter } from "@/services/rate-limit"
 import { TWILIO_ACCOUNT_TEST } from "@/services/phone-provider/twilio-service"
 import { getPhoneProviderVerifyService } from "@/services/phone-provider"
 
@@ -94,6 +98,28 @@ export const requestPhoneCodeWithCaptcha = async ({
 
   const verifyService = getPhoneProviderVerifyService()
   if (verifyService instanceof Error) return verifyService
+
+  const country = parsePhoneNumberFromString(phone)?.country as CountryCode | undefined
+  if (!country) return new InvalidPhoneNumber(phone)
+
+  {
+    const limitOk = await checkCaptchaRequestCodePerCountryLimits(country)
+    if (limitOk instanceof Error) return limitOk
+  }
+
+  {
+    const limitOk = await checkCaptchaRequestCodeGlobalLimits(country)
+    if (limitOk instanceof Error) {
+      const rewarded = await rewardLimiter({
+        rateLimitConfig: RateLimitConfig.requestCodeCaptchaPerCountry,
+        keyToConsume: country,
+      })
+      if (rewarded instanceof Error) {
+        recordExceptionInCurrentSpan({ error: rewarded, level: ErrorLevel.Warn })
+      }
+      return limitOk
+    }
+  }
 
   return verifyService.initiateVerify({
     to: phone,
@@ -313,3 +339,35 @@ const checkRequestCodeAttemptPerAppcheckJtiLimits = async (
     rateLimitConfig: RateLimitConfig.requestCodeAttemptPerAppcheckJti,
     keyToConsume: appcheckJti,
   })
+
+const checkCaptchaRequestCodePerCountryLimits = async (
+  country: CountryCode,
+): Promise<true | RateLimiterExceededError> => {
+  const limitOk = await consumeLimiter({
+    rateLimitConfig: RateLimitConfig.requestCodeCaptchaPerCountry,
+    keyToConsume: country,
+  })
+  if (limitOk instanceof Error) {
+    addEventToCurrentSpan("captchaRequestCodeCapExceeded", {
+      "captcha.cap.scope": "country",
+      "captcha.cap.country": country,
+    })
+  }
+  return limitOk
+}
+
+const checkCaptchaRequestCodeGlobalLimits = async (
+  country: CountryCode,
+): Promise<true | RateLimiterExceededError> => {
+  const limitOk = await consumeLimiter({
+    rateLimitConfig: RateLimitConfig.requestCodeCaptchaGlobal,
+    keyToConsume: REQUEST_CODE_CAPTCHA_GLOBAL_KEY,
+  })
+  if (limitOk instanceof Error) {
+    addEventToCurrentSpan("captchaRequestCodeCapExceeded", {
+      "captcha.cap.scope": "global",
+      "captcha.cap.country": country,
+    })
+  }
+  return limitOk
+}

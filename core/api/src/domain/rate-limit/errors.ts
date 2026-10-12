@@ -25,3 +25,5 @@ export class AddQuizAttemptIpRateLimiterExceededError extends RateLimiterExceede
 export class AddQuizAttemptPhoneRateLimiterExceededError extends RateLimiterExceededError {}
 export class RegionCheckIpResolutionBudgetExceededError extends RateLimiterExceededError {}
 export class BtcMapPlaceSubmitPerAccountRateLimiterExceededError extends RateLimiterExceededError {}
+export class CaptchaRequestCodePerCountryRateLimiterExceededError extends RateLimiterExceededError {}
+export class CaptchaRequestCodeGlobalRateLimiterExceededError extends RateLimiterExceededError {}

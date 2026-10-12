@@ -9,6 +9,8 @@ type RateLimitConfig = {
   error: typeof import("./errors").RateLimiterExceededError
 }
 
+type RequestCodeCaptchaGlobalKey = string & { readonly brand: unique symbol }
+
 type RateLimitOptions = {
   points: number
   duration: Seconds
