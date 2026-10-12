@@ -735,12 +735,12 @@ export const configSchema = {
           blockDuration: 3600,
         },
         requestCodeCaptchaPerCountry: {
-          points: 10,
+          points: 5,
           duration: 3600,
           blockDuration: 3600,
         },
         requestCodeCaptchaGlobal: {
-          points: 40,
+          points: 15,
           duration: 3600,
           blockDuration: 3600,
         },
