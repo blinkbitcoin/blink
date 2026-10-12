@@ -20,6 +20,7 @@ jest.mock("@/config", () => ({
 jest.mock("@/domain/rate-limit", () => {
   const errors = jest.requireActual("@/domain/rate-limit/errors")
   return {
+    REQUEST_CODE_CAPTCHA_GLOBAL_KEY: "all",
     RateLimitConfig: {
       requestCodeAttemptPerIp: { key: "request_code_attempt_ip" },
       requestCodeAttemptPerPhoneNumber: { key: "request_phone_number_id" },
@@ -241,7 +242,7 @@ describe("requestPhoneCodeWithCaptcha code-send caps", () => {
     expect(mockInitiateVerify).toHaveBeenCalledTimes(1)
     expect(cappedCalls()).toEqual([
       [COUNTRY_KEY, "GT"],
-      [GLOBAL_KEY, "global"],
+      [GLOBAL_KEY, "all"],
     ])
     expect(mockAddEventToCurrentSpan).not.toHaveBeenCalled()
   })
@@ -255,7 +256,7 @@ describe("requestPhoneCodeWithCaptcha code-send caps", () => {
     expect(result).toBeInstanceOf(CaptchaRequestCodePerCountryRateLimiterExceededError)
     expect(mockInitiateVerify).not.toHaveBeenCalled()
     expect(cappedCalls()).toEqual([[COUNTRY_KEY, "GT"]])
-    expect(buckets.get(`${GLOBAL_KEY}:global`)).toBe(5)
+    expect(buckets.get(`${GLOBAL_KEY}:all`)).toBe(5)
     expect(mockAddEventToCurrentSpan).toHaveBeenCalledWith(
       "captchaRequestCodeCapExceeded",
       { "captcha.cap.scope": "country", "captcha.cap.country": "GT" },
@@ -273,7 +274,7 @@ describe("requestPhoneCodeWithCaptcha code-send caps", () => {
     expect(mockInitiateVerify).toHaveBeenCalledTimes(1)
     expect(cappedCalls()).toEqual([
       [COUNTRY_KEY, "TJ"],
-      [GLOBAL_KEY, "global"],
+      [GLOBAL_KEY, "all"],
     ])
   })
 
@@ -303,7 +304,7 @@ describe("requestPhoneCodeWithCaptcha code-send caps", () => {
     expect(mockInitiateVerify).not.toHaveBeenCalled()
     expect(cappedCalls()).toEqual([
       [COUNTRY_KEY, "ES"],
-      [GLOBAL_KEY, "global"],
+      [GLOBAL_KEY, "all"],
     ])
     expect(mockRewardLimiter).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -346,7 +347,7 @@ describe("requestPhoneCodeWithCaptcha code-send caps", () => {
     expect(mockInitiateVerify).not.toHaveBeenCalled()
     expect(cappedCalls()).toEqual([
       [COUNTRY_KEY, "IT"],
-      [GLOBAL_KEY, "global"],
+      [GLOBAL_KEY, "all"],
     ])
   })
 

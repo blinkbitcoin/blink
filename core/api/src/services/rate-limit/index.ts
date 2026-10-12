@@ -56,7 +56,7 @@ export const consumeLimiter = async ({
     | AccountId
     | AppcheckJti
     | CountryCode
-    | "global"
+    | RequestCodeCaptchaGlobalKey
     | ""
 }) => {
   const limiter = RedisRateLimitService({

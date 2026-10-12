@@ -19,7 +19,7 @@ import {
   NotImplementedError,
   UnauthorizedIPForOnboardingError,
 } from "@/domain/errors"
-import { RateLimitConfig } from "@/domain/rate-limit"
+import { RateLimitConfig, REQUEST_CODE_CAPTCHA_GLOBAL_KEY } from "@/domain/rate-limit"
 import { IpFetcherServiceError } from "@/domain/ipfetcher"
 import { RateLimiterExceededError } from "@/domain/rate-limit/errors"
 import { IPMetadataAuthorizer } from "@/domain/accounts-ips/ip-metadata-authorizer"
@@ -361,7 +361,7 @@ const checkCaptchaRequestCodeGlobalLimits = async (
 ): Promise<true | RateLimiterExceededError> => {
   const limitOk = await consumeLimiter({
     rateLimitConfig: RateLimitConfig.requestCodeCaptchaGlobal,
-    keyToConsume: "global",
+    keyToConsume: REQUEST_CODE_CAPTCHA_GLOBAL_KEY,
   })
   if (limitOk instanceof Error) {
     addEventToCurrentSpan("captchaRequestCodeCapExceeded", {

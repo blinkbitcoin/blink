@@ -64,6 +64,8 @@ export const RateLimitPrefix = {
 
 type RateLimitPrefixKey = keyof typeof RateLimitPrefix
 
+export const REQUEST_CODE_CAPTCHA_GLOBAL_KEY = "all" as RequestCodeCaptchaGlobalKey
+
 export const RateLimitConfig: { [key in RateLimitPrefixKey]: RateLimitConfig } = {
   requestCodeAttemptPerEmail: {
     key: RateLimitPrefix.requestCodeAttemptPerEmail,
