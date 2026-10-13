@@ -17,9 +17,9 @@ type VerifyEmailProp = {
 export default async function VerifyEmail({
   searchParams,
 }: {
-  searchParams: VerifyEmailProp
+  searchParams: Promise<VerifyEmailProp>
 }) {
-  let { emailRegistrationId } = searchParams
+  let { emailRegistrationId } = await searchParams
   const session = await getServerSession(authOptions)
   const token = session?.accessToken
 
