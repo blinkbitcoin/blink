@@ -181,6 +181,20 @@ export const AccountLevel = {
 } as const;
 
 export type AccountLevel = typeof AccountLevel[keyof typeof AccountLevel];
+/** Daily transaction limits enforced for a given account level. */
+export type AccountLevelLimits = {
+  readonly __typename: 'AccountLevelLimits';
+  /** Max amount that can be converted between currencies among an account's own wallets. */
+  readonly convert: Scalars['CentAmount']['output'];
+  /** Max amount that can be sent to other internal accounts. */
+  readonly internalSend: Scalars['CentAmount']['output'];
+  /** The rolling time interval in seconds that the limits apply for. */
+  readonly interval: Scalars['Seconds']['output'];
+  readonly level: AccountLevel;
+  /** Max amount that can be withdrawn to external onchain or lightning destinations. */
+  readonly withdrawal: Scalars['CentAmount']['output'];
+};
+
 export type AccountLimit = {
   /** The rolling time interval in seconds that the limits would apply for. */
   readonly interval?: Maybe<Scalars['Seconds']['output']>;
@@ -198,6 +212,21 @@ export type AccountLimits = {
   readonly internalSend: ReadonlyArray<AccountLimit>;
   /** Limits for withdrawing to external onchain or lightning destinations. */
   readonly withdrawal: ReadonlyArray<AccountLimit>;
+};
+
+export type AccountMigration = {
+  readonly __typename: 'AccountMigration';
+  readonly preview: AccountMigrationPreview;
+  readonly status: MigrationStatus;
+  readonly transferPaymentHash?: Maybe<Scalars['String']['output']>;
+};
+
+export type AccountMigrationPreview = {
+  readonly __typename: 'AccountMigrationPreview';
+  readonly balanceSats: Scalars['SatAmount']['output'];
+  readonly feeCoveredByBlink: Scalars['Boolean']['output'];
+  readonly feeSats: Scalars['SatAmount']['output'];
+  readonly receiveSats: Scalars['SatAmount']['output'];
 };
 
 export type AccountUpdateDefaultWalletIdInput = {
@@ -226,6 +255,15 @@ export type AccountUpdateNotificationSettingsPayload = {
   readonly errors: ReadonlyArray<Error>;
 };
 
+export type AccountWindDown = {
+  readonly __typename: 'AccountWindDown';
+  readonly finalDeadline: Scalars['Timestamp']['output'];
+  readonly gateArmsAt: Scalars['Timestamp']['output'];
+  readonly receiveDisabledAt: Scalars['Timestamp']['output'];
+  readonly status: WindDownStatus;
+  readonly timezone: Scalars['String']['output'];
+};
+
 export type ApiKey = {
   readonly __typename: 'ApiKey';
   readonly createdAt: Scalars['Timestamp']['output'];
@@ -233,6 +271,7 @@ export type ApiKey = {
   readonly expiresAt?: Maybe<Scalars['Timestamp']['output']>;
   readonly id: Scalars['ID']['output'];
   readonly lastUsedAt?: Maybe<Scalars['Timestamp']['output']>;
+  readonly limits: ApiKeyLimits;
   readonly name: Scalars['String']['output'];
   readonly readOnly: Scalars['Boolean']['output'];
   readonly revoked: Scalars['Boolean']['output'];
@@ -251,12 +290,40 @@ export type ApiKeyCreatePayload = {
   readonly apiKeySecret: Scalars['String']['output'];
 };
 
+export type ApiKeyLimits = {
+  readonly __typename: 'ApiKeyLimits';
+  readonly annualLimitSats?: Maybe<Scalars['Int']['output']>;
+  readonly annualSpentSats: Scalars['Int']['output'];
+  readonly dailyLimitSats?: Maybe<Scalars['Int']['output']>;
+  readonly dailySpentSats: Scalars['Int']['output'];
+  readonly monthlyLimitSats?: Maybe<Scalars['Int']['output']>;
+  readonly monthlySpentSats: Scalars['Int']['output'];
+  readonly weeklyLimitSats?: Maybe<Scalars['Int']['output']>;
+  readonly weeklySpentSats: Scalars['Int']['output'];
+};
+
+export type ApiKeyRemoveLimitInput = {
+  readonly id: Scalars['ID']['input'];
+  readonly limitTimeWindow: LimitTimeWindow;
+};
+
 export type ApiKeyRevokeInput = {
   readonly id: Scalars['ID']['input'];
 };
 
 export type ApiKeyRevokePayload = {
   readonly __typename: 'ApiKeyRevokePayload';
+  readonly apiKey: ApiKey;
+};
+
+export type ApiKeySetLimitInput = {
+  readonly id: Scalars['ID']['input'];
+  readonly limitSats: Scalars['Int']['input'];
+  readonly limitTimeWindow: LimitTimeWindow;
+};
+
+export type ApiKeySetLimitPayload = {
+  readonly __typename: 'ApiKeySetLimitPayload';
   readonly apiKey: ApiKey;
 };
 
@@ -538,13 +605,31 @@ export type CurrencyConversionEstimation = {
   readonly usdCentAmount: Scalars['CentAmount']['output'];
 };
 
+export type CustodialRestrictions = {
+  readonly __typename: 'CustodialRestrictions';
+  readonly dollarBalance: Scalars['Boolean']['output'];
+  readonly transfer: Scalars['Boolean']['output'];
+};
+
+export type DepositFeeTier = {
+  readonly __typename: 'DepositFeeTier';
+  readonly amount: Scalars['String']['output'];
+  /** highest amount this tier applies to, null when unbounded */
+  readonly maxAmount?: Maybe<Scalars['String']['output']>;
+};
+
 export type DepositFeesInformation = {
   readonly __typename: 'DepositFeesInformation';
   readonly minBankFee: Scalars['String']['output'];
   /** below this amount minBankFee will be charged */
   readonly minBankFeeThreshold: Scalars['String']['output'];
-  /** ratio to charge as basis points above minBankFeeThreshold amount */
+  /**
+   * ratio to charge as basis points above minBankFeeThreshold amount
+   * @deprecated fees are a flat amount per tier, use tiers
+   */
   readonly ratio: Scalars['String']['output'];
+  /** amount charged per tier, in ascending order of maxAmount */
+  readonly tiers: ReadonlyArray<DepositFeeTier>;
 };
 
 export type DeviceNotificationTokenCreateInput = {
@@ -581,6 +666,8 @@ export type FeesInformation = {
 /** Provides global settings for the application which might have an impact for the user. */
 export type Globals = {
   readonly __typename: 'Globals';
+  /** Daily transaction limits enforced for each account level, in USD cents. */
+  readonly accountLimitsByLevel: ReadonlyArray<AccountLevelLimits>;
   /** Current block height and block hash */
   readonly blockInfo?: Maybe<BlockInfo>;
   readonly buildInformation: BuildInformation;
@@ -755,6 +842,14 @@ export const InvoicePaymentStatus = {
 } as const;
 
 export type InvoicePaymentStatus = typeof InvoicePaymentStatus[keyof typeof InvoicePaymentStatus];
+export const LimitTimeWindow = {
+  Annual: 'ANNUAL',
+  Daily: 'DAILY',
+  Monthly: 'MONTHLY',
+  Weekly: 'WEEKLY'
+} as const;
+
+export type LimitTimeWindow = typeof LimitTimeWindow[keyof typeof LimitTimeWindow];
 export type LnAddressPaymentSendInput = {
   /** Amount in satoshis. */
   readonly amount: Scalars['SatAmount']['input'];
@@ -804,6 +899,7 @@ export type LnInvoiceCreateOnBehalfOfRecipientInput = {
   readonly memo?: InputMaybe<Scalars['Memo']['input']>;
   /** Wallet ID for a BTC wallet which belongs to any account. */
   readonly recipientWalletId: Scalars['WalletId']['input'];
+  readonly webhookUrl?: InputMaybe<Scalars['EndpointUrl']['input']>;
 };
 
 export type LnInvoiceFeeProbeInput = {
@@ -883,6 +979,7 @@ export type LnNoAmountInvoiceCreateOnBehalfOfRecipientInput = {
   readonly memo?: InputMaybe<Scalars['Memo']['input']>;
   /** ID for either a USD or BTC wallet which belongs to the account of any user. */
   readonly recipientWalletId: Scalars['WalletId']['input'];
+  readonly webhookUrl?: InputMaybe<Scalars['EndpointUrl']['input']>;
 };
 
 export type LnNoAmountInvoiceFeeProbeInput = {
@@ -946,6 +1043,7 @@ export type LnUsdInvoiceBtcDenominatedCreateOnBehalfOfRecipientInput = {
   readonly memo?: InputMaybe<Scalars['Memo']['input']>;
   /** Wallet ID for a USD wallet which belongs to the account of any user. */
   readonly recipientWalletId: Scalars['WalletId']['input'];
+  readonly webhookUrl?: InputMaybe<Scalars['EndpointUrl']['input']>;
 };
 
 export type LnUsdInvoiceCreateInput = {
@@ -971,6 +1069,7 @@ export type LnUsdInvoiceCreateOnBehalfOfRecipientInput = {
   readonly memo?: InputMaybe<Scalars['Memo']['input']>;
   /** Wallet ID for a USD wallet which belongs to the account of any user. */
   readonly recipientWalletId: Scalars['WalletId']['input'];
+  readonly webhookUrl?: InputMaybe<Scalars['EndpointUrl']['input']>;
 };
 
 export type LnUsdInvoiceFeeProbeInput = {
@@ -1025,6 +1124,57 @@ export type MerchantPayload = {
   readonly merchant?: Maybe<Merchant>;
 };
 
+export type MigrationCommitInput = {
+  readonly backupAttested: Scalars['Boolean']['input'];
+  readonly disclosureVersion: Scalars['String']['input'];
+  readonly proofSignature: Scalars['String']['input'];
+  readonly proofTimestamp: Scalars['SafeInt']['input'];
+  readonly sparkInvoice: Scalars['LnPaymentRequest']['input'];
+  readonly sparkPubkey: Scalars['String']['input'];
+};
+
+export type MigrationLnAddressTransferInput = {
+  readonly proofSignature: Scalars['String']['input'];
+  readonly proofTimestamp: Scalars['SafeInt']['input'];
+  readonly sparkPubkey: Scalars['String']['input'];
+};
+
+export type MigrationLnAddressTransferPayload = {
+  readonly __typename: 'MigrationLnAddressTransferPayload';
+  readonly errors: ReadonlyArray<Error>;
+  readonly results: ReadonlyArray<MigrationLnAddressTransferResult>;
+};
+
+export type MigrationLnAddressTransferResult = {
+  readonly __typename: 'MigrationLnAddressTransferResult';
+  readonly identifier: Scalars['String']['output'];
+  readonly lightningAddress?: Maybe<Scalars['String']['output']>;
+  readonly status: MigrationLnAddressTransferStatus;
+};
+
+export const MigrationLnAddressTransferStatus = {
+  AlreadyTransferred: 'ALREADY_TRANSFERRED',
+  Failed: 'FAILED',
+  SkippedNotRegistered: 'SKIPPED_NOT_REGISTERED',
+  Transferred: 'TRANSFERRED'
+} as const;
+
+export type MigrationLnAddressTransferStatus = typeof MigrationLnAddressTransferStatus[keyof typeof MigrationLnAddressTransferStatus];
+export type MigrationPayload = {
+  readonly __typename: 'MigrationPayload';
+  readonly errors: ReadonlyArray<Error>;
+  readonly migration?: Maybe<AccountMigration>;
+};
+
+export const MigrationStatus = {
+  Completed: 'COMPLETED',
+  Failed: 'FAILED',
+  InProgress: 'IN_PROGRESS',
+  NotStarted: 'NOT_STARTED',
+  Transferring: 'TRANSFERRING'
+} as const;
+
+export type MigrationStatus = typeof MigrationStatus[keyof typeof MigrationStatus];
 export type MobileVersions = {
   readonly __typename: 'MobileVersions';
   readonly currentSupported: Scalars['Int']['output'];
@@ -1042,7 +1192,9 @@ export type Mutation = {
   readonly accountUpdateDefaultWalletId: AccountUpdateDefaultWalletIdPayload;
   readonly accountUpdateDisplayCurrency: AccountUpdateDisplayCurrencyPayload;
   readonly apiKeyCreate: ApiKeyCreatePayload;
+  readonly apiKeyRemoveLimit: ApiKeySetLimitPayload;
   readonly apiKeyRevoke: ApiKeyRevokePayload;
+  readonly apiKeySetLimit: ApiKeySetLimitPayload;
   readonly callbackEndpointAdd: CallbackEndpointAddPayload;
   readonly callbackEndpointDelete: SuccessPayload;
   readonly captchaCreateChallenge: CaptchaCreateChallengePayload;
@@ -1136,6 +1288,9 @@ export type Mutation = {
   /** Sends a payment to a lightning address. */
   readonly lnurlPaymentSend: PaymentSendPayload;
   readonly merchantMapSuggest: MerchantPayload;
+  readonly migrationCommit: MigrationPayload;
+  readonly migrationLnAddressTransfer: MigrationLnAddressTransferPayload;
+  readonly migrationStart: MigrationPayload;
   readonly onChainAddressCreate: OnChainAddressPayload;
   readonly onChainAddressCurrent: OnChainAddressPayload;
   readonly onChainPaymentSend: PaymentSendPayload;
@@ -1202,8 +1357,18 @@ export type MutationApiKeyCreateArgs = {
 };
 
 
+export type MutationApiKeyRemoveLimitArgs = {
+  input: ApiKeyRemoveLimitInput;
+};
+
+
 export type MutationApiKeyRevokeArgs = {
   input: ApiKeyRevokeInput;
+};
+
+
+export type MutationApiKeySetLimitArgs = {
+  input: ApiKeySetLimitInput;
 };
 
 
@@ -1334,6 +1499,16 @@ export type MutationLnurlPaymentSendArgs = {
 
 export type MutationMerchantMapSuggestArgs = {
   input: MerchantMapSuggestInput;
+};
+
+
+export type MutationMigrationCommitArgs = {
+  input: MigrationCommitInput;
+};
+
+
+export type MutationMigrationLnAddressTransferArgs = {
+  input: MigrationLnAddressTransferInput;
 };
 
 
@@ -1558,10 +1733,12 @@ export type OneDayAccountLimit = AccountLimit & {
 export type OpenDeepLinkAction = {
   readonly __typename: 'OpenDeepLinkAction';
   readonly deepLink: Scalars['String']['output'];
+  readonly label?: Maybe<Scalars['String']['output']>;
 };
 
 export type OpenExternalLinkAction = {
   readonly __typename: 'OpenExternalLinkAction';
+  readonly label?: Maybe<Scalars['String']['output']>;
   readonly url: Scalars['String']['output'];
 };
 
@@ -1707,12 +1884,14 @@ export type Query = {
   /** Returns an estimated conversion rate for the given amount and currency */
   readonly currencyConversionEstimation: CurrencyConversionEstimation;
   readonly currencyList: ReadonlyArray<Currency>;
+  readonly custodialRestrictions: CustodialRestrictions;
   readonly globals?: Maybe<Globals>;
   /** @deprecated Deprecated in favor of lnInvoicePaymentStatusByPaymentRequest */
   readonly lnInvoicePaymentStatus: LnInvoicePaymentStatusPayload;
   readonly lnInvoicePaymentStatusByHash: LnInvoicePaymentStatus;
   readonly lnInvoicePaymentStatusByPaymentRequest: LnInvoicePaymentStatus;
   readonly me?: Maybe<User>;
+  readonly migration?: Maybe<AccountMigration>;
   readonly mobileVersions?: Maybe<ReadonlyArray<Maybe<MobileVersions>>>;
   readonly onChainTxFee: OnChainTxFee;
   readonly onChainUsdTxFee: OnChainUsdTxFee;
@@ -1721,9 +1900,11 @@ export type Query = {
   readonly payoutSpeeds: ReadonlyArray<PayoutSpeeds>;
   /** Returns 1 Sat and 1 Usd Cent price for the given currency in minor unit */
   readonly realtimePrice: RealtimePrice;
+  readonly regionCheck: RegionCheck;
   /** @deprecated will be migrated to AccountDefaultWalletId */
   readonly userDefaultWalletId: Scalars['WalletId']['output'];
   readonly usernameAvailable?: Maybe<Scalars['Boolean']['output']>;
+  readonly windDown?: Maybe<AccountWindDown>;
 };
 
 
@@ -1837,6 +2018,13 @@ export type RealtimePricePayload = {
   readonly __typename: 'RealtimePricePayload';
   readonly errors: ReadonlyArray<Error>;
   readonly realtimePrice?: Maybe<RealtimePrice>;
+};
+
+export type RegionCheck = {
+  readonly __typename: 'RegionCheck';
+  readonly countryCode?: Maybe<Scalars['String']['output']>;
+  readonly custodialCreationAllowed: Scalars['Boolean']['output'];
+  readonly restricted: Scalars['Boolean']['output'];
 };
 
 export type SatAmountPayload = {
@@ -2465,6 +2653,13 @@ export const WalletCurrency = {
 } as const;
 
 export type WalletCurrency = typeof WalletCurrency[keyof typeof WalletCurrency];
+export const WindDownStatus = {
+  GatedClosed: 'GATED_CLOSED',
+  PreCutoff: 'PRE_CUTOFF',
+  ReceiveDisabled: 'RECEIVE_DISABLED'
+} as const;
+
+export type WindDownStatus = typeof WindDownStatus[keyof typeof WindDownStatus];
 export const Join__Graph = {
   ApiKeys: 'API_KEYS',
   Notifications: 'NOTIFICATIONS',
@@ -2561,7 +2756,7 @@ export type UserTotpRegistrationValidateMutation = { readonly __typename: 'Mutat
 export type ApiKeysQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type ApiKeysQuery = { readonly __typename: 'Query', readonly me?: { readonly __typename: 'User', readonly apiKeys: ReadonlyArray<{ readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly createdAt: number, readonly revoked: boolean, readonly expired: boolean, readonly lastUsedAt?: number | null, readonly expiresAt?: number | null, readonly readOnly: boolean, readonly scopes: ReadonlyArray<Scope> }> } | null };
+export type ApiKeysQuery = { readonly __typename: 'Query', readonly me?: { readonly __typename: 'User', readonly apiKeys: ReadonlyArray<{ readonly __typename: 'ApiKey', readonly id: string, readonly name: string, readonly createdAt: number, readonly revoked: boolean, readonly expired: boolean, readonly lastUsedAt?: number | null, readonly expiresAt?: number | null, readonly readOnly: boolean, readonly scopes: ReadonlyArray<Scope>, readonly limits: { readonly __typename: 'ApiKeyLimits', readonly dailyLimitSats?: number | null, readonly weeklyLimitSats?: number | null, readonly monthlyLimitSats?: number | null, readonly annualLimitSats?: number | null, readonly dailySpentSats: number, readonly weeklySpentSats: number, readonly monthlySpentSats: number, readonly annualSpentSats: number } }> } | null };
 
 export type CallbackEndpointsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -3072,6 +3267,16 @@ export const ApiKeysDocument = gql`
       expiresAt
       readOnly
       scopes
+      limits {
+        dailyLimitSats
+        weeklyLimitSats
+        monthlyLimitSats
+        annualLimitSats
+        dailySpentSats
+        weeklySpentSats
+        monthlySpentSats
+        annualSpentSats
+      }
     }
   }
 }
@@ -3603,18 +3808,26 @@ export type ResolversTypes = {
   AccountEnableNotificationCategoryInput: AccountEnableNotificationCategoryInput;
   AccountEnableNotificationChannelInput: AccountEnableNotificationChannelInput;
   AccountLevel: AccountLevel;
+  AccountLevelLimits: ResolverTypeWrapper<AccountLevelLimits>;
   AccountLimit: ResolverTypeWrapper<ResolversInterfaceTypes<ResolversTypes>['AccountLimit']>;
   AccountLimits: ResolverTypeWrapper<Omit<AccountLimits, 'convert' | 'internalSend' | 'withdrawal'> & { convert: ReadonlyArray<ResolversTypes['AccountLimit']>, internalSend: ReadonlyArray<ResolversTypes['AccountLimit']>, withdrawal: ReadonlyArray<ResolversTypes['AccountLimit']> }>;
+  AccountMigration: ResolverTypeWrapper<AccountMigration>;
+  AccountMigrationPreview: ResolverTypeWrapper<AccountMigrationPreview>;
   AccountUpdateDefaultWalletIdInput: AccountUpdateDefaultWalletIdInput;
   AccountUpdateDefaultWalletIdPayload: ResolverTypeWrapper<Omit<AccountUpdateDefaultWalletIdPayload, 'account' | 'errors'> & { account?: Maybe<ResolversTypes['ConsumerAccount']>, errors: ReadonlyArray<ResolversTypes['Error']> }>;
   AccountUpdateDisplayCurrencyInput: AccountUpdateDisplayCurrencyInput;
   AccountUpdateDisplayCurrencyPayload: ResolverTypeWrapper<Omit<AccountUpdateDisplayCurrencyPayload, 'account' | 'errors'> & { account?: Maybe<ResolversTypes['ConsumerAccount']>, errors: ReadonlyArray<ResolversTypes['Error']> }>;
   AccountUpdateNotificationSettingsPayload: ResolverTypeWrapper<Omit<AccountUpdateNotificationSettingsPayload, 'account' | 'errors'> & { account?: Maybe<ResolversTypes['ConsumerAccount']>, errors: ReadonlyArray<ResolversTypes['Error']> }>;
+  AccountWindDown: ResolverTypeWrapper<AccountWindDown>;
   ApiKey: ResolverTypeWrapper<ApiKey>;
   ApiKeyCreateInput: ApiKeyCreateInput;
   ApiKeyCreatePayload: ResolverTypeWrapper<ApiKeyCreatePayload>;
+  ApiKeyLimits: ResolverTypeWrapper<ApiKeyLimits>;
+  ApiKeyRemoveLimitInput: ApiKeyRemoveLimitInput;
   ApiKeyRevokeInput: ApiKeyRevokeInput;
   ApiKeyRevokePayload: ResolverTypeWrapper<ApiKeyRevokePayload>;
+  ApiKeySetLimitInput: ApiKeySetLimitInput;
+  ApiKeySetLimitPayload: ResolverTypeWrapper<ApiKeySetLimitPayload>;
   AuthToken: ResolverTypeWrapper<Scalars['AuthToken']['output']>;
   AuthTokenPayload: ResolverTypeWrapper<Omit<AuthTokenPayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
   Authorization: ResolverTypeWrapper<Authorization>;
@@ -3645,6 +3858,8 @@ export type ResolversTypes = {
   CountryCode: ResolverTypeWrapper<Scalars['CountryCode']['output']>;
   Currency: ResolverTypeWrapper<Currency>;
   CurrencyConversionEstimation: ResolverTypeWrapper<CurrencyConversionEstimation>;
+  CustodialRestrictions: ResolverTypeWrapper<CustodialRestrictions>;
+  DepositFeeTier: ResolverTypeWrapper<DepositFeeTier>;
   DepositFeesInformation: ResolverTypeWrapper<DepositFeesInformation>;
   DeviceNotificationTokenCreateInput: DeviceNotificationTokenCreateInput;
   DisplayCurrency: ResolverTypeWrapper<Scalars['DisplayCurrency']['output']>;
@@ -3674,6 +3889,7 @@ export type ResolversTypes = {
   InvoiceEdge: ResolverTypeWrapper<Omit<InvoiceEdge, 'node'> & { node: ResolversTypes['Invoice'] }>;
   InvoicePaymentStatus: InvoicePaymentStatus;
   Language: ResolverTypeWrapper<Scalars['Language']['output']>;
+  LimitTimeWindow: LimitTimeWindow;
   LnAddressPaymentSendInput: LnAddressPaymentSendInput;
   LnInvoice: ResolverTypeWrapper<LnInvoice>;
   LnInvoiceCancelInput: LnInvoiceCancelInput;
@@ -3710,6 +3926,13 @@ export type ResolversTypes = {
   Merchant: ResolverTypeWrapper<Merchant>;
   MerchantMapSuggestInput: MerchantMapSuggestInput;
   MerchantPayload: ResolverTypeWrapper<Omit<MerchantPayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
+  MigrationCommitInput: MigrationCommitInput;
+  MigrationLnAddressTransferInput: MigrationLnAddressTransferInput;
+  MigrationLnAddressTransferPayload: ResolverTypeWrapper<Omit<MigrationLnAddressTransferPayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
+  MigrationLnAddressTransferResult: ResolverTypeWrapper<MigrationLnAddressTransferResult>;
+  MigrationLnAddressTransferStatus: MigrationLnAddressTransferStatus;
+  MigrationPayload: ResolverTypeWrapper<Omit<MigrationPayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
+  MigrationStatus: MigrationStatus;
   Minutes: ResolverTypeWrapper<Scalars['Minutes']['output']>;
   MobileVersions: ResolverTypeWrapper<MobileVersions>;
   Mutation: ResolverTypeWrapper<{}>;
@@ -3761,6 +3984,7 @@ export type ResolversTypes = {
   RealtimePrice: ResolverTypeWrapper<RealtimePrice>;
   RealtimePriceInput: RealtimePriceInput;
   RealtimePricePayload: ResolverTypeWrapper<Omit<RealtimePricePayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
+  RegionCheck: ResolverTypeWrapper<RegionCheck>;
   SafeInt: ResolverTypeWrapper<Scalars['SafeInt']['output']>;
   SatAmount: ResolverTypeWrapper<Scalars['SatAmount']['output']>;
   SatAmountPayload: ResolverTypeWrapper<Omit<SatAmountPayload, 'errors'> & { errors: ReadonlyArray<ResolversTypes['Error']> }>;
@@ -3827,6 +4051,7 @@ export type ResolversTypes = {
   Wallet: ResolverTypeWrapper<ResolversInterfaceTypes<ResolversTypes>['Wallet']>;
   WalletCurrency: WalletCurrency;
   WalletId: ResolverTypeWrapper<Scalars['WalletId']['output']>;
+  WindDownStatus: WindDownStatus;
   join__FieldSet: ResolverTypeWrapper<Scalars['join__FieldSet']['output']>;
   join__Graph: Join__Graph;
   link__Import: ResolverTypeWrapper<Scalars['link__Import']['output']>;
@@ -3845,18 +4070,26 @@ export type ResolversParentTypes = {
   AccountDisableNotificationChannelInput: AccountDisableNotificationChannelInput;
   AccountEnableNotificationCategoryInput: AccountEnableNotificationCategoryInput;
   AccountEnableNotificationChannelInput: AccountEnableNotificationChannelInput;
+  AccountLevelLimits: AccountLevelLimits;
   AccountLimit: ResolversInterfaceTypes<ResolversParentTypes>['AccountLimit'];
   AccountLimits: Omit<AccountLimits, 'convert' | 'internalSend' | 'withdrawal'> & { convert: ReadonlyArray<ResolversParentTypes['AccountLimit']>, internalSend: ReadonlyArray<ResolversParentTypes['AccountLimit']>, withdrawal: ReadonlyArray<ResolversParentTypes['AccountLimit']> };
+  AccountMigration: AccountMigration;
+  AccountMigrationPreview: AccountMigrationPreview;
   AccountUpdateDefaultWalletIdInput: AccountUpdateDefaultWalletIdInput;
   AccountUpdateDefaultWalletIdPayload: Omit<AccountUpdateDefaultWalletIdPayload, 'account' | 'errors'> & { account?: Maybe<ResolversParentTypes['ConsumerAccount']>, errors: ReadonlyArray<ResolversParentTypes['Error']> };
   AccountUpdateDisplayCurrencyInput: AccountUpdateDisplayCurrencyInput;
   AccountUpdateDisplayCurrencyPayload: Omit<AccountUpdateDisplayCurrencyPayload, 'account' | 'errors'> & { account?: Maybe<ResolversParentTypes['ConsumerAccount']>, errors: ReadonlyArray<ResolversParentTypes['Error']> };
   AccountUpdateNotificationSettingsPayload: Omit<AccountUpdateNotificationSettingsPayload, 'account' | 'errors'> & { account?: Maybe<ResolversParentTypes['ConsumerAccount']>, errors: ReadonlyArray<ResolversParentTypes['Error']> };
+  AccountWindDown: AccountWindDown;
   ApiKey: ApiKey;
   ApiKeyCreateInput: ApiKeyCreateInput;
   ApiKeyCreatePayload: ApiKeyCreatePayload;
+  ApiKeyLimits: ApiKeyLimits;
+  ApiKeyRemoveLimitInput: ApiKeyRemoveLimitInput;
   ApiKeyRevokeInput: ApiKeyRevokeInput;
   ApiKeyRevokePayload: ApiKeyRevokePayload;
+  ApiKeySetLimitInput: ApiKeySetLimitInput;
+  ApiKeySetLimitPayload: ApiKeySetLimitPayload;
   AuthToken: Scalars['AuthToken']['output'];
   AuthTokenPayload: Omit<AuthTokenPayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
   Authorization: Authorization;
@@ -3886,6 +4119,8 @@ export type ResolversParentTypes = {
   CountryCode: Scalars['CountryCode']['output'];
   Currency: Currency;
   CurrencyConversionEstimation: CurrencyConversionEstimation;
+  CustodialRestrictions: CustodialRestrictions;
+  DepositFeeTier: DepositFeeTier;
   DepositFeesInformation: DepositFeesInformation;
   DeviceNotificationTokenCreateInput: DeviceNotificationTokenCreateInput;
   DisplayCurrency: Scalars['DisplayCurrency']['output'];
@@ -3948,6 +4183,11 @@ export type ResolversParentTypes = {
   Merchant: Merchant;
   MerchantMapSuggestInput: MerchantMapSuggestInput;
   MerchantPayload: Omit<MerchantPayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
+  MigrationCommitInput: MigrationCommitInput;
+  MigrationLnAddressTransferInput: MigrationLnAddressTransferInput;
+  MigrationLnAddressTransferPayload: Omit<MigrationLnAddressTransferPayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
+  MigrationLnAddressTransferResult: MigrationLnAddressTransferResult;
+  MigrationPayload: Omit<MigrationPayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
   Minutes: Scalars['Minutes']['output'];
   MobileVersions: MobileVersions;
   Mutation: {};
@@ -3993,6 +4233,7 @@ export type ResolversParentTypes = {
   RealtimePrice: RealtimePrice;
   RealtimePriceInput: RealtimePriceInput;
   RealtimePricePayload: Omit<RealtimePricePayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
+  RegionCheck: RegionCheck;
   SafeInt: Scalars['SafeInt']['output'];
   SatAmount: Scalars['SatAmount']['output'];
   SatAmountPayload: Omit<SatAmountPayload, 'errors'> & { errors: ReadonlyArray<ResolversParentTypes['Error']> };
@@ -4141,6 +4382,15 @@ export type AccountDeletePayloadResolvers<ContextType = any, ParentType extends 
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
+export type AccountLevelLimitsResolvers<ContextType = any, ParentType extends ResolversParentTypes['AccountLevelLimits'] = ResolversParentTypes['AccountLevelLimits']> = {
+  convert?: Resolver<ResolversTypes['CentAmount'], ParentType, ContextType>;
+  internalSend?: Resolver<ResolversTypes['CentAmount'], ParentType, ContextType>;
+  interval?: Resolver<ResolversTypes['Seconds'], ParentType, ContextType>;
+  level?: Resolver<ResolversTypes['AccountLevel'], ParentType, ContextType>;
+  withdrawal?: Resolver<ResolversTypes['CentAmount'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
 export type AccountLimitResolvers<ContextType = any, ParentType extends ResolversParentTypes['AccountLimit'] = ResolversParentTypes['AccountLimit']> = {
   __resolveType: TypeResolveFn<'OneDayAccountLimit', ParentType, ContextType>;
   interval?: Resolver<Maybe<ResolversTypes['Seconds']>, ParentType, ContextType>;
@@ -4152,6 +4402,21 @@ export type AccountLimitsResolvers<ContextType = any, ParentType extends Resolve
   convert?: Resolver<ReadonlyArray<ResolversTypes['AccountLimit']>, ParentType, ContextType>;
   internalSend?: Resolver<ReadonlyArray<ResolversTypes['AccountLimit']>, ParentType, ContextType>;
   withdrawal?: Resolver<ReadonlyArray<ResolversTypes['AccountLimit']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
+export type AccountMigrationResolvers<ContextType = any, ParentType extends ResolversParentTypes['AccountMigration'] = ResolversParentTypes['AccountMigration']> = {
+  preview?: Resolver<ResolversTypes['AccountMigrationPreview'], ParentType, ContextType>;
+  status?: Resolver<ResolversTypes['MigrationStatus'], ParentType, ContextType>;
+  transferPaymentHash?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
+export type AccountMigrationPreviewResolvers<ContextType = any, ParentType extends ResolversParentTypes['AccountMigrationPreview'] = ResolversParentTypes['AccountMigrationPreview']> = {
+  balanceSats?: Resolver<ResolversTypes['SatAmount'], ParentType, ContextType>;
+  feeCoveredByBlink?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  feeSats?: Resolver<ResolversTypes['SatAmount'], ParentType, ContextType>;
+  receiveSats?: Resolver<ResolversTypes['SatAmount'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
@@ -4173,12 +4438,22 @@ export type AccountUpdateNotificationSettingsPayloadResolvers<ContextType = any,
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
+export type AccountWindDownResolvers<ContextType = any, ParentType extends ResolversParentTypes['AccountWindDown'] = ResolversParentTypes['AccountWindDown']> = {
+  finalDeadline?: Resolver<ResolversTypes['Timestamp'], ParentType, ContextType>;
+  gateArmsAt?: Resolver<ResolversTypes['Timestamp'], ParentType, ContextType>;
+  receiveDisabledAt?: Resolver<ResolversTypes['Timestamp'], ParentType, ContextType>;
+  status?: Resolver<ResolversTypes['WindDownStatus'], ParentType, ContextType>;
+  timezone?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
 export type ApiKeyResolvers<ContextType = any, ParentType extends ResolversParentTypes['ApiKey'] = ResolversParentTypes['ApiKey']> = {
   createdAt?: Resolver<ResolversTypes['Timestamp'], ParentType, ContextType>;
   expired?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   expiresAt?: Resolver<Maybe<ResolversTypes['Timestamp']>, ParentType, ContextType>;
   id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
   lastUsedAt?: Resolver<Maybe<ResolversTypes['Timestamp']>, ParentType, ContextType>;
+  limits?: Resolver<ResolversTypes['ApiKeyLimits'], ParentType, ContextType>;
   name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   readOnly?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   revoked?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
@@ -4192,7 +4467,24 @@ export type ApiKeyCreatePayloadResolvers<ContextType = any, ParentType extends R
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
+export type ApiKeyLimitsResolvers<ContextType = any, ParentType extends ResolversParentTypes['ApiKeyLimits'] = ResolversParentTypes['ApiKeyLimits']> = {
+  annualLimitSats?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  annualSpentSats?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  dailyLimitSats?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  dailySpentSats?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  monthlyLimitSats?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  monthlySpentSats?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  weeklyLimitSats?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  weeklySpentSats?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
 export type ApiKeyRevokePayloadResolvers<ContextType = any, ParentType extends ResolversParentTypes['ApiKeyRevokePayload'] = ResolversParentTypes['ApiKeyRevokePayload']> = {
+  apiKey?: Resolver<ResolversTypes['ApiKey'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
+export type ApiKeySetLimitPayloadResolvers<ContextType = any, ParentType extends ResolversParentTypes['ApiKeySetLimitPayload'] = ResolversParentTypes['ApiKeySetLimitPayload']> = {
   apiKey?: Resolver<ResolversTypes['ApiKey'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
@@ -4365,10 +4657,23 @@ export type CurrencyConversionEstimationResolvers<ContextType = any, ParentType 
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
+export type CustodialRestrictionsResolvers<ContextType = any, ParentType extends ResolversParentTypes['CustodialRestrictions'] = ResolversParentTypes['CustodialRestrictions']> = {
+  dollarBalance?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  transfer?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
+export type DepositFeeTierResolvers<ContextType = any, ParentType extends ResolversParentTypes['DepositFeeTier'] = ResolversParentTypes['DepositFeeTier']> = {
+  amount?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  maxAmount?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
 export type DepositFeesInformationResolvers<ContextType = any, ParentType extends ResolversParentTypes['DepositFeesInformation'] = ResolversParentTypes['DepositFeesInformation']> = {
   minBankFee?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   minBankFeeThreshold?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   ratio?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  tiers?: Resolver<ReadonlyArray<ResolversTypes['DepositFeeTier']>, ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
@@ -4415,6 +4720,7 @@ export type FeesInformationResolvers<ContextType = any, ParentType extends Resol
 };
 
 export type GlobalsResolvers<ContextType = any, ParentType extends ResolversParentTypes['Globals'] = ResolversParentTypes['Globals']> = {
+  accountLimitsByLevel?: Resolver<ReadonlyArray<ResolversTypes['AccountLevelLimits']>, ParentType, ContextType>;
   blockInfo?: Resolver<Maybe<ResolversTypes['BlockInfo']>, ParentType, ContextType>;
   buildInformation?: Resolver<ResolversTypes['BuildInformation'], ParentType, ContextType>;
   feesInformation?: Resolver<ResolversTypes['FeesInformation'], ParentType, ContextType>;
@@ -4596,6 +4902,25 @@ export type MerchantPayloadResolvers<ContextType = any, ParentType extends Resol
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
+export type MigrationLnAddressTransferPayloadResolvers<ContextType = any, ParentType extends ResolversParentTypes['MigrationLnAddressTransferPayload'] = ResolversParentTypes['MigrationLnAddressTransferPayload']> = {
+  errors?: Resolver<ReadonlyArray<ResolversTypes['Error']>, ParentType, ContextType>;
+  results?: Resolver<ReadonlyArray<ResolversTypes['MigrationLnAddressTransferResult']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
+export type MigrationLnAddressTransferResultResolvers<ContextType = any, ParentType extends ResolversParentTypes['MigrationLnAddressTransferResult'] = ResolversParentTypes['MigrationLnAddressTransferResult']> = {
+  identifier?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  lightningAddress?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  status?: Resolver<ResolversTypes['MigrationLnAddressTransferStatus'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
+export type MigrationPayloadResolvers<ContextType = any, ParentType extends ResolversParentTypes['MigrationPayload'] = ResolversParentTypes['MigrationPayload']> = {
+  errors?: Resolver<ReadonlyArray<ResolversTypes['Error']>, ParentType, ContextType>;
+  migration?: Resolver<Maybe<ResolversTypes['AccountMigration']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
 export interface MinutesScalarConfig extends GraphQLScalarTypeConfig<ResolversTypes['Minutes'], any> {
   name: 'Minutes';
 }
@@ -4616,7 +4941,9 @@ export type MutationResolvers<ContextType = any, ParentType extends ResolversPar
   accountUpdateDefaultWalletId?: Resolver<ResolversTypes['AccountUpdateDefaultWalletIdPayload'], ParentType, ContextType, RequireFields<MutationAccountUpdateDefaultWalletIdArgs, 'input'>>;
   accountUpdateDisplayCurrency?: Resolver<ResolversTypes['AccountUpdateDisplayCurrencyPayload'], ParentType, ContextType, RequireFields<MutationAccountUpdateDisplayCurrencyArgs, 'input'>>;
   apiKeyCreate?: Resolver<ResolversTypes['ApiKeyCreatePayload'], ParentType, ContextType, RequireFields<MutationApiKeyCreateArgs, 'input'>>;
+  apiKeyRemoveLimit?: Resolver<ResolversTypes['ApiKeySetLimitPayload'], ParentType, ContextType, RequireFields<MutationApiKeyRemoveLimitArgs, 'input'>>;
   apiKeyRevoke?: Resolver<ResolversTypes['ApiKeyRevokePayload'], ParentType, ContextType, RequireFields<MutationApiKeyRevokeArgs, 'input'>>;
+  apiKeySetLimit?: Resolver<ResolversTypes['ApiKeySetLimitPayload'], ParentType, ContextType, RequireFields<MutationApiKeySetLimitArgs, 'input'>>;
   callbackEndpointAdd?: Resolver<ResolversTypes['CallbackEndpointAddPayload'], ParentType, ContextType, RequireFields<MutationCallbackEndpointAddArgs, 'input'>>;
   callbackEndpointDelete?: Resolver<ResolversTypes['SuccessPayload'], ParentType, ContextType, RequireFields<MutationCallbackEndpointDeleteArgs, 'input'>>;
   captchaCreateChallenge?: Resolver<ResolversTypes['CaptchaCreateChallengePayload'], ParentType, ContextType>;
@@ -4644,6 +4971,9 @@ export type MutationResolvers<ContextType = any, ParentType extends ResolversPar
   lnUsdInvoiceFeeProbe?: Resolver<ResolversTypes['SatAmountPayload'], ParentType, ContextType, RequireFields<MutationLnUsdInvoiceFeeProbeArgs, 'input'>>;
   lnurlPaymentSend?: Resolver<ResolversTypes['PaymentSendPayload'], ParentType, ContextType, RequireFields<MutationLnurlPaymentSendArgs, 'input'>>;
   merchantMapSuggest?: Resolver<ResolversTypes['MerchantPayload'], ParentType, ContextType, RequireFields<MutationMerchantMapSuggestArgs, 'input'>>;
+  migrationCommit?: Resolver<ResolversTypes['MigrationPayload'], ParentType, ContextType, RequireFields<MutationMigrationCommitArgs, 'input'>>;
+  migrationLnAddressTransfer?: Resolver<ResolversTypes['MigrationLnAddressTransferPayload'], ParentType, ContextType, RequireFields<MutationMigrationLnAddressTransferArgs, 'input'>>;
+  migrationStart?: Resolver<ResolversTypes['MigrationPayload'], ParentType, ContextType>;
   onChainAddressCreate?: Resolver<ResolversTypes['OnChainAddressPayload'], ParentType, ContextType, RequireFields<MutationOnChainAddressCreateArgs, 'input'>>;
   onChainAddressCurrent?: Resolver<ResolversTypes['OnChainAddressPayload'], ParentType, ContextType, RequireFields<MutationOnChainAddressCurrentArgs, 'input'>>;
   onChainPaymentSend?: Resolver<ResolversTypes['PaymentSendPayload'], ParentType, ContextType, RequireFields<MutationOnChainPaymentSendArgs, 'input'>>;
@@ -4746,10 +5076,12 @@ export interface OneTimeAuthCodeScalarConfig extends GraphQLScalarTypeConfig<Res
 
 export type OpenDeepLinkActionResolvers<ContextType = any, ParentType extends ResolversParentTypes['OpenDeepLinkAction'] = ResolversParentTypes['OpenDeepLinkAction']> = {
   deepLink?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  label?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
 export type OpenExternalLinkActionResolvers<ContextType = any, ParentType extends ResolversParentTypes['OpenExternalLinkAction'] = ResolversParentTypes['OpenExternalLinkAction']> = {
+  label?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   url?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
@@ -4847,19 +5179,23 @@ export type QueryResolvers<ContextType = any, ParentType extends ResolversParent
   businessMapMarkers?: Resolver<ReadonlyArray<ResolversTypes['MapMarker']>, ParentType, ContextType>;
   currencyConversionEstimation?: Resolver<ResolversTypes['CurrencyConversionEstimation'], ParentType, ContextType, RequireFields<QueryCurrencyConversionEstimationArgs, 'amount' | 'currency'>>;
   currencyList?: Resolver<ReadonlyArray<ResolversTypes['Currency']>, ParentType, ContextType>;
+  custodialRestrictions?: Resolver<ResolversTypes['CustodialRestrictions'], ParentType, ContextType>;
   globals?: Resolver<Maybe<ResolversTypes['Globals']>, ParentType, ContextType>;
   lnInvoicePaymentStatus?: Resolver<ResolversTypes['LnInvoicePaymentStatusPayload'], ParentType, ContextType, RequireFields<QueryLnInvoicePaymentStatusArgs, 'input'>>;
   lnInvoicePaymentStatusByHash?: Resolver<ResolversTypes['LnInvoicePaymentStatus'], ParentType, ContextType, RequireFields<QueryLnInvoicePaymentStatusByHashArgs, 'input'>>;
   lnInvoicePaymentStatusByPaymentRequest?: Resolver<ResolversTypes['LnInvoicePaymentStatus'], ParentType, ContextType, RequireFields<QueryLnInvoicePaymentStatusByPaymentRequestArgs, 'input'>>;
   me?: Resolver<Maybe<ResolversTypes['User']>, ParentType, ContextType>;
+  migration?: Resolver<Maybe<ResolversTypes['AccountMigration']>, ParentType, ContextType>;
   mobileVersions?: Resolver<Maybe<ReadonlyArray<Maybe<ResolversTypes['MobileVersions']>>>, ParentType, ContextType>;
   onChainTxFee?: Resolver<ResolversTypes['OnChainTxFee'], ParentType, ContextType, RequireFields<QueryOnChainTxFeeArgs, 'address' | 'amount' | 'speed' | 'walletId'>>;
   onChainUsdTxFee?: Resolver<ResolversTypes['OnChainUsdTxFee'], ParentType, ContextType, RequireFields<QueryOnChainUsdTxFeeArgs, 'address' | 'amount' | 'speed' | 'walletId'>>;
   onChainUsdTxFeeAsBtcDenominated?: Resolver<ResolversTypes['OnChainUsdTxFee'], ParentType, ContextType, RequireFields<QueryOnChainUsdTxFeeAsBtcDenominatedArgs, 'address' | 'amount' | 'speed' | 'walletId'>>;
   payoutSpeeds?: Resolver<ReadonlyArray<ResolversTypes['PayoutSpeeds']>, ParentType, ContextType>;
   realtimePrice?: Resolver<ResolversTypes['RealtimePrice'], ParentType, ContextType, RequireFields<QueryRealtimePriceArgs, 'currency'>>;
+  regionCheck?: Resolver<ResolversTypes['RegionCheck'], ParentType, ContextType>;
   userDefaultWalletId?: Resolver<ResolversTypes['WalletId'], ParentType, ContextType, RequireFields<QueryUserDefaultWalletIdArgs, 'username'>>;
   usernameAvailable?: Resolver<Maybe<ResolversTypes['Boolean']>, ParentType, ContextType, RequireFields<QueryUsernameAvailableArgs, 'username'>>;
+  windDown?: Resolver<Maybe<ResolversTypes['AccountWindDown']>, ParentType, ContextType>;
 };
 
 export type QuizResolvers<ContextType = any, ParentType extends ResolversParentTypes['Quiz'] = ResolversParentTypes['Quiz']> = {
@@ -4889,6 +5225,13 @@ export type RealtimePriceResolvers<ContextType = any, ParentType extends Resolve
 export type RealtimePricePayloadResolvers<ContextType = any, ParentType extends ResolversParentTypes['RealtimePricePayload'] = ResolversParentTypes['RealtimePricePayload']> = {
   errors?: Resolver<ReadonlyArray<ResolversTypes['Error']>, ParentType, ContextType>;
   realtimePrice?: Resolver<Maybe<ResolversTypes['RealtimePrice']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
+export type RegionCheckResolvers<ContextType = any, ParentType extends ResolversParentTypes['RegionCheck'] = ResolversParentTypes['RegionCheck']> = {
+  countryCode?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  custodialCreationAllowed?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  restricted?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
@@ -5221,14 +5564,20 @@ export interface Link__ImportScalarConfig extends GraphQLScalarTypeConfig<Resolv
 export type Resolvers<ContextType = any> = {
   Account?: AccountResolvers<ContextType>;
   AccountDeletePayload?: AccountDeletePayloadResolvers<ContextType>;
+  AccountLevelLimits?: AccountLevelLimitsResolvers<ContextType>;
   AccountLimit?: AccountLimitResolvers<ContextType>;
   AccountLimits?: AccountLimitsResolvers<ContextType>;
+  AccountMigration?: AccountMigrationResolvers<ContextType>;
+  AccountMigrationPreview?: AccountMigrationPreviewResolvers<ContextType>;
   AccountUpdateDefaultWalletIdPayload?: AccountUpdateDefaultWalletIdPayloadResolvers<ContextType>;
   AccountUpdateDisplayCurrencyPayload?: AccountUpdateDisplayCurrencyPayloadResolvers<ContextType>;
   AccountUpdateNotificationSettingsPayload?: AccountUpdateNotificationSettingsPayloadResolvers<ContextType>;
+  AccountWindDown?: AccountWindDownResolvers<ContextType>;
   ApiKey?: ApiKeyResolvers<ContextType>;
   ApiKeyCreatePayload?: ApiKeyCreatePayloadResolvers<ContextType>;
+  ApiKeyLimits?: ApiKeyLimitsResolvers<ContextType>;
   ApiKeyRevokePayload?: ApiKeyRevokePayloadResolvers<ContextType>;
+  ApiKeySetLimitPayload?: ApiKeySetLimitPayloadResolvers<ContextType>;
   AuthToken?: GraphQLScalarType;
   AuthTokenPayload?: AuthTokenPayloadResolvers<ContextType>;
   Authorization?: AuthorizationResolvers<ContextType>;
@@ -5253,6 +5602,8 @@ export type Resolvers<ContextType = any> = {
   CountryCode?: GraphQLScalarType;
   Currency?: CurrencyResolvers<ContextType>;
   CurrencyConversionEstimation?: CurrencyConversionEstimationResolvers<ContextType>;
+  CustodialRestrictions?: CustodialRestrictionsResolvers<ContextType>;
+  DepositFeeTier?: DepositFeeTierResolvers<ContextType>;
   DepositFeesInformation?: DepositFeesInformationResolvers<ContextType>;
   DisplayCurrency?: GraphQLScalarType;
   Email?: EmailResolvers<ContextType>;
@@ -5290,6 +5641,9 @@ export type Resolvers<ContextType = any> = {
   Memo?: GraphQLScalarType;
   Merchant?: MerchantResolvers<ContextType>;
   MerchantPayload?: MerchantPayloadResolvers<ContextType>;
+  MigrationLnAddressTransferPayload?: MigrationLnAddressTransferPayloadResolvers<ContextType>;
+  MigrationLnAddressTransferResult?: MigrationLnAddressTransferResultResolvers<ContextType>;
+  MigrationPayload?: MigrationPayloadResolvers<ContextType>;
   Minutes?: GraphQLScalarType;
   MobileVersions?: MobileVersionsResolvers<ContextType>;
   Mutation?: MutationResolvers<ContextType>;
@@ -5326,6 +5680,7 @@ export type Resolvers<ContextType = any> = {
   QuizClaimPayload?: QuizClaimPayloadResolvers<ContextType>;
   RealtimePrice?: RealtimePriceResolvers<ContextType>;
   RealtimePricePayload?: RealtimePricePayloadResolvers<ContextType>;
+  RegionCheck?: RegionCheckResolvers<ContextType>;
   SafeInt?: GraphQLScalarType;
   SatAmount?: GraphQLScalarType;
   SatAmountPayload?: SatAmountPayloadResolvers<ContextType>;
