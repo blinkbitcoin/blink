@@ -10,9 +10,9 @@ import { Status } from "@/lib/graphql/generated"
 
 export async function GET(
   request: Request,
-  { params }: { params: { "unique-hash": string } },
+  { params }: { params: Promise<{ "unique-hash": string }> },
 ) {
-  const { "unique-hash": uniqueHash } = params
+  const { "unique-hash": uniqueHash } = await params
 
   try {
     const withdrawLink = await getWithdrawLinkByUniqueHashQuery({ uniqueHash })

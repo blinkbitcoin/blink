@@ -1,13 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    outputFileTracingRoot: require("path").join(__dirname, "../../"),
-    instrumentationHook: true,
-    serverComponentsExternalPackages: ["knex", "pg"],
-    outputFileTracingIncludes: {
-      "./": ["./services/db/migrations/**/*"],
-    },
+  outputFileTracingRoot: require("path").join(__dirname, "../../"),
+  outputFileTracingIncludes: {
+    "./": ["./services/db/migrations/**/*"],
   },
+  serverExternalPackages: ["knex", "pg"],
   output: "standalone",
 }
 
