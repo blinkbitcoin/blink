@@ -9,6 +9,8 @@ const nextConfig = {
     },
   },
   output: "standalone",
+  // Disable the /_next/image optimizer: all images are static repo assets
+  images: { unoptimized: true },
 }
 
 module.exports = nextConfig
