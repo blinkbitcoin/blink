@@ -62,10 +62,30 @@ def run_command(cmd, cwd=None, timeout=1800, *, env=None, cleanup_timeout=30):
     Detached descendants cannot be killed as a group, but cannot hold us open.
     """
     print(f"Running command: {' '.join(cmd)}", file=sys.stderr)
-    handle_sigterm = threading.current_thread() is threading.main_thread()
-    if handle_sigterm:
-        previous_sigterm = signal.signal(signal.SIGTERM, _terminate)
+    handle_signals = threading.current_thread() is threading.main_thread()
+    starting = True
+    pending_signals = []
+    previous_handlers = {}
+
+    def cancel(signum, frame):
+        # Raising inside Popen can lose an already-spawned child's handle.
+        # Defer until assignment and entry into the cleanup-protected block.
+        if starting:
+            pending_signals.append((signum, frame))
+        elif signum == signal.SIGTERM:
+            _terminate(signum, frame)
+        else:
+            previous_handlers[signum](signum, frame)
+
     try:
+        if handle_signals:
+            previous_handlers[signal.SIGTERM] = signal.getsignal(signal.SIGTERM)
+            signal.signal(signal.SIGTERM, cancel)
+            previous_sigint = signal.getsignal(signal.SIGINT)
+            # Preserve ignored/default SIGINT dispositions and custom handlers.
+            if callable(previous_sigint):
+                previous_handlers[signal.SIGINT] = previous_sigint
+                signal.signal(signal.SIGINT, cancel)
         process = subprocess.Popen(
             cmd,
             cwd=cwd,
@@ -73,9 +93,13 @@ def run_command(cmd, cwd=None, timeout=1800, *, env=None, cleanup_timeout=30):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             universal_newlines=True,
+            errors="replace",
             start_new_session=True,
         )
         try:
+            starting = False
+            for signum, frame in pending_signals:
+                cancel(signum, frame)
             stdout, stderr = process.communicate(timeout=timeout)
             exit_code = process.returncode
         except subprocess.TimeoutExpired:
@@ -97,5 +121,5 @@ def run_command(cmd, cwd=None, timeout=1800, *, env=None, cleanup_timeout=30):
         print(f"Error running command: {error}", file=sys.stderr)
         return 1
     finally:
-        if handle_sigterm:
-            signal.signal(signal.SIGTERM, previous_sigterm)
+        for signum, handler in previous_handlers.items():
+            signal.signal(signum, handler)
