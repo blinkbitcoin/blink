@@ -23,5 +23,15 @@
     "tar": "^7.5.19",
     "proxy-addr": "^2.0.8"
   },
+  "pnpm": {
+    "packageExtensions": {
+      "next@15": {
+        "peerDependencies": {
+          "@types/react": "*",
+          "@types/react-dom": "*"
+        }
+      }
+    }
+  },
   "packageManager": "pnpm@8.7.6"
 }
