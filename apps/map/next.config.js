@@ -1,9 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    outputFileTracingRoot: require("path").join(__dirname, "../../"),
-    instrumentationHook: true,
-  },
+  outputFileTracingRoot: require("path").join(__dirname, "../../"),
   output: "standalone",
 }
 

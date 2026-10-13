@@ -20,7 +20,7 @@ gql`
 export async function businessMapMarkers(): Promise<
   BusinessMapMarkersQuery["businessMapMarkers"] | Error
 > {
-  const client = apolloClient.UnAuthed()
+  const client = await apolloClient.UnAuthed()
   try {
     const response = await client.query<BusinessMapMarkersQuery>({
       query: BusinessMapMarkersDocument,
