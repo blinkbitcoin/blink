@@ -1,13 +1,66 @@
 """Bounded subprocess execution for the pnpm build scripts (POSIX)."""
 import os
 import signal
+import selectors
 import subprocess
 import sys
 import threading
+import time
+
+
+# Limits are per stream, in bytes. Decode only the retained tail so reads can
+# split UTF-8 characters without corrupting them. A truncated prefix is replaced.
+OUTPUT_TAIL_BYTES = 256 * 1024
+READ_CHUNK_BYTES = 64 * 1024
+
+
+class _OutputCapture:
+    def __init__(self):
+        self.tails = [bytearray(), bytearray()]
+
+    def output(self):
+        return tuple(bytes(tail) for tail in self.tails)
+
+    def drain(self, process, timeout):
+        deadline = None if timeout is None else time.monotonic() + timeout
+
+        def remaining():
+            if deadline is None:
+                return None
+            left = deadline - time.monotonic()
+            if left <= 0:
+                assert timeout is not None
+                raise subprocess.TimeoutExpired(process.args, timeout)
+            return left
+
+        # Recreate registrations on cleanup, retaining bytes from before the
+        # interruption. Nonblocking reads avoid hangs even with inherited pipes.
+        with selectors.DefaultSelector() as selector:
+            for stream, tail in zip((process.stdout, process.stderr), self.tails):
+                if not stream.closed:
+                    os.set_blocking(stream.fileno(), False)
+                    selector.register(stream, selectors.EVENT_READ, (stream, tail))
+            while selector.get_map():
+                for key, _ in selector.select(remaining()):
+                    remaining()
+                    try:
+                        chunk = os.read(key.fd, READ_CHUNK_BYTES)
+                    except BlockingIOError:
+                        continue
+                    stream, tail = key.data
+                    if not chunk:
+                        selector.unregister(stream)
+                        stream.close()
+                        continue
+                    tail.extend(chunk)
+                    if len(tail) > OUTPUT_TAIL_BYTES:
+                        del tail[:-OUTPUT_TAIL_BYTES]
+            # EOF does not imply the child exited (it may close its own pipes).
+            process.wait(timeout=remaining())
 
 
 def _text(output):
-    # TimeoutExpired retains bytes even when Popen uses text mode.
+    # Diagnostic tails can begin or end within a multibyte character.
     if isinstance(output, bytes):
         return output.decode(errors="replace")
     return output or ""
@@ -20,7 +73,7 @@ def _diagnostics(stdout, stderr):
     print(_text(stderr), file=sys.stderr)
 
 
-def _stop_and_drain(process, cleanup_timeout):
+def _stop_and_drain(process, capture, cleanup_timeout):
     # Also kill descendants when the parent has already exited but they still
     # hold its pipes. A detached descendant may escape this process group.
     try:
@@ -31,9 +84,12 @@ def _stop_and_drain(process, cleanup_timeout):
         print(f"Warning: could not kill process group: {error}", file=sys.stderr)
 
     try:
-        return process.communicate(timeout=cleanup_timeout)
-    except subprocess.TimeoutExpired as error:
-        print("Error: timed out draining command output during cleanup", file=sys.stderr)
+        capture.drain(process, cleanup_timeout)
+    except (subprocess.TimeoutExpired, OSError) as error:
+        if isinstance(error, subprocess.TimeoutExpired):
+            print("Error: timed out draining command output during cleanup", file=sys.stderr)
+        else:
+            print(f"Warning: could not drain command output: {error}", file=sys.stderr)
         # Never wait for EOF from a descendant which escaped the process group.
         process.stdout.close()
         process.stderr.close()
@@ -46,7 +102,7 @@ def _stop_and_drain(process, cleanup_timeout):
             process.wait(timeout=cleanup_timeout)
         except subprocess.TimeoutExpired:
             print("Warning: command could not be reaped before cleanup timeout", file=sys.stderr)
-        return error.output, error.stderr
+    return capture.output()
 
 
 def _terminate(signum, _frame):
@@ -58,6 +114,7 @@ def _terminate(signum, _frame):
 def run_command(cmd, cwd=None, timeout=1800, *, env=None, cleanup_timeout=30):
     """Drain both streams, preserve failures, and bound timeout/cancel cleanup.
 
+    Retain only the last OUTPUT_TAIL_BYTES bytes of each stream in memory.
     Cleanup takes at most two cleanup_timeout intervals (drain, then reap).
     Detached descendants cannot be killed as a group, but cannot hold us open.
     """
@@ -66,6 +123,7 @@ def run_command(cmd, cwd=None, timeout=1800, *, env=None, cleanup_timeout=30):
     starting = True
     pending_signals = []
     previous_handlers = {}
+    capture = _OutputCapture()
 
     def cancel(signum, frame):
         # Raising inside Popen can lose an already-spawned child's handle.
@@ -92,24 +150,24 @@ def run_command(cmd, cwd=None, timeout=1800, *, env=None, cleanup_timeout=30):
             env=env,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            universal_newlines=True,
-            errors="replace",
+            bufsize=0,
             start_new_session=True,
         )
         try:
             starting = False
             for signum, frame in pending_signals:
                 cancel(signum, frame)
-            stdout, stderr = process.communicate(timeout=timeout)
+            capture.drain(process, timeout)
+            stdout, stderr = capture.output()
             exit_code = process.returncode
         except subprocess.TimeoutExpired:
             print(f"Error: Command timed out after {timeout} seconds", file=sys.stderr)
-            stdout, stderr = _stop_and_drain(process, cleanup_timeout)
+            stdout, stderr = _stop_and_drain(process, capture, cleanup_timeout)
             exit_code = 1
             print(f"Command return code after cleanup: {process.returncode}", file=sys.stderr)
         except BaseException:
             # Includes SIGINT, SIGTERM, and errors while reading command output.
-            stdout, stderr = _stop_and_drain(process, cleanup_timeout)
+            stdout, stderr = _stop_and_drain(process, capture, cleanup_timeout)
             _diagnostics(stdout, stderr)
             raise
 
