@@ -6,8 +6,11 @@ on:
       - ci/core/tasks/bump-image-digest.sh
       - ci/core/tasks/open-charts-pr.sh
       - ci/core/tasks/tests/**
-      - toolchains/workspace-pnpm/build_node_modules.py
-      - toolchains/workspace-pnpm/test_build_node_modules.py
+      - toolchains/workspace-pnpm/**
+      - toolchains/simple-pnpm/**
+      - toolchains/subprocess_util.py
+      - toolchains/pnpm_script.bzl
+      - toolchains/BUCK
       - .github/workflows/ci-task-tests.yml
 
 permissions:

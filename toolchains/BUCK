@@ -8,6 +8,11 @@ load("@prelude//toolchains:cxx.bzl", "system_cxx_toolchain")
 load("@prelude//toolchains:rust.bzl", "system_rust_toolchain")
 load("@prelude//toolchains:remote_test_execution.bzl", "remote_test_execution_toolchain")
 
+export_file(
+    name = "subprocess_util.py",
+    visibility = ["PUBLIC"],
+)
+
 remote_test_execution_toolchain(
     name = "remote_test_execution",
     visibility = ["PUBLIC"],

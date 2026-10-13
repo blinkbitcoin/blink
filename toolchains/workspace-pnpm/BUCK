@@ -1,5 +1,8 @@
-export_file(
+load("@toolchains//:pnpm_script.bzl", "pnpm_script")
+
+pnpm_script(
   name = "build_node_modules.py",
+  src = "build_node_modules.py",
   visibility = ["PUBLIC"],
 )
 
@@ -38,8 +41,9 @@ export_file(
   visibility = ["PUBLIC"],
 )
 
-export_file(
+pnpm_script(
   name = "build_next_build.py",
+  src = "build_next_build.py",
   visibility = ["PUBLIC"],
 )
 
