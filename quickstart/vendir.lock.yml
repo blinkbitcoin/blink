@@ -2,24 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat(core): cap code sends on the captcha path (#910)...'
-      sha: 62bf115fc47aea87b8dbe4e6bc51c76d0370cfd6
+      commitTitle: 'fix(ci): prevent pnpm subprocess output deadlocks (#882)...'
+      sha: 2b3d72a65998f86eda0787ab0de8c87bc4b2edc5
       tags:
-      - 0.22.69-2-g62bf115fc
+      - 0.22.70-2-g2b3d72a65
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat(core): cap code sends on the captcha path (#910)...'
-      sha: 62bf115fc47aea87b8dbe4e6bc51c76d0370cfd6
+      commitTitle: 'fix(ci): prevent pnpm subprocess output deadlocks (#882)...'
+      sha: 2b3d72a65998f86eda0787ab0de8c87bc4b2edc5
       tags:
-      - 0.22.69-2-g62bf115fc
+      - 0.22.70-2-g2b3d72a65
     path: schemas
   - git:
-      commitTitle: 'feat(core): cap code sends on the captcha path (#910)...'
-      sha: 62bf115fc47aea87b8dbe4e6bc51c76d0370cfd6
+      commitTitle: 'fix(ci): prevent pnpm subprocess output deadlocks (#882)...'
+      sha: 2b3d72a65998f86eda0787ab0de8c87bc4b2edc5
       tags:
-      - 0.22.69-2-g62bf115fc
+      - 0.22.70-2-g2b3d72a65
     path: gql
   path: graphql
 kind: LockConfig

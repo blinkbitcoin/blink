@@ -100,7 +100,7 @@ services:
     - POSTGRES_PASSWORD=secret
     - POSTGRES_DB=hydra
   galoy:
-    image: us.gcr.io/galoy-org/galoy-api@sha256:aea664df21ae1a608ef7d715a787b36785afc5ca472f7a86c6fc62f1fb5d3456
+    image: us.gcr.io/galoy-org/galoy-api@sha256:ab87ce43988522a6d845068c7d641b9628a29b91a8b6c6c18db0b824c3e76a25
     environment:
     - HELMREVISION=dev
     - NETWORK=regtest
@@ -159,7 +159,7 @@ services:
         aliases:
         - bats-tests
   trigger:
-    image: us.gcr.io/galoy-org/galoy-api-trigger@sha256:12bbda98db010f86e68a24d762de35da8cf81070ad716574afdc8ae8d60c48e5
+    image: us.gcr.io/galoy-org/galoy-api-trigger@sha256:9e897267cf6a2eff0d41d337d3abd8da19385ffe44f62f9471f2e68de8d20e08
     environment:
     - HELMREVISION=dev
     - NETWORK=regtest
@@ -202,7 +202,7 @@ services:
     depends_on:
     - galoy
   notifications:
-    image: us.gcr.io/galoy-org/galoy-notifications@sha256:9ab6a6f358f8251d6ae35e424333a8b6acf4a9fd794dd9fd11a91290934c05a2
+    image: us.gcr.io/galoy-org/galoy-notifications@sha256:be920cd22316b4766197c5fc6be9acfc273b78a86b9fd2bada0b3bdf37191614
     environment:
     - PG_CON=postgres://user:password@notifications-pg:5432/pg
     - PG_READ_CON=postgres://user:password@notifications-pg:5432/pg
@@ -271,7 +271,7 @@ services:
     environment:
     - MONGO_INITDB_DATABASE=galoy
   mongodb-migrate:
-    image: us.gcr.io/galoy-org/galoy-api-migrate@sha256:f1924d5be035c8d1658056158fb7486270dd845e8d24bcdd85d98e3829bcbd9b
+    image: us.gcr.io/galoy-org/galoy-api-migrate@sha256:9b2a7d94c96426e69ee47965e30b0548b714680f6df2eba5a344bc40a791d31f
     depends_on:
     - mongodb
     environment:
