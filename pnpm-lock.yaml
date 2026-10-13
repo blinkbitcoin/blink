@@ -11,7 +11,7 @@ overrides:
   http-cache-semantics: 4.1.1
   elliptic: ^6.6.1
   form-data: ^4.0.4
-  handlebars: ^4.7.9
+  handlebars: ^4.7.10
   shell-quote: ^1.11.0
   tar: ^7.5.19
   proxy-addr: ^2.0.8
@@ -12052,7 +12052,7 @@ packages:
       find-up: 5.0.0
       fs-extra: 11.3.0
       glob: 10.4.5
-      handlebars: 4.7.9
+      handlebars: 4.7.10
       lazy-universal-dotenv: 4.0.0
       node-fetch: 2.7.0
       picomatch: 2.3.1
@@ -21600,7 +21600,7 @@ packages:
     hasBin: true
     dependencies:
       google-protobuf: 3.15.8
-      handlebars: 4.7.9
+      handlebars: 4.7.10
     dev: true
 
   /gtoken@7.1.0:
@@ -21633,8 +21633,8 @@ packages:
       duplexer: 0.1.2
     dev: true
 
-  /handlebars@4.7.9:
-    resolution: {integrity: sha512-4E71E0rpOaQuJR2A3xDZ+GM1HyWYv1clR58tC8emQNeQe3RH7MAzSbat+V0wG78LQBo6m6bzSG/L4pBuCsgnUQ==}
+  /handlebars@4.7.10:
+    resolution: {integrity: sha512-P5VJMVM7qgBn6vjXMw8WG9uVI+ncf2pi72j4de4yz5ZULLj2RGqLYaKOYGsgyrViQ0tePOVlN1tDCCXXtFqXKg==}
     engines: {node: '>=0.4.7'}
     hasBin: true
     dependencies:

@@ -43,6 +43,14 @@ rateLimits:
     points: 30
     duration: 3600
     blockDuration: 3600
+  requestCodeCaptchaPerCountry:
+    points: 5
+    duration: 3600
+    blockDuration: 3600
+  requestCodeCaptchaGlobal:
+    points: 15
+    duration: 3600
+    blockDuration: 3600
   requestTelegramPassportNoncePerPhoneNumber:
     points: 5
     duration: 3600
