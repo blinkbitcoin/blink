@@ -4,6 +4,8 @@ set -e
 
 cd repo
 
+trap 'buck2 kill || true' EXIT
+
 if [[ -z "${SSL_CERT_FILE}" ]]; then
   buck2 "${BUCK_CMD}" "${BUCK_TARGET}"
 else
