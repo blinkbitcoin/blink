@@ -88,15 +88,21 @@ selfservice:
                     value: The-Value-of-My-Key
                     in: header
 
+    # The email login runs on this flow, so an issued code stays spendable for
+    # min(methods.code.config.lifespan, recovery.lifespan). The values below are
+    # pinned rather than inherited, so a Kratos upgrade cannot change them silently.
     recovery:
       enabled: true
       ui_url: http://127.0.0.1:4455/recovery
+      use: code
+      lifespan: 15m
+      notify_unknown_recipients: false
 
     verification:
       use: code
       enabled: true
       lifespan: 15m
-      # notify_unknown_recipients: false
+      notify_unknown_recipients: false
 
     logout:
       after:
@@ -175,4 +181,8 @@ session:
   earliest_possible_extend: "720h" # needed for test. should be shorter in prod
 
   whoami:
+    # The email and phone logins return an aal1 token for a TOTP identity so the
+    # client can elevate it with /auth/totp/validate. This keeps that token
+    # rejected everywhere else until then; see "auth: log in with email with
+    # totp activated" in bats/core/api/auth.bats.
     required_aal: highest_available

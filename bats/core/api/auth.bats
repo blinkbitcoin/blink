@@ -243,6 +243,7 @@ generateTotpCode() {
 
   totpSecret="$(graphql_output '.data.userTotpRegistrationInitiate.totpSecret')"
   [ -n "$totpSecret" ] || exit 1
+  cache_value 'charlie.totpSecret' "$totpSecret"
 
   # Validate TOTP Registration
   totpCode=$(generateTotpCode "$totpSecret")
@@ -278,12 +279,18 @@ generateTotpCode() {
   [ -n "$authToken" ] || exit 1
   totpRequired="$(curl_output '.result.totpRequired')"
   [ "$totpRequired" == "true" ] || exit 1
+  cache_value 'charlie.email-login' "$authToken"
 
-  totpCode=$(generateTotpCode "$totpSecret")
+  # the aal1 token is rejected until it is elevated (session.whoami.required_aal)
+  exec_graphql 'charlie.email-login' 'identity'
+  [[ "$(graphql_output '.error.code')" = "401" ]] || exit 1
+
+  totpCode=$(generateTotpCode "$(read_value 'charlie.totpSecret')")
   variables="{\"totpCode\": \"$totpCode\", \"authToken\": \"$authToken\"}"
   curl_request "http://${GALOY_ENDPOINT}/auth/totp/validate" "$variables"
+  [[ -z "$(curl_output '.error // empty')" ]] || exit 1
 
-  exec_graphql 'charlie' 'identity'
+  exec_graphql 'charlie.email-login' 'identity'
   [[ "$(graphql_output '.data.me.totpEnabled')" = "true" ]] || exit 1
 }
 
