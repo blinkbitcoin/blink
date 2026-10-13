@@ -3,12 +3,14 @@
 Runs a tsc compilation.
 """
 import argparse
-import subprocess
 import sys
 import os
 import shutil
-import time
 
+
+# Source scripts find the helper in toolchains/; Buck bundles it beside them.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from subprocess_util import run_command
 
 def create_symlink(src, dest, description=""):
     """Create a symlink from src to dest, handling existing destinations."""
@@ -61,49 +63,6 @@ def copy_directory(src, dest, description=""):
     shutil.copytree(src, dest, symlinks=True, dirs_exist_ok=True)
     print(f"Directory{desc_text} copied successfully", file=sys.stderr)
     return True
-
-def run_command(cmd, cwd=None, env=None, timeout=1800):
-    """Run a command with improved error handling and timeout."""
-    print(f"Running command: {' '.join(cmd)} in {cwd}", file=sys.stderr)
-    try:
-        process = subprocess.Popen(
-            cmd,
-            cwd=cwd,
-            env=env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            universal_newlines=True,
-        )
-
-        # Poll the process with timeout
-        start_time = time.time()
-        while process.poll() is None:
-            if time.time() - start_time > timeout:
-                process.terminate()
-                time.sleep(1)
-                if process.poll() is None:
-                    process.kill()
-                print(f"Error: Command timed out after {timeout} seconds", file=sys.stderr)
-                return 1
-            time.sleep(1)  # Check every second
-
-        # Get output and error
-        stdout, stderr = process.communicate()
-        exit_code = process.returncode
-
-        # Print output on error
-        if exit_code != 0:
-            print(f"Command failed with exit code {exit_code}", file=sys.stderr)
-            print("STDOUT:", file=sys.stderr)
-            print(stdout, file=sys.stderr)
-            print("STDERR:", file=sys.stderr)
-            print(stderr, file=sys.stderr)
-
-        return exit_code
-    except Exception as e:
-        print(f"Error running command: {e}", file=sys.stderr)
-        return 1
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
