@@ -5,12 +5,13 @@ import LnurlComponent from "./lnurl"
 import { env } from "@/env"
 
 type Props = {
-  params: {
+  params: Promise<{
     "voucher-secret": string
-  }
+  }>
 }
 
-export default function Page({ params: { "voucher-secret": voucherSecret } }: Props) {
+export default async function Page({ params }: Props) {
+  const { "voucher-secret": voucherSecret } = await params
   const voucherUrl = env.VOUCHER_URL
   return <LnurlComponent voucherSecret={voucherSecret} voucherUrl={voucherUrl} />
 }
