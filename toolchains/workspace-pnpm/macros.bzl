@@ -188,6 +188,7 @@ def build_node_modules_impl(ctx: AnalysisContext) -> list[DefaultInfo]:
         "--turbo-bin",
         ctx.attrs.turbo_bin[RunInfo],
     )
+    cmd.hidden(pnpm_toolchain.build_node_modules[DefaultInfo].other_outputs)
 
     cmd.add("--package-dir")
     cmd.add(package_dir)
@@ -493,6 +494,7 @@ def next_build_impl(ctx: AnalysisContext) -> list[[DefaultInfo, RunInfo]]:
         "--package-dir",
         ctx.label.package,
     )
+    cmd.hidden(pnpm_toolchain.build_next_build[DefaultInfo].other_outputs)
 
     for (key, val) in ctx.attrs.build_env.items():
         cmd.add(

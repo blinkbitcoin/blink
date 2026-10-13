@@ -29,6 +29,7 @@ def build_node_modules_impl(ctx: AnalysisContext) -> list[DefaultInfo]:
         ctx.attrs._python_toolchain[PythonToolchainInfo].interpreter,
         simple_pnpm_toolchain.build_node_modules[DefaultInfo].default_outputs,
     )
+    cmd.hidden(simple_pnpm_toolchain.build_node_modules[DefaultInfo].other_outputs)
     cmd.add("--root-dir")
     cmd.add(package_dir)
 
