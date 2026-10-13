@@ -6,11 +6,11 @@ import Box from "@mui/joy/Box"
 import ModalClose from "@mui/joy/ModalClose"
 import Typography from "@mui/joy/Typography"
 import Sheet from "@mui/joy/Sheet"
-import { useState } from "react"
+import { useActionState, useState } from "react"
 import AddIcon from "@mui/icons-material/Add"
 import InfoOutlined from "@mui/icons-material/InfoOutlined"
 
-import { useFormStatus, useFormState } from "react-dom"
+import { useFormStatus } from "react-dom"
 
 import Link from "next/link"
 
@@ -26,7 +26,7 @@ type Props = {
 function CreateCallBack({ callbackPortalUrl }: Props) {
   const [open, setOpen] = useState<boolean>(false)
   const { pending } = useFormStatus()
-  const [state, formAction] = useFormState<CallBackAdditionResponse, FormData>(
+  const [state, formAction] = useActionState<CallBackAdditionResponse, FormData>(
     createCallbackAction,
     {
       error: false,
