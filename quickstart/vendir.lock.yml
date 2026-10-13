@@ -2,27 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix(deps): bump proxy-addr and shell-quote for critical advisories
-        (#892)'
-      sha: 85f11784b633a4419c4089a16a33670f9fc3c2ce
+      commitTitle: 'feat(core): cap code sends on the captcha path (#910)...'
+      sha: 62bf115fc47aea87b8dbe4e6bc51c76d0370cfd6
       tags:
-      - 0.22.68-3-g85f11784b
+      - 0.22.69-2-g62bf115fc
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'fix(deps): bump proxy-addr and shell-quote for critical advisories
-        (#892)'
-      sha: 85f11784b633a4419c4089a16a33670f9fc3c2ce
+      commitTitle: 'feat(core): cap code sends on the captcha path (#910)...'
+      sha: 62bf115fc47aea87b8dbe4e6bc51c76d0370cfd6
       tags:
-      - 0.22.68-3-g85f11784b
+      - 0.22.69-2-g62bf115fc
     path: schemas
   - git:
-      commitTitle: 'fix(deps): bump proxy-addr and shell-quote for critical advisories
-        (#892)'
-      sha: 85f11784b633a4419c4089a16a33670f9fc3c2ce
+      commitTitle: 'feat(core): cap code sends on the captcha path (#910)...'
+      sha: 62bf115fc47aea87b8dbe4e6bc51c76d0370cfd6
       tags:
-      - 0.22.68-3-g85f11784b
+      - 0.22.69-2-g62bf115fc
     path: gql
   path: graphql
 kind: LockConfig
