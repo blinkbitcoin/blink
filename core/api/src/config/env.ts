@@ -1,6 +1,8 @@
 import { createEnv } from "@t3-oss/env-core"
 import { ZodError, z } from "zod"
 
+import { adminApiJwtAudienceSchema } from "./admin-api-env"
+
 export const env = createEnv({
   onValidationError: (error: ZodError) => {
     console.error("❌ Invalid environment variables:", error.flatten().fieldErrors)
@@ -35,12 +37,7 @@ export const env = createEnv({
     OATHKEEPER_DECISION_ENDPOINT: z.string().url(),
     GALOY_API_PORT: z.number().or(z.string()).pipe(z.coerce.number()).default(4012),
     GALOY_ADMIN_PORT: z.number().or(z.string()).pipe(z.coerce.number()).default(4001),
-    // Secure by default. An explicit empty value disables the audience check so the
-    // API and the token issuer (oathkeeper mutator) can be rolled out independently.
-    ADMIN_API_JWT_AUDIENCE: z
-      .string()
-      .default("galoy-admin")
-      .transform((value) => (value.trim() === "" ? undefined : value.trim())),
+    ADMIN_API_JWT_AUDIENCE: adminApiJwtAudienceSchema,
     // Frozen by default. Comma-separated admin mutation names that are rejected for
     // every caller, regardless of access rights. An explicit empty value lifts
     // the freeze; add accountUpdateLevel to extend it (that one breaks kyc upgrades).
