@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+: "${FLY_TARGET:?Set the verified Concourse target}" "${HOSTS_VALUES:?Set the verified host-key inventory}" "${PIPELINE_TASKS_BRANCH:?Set the reviewed source branch}"
+test "$FLY_TARGET" = zrh1-org
+test -f "$HOSTS_VALUES"
+work_dir=$(mktemp -d)
+trap 'rm -rf "$work_dir"' EXIT
+ytt -f ci/shared/qualification.yml -f ci/shared/qualification-values.yml -f "$HOSTS_VALUES" \
+  --data-value tasks_branch="$PIPELINE_TASKS_BRANCH" > "$work_dir/pipeline.yml"
+fly -t "$FLY_TARGET" validate-pipeline -c "$work_dir/pipeline.yml"
+fly -t "$FLY_TARGET" set-pipeline --team=dev -p zrh1-docker-host-qualification -c "$work_dir/pipeline.yml"
+fly -t "$FLY_TARGET" unpause-pipeline --team=dev -p zrh1-docker-host-qualification

@@ -1,0 +1,84 @@
+#@ load("@ytt:data", "data")
+#@ load("@ytt:json", "json")
+#@ load("@ytt:assert", "assert")
+---
+#@ assert.equals(len(data.values.hosts), 4)
+jobs:
+- name: qualify-and-register
+  serial: true
+  plan:
+  - get: pipeline-tasks
+  - get: repo
+  - get: pool-repo
+  - task: initialize-empty-pool
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source: &image
+          repository: us.gcr.io/galoy-org/galoy-dev
+          username: ((docker-creds.username))
+          password: ((docker-creds.password))
+      inputs: [{name: pipeline-tasks}, {name: pool-repo}]
+      outputs: [{name: pool-repo}]
+      run:
+        path: bash
+        args: [pipeline-tasks/ci/shared/tasks/initialize-ssh-pool.sh]
+  - put: pool-repo
+    params: {repository: pool-repo, rebase: true}
+  - in_parallel:
+      limit: 4
+      steps:
+      #@ for i, host in enumerate(data.values.hosts):
+      - task: #@ "qualify-" + host["docker_host_name"]
+        timeout: 50m
+        output_mapping:
+          qualified: #@ "qualified-" + str(i)
+        config:
+          platform: linux
+          image_resource: {type: registry-image, source: *image}
+          inputs: [{name: pipeline-tasks}, {name: repo, path: blink}]
+          outputs: [{name: qualified}]
+          params:
+            HOST_METADATA_JSON: #@ json.encode(host)
+            REPO_PATH: blink
+            SSH_PRIVATE_KEY: ((staging-ssh.ssh_private_key))
+            GOOGLE_CREDENTIALS: ((staging-gcp-creds.creds_json))
+            CMD: "set -eu; node --version; pnpm --version; docker compose version; docker pull us.gcr.io/galoy-org/galoy-dev; docker run --rm us.gcr.io/galoy-org/galoy-dev true"
+          run:
+            path: bash
+            args: [pipeline-tasks/ci/shared/tasks/qualify-ssh-host.sh]
+      #@ end
+  #@ for i, host in enumerate(data.values.hosts):
+  - put: #@ "admit-" + str(i)
+    resource: zrh1-pool
+    params:
+      add: #@ "qualified-" + str(i)
+  #@ end
+resources:
+- name: pipeline-tasks
+  type: git
+  source:
+    uri: git@github.com:blinkbitcoin/blink.git
+    branch: #@ data.values.tasks_branch
+    private_key: ((github-blinkbitcoin.private_key))
+    paths: [ci/shared/*]
+- name: repo
+  type: git
+  source:
+    uri: git@github.com:blinkbitcoin/blink.git
+    branch: main
+    private_key: ((github-blinkbitcoin.private_key))
+- name: pool-repo
+  type: git
+  source:
+    uri: git@github.com:blinkbitcoin/concourse-locks.git
+    branch: main
+    private_key: ((github-blinkbitcoin.private_key))
+- name: zrh1-pool
+  type: pool
+  source:
+    uri: git@github.com:blinkbitcoin/concourse-locks.git
+    branch: main
+    pool: zrh1-docker-hosts
+    private_key: ((github-blinkbitcoin.private_key))

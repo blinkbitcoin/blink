@@ -8,6 +8,11 @@ on:
       - ci/core/tasks/tests/**
       - ci/tests/**
       - .github/workflows/integration-test.yml
+      - ci/shared/**
+      - ci/core/pipeline.yml
+      - ci/apps/pipeline.yml
+      - ci/core/tasks/run-on-nix-host.sh
+      - ci/apps/tasks/run-on-nix-host.sh
       - toolchains/workspace-pnpm/**
       - toolchains/simple-pnpm/**
       - toolchains/subprocess_util.py
@@ -32,6 +37,13 @@ jobs:
       - uses: actions/checkout@v4
       - name: Test chart bump and PR tasks
         run: python3 -m unittest discover -s ci/core/tasks/tests -v
+
+  ssh-host-task:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m unittest discover -s ci/shared/tests -v
+      - run: shellcheck ci/shared/tasks/*.sh ci/shared/repipe-qualification
 
   pnpm-subprocess:
     runs-on: ubuntu-latest
