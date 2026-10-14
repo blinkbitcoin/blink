@@ -19,7 +19,6 @@ import {
   UnknownPhoneProviderServiceError,
   UnsubscribedRecipientPhoneProviderError,
   isDisposablePhoneNumber,
-  normalizeUserAgent,
 } from "@/domain/phone-provider"
 import { baseLogger } from "@/services/logger"
 import { parseErrorMessageFromUnknown } from "@/domain/shared"
@@ -49,7 +48,7 @@ export const PreludeClient = ():
     channel: ChannelType
     phoneExists: boolean
     ip: IpAddress
-    userAgent?: string
+    userAgent?: UserAgent
     devicePlatform?: DevicePlatform
   }): Promise<true | PhoneProviderServiceError> => {
     try {
@@ -60,10 +59,9 @@ export const PreludeClient = ():
         }
       }
 
-      const normalizedUserAgent = normalizeUserAgent(userAgent)
       addAttributesToCurrentSpan({
         "prelude.signals.devicePlatform": devicePlatform,
-        "prelude.signals.userAgent": normalizedUserAgent,
+        "prelude.signals.userAgent": userAgent,
       })
       const response = await client.verification.create({
         target: {
@@ -76,7 +74,7 @@ export const PreludeClient = ():
         signals: {
           ip,
           ...(devicePlatform ? { device_platform: devicePlatform } : {}),
-          ...(normalizedUserAgent ? { user_agent: normalizedUserAgent } : {}),
+          ...(userAgent ? { user_agent: userAgent } : {}),
         },
       })
 

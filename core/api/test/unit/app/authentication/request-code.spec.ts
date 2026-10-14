@@ -488,7 +488,8 @@ describe("requestPhoneCodeWithCaptcha code-send caps", () => {
 })
 
 describe("request code fraud signals", () => {
-  const userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_6) Safari/605.1.15"
+  const userAgent =
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_6) Safari/605.1.15" as UserAgent
 
   it("forwards user agent and platform on the captcha path", async () => {
     const result = await requestPhoneCodeWithCaptcha({

@@ -22,7 +22,7 @@ import { ErrorLevel, parseErrorMessageFromUnknown } from "@/domain/shared"
 import { checkedToEmailAddress, checkedToPhoneNumber } from "@/domain/users"
 import { UserLoginIpRateLimiterExceededError } from "@/domain/rate-limit/errors"
 import { checkedToEmailCode, validOneTimeAuthCodeValue } from "@/domain/authentication"
-import { DevicePlatform } from "@/domain/phone-provider"
+import { DevicePlatform, normalizeUserAgent } from "@/domain/phone-provider"
 
 import {
   checkedToAuthToken,
@@ -290,7 +290,7 @@ authRouter.post("/phone/code", async (req: Request, res: Response) => {
     geetestSeccode,
     ip,
     channel,
-    userAgent: req.headers["user-agent"],
+    userAgent: normalizeUserAgent(req.headers["user-agent"]),
     // only legitimate caller is the consent web app
     devicePlatform: DevicePlatform.Web,
   })
@@ -332,7 +332,7 @@ authRouter.post("/phone/code-appcheck", async (req: Request, res: Response) => {
     appcheckJti,
     ip,
     channel,
-    userAgent: req.headers["user-agent"],
+    userAgent: normalizeUserAgent(req.headers["user-agent"]),
   })
 
   if (result instanceof Error) {

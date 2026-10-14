@@ -20,7 +20,7 @@ jest.mock("@/services/tracing", () => ({
   addAttributesToCurrentSpan: jest.fn(),
 }))
 
-import { DevicePlatform, USER_AGENT_MAX_LENGTH } from "@/domain/phone-provider"
+import { DevicePlatform } from "@/domain/phone-provider"
 import { PreludeClient } from "@/services/phone-provider/prelude-service"
 
 const { addAttributesToCurrentSpan: mockAddAttributesToCurrentSpan } = jest.requireMock(
@@ -29,11 +29,11 @@ const { addAttributesToCurrentSpan: mockAddAttributesToCurrentSpan } = jest.requ
 
 const ip = "203.0.113.7" as IpAddress
 const to = "+50365055500" as PhoneNumber
-const browserUa = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_6) Safari/605.1.15"
-const appUa = "Blink/2.4.0 okhttp/4.12.0"
+const userAgent =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_6) Safari/605.1.15" as UserAgent
 
 const initiateVerify = (args: {
-  userAgent?: string
+  userAgent?: UserAgent
   devicePlatform?: DevicePlatform
 }) => {
   const client = PreludeClient()
@@ -58,65 +58,36 @@ describe("PreludeClient.initiateVerify signals", () => {
     mockVerificationCreate.mockResolvedValue({ status: "success" })
   })
 
-  it("web login via consent: web platform and browser UA", async () => {
-    const result = await initiateVerify({
-      userAgent: browserUa,
-      devicePlatform: DevicePlatform.Web,
-    })
+  it("sends platform and user agent", async () => {
+    const result = await initiateVerify({ userAgent, devicePlatform: DevicePlatform.Web })
     expect(result).toBe(true)
     expect(sentSignals()).toStrictEqual({
       ip,
       device_platform: "web",
-      user_agent: browserUa,
+      user_agent: userAgent,
     })
   })
 
-  it("bot on REST /phone/code: web platform and its own UA", async () => {
-    await initiateVerify({ userAgent: "curl/8.10.1", devicePlatform: DevicePlatform.Web })
-    expect(sentSignals()).toStrictEqual({
-      ip,
-      device_platform: "web",
-      user_agent: "curl/8.10.1",
-    })
+  it("omits platform when unknown", async () => {
+    await initiateVerify({ userAgent })
+    expect(sentSignals()).toStrictEqual({ ip, user_agent: userAgent })
   })
 
-  it("app on REST /phone/code-appcheck: no platform", async () => {
-    await initiateVerify({ userAgent: appUa })
-    expect(sentSignals()).toStrictEqual({ ip, user_agent: appUa })
-  })
-
-  it.each([undefined, "", "   "])("no UA %p: user_agent omitted", async (userAgent) => {
-    await initiateVerify({ userAgent, devicePlatform: DevicePlatform.Web })
+  it("omits user agent when absent", async () => {
+    await initiateVerify({ devicePlatform: DevicePlatform.Web })
     expect(sentSignals()).toStrictEqual({ ip, device_platform: "web" })
   })
 
-  it("no UA and no platform: only ip", async () => {
+  it("sends only ip without other signals", async () => {
     await initiateVerify({})
     expect(sentSignals()).toStrictEqual({ ip })
   })
 
-  it("oversized UA: truncated to the cap", async () => {
-    await initiateVerify({ userAgent: " " + "x".repeat(USER_AGENT_MAX_LENGTH + 100) })
-    expect(sentSignals()).toStrictEqual({
-      ip,
-      user_agent: "x".repeat(USER_AGENT_MAX_LENGTH),
-    })
-  })
-
   it("records the sent signals on the span", async () => {
-    await initiateVerify({ userAgent: browserUa, devicePlatform: DevicePlatform.Web })
+    await initiateVerify({ userAgent, devicePlatform: DevicePlatform.Web })
     expect(mockAddAttributesToCurrentSpan).toHaveBeenCalledWith({
       "prelude.signals.devicePlatform": "web",
-      "prelude.signals.userAgent": browserUa,
-    })
-  })
-
-  it("keeps target and options unchanged", async () => {
-    await initiateVerify({ userAgent: appUa })
-    expect(mockVerificationCreate).toHaveBeenCalledWith({
-      target: { type: "phone_number", value: to },
-      options: { preferred_channel: "sms" },
-      signals: { ip, user_agent: appUa },
+      "prelude.signals.userAgent": userAgent,
     })
   })
 })

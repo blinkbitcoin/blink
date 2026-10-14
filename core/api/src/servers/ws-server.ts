@@ -24,6 +24,7 @@ import {
 
 import { getJwksArgs, UNSECURE_IP_FROM_REQUEST_OBJECT, WEBSOCKET_PORT } from "@/config"
 import { parseIps } from "@/domain/accounts-ips"
+import { normalizeUserAgent } from "@/domain/phone-provider"
 import { ErrorLevel } from "@/domain/shared"
 import { gqlPublicSchema } from "@/graphql/public"
 
@@ -92,7 +93,7 @@ const getContext = async (
       const context = await sessionPublicContext({
         tokenPayload,
         ip,
-        userAgent: ctx.extra?.request?.headers?.["user-agent"],
+        userAgent: normalizeUserAgent(ctx.extra?.request?.headers?.["user-agent"]),
       })
 
       if (context instanceof Error) throw context

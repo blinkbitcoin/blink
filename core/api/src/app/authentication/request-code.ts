@@ -54,7 +54,7 @@ export const requestPhoneCodeWithCaptcha = async ({
   geetestSeccode: string
   ip: IpAddress
   channel: string
-  userAgent?: string
+  userAgent?: UserAgent
   devicePlatform?: DevicePlatform
 }): Promise<true | ApplicationError> => {
   const geeTestConfig = getGeetestConfig()
@@ -147,7 +147,7 @@ export const requestPhoneCodeForAuthedUser = async ({
   ip: IpAddress
   channel: string
   user: User
-  userAgent?: string
+  userAgent?: UserAgent
   devicePlatform?: DevicePlatform
 }): Promise<true | PhoneProviderServiceError> => {
   {
@@ -209,7 +209,7 @@ export const requestPhoneCodeWithAppcheckJti = async ({
   ip: IpAddress
   channel: string
   appcheckJti: string
-  userAgent?: string
+  userAgent?: UserAgent
   devicePlatform?: DevicePlatform
 }): Promise<true | PhoneProviderServiceError> => {
   {

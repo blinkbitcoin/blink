@@ -51,10 +51,10 @@ export const DevicePlatform = {
 
 export const USER_AGENT_MAX_LENGTH = 512
 
-export const normalizeUserAgent = (ua?: string): string | undefined => {
+export const normalizeUserAgent = (ua?: string): UserAgent | undefined => {
   const trimmed = ua?.trim()
   if (!trimmed) return undefined
-  return trimmed.slice(0, USER_AGENT_MAX_LENGTH)
+  return trimmed.slice(0, USER_AGENT_MAX_LENGTH) as UserAgent
 }
 
 const CHANNEL_CONFIG = {

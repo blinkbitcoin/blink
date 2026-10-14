@@ -28,6 +28,7 @@ import {
 } from "@/services/tracing"
 
 import { parseIps } from "@/domain/accounts-ips"
+import { normalizeUserAgent } from "@/domain/phone-provider"
 import { AccountStatus } from "@/domain/accounts"
 
 const isAuthenticated = rule({ cache: "contextual" })((
@@ -76,7 +77,7 @@ const setGqlContext = async (
   const gqlContext = await sessionPublicContext({
     tokenPayload,
     ip,
-    userAgent: req.headers["user-agent"],
+    userAgent: normalizeUserAgent(req.headers["user-agent"]),
   })
 
   req.gqlContext = gqlContext

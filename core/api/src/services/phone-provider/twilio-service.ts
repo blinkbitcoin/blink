@@ -63,8 +63,6 @@ export const TwilioClient = (): IPhoneProviderService | PhoneProviderConfigError
     channel: ChannelType
     phoneExists: boolean
     ip: IpAddress
-    userAgent?: string
-    devicePlatform?: DevicePlatform
   }): Promise<true | PhoneProviderServiceError> => {
     try {
       if (!phoneExists) {
