@@ -228,7 +228,6 @@ jest_test(
     srcs = [":src"] + [":test_src"] + glob(["galoy.yaml"]),
     prod_deps_srcs = prod_deps_srcs,
     config_file = "test/integration/jest.config.js",
-    run_serially = True,
     env_json = "//dev:integration_env",
     env = {
         # Some integration hooks bootstrap LND/bitcoind state and can exceed
