@@ -9,15 +9,11 @@ describe("Login Phone", () => {
       expect(params.has("login_challenge")).to.be.true
     })
 
-    cy.get("[data-testid=sign_in_with_email_btn]")
-      .should("exist")
-      .should("be.visible")
-      .click()
-
     cy.get("[data-testid=sign_in_with_phone_btn]")
       .should("exist")
       .should("be.visible")
       .click()
+    cy.location("pathname").should("eq", "/login/phone")
 
     cy.get("[data-testid=phone_number_input]")
       .should("exist")
@@ -48,15 +44,19 @@ describe("Login Phone", () => {
         // Simulate the Telegram Passport webhook using the nonce from the attribute
         cy.simulateTelegramPassportWebhook(testData.PHONE_NUMBER, nonce || "").then(
           () => {
-            cy.window().then((win) => {
-              win.checkAuthStatus().then(() => {
-                // After successful authentication, user should be redirected to the consent page
-                cy.get("[data-testid=submit_consent_btn]", { timeout: 15000 })
-                  .should("exist")
-                  .should("be.visible")
-                  .should("not.be.disabled")
+            cy.window()
+              .its("checkAuthStatus")
+              .should("be.a", "function")
+              .then((checkAuthStatus) => {
+                if (!checkAuthStatus) throw new Error("checkAuthStatus is not attached")
+                cy.wrap(checkAuthStatus()).then(() => {
+                  // After successful authentication, user should be redirected to the consent page
+                  cy.get("[data-testid=submit_consent_btn]", { timeout: 15000 })
+                    .should("exist")
+                    .should("be.visible")
+                    .should("not.be.disabled")
+                })
               })
-            })
           },
         )
       })
