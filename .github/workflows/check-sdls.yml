@@ -20,9 +20,22 @@ jobs:
       # Bound Buck fanout on hosted runners while crate archives come from CDN URLs.
       BUCK2_JOBS: "4"
     steps:
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+          df -i /
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v14
       - name: Run the Magic Nix Cache
         uses: DeterminateSystems/magic-nix-cache-action@v8
       - uses: actions/checkout@v4
       - run: nix develop -c buck2 test -j "$BUCK2_JOBS" //dev:check-sdls
+      - name: Report disk usage
+        if: always()
+        continue-on-error: true
+        run: |
+          df -h
+          df -i
+          sudo du -xhd1 /nix /home/runner/work /var/lib/docker 2>/dev/null || true
