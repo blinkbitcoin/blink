@@ -121,6 +121,39 @@ class Transport(unittest.TestCase):
         self.assertEqual(raised.exception.code, 143)
 
 
+    def test_remote_cleanup_requires_matching_process_marker(self):
+        if not Path("/proc").exists():
+            self.skipTest("Remote cleanup fixture requires Linux")
+        self.simulate()
+        script = self.calls[-1][1]["input"]
+        run_dir = self.root / ".ci-run/run.12345678"
+        run_dir.mkdir(parents=True)
+        for matching in [True, False]:
+            with self.subTest(matching=matching):
+                (run_dir / "docker").mkdir()
+                (run_dir / "docker/config.json").write_text("fixture-token")
+                process = subprocess.Popen(["setsid", "sleep", "300"],
+                    env=dict(os.environ, CI_RUN_DIR=str(run_dir) if matching else "unrelated"))
+                try:
+                    # Wait for setsid to establish its process group before cleanup.
+                    deadline = time.monotonic() + 3
+                    while os.getpgid(process.pid) != process.pid and time.monotonic() < deadline:
+                        time.sleep(0.01)
+                    (run_dir / "runner.pid").write_text(str(process.pid))
+                    result = subprocess.run(["bash", "-s", "--", ".ci-run/run.12345678"], input=script,
+                        text=True, cwd=self.root, env=dict(os.environ, HOME=str(self.root)), capture_output=True)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertFalse((run_dir / "docker").exists())
+                    if matching:
+                        self.assertEqual(process.wait(timeout=3), -15)
+                    else:
+                        self.assertIsNone(process.poll())
+                finally:
+                    if process.poll() is None:
+                        process.terminate()
+                    process.wait(timeout=3)
+
+
 class PoolBootstrap(unittest.TestCase):
     def test_empty_retry_members_and_dirty_checkout(self):
         if not shutil.which("git"):
