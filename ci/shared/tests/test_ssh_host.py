@@ -24,7 +24,7 @@ class Transport(unittest.TestCase):
         self.root = Path(self.tmp.name)
         (self.root / "repo").mkdir()
         (self.root / "nix-host").mkdir()
-        self.meta = {"transport": "ssh", "docker_host_name": "zrh1-docker-host-01-g1", "ssh_host_key": "ssh-ed25519 AAAATEST"}
+        self.meta = {"transport": "ssh", "docker_host_name": "zrh1-docker-host-01-g1", "ssh_host": "10.100.1.2", "ssh_host_key": "ssh-ed25519 AAAATEST"}
         (self.root / "nix-host/metadata").write_text(json.dumps(self.meta))
         self.env = dict(os.environ, REPO_PATH="repo", CMD="echo ok", SSH_PRIVATE_KEY="PRIVATE-FIXTURE", GOOGLE_CREDENTIALS="GOOGLE-FIXTURE")
         self.calls = []
@@ -84,13 +84,15 @@ class Transport(unittest.TestCase):
         self.assertEqual(len(self.calls), 2)
 
     def test_reject_untrusted_metadata_and_paths(self):
-        for changes in [{"transport": "gcp"}, {"docker_host_name": "other"}, {"ssh_host_key": "ssh-ed25519 key\nextra"}]:
+        for changes in [{"transport": "gcp"}, {"docker_host_name": "invalid name"}, {"ssh_host": "8.8.8.8"}, {"ssh_host": "127.0.0.1"}, {"ssh_host": "bad"}, {"ssh_host_key": "ssh-ed25519 key\nextra"}]:
             with self.assertRaises(ValueError):
                 host.metadata(dict(self.meta, **changes))
         for path in ["/root", "../repo", "repo/../other", "-option", "a b", ""]:
             with self.assertRaises(ValueError):
                 host.relative_path(path)
         self.assertEqual(host.relative_path("core/api"), "core/api")
+        for address in ["10.1.2.3", "172.16.1.2", "192.168.1.2"]:
+            self.assertEqual(host.metadata(dict(self.meta, ssh_host=address))[1], address)
 
     def test_missing_inputs_refuse_before_remote_access(self):
         for update in [{"CMD": " "}, {"SSH_PRIVATE_KEY": ""}, {"GOOGLE_CREDENTIALS": ""}, {"REPO_PATH": "missing"}]:

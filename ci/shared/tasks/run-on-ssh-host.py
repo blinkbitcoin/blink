@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Run one claimed Blink CI workload on a pinned, private ZRH1 SSH host."""
+"""Run one claimed Blink CI workload on a pinned, private SSH Docker host."""
+import ipaddress
 import json
 import os
 from pathlib import Path
@@ -18,10 +19,13 @@ def require(condition, message):
 def metadata(value):
     name = value.get("docker_host_name", "")
     require(value.get("transport") == "ssh", "Expected SSH pool metadata")
-    require(re.fullmatch(r"zrh1-docker-host-0[1-4]-g[1-9][0-9]*", name), "Unexpected Docker host")
+    require(re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", name), "Unexpected Docker host")
+    address = ipaddress.IPv4Address(value.get("ssh_host", ""))
+    require(any(address in ipaddress.IPv4Network(cidr) for cidr in
+                ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16")), "Require a private SSH service address")
     key = value.get("ssh_host_key", "")
     require(re.fullmatch(r"ssh-ed25519 [A-Za-z0-9+/]+={0,2}", key), "Require a verified Ed25519 host key")
-    return name, name + ".zrh1-docker-hosts.svc.cluster.local", key
+    return name, str(address), key
 
 
 def relative_path(value):
@@ -45,7 +49,7 @@ def execute(environment, work=Path(".")):
     require((work / repo).is_dir(), "Missing repository input")
     require(environment.get("SSH_PRIVATE_KEY") and environment.get("GOOGLE_CREDENTIALS"), "Missing CI credentials")
     child_env = {k: v for k, v in environment.items() if k not in {"SSH_PRIVATE_KEY", "SSH_PUB_KEY", "GOOGLE_CREDENTIALS"}}
-    with tempfile.TemporaryDirectory(prefix="zrh1-ci-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="ssh-host-ci-") as tmp:
         root = Path(tmp)
         for filename, content in [("key", environment["SSH_PRIVATE_KEY"]),
                                   ("google.json", environment["GOOGLE_CREDENTIALS"]),
@@ -107,7 +111,7 @@ def main():
         execute(dict(os.environ))
     except (ValueError, KeyError, OSError, subprocess.SubprocessError) as error:
         # Never log the environment, token, private key, or subprocess input.
-        print(f"ZRH1 task failed: {type(error).__name__}", flush=True)
+        print(f"SSH Docker host task failed: {type(error).__name__}", flush=True)
         raise SystemExit(1) from None
 
 

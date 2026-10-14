@@ -1,4 +1,4 @@
-# ZRH1 Docker host pool
+# Dedicated SSH Docker host pool
 
 `blink-core` and `blink-apps` use the separate `zrh1-docker-hosts` pool.
 The shared `docker-hosts` pool remains for GCP-only consumers. The metadata
@@ -6,16 +6,20 @@ selects direct SSH; absent transport retains the existing GCP implementation.
 
 The four VMs are provisioned in `zrh1-infra`, following
 `docs/operations/docker-host-vms.md`, including its post-bootstrap Nix setup.
-Workers must reach the private service DNS names on port 22. Only the ZRH1
+Workers must reach the private service addresses on port 22. Only the dedicated
 worker namespace is allowed by the host network policy. Host tasks therefore
-run on untagged Linux workers; confirm those workers are ZRH1 before rollout.
+run on untagged Linux workers; confirm those workers belong to the VM cluster before rollout.
 
 ## Qualification and admission
 
 Use a clean, reviewed, published source commit. Verify `fly -t zrh1-org userinfo`
 and the `dev` team first. Build a protected ytt data-values file containing
 exactly four `hosts` entries, each with `transport: ssh`, `docker_host_name`
-(`zrh1-docker-host-01-g1` through `04-g1`) and `ssh_host_key` (Ed25519 public key).
+(the verified VM hostname), `ssh_host` (its private Service ClusterIP), and
+`ssh_host_key` (Ed25519 public key). Read each address from the authenticated
+cluster API. Service addresses remain stable for the retained Service resource;
+requalify metadata if a Service is replaced. Direct addresses avoid ambiguity
+when worker and guest clusters use overlapping DNS service ranges.
 Obtain host keys through the authenticated KubeVirt API channel; never trust
 an unauthenticated network keyscan. The CI private key remains in Concourse's
 `staging-ssh.ssh_private_key` secret.
@@ -62,7 +66,7 @@ job.
 
 Rollback uses the saved pipeline definitions with `fly set-pipeline --team=dev`
 for each affected pipeline, after checking current running builds and locks.
-Keep the ZRH1 VMs and pool entries intact; do not reclaim active locks, delete
+Keep the dedicated VMs and pool entries intact; do not reclaim active locks, delete
 disks, or move entries into the GCP pool. A host requiring recovery should be
 quarantined through the pool's normal lock mechanism before infrastructure work.
 
@@ -76,4 +80,4 @@ shellcheck ci/shared/tasks/*.sh ci/shared/repipe-qualification
 Linux exercises the real process supervisor. macOS skips that fixture; a
 Linux container or GitHub Actions runs it. Python transport tests cover every
 external-command failure boundary and verify credential cleanup/redaction.
-Live qualification remains required for DNS, SSH, registry and Nix integration.
+Live qualification remains required for private routing, SSH, registry and Nix integration.
