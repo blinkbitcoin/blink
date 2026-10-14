@@ -291,7 +291,7 @@ authRouter.post("/phone/code", async (req: Request, res: Response) => {
     ip,
     channel,
     userAgent: normalizeUserAgent(req.headers["user-agent"]),
-    // only legitimate caller is the consent web app
+    // endpoint serves the consent web app; labels the entry point, not a verified client
     devicePlatform: DevicePlatform.Web,
   })
 
