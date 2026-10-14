@@ -2,24 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix(api): validate LNURL fetch destinations (#922)'
-      sha: b6973a60126c9d0bdc7c131b700a0fc4c2317317
+      commitTitle: 'fix(ci): recycle serial integration workers and retain failure
+        logs (#921)'
+      sha: 002c43f5ae7f2f6a821ce5ef273651dcc45580da
       tags:
-      - 0.22.70-4-gb6973a601
+      - 0.22.71-5-g002c43f5a
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'fix(api): validate LNURL fetch destinations (#922)'
-      sha: b6973a60126c9d0bdc7c131b700a0fc4c2317317
+      commitTitle: 'fix(ci): recycle serial integration workers and retain failure
+        logs (#921)'
+      sha: 002c43f5ae7f2f6a821ce5ef273651dcc45580da
       tags:
-      - 0.22.70-4-gb6973a601
+      - 0.22.71-5-g002c43f5a
     path: schemas
   - git:
-      commitTitle: 'fix(api): validate LNURL fetch destinations (#922)'
-      sha: b6973a60126c9d0bdc7c131b700a0fc4c2317317
+      commitTitle: 'fix(ci): recycle serial integration workers and retain failure
+        logs (#921)'
+      sha: 002c43f5ae7f2f6a821ce5ef273651dcc45580da
       tags:
-      - 0.22.70-4-gb6973a601
+      - 0.22.71-5-g002c43f5a
     path: gql
   path: graphql
 kind: LockConfig
