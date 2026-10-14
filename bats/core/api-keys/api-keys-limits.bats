@@ -620,7 +620,7 @@ setup_file() {
   exec_graphql 'alice' 'api-key-set-limit' "$variables"
 
   # Send payment via lnurl (to xyz_zap_receiver)
-  lnurl="lnurl1dp68gup69uhkcmmrv9kxsmmnwsarxvpsxghjuam9d3kz66mwdamkutmvde6hymrs9au8j7jl0fshqhmjv43k26tkv4eq5ndl2y"
+  lnurl="lnurl1dp68gurn8ghj7mrww4excttxd9u8gatjv5hx27rpd4cxcef09emk2mrv944kummhdchkcmn4wfk8qtmc09a977npwp0hyetrv45hvetjps734l"
 
   variables=$(
     jq -n \
@@ -641,7 +641,7 @@ setup_file() {
 
 @test "api-keys-limits: lnurlPaymentSend exceeding limit fails" {
   # Try to send 4000 more sats (would exceed 5000 limit)
-  lnurl="lnurl1dp68gup69uhkcmmrv9kxsmmnwsarxvpsxghjuam9d3kz66mwdamkutmvde6hymrs9au8j7jl0fshqhmjv43k26tkv4eq5ndl2y"
+  lnurl="lnurl1dp68gurn8ghj7mrww4excttxd9u8gatjv5hx27rpd4cxcef09emk2mrv944kummhdchkcmn4wfk8qtmc09a977npwp0hyetrv45hvetjps734l"
 
   variables=$(
     jq -n \

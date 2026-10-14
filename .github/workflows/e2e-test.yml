@@ -35,6 +35,9 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v14
 
+      - name: Test LNURL fixture transport
+        run: nix develop -c node --test --experimental-test-coverage bats/helpers/lnurl-transport.test.cjs
+
       - name: Run bats tests
         run: |
           nix develop -c ./bats/ci_run.sh
