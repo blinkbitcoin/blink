@@ -850,6 +850,63 @@ def audit(
         **kwargs,
     )
 
+def _next_config_check_impl(ctx: AnalysisContext) -> list[[
+    DefaultInfo,
+    RunInfo,
+    ExternalRunnerTestInfo,
+]]:
+    pnpm_toolchain = ctx.attrs._workspace_pnpm_toolchain[WorkspacePnpmToolchainInfo]
+
+    run_cmd_args = cmd_args([
+        ctx.attrs._python_toolchain[PythonToolchainInfo].interpreter,
+        pnpm_toolchain.check_next_config[DefaultInfo].default_outputs,
+        ctx.attrs.config,
+    ])
+
+    args_file = ctx.actions.write("args.txt", run_cmd_args)
+
+    return inject_test_run_info(
+        ctx,
+        ExternalRunnerTestInfo(
+            type = "next_config_check",
+            command = [run_cmd_args],
+        ),
+    ) + [
+        DefaultInfo(default_output = args_file),
+    ]
+
+_next_config_check = rule(
+    impl = _next_config_check_impl,
+    attrs = {
+        "config": attrs.source(
+            doc = """The app's `next.config.js`.""",
+        ),
+        "_inject_test_env": attrs.default_only(
+            attrs.dep(default = "prelude//test/tools:inject_test_env"),
+        ),
+        "_python_toolchain": attrs.toolchain_dep(
+            default = "toolchains//:python",
+            providers = [PythonToolchainInfo],
+        ),
+        "_workspace_pnpm_toolchain": attrs.toolchain_dep(
+            default = "toolchains//:workspace_pnpm",
+            providers = [WorkspacePnpmToolchainInfo],
+        ),
+    },
+)
+
+def next_config_check(
+        config = "next.config.js",
+        visibility = ["PUBLIC"],
+        **kwargs):
+    """Fails if the app's Next.js image optimizer is not disabled."""
+
+    _next_config_check(
+        config = config,
+        visibility = visibility,
+        **kwargs,
+    )
+
 def eslint_impl(ctx: AnalysisContext) -> list[[
     DefaultInfo,
     RunInfo,

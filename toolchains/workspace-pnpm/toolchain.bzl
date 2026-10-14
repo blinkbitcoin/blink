@@ -11,6 +11,7 @@ WorkspacePnpmToolchainInfo = provider(fields = [
   "package_next_bin",
   "run_npm_test",
   "run_audit",
+  "check_next_config",
   "graphql_codegen",
 ])
 
@@ -33,6 +34,7 @@ def workspace_pnpm_toolchain_impl(ctx) -> list[[DefaultInfo, WorkspacePnpmToolch
             package_next_bin = ctx.attrs._package_next_bin,
             run_npm_test = ctx.attrs._run_npm_test,
             run_audit = ctx.attrs._run_audit,
+            check_next_config = ctx.attrs._check_next_config,
             graphql_codegen = ctx.attrs._graphql_codegen,
         )
     ]
@@ -75,6 +77,9 @@ workspace_pnpm_toolchain = rule(
         ),
         "_run_audit": attrs.dep(
             default = "toolchains//workspace-pnpm:run_audit.py",
+        ),
+        "_check_next_config": attrs.dep(
+            default = "toolchains//workspace-pnpm:check_next_config.py",
         ),
         "_graphql_codegen": attrs.dep(
             default = "toolchains//workspace-pnpm:graphql_codegen.py",
