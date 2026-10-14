@@ -3,6 +3,11 @@
 #@ load("@ytt:assert", "assert")
 ---
 #@ assert.equals(len(data.values.hosts), 4)
+#@ assert.equals(len({h["docker_host_name"]: True for h in data.values.hosts}), 4)
+#@ for host in data.values.hosts:
+#@ assert.equals(host["transport"], "ssh")
+#@ assert.equals(host["ssh_host_key"].startswith("ssh-ed25519 "), True)
+#@ end
 jobs:
 - name: qualify-and-register
   serial: true
