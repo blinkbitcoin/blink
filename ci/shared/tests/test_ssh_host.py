@@ -7,6 +7,7 @@ from pathlib import Path
 import subprocess
 import shutil
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 from types import SimpleNamespace
@@ -239,6 +240,43 @@ class RemoteRunner(unittest.TestCase):
                 pid = (root / "repo/child.pid").read_text().strip()
                 proc = Path("/proc") / pid / "stat"
                 self.assertTrue(not proc.exists() or proc.read_text().split()[2] == "Z")
+
+
+    def test_cancellation_kills_term_ignoring_children_and_missing_path_fails(self):
+        if not Path("/proc").exists():
+            self.skipTest("Remote supervisor integration requires Linux")
+        for mode in ["cancel", "missing"]:
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                (root / "repo").mkdir()
+                (root / ".ci-run/run.12345678").mkdir(parents=True)
+                binary = root / "bin"
+                binary.mkdir()
+                nix = binary / "nix"
+                nix.write_text('#!/bin/bash\nshift 2\nexec "$@"\n')
+                nix.chmod(0o755)
+                command = 'trap "" TERM; sleep 300 & echo $! > child.pid; while :; do sleep 1; done'
+                proc = subprocess.Popen(["bash", str(TASKS / "remote-nix-run.sh"), ".ci-run/run.12345678", "repo",
+                                         "." if mode == "cancel" else "missing", command],
+                    env=dict(os.environ, HOME=tmp, PATH=str(binary) + ":" + os.environ["PATH"]),
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                try:
+                    if mode == "cancel":
+                        deadline = time.monotonic() + 5
+                        while not (root / "repo/child.pid").exists() and time.monotonic() < deadline:
+                            time.sleep(0.05)
+                        self.assertTrue((root / "repo/child.pid").exists())
+                        proc.terminate()
+                    proc.communicate(timeout=10)
+                    self.assertEqual(proc.returncode, 143 if mode == "cancel" else 1)
+                    if mode == "cancel":
+                        pid = (root / "repo/child.pid").read_text().strip()
+                        stat = Path("/proc") / pid / "stat"
+                        self.assertTrue(not stat.exists() or stat.read_text().split()[2] == "Z")
+                finally:
+                    if proc.poll() is None:
+                        proc.kill()
+                        proc.communicate()
 
 
 if __name__ == "__main__":
