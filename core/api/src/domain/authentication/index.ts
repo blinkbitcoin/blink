@@ -52,7 +52,7 @@ export const checkedToEmailCode = (code: string): EmailCode | ApplicationError =
 }
 
 export const validOneTimeAuthCodeValue = (code: string) => {
-  if (code.match(/^[0-9]{6}/i)) {
+  if (code.match(/^[0-9]{6}$/)) {
     return code as PhoneCode
   }
   return new PhoneCodeInvalidError({ message: "Invalid value for OneTimeAuthCode" })
