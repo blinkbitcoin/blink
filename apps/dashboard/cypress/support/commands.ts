@@ -80,11 +80,17 @@ Cypress.Commands.add("loginViaEmail", (email: string) => {
         .should("exist")
         .should("be.visible")
         .click()
+      // Tabs navigate client-side; wait for the phone form before the next step
+      cy.location("pathname").should("match", /\/login\/phone$/)
+      cy.get("[data-testid=phone_number_input]").should("be.visible")
 
       cy.get("[data-testid=sign_in_with_email_btn]")
         .should("exist")
         .should("be.visible")
         .click()
+      // Tabs navigate client-side; wait for the email form before the next step
+      cy.location("pathname").should("match", /\/login$/)
+      cy.get("[data-testid=email_id_input]").should("be.visible")
 
       cy.get("[data-testid=email_id_input]")
         .should("exist")
