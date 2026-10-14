@@ -216,6 +216,7 @@ dev_pnpm_task_test(
 jest_test(
     name = "unit-tests",
     srcs = [":src"] + [":test_src"] + glob(["galoy.yaml"]),
+    prod_deps_srcs = prod_deps_srcs,
     config_file = "test/unit/jest.config.js",
     env_json = "//dev:dummy_env",
     env = {

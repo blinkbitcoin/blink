@@ -15,4 +15,5 @@ export const CacheKeys = {
   ClosedChannels: "lnd:closedChannels",
   TelegramPassportNonce: "auth:tg:passport",
   BlockInfo: "bitcoin:blockInfo",
+  GeetestBypassStatus: "captcha:geetest:bypassStatus",
 } as const
