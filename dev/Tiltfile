@@ -498,12 +498,19 @@ local_resource(
 api_target = "//core/api:dev"
 if is_ci:
   api_target = "//core/api:api"
+api_serve_env = dict(core_serve_env)
+if cfg.get("bats", False):
+  # Only Bats maps its reserved HTTPS fixture hostname to local Pay. Production
+  # transport validation remains unchanged and direct localhost LNURLs fail.
+  fixture = "{}/bats/helpers/lnurl-transport.cjs".format(str(local("git rev-parse --show-toplevel")).strip())
+  api_serve_env["BATS_LNURL_FIXTURE"] = "1"
+  api_serve_env["NODE_OPTIONS"] = '{} --require="{}"'.format(api_serve_env.get("NODE_OPTIONS", ""), fixture)
 local_resource(
     "api",
     labels = ["core"],
     cmd = "buck2 build {}".format(api_target),
     serve_cmd = "buck2 run {}".format(api_target),
-    serve_env = core_serve_env,
+    serve_env = api_serve_env,
     allow_parallel = True,
     readiness_probe = probe(
         period_secs  = 5,

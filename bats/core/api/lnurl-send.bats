@@ -13,10 +13,23 @@ setup_file() {\
   ensure_username_is_present "xyz_zap_receiver"
 }
 
+@test "lnurl-send: rejects a direct private HTTP destination" {
+  local lnurl="lnurl1dp68gup69uhkcmmrv9kxsmmnwsarxvpsxghjuam9d3kz66mwdamkutmvde6hymrs9au8j7jl0fshqhmjv43k26tkv4eq5ndl2y"
+  local variables
+  variables=$(jq -n \
+    --arg wallet_id "$(read_value bob.btc_wallet_id)" \
+    --arg lnurl "$lnurl" \
+    '{input: {walletId: $wallet_id, amount: 200, lnurl: $lnurl}}')
+  exec_graphql 'bob' 'lnurl-payment-send' "$variables"
+  [[ "$(graphql_output '.data.lnurlPaymentSend.status')" == "FAILURE" ]]
+  [[ "$(graphql_output '.data.lnurlPaymentSend.errors[0].code')" == "LNURL_REQUEST_INVOICE_ERROR" ]]
+  [[ "$(graphql_output '.data.lnurlPaymentSend.errors[0].message')" == "LNURL service unreachable or not allowed" ]]
+}
+
 @test "lnurl-send: send to lnurl" {
   btc_wallet_name="bob.btc_wallet_id"
 
-  lnurl="lnurl1dp68gup69uhkcmmrv9kxsmmnwsarxvpsxghjuam9d3kz66mwdamkutmvde6hymrs9au8j7jl0fshqhmjv43k26tkv4eq5ndl2y" # http://localhost:3002/.well-known/lnurlp/xyz_zap_receiver
+  lnurl="lnurl1dp68gurn8ghj7mrww4excttxd9u8gatjv5hx27rpd4cxcef09emk2mrv944kummhdchkcmn4wfk8qtmc09a977npwp0hyetrv45hvetjps734l" # https://lnurl-fixture.example/.well-known/lnurlp/xyz_zap_receiver
 
   variables=$(
     jq -n \

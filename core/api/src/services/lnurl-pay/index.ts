@@ -2,11 +2,12 @@ import { utils, requestInvoice } from "lnurl-pay"
 
 import { wrapAsyncFunctionsToRunInSpan } from "../tracing"
 
+import { safeFetchGet } from "./safe-fetch"
+
 import { toSats } from "@/domain/bitcoin"
 import {
   ErrorFetchingLnurlInvoice,
   LnurlServiceError,
-  UnknownLnurlServiceError,
 } from "@/domain/bitcoin/lnurl/errors"
 
 export const LnurlPayService = (): ILnurlPayService => {
@@ -21,6 +22,7 @@ export const LnurlPayService = (): ILnurlPayService => {
       const invoice = await requestInvoice({
         lnUrlOrAddress: lnAddressOrLnurl,
         tokens: utils.toSats(toSats(amount.amount)),
+        fetchGet: safeFetchGet,
       })
 
       if (!invoice.hasValidAmount) {
@@ -30,11 +32,8 @@ export const LnurlPayService = (): ILnurlPayService => {
       }
 
       return invoice.invoice
-    } catch (err) {
-      if (err instanceof Error) {
-        return new ErrorFetchingLnurlInvoice(err.message)
-      }
-      return new UnknownLnurlServiceError(err)
+    } catch {
+      return new ErrorFetchingLnurlInvoice("LNURL service unreachable or not allowed")
     }
   }
 
