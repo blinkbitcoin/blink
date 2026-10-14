@@ -6,6 +6,7 @@ load "../../helpers/ledger.bash"
 load "../../helpers/ln.bash"
 load "../../helpers/user.bash"
 load "../../helpers/merchant.bash"
+load "../../helpers/trigger.bash"
 
 setup_file() {
   clear_cache
@@ -37,6 +38,30 @@ wait_for_bria_hot_balance_at_least() {
   )
 
   [[ "$amount" -le "$bria_settled_hot_balance" ]] || return 1
+}
+
+hot_to_cold_payout_accounted() {
+  local after_sequence="$1" payout_ids payout_id payout tx_id rows
+  payout_ids=$(
+    grep_in_trigger_logs "sequence.*payout_submitted" \
+      | jq -r --argjson after "$after_sequence" 'select(.sequence > $after) | .id'
+  ) || return 1
+
+  for payout_id in $payout_ids; do
+    grep_in_trigger_logs "sequence.*payout_broadcast.*${payout_id}" > /dev/null || continue
+    payout=$(bria_cli get-payout -i "$payout_id") || return 1
+    tx_id=$(jq -er --arg id "$payout_id" '
+      .payout | select(.id == $id and .metadata.galoy.rebalanceToColdWallet == true)
+      | .txId | select(type == "string") | select(test("^[0-9a-f]{64}$"))
+    ' <<< "$payout") || continue
+
+    # The broadcast log precedes the handler. Wait for all three ledger legs
+    # (hot credit, fee debit, cold debit), not just event delivery.
+    rows=$(mongo_cli "db.medici_transactions.countDocuments({type:'to_cold_storage',hash:'${tx_id}',pending:false,voided:{\$ne:true}})") || return 1
+    [[ "$rows" == 3 ]] && return 0
+    echo "Waiting for hot-to-cold journal: payout=$payout_id tx=$tx_id rows=$rows"
+  done
+  return 1
 }
 
 mempool_not_empty() {
@@ -148,9 +173,13 @@ synced_to_chain() {
 
   [[ "${cold_balance}" = "0" ]] || exit 1
 
+  local before_sequence
+  before_sequence=$(grep_in_trigger_logs '"sequence":' | jq -s 'map(.sequence) | max // 0')
   run_cron
 
-  bria_cli watch-events -o
+  # One arbitrary Bria event is not a broadcast/accounting barrier. Confirming
+  # first can skip the broadcast lifecycle that records the hot-to-cold fee.
+  retry 30 2 hot_to_cold_payout_accounted "$before_sequence"
   bitcoin_cli -generate 1
   for i in {1..30}; do
     cold_balance=$(bria_cli wallet-balance -w cold | jq -r '.effectivePendingIncome')
