@@ -6,6 +6,8 @@ on:
       - ci/core/tasks/bump-image-digest.sh
       - ci/core/tasks/open-charts-pr.sh
       - ci/core/tasks/tests/**
+      - ci/tests/**
+      - .github/workflows/integration-test.yml
       - toolchains/workspace-pnpm/**
       - toolchains/simple-pnpm/**
       - toolchains/subprocess_util.py
@@ -17,6 +19,13 @@ permissions:
   contents: read
 
 jobs:
+  integration-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check integration artifact upload conditions
+        run: python3 -m unittest discover -s ci/tests -v
+
   chart-pr-task:
     runs-on: ubuntu-latest
     steps:

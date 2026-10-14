@@ -97,6 +97,9 @@ jobs:
         uses: DeterminateSystems/magic-nix-cache-action@v8
       - name: Build via buck2
         run: nix develop -c buck2 build -j "$BUCK2_JOBS" ${{ matrix.build_args }}
+      - name: Check serial integration worker recycling
+        if: matrix.component == 'core'
+        run: nix develop -c node --test ci/tests/integration-worker-recycling.spec.cjs
       - name: Start deps and run tests via tilt
         run: nix develop -c xvfb-run ./dev/bin/tilt-ci.sh ${{ matrix.component }}
       - name: Prepare Tilt log
@@ -113,7 +116,7 @@ jobs:
             echo "prepared=false" >> "$GITHUB_OUTPUT"
           fi
       - name: Upload Tilt log
-        if: steps.prepare_tilt_log.outputs.prepared == 'true'
+        if: always() && steps.prepare_tilt_log.outputs.prepared == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: Tilt log - ${{ matrix.component }}
