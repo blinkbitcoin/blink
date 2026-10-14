@@ -2,6 +2,9 @@
 
 BUCK2_JOBS="${BUCK2_JOBS:-4}"
 
+echo "Running bats helper regressions..."
+bats -t bats/helpers/tests || exit 1
+
 echo "Running node_modules build..."
 buck2 build -j "$BUCK2_JOBS" //:node_modules --verbose 4
 

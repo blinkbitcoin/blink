@@ -458,14 +458,6 @@ teardown() {
 
   amount=210000
 
-  estimated_fee=$(bria_cli estimate-payout-fee \
-    -w dev-wallet \
-    -q dev-queue \
-    -d ${address} \
-    -a ${amount} \
-    | jq -r '.satoshis'
-  )
-
   payout_id=$(bria_cli submit-payout \
     -w dev-wallet \
     -q dev-queue \
@@ -495,8 +487,28 @@ teardown() {
   lnd_final_balance=$(lnd_cli walletbalance | jq -r '.confirmed_balance')
   bria_final_dev_wallet_balance=$(bria_cli wallet-balance -w dev-wallet | jq -r '.effectiveSettled')
 
+  # Fee recommendations can change between estimation and batch construction.
+  payout=$(bria_cli get-payout -i "$payout_id")
+  payout=$(jq -e --arg id "$payout_id" --arg address "$address" --argjson amount "$amount" '
+    .payout
+    | select(.id == $id and .satoshis == $amount and .destination.onchainAddress == $address)
+    | select(all(.batchId, .walletId, .txId; type == "string" and length > 0))
+  ' <<< "$payout") || fail "Invalid payout details for $payout_id"
+  batch_id=$(jq -r '.batchId' <<< "$payout")
+  batch=$(bria_cli get-batch -b "$batch_id")
+  # The wallet balance invariant requires this to be its only payout in the batch.
+  actual_fee=$(jq -er --argjson payout "$payout" '
+    select(.id == $payout.batchId and .txId == $payout.txId)
+    | [.walletSummaries[] | select(.walletId == $payout.walletId)]
+    | select(length == 1) | .[0]
+    | select(.payouts | length == 1)
+    | select(.payouts[0].id == $payout.id and .payouts[0].satoshis == $payout.satoshis
+        and .payouts[0].destination == $payout.destination)
+    | .feeSats | select(type == "number" and . > 0 and . == floor)
+  ' <<< "$batch") || fail "Invalid batch fee for $payout_id"
+
   expected_lnd_final_balance=$((lnd_initial_balance + amount))
-  expected_bria_final_dev_wallet_balance=$((bria_initial_dev_wallet_balance - amount - estimated_fee))
+  expected_bria_final_dev_wallet_balance=$((bria_initial_dev_wallet_balance - amount - actual_fee))
 
   echo "Lnd: ${lnd_final_balance} - ${expected_lnd_final_balance}"
   echo "Bria: ${bria_final_dev_wallet_balance} - ${expected_bria_final_dev_wallet_balance}"
