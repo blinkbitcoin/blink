@@ -15,11 +15,13 @@ describe("Login Email", () => {
       .should("exist")
       .should("be.visible")
       .click()
+    cy.location("pathname").should("eq", "/login/phone")
 
     cy.get("[data-testid=sign_in_with_email_btn]")
       .should("exist")
       .should("be.visible")
       .click()
+    cy.location("pathname").should("eq", "/login")
 
     cy.get("[data-testid=email_id_input]")
       .should("exist")

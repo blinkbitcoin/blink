@@ -9,15 +9,11 @@ describe("Login Phone", () => {
       expect(params.has("login_challenge")).to.be.true
     })
 
-    cy.get("[data-testid=sign_in_with_email_btn]")
-      .should("exist")
-      .should("be.visible")
-      .click()
-
     cy.get("[data-testid=sign_in_with_phone_btn]")
       .should("exist")
       .should("be.visible")
       .click()
+    cy.location("pathname").should("eq", "/login/phone")
 
     cy.get("[data-testid=phone_number_input]")
       .should("exist")

@@ -21,7 +21,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <Script src="/gt.js" />
       <body className={inter.className}>
         <ToastProvider />
-        <Theme>{children}</Theme>
+        <Theme />
+        {children}
       </body>
     </html>
   )
