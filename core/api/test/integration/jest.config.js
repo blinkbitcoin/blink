@@ -12,6 +12,8 @@ module.exports = {
     "^.+\\.(t|j)sx?$": ["@swc/jest", swcConfig],
   },
   testRegex: ".*\\.spec\\.ts$",
+  // Progress on stdout survives a buck2 timeout, which drops Jest's results
+  reporters: ["default", "<rootDir>/test/integration/progress-reporter.js"],
   setupFilesAfterEnv: ["<rootDir>/test/integration/jest.setup.js"],
   testEnvironment: "node",
   moduleNameMapper: {
