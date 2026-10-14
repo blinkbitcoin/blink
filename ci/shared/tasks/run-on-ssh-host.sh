@@ -83,7 +83,14 @@ printf '%s\n' "$private_key" > "$root/key"
 printf '%s\n' "$google_credentials" > "$root/google.json"
 printf '%s %s\n' "$host" "$key" > "$root/known_hosts"
 unset private_key google_credentials
-export CLOUDSDK_CONFIG="$root/gcloud"
+# Reject a corrupt secret before SSH. The key's token_uri is not trusted.
+jq -e '.type == "service_account" and (.client_email | type == "string") and (.private_key | type == "string")' \
+  "$root/google.json" >/dev/null 2>&1 || fail 'invalid service-account key'
+email=$(jq -r '.client_email' "$root/google.json")
+[[ $email =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]] || fail 'invalid service-account key'
+jq -r '.private_key' "$root/google.json" > "$root/sa.pem"
+grep -qxF -e '-----BEGIN PRIVATE KEY-----' "$root/sa.pem" || fail 'invalid service-account key'
+grep -qxF -e '-----END PRIVATE KEY-----' "$root/sa.pem" || fail 'invalid service-account key'
 options=(ssh -i "$root/key" -o BatchMode=yes -o IdentitiesOnly=yes
   -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$root/known_hosts"
   -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=3)
@@ -101,12 +108,34 @@ printf -v rsync_ssh '"%s" ' "${options[@]}"
 [[ $root != *[\"\\]* ]] || fail 'unsupported temporary directory'
 bounded 300s rsync -avr --delete --exclude='buck-out/**' --exclude='**/node_modules/**' \
   --exclude='dev/.data/**' -e "$rsync_ssh" "$repo/" "ci@$host:$repo"
-bounded 60s gcloud auth activate-service-account --key-file "$root/google.json" --quiet > /dev/null
-bounded 60s gcloud auth print-access-token > "$root/token"
-token=$(cat "$root/token")
-[[ $token =~ [^[:space:]] ]] || fail 'no registry access token'
-# Token stays on stdin; long-lived Google JSON never reaches the guest.
+# Do not use gcloud auth print-access-token. Those stable commands have no
+# --scopes flag and mint CLOUDSDK_SCOPES (cloud-platform, compute, appengine,
+# sql). GCR pull needs only devstorage.read_only. The JSON key stays on the worker.
+now=$(date +%s)
+iat=$((now - 60))
+exp=$((iat + 3600))
+header=$(printf '%s' '{"alg":"RS256","typ":"JWT"}' | openssl base64 -A | tr '+/' '-_' | tr -d '=')
+payload=$(jq -nc \
+  --arg iss "$email" \
+  --arg scope "https://www.googleapis.com/auth/devstorage.read_only" \
+  --arg aud "https://oauth2.googleapis.com/token" \
+  --argjson iat "$iat" \
+  --argjson exp "$exp" \
+  '{iss:$iss,scope:$scope,aud:$aud,iat:$iat,exp:$exp}' \
+  | openssl base64 -A | tr '+/' '-_' | tr -d '=')
+signing="${header}.${payload}"
+signature=$(printf '%s' "$signing" | openssl dgst -sha256 -sign "$root/sa.pem" -binary \
+  | openssl base64 -A | tr '+/' '-_' | tr -d '=')
+printf '%s' "${signing}.${signature}" > "$root/assertion"
+bounded 60s curl --fail --silent --show-error --max-time 30 \
+  --data-urlencode "grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer" \
+  --data-urlencode "assertion@${root}/assertion" \
+  --output "$root/token.json" \
+  "https://oauth2.googleapis.com/token"
+token=$(jq -r '.access_token // empty' "$root/token.json")
+[[ $token =~ ^[A-Za-z0-9._~+/=-]+$ ]] || fail 'no registry access token'
+# Token stays on stdin; the service-account JSON never reaches the guest.
 bounded 60s "${ssh[@]}" "docker --config $run_dir/docker login us.gcr.io --username oauth2accesstoken --password-stdin" <<< "$token" > /dev/null
-unset token
+unset token email signing signature
 printf -v remote_command 'bash -s -- %q %q %q %q' "$run_dir" "$repo" "$package" "$command"
 bounded 2800s "${ssh[@]}" "$remote_command" < "$tasks/remote-nix-run.sh"

@@ -36,11 +36,17 @@ fly -t zrh1-org trigger-job --team=dev \
 The manual job initializes only the new pool's empty directories, tests all
 four hosts in parallel, and admits hosts only after all four tests succeed.
 Checks cover pinned SSH authentication, Docker, Nix dev-shell evaluation,
-Node/pnpm, Compose, and a private registry pull/run. Only a short-lived registry
-token reaches the guest; the service-account JSON stays inside Concourse.
-Each run has a temporary Docker config, removed on normal or failing exit.
-Loss of SSH may prevent cleanup; inspect that host before reuse. Workloads
-have a 45-minute remote limit and process-group cleanup.
+Node/pnpm, Compose, and a private registry pull/run. The worker exchanges the
+service-account key for a short-lived token scoped only to
+`https://www.googleapis.com/auth/devstorage.read_only`. `gcloud auth
+print-access-token` is not used: those stable commands have no `--scopes`
+flag and would mint a cloud-platform token. That pull token is the only Google
+credential sent to the guest, on docker login's stdin. The service-account JSON
+stays inside Concourse. Each run has a temporary Docker config, removed on
+normal or failing exit. Old `.ci-run` directories are then pruned to the four
+newest, matching the core GCP host transport. The active run directory is kept
+until that cleanup finishes. Loss of SSH may prevent cleanup; inspect that host
+before reuse. Workloads have a 45-minute remote limit and process-group cleanup.
 
 If qualification fails, leave core/apps on GCP. An empty pool can be retried.
 If admission partially succeeds, stop and reconcile actual claimed/unclaimed
@@ -84,9 +90,9 @@ python3 -m unittest discover -s ci/shared/tests -v
 shellcheck ci/shared/tasks/*.sh ci/shared/repipe-qualification
 ```
 
-The runtime tasks use Bash, jq and GNU coreutils (including `timeout`); no Python
-interpreter is required by the transport or its remote helpers. Python is used
-only by the test harness. Linux exercises the real process supervisor. macOS
+The runtime tasks use Bash, jq, OpenSSL, curl and GNU coreutils (including
+`timeout`); no Python interpreter is required by the transport or its remote
+helpers. Python is used only by the test harness. Linux exercises the real process supervisor. macOS
 skips that fixture; a Linux container or GitHub Actions runs it. Subprocess
 fixtures exercise the Bash transport, cover every external-command failure
 boundary, and verify credential cleanup/redaction.

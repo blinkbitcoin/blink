@@ -1,3 +1,4 @@
+import base64
 import json
 import os
 from pathlib import Path
@@ -19,6 +20,11 @@ name = pathlib.Path(sys.argv[0]).name
 args = sys.argv[1:]
 assert not any(k in os.environ for k in ("SSH_PRIVATE_KEY", "SSH_PUB_KEY", "GOOGLE_CREDENTIALS", "private_key", "google_credentials"))
 body = sys.stdin.read() if name == "ssh" else ""
+if name == "curl":
+    assertion = next(arg for arg in args if arg.startswith("assertion@")).split("@", 1)[1]
+    assertion_path = pathlib.Path(assertion)
+    assert assertion_path.stat().st_mode & 0o777 == 0o600
+    body = assertion_path.read_text()
 log = pathlib.Path(os.environ["CALLS"])
 calls = log.read_text().splitlines() if log.exists() else []
 index = len(calls)
@@ -27,19 +33,26 @@ if name == "ssh":
     assert key.stat().st_mode & 0o777 == 0o600
     assert key.parent.stat().st_mode & 0o777 == 0o700
     assert (key.parent / "google.json").stat().st_mode & 0o777 == 0o600
+    assert (key.parent / "sa.pem").stat().st_mode & 0o777 == 0o600
     assert (key.parent / "known_hosts").stat().st_mode & 0o777 == 0o600
     assert "StrictHostKeyChecking=yes" in args
 with log.open("a") as f:
     f.write(json.dumps({"name": name, "args": args, "input": body}) + "\n")
 if str(index) in os.environ.get("FAIL", "").split(","):
     sys.exit(7)
+if os.environ.get("BLOCK") == "workload" and name == "ssh" and "nix develop" in body:
+    pathlib.Path(os.environ["BLOCKED"]).write_text(str(os.getpid()))
+    while True: time.sleep(1)
 if str(index) == os.environ.get("BLOCK"):
     pathlib.Path(os.environ["BLOCKED"]).write_text(str(os.getpid()))
     while True: time.sleep(1)
 if name == "ssh" and "mktemp" in args[-1]:
     print(os.environ.get("DIRECTORY", ".ci-run/run.12345678"))
-if name == "gcloud" and args[:2] == ["auth", "print-access-token"]:
-    print(os.environ.get("TOKEN", "TOKEN-FIXTURE"))
+if name == "gcloud":
+    sys.exit(9)
+if name == "curl":
+    out = pathlib.Path(args[args.index("--output") + 1])
+    out.write_text(json.dumps({"access_token": os.environ.get("TOKEN", "TOKEN-FIXTURE")}))
 '''
 
 
@@ -56,15 +69,27 @@ class Transport(unittest.TestCase):
         self.metadata_file.write_text(json.dumps(self.meta))
         binary = self.root / "bin"
         binary.mkdir()
-        for name in ["ssh", "rsync", "gcloud"]:
+        for name in ["ssh", "rsync", "gcloud", "curl"]:
             path = binary / name
             path.write_text(STUB)
             path.chmod(0o755)
         self.log = self.root / "calls"
+        key = self.root / "fixture.pem"
+        subprocess.check_call(["openssl", "genrsa", "-out", str(key), "2048"], stderr=subprocess.DEVNULL)
+        pkcs8 = self.root / "fixture.pkcs8.pem"
+        subprocess.check_call(["openssl", "pkcs8", "-topk8", "-nocrypt", "-in", str(key), "-out", str(pkcs8)], stderr=subprocess.DEVNULL)
+        self.pem = pkcs8.read_text()
+        credentials = json.dumps({
+            "type": "service_account",
+            "client_email": "ci-fixture@example.invalid",
+            "private_key": self.pem,
+            "private_key_id": "GOOGLE-FIXTURE",
+            "token_uri": "https://evil.example/token",
+        })
         self.env = dict(os.environ, PATH=str(binary) + ":" + os.environ["PATH"],
             TMPDIR=str(self.root / "tmp"), CALLS=str(self.log), BLOCKED=str(self.root / "blocked"),
             REPO_PATH="repo", CMD="echo ok", SSH_PRIVATE_KEY="PRIVATE-FIXTURE", SSH_PUB_KEY="PUBLIC-FIXTURE",
-            GOOGLE_CREDENTIALS="GOOGLE-FIXTURE")
+            GOOGLE_CREDENTIALS=credentials)
         for key in ["PACKAGE_DIR", "FAIL", "TOKEN", "DIRECTORY", "BLOCK"]:
             self.env.pop(key, None)
 
@@ -89,6 +114,27 @@ class Transport(unittest.TestCase):
         login = next(c for c in calls if "login us.gcr.io" in c["args"][-1])
         self.assertEqual(login["input"], "TOKEN-FIXTURE\n")
         self.assertIn(".ci-run/run.12345678/docker", login["args"][-1])
+        minted = next(c for c in calls if c["name"] == "curl")
+        self.assertEqual(minted["args"][-1], "https://oauth2.googleapis.com/token")
+        self.assertNotIn("evil.example", json.dumps(minted["args"]))
+        self.assertNotIn("cloud-platform", minted["input"])
+        self.assertFalse(any(c["name"] == "gcloud" for c in calls))
+        self.assertNotIn("BEGIN PRIVATE KEY", json.dumps(calls))
+        header_b64, payload_b64, sig_b64 = minted["input"].split(".")
+        def dec(part):
+            return base64.urlsafe_b64decode(part + "=" * (-len(part) % 4))
+        self.assertEqual(json.loads(dec(header_b64))["alg"], "RS256")
+        payload = json.loads(dec(payload_b64))
+        self.assertEqual(payload["scope"], "https://www.googleapis.com/auth/devstorage.read_only")
+        self.assertEqual(payload["aud"], "https://oauth2.googleapis.com/token")
+        self.assertEqual(payload["iss"], "ci-fixture@example.invalid")
+        signed = self.root / "signed"
+        signature = self.root / "sig.bin"
+        public = self.root / "pub.pem"
+        signed.write_bytes(f"{header_b64}.{payload_b64}".encode())
+        signature.write_bytes(dec(sig_b64))
+        subprocess.check_call(["openssl", "rsa", "-in", str(self.root / "fixture.pkcs8.pem"), "-pubout", "-out", str(public)], stderr=subprocess.DEVNULL)
+        subprocess.check_call(["openssl", "dgst", "-sha256", "-verify", str(public), "-signature", str(signature), str(signed)], stdout=subprocess.DEVNULL)
         self.assertEqual(calls[-1]["input"], (TASKS / "remote-nix-cleanup.sh").read_text())
         # Decode the actual SSH command with Bash, preserving multiline commands.
         decoded = subprocess.check_output(["bash", "-c", 'set -- ' + calls[-2]["args"][-1] + '; printf "%s\\0" "$@"'])
@@ -108,7 +154,10 @@ class Transport(unittest.TestCase):
                     self.assertEqual(self.calls()[-1]["input"], (TASKS / "remote-nix-cleanup.sh").read_text())
 
     def test_cleanup_failure_preserves_workload_failure(self):
-        result = self.invoke(FAIL="7,8")
+        self.assertEqual(self.invoke().returncode, 0)
+        calls = self.calls()
+        workload = next(i for i, call in enumerate(calls) if call["name"] == "ssh" and "nix develop" in call["input"])
+        result = self.invoke(FAIL=f"{workload},{len(calls) - 1}")
         self.assertEqual(result.returncode, 7)
         self.assertIn("cleanup failed", result.stderr)
 
@@ -119,7 +168,7 @@ class Transport(unittest.TestCase):
             'if [[ $2 == 2800s ]]; then set -- "$1" 0.2s "${@:3}"; fi\n' +
             "exec " + shlex.quote(shutil.which("timeout")) + ' "$@"\n')
         binary.chmod(0o755)
-        result = self.invoke(BLOCK="7")
+        result = self.invoke(BLOCK="workload")
         self.assertEqual(result.returncode, 124, result.stderr)
         self.assertEqual(self.calls()[-1]["input"], (TASKS / "remote-nix-cleanup.sh").read_text())
         with self.assertRaises(ProcessLookupError):
@@ -167,6 +216,14 @@ class Transport(unittest.TestCase):
             self.metadata_file.write_text(json.dumps(dict(self.meta, ssh_host=address)))
             self.assertEqual(self.invoke().returncode, 0)
 
+    def test_invalid_service_account_does_not_open_ssh(self):
+        for creds in ["not-json", json.dumps({"type": "service_account", "client_email": "not-an-email", "private_key": self.pem}),
+                      json.dumps({"type": "service_account", "client_email": "ci@example.invalid", "private_key": "not-a-key",
+                                  "token_uri": "https://evil.example/token"})]:
+            with self.subTest(creds=creds[:24]):
+                self.assertNotEqual(self.invoke(GOOGLE_CREDENTIALS=creds).returncode, 0)
+                self.assertEqual(self.calls(), [])
+
     def test_missing_inputs_refuse_before_remote_access(self):
         for update in [{"CMD": " "}, {"SSH_PRIVATE_KEY": ""}, {"GOOGLE_CREDENTIALS": ""}, {"REPO_PATH": "missing"}]:
             self.assertNotEqual(self.invoke(**update).returncode, 0)
@@ -179,7 +236,7 @@ class Transport(unittest.TestCase):
                 blocked = self.root / "blocked"
                 blocked.unlink(missing_ok=True)
                 process = subprocess.Popen(["bash", str(TASKS / "run-on-ssh-host.sh")], cwd=self.root,
-                    env=dict(self.env, BLOCK="7"), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                    env=dict(self.env, BLOCK="workload"), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                 try:
                     deadline = time.monotonic() + 10
                     while not blocked.exists() and process.poll() is None and time.monotonic() < deadline:
@@ -209,6 +266,36 @@ class Transport(unittest.TestCase):
                 cwd=self.root, capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertFalse((run_dir / "docker").exists())
+
+    def test_remote_cleanup_prunes_old_runs_and_keeps_active_log(self):
+        base = self.root / ".ci-run"
+        base.mkdir(parents=True)
+        names = []
+        for index in range(6):
+            path = base / f"run.{index + 1:08d}"
+            path.mkdir()
+            (path / "log").write_text(f"log-{index}")
+            (path / "docker").mkdir()
+            (path / "docker/config.json").write_text("token")
+            os.utime(path, (index + 1, index + 1))
+            names.append(path.name)
+        outside = self.root / "outside"
+        outside.mkdir()
+        (outside / "secret").write_text("keep")
+        link = base / "run.symlink0"
+        link.symlink_to(outside, target_is_directory=True)
+        (base / "run.notadir").write_text("file")
+        active = f".ci-run/{names[-1]}"
+        result = subprocess.run(["bash", str(TASKS / "remote-nix-cleanup.sh"), active],
+            cwd=self.root, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.root / active / "log").read_text(), "log-5")
+        self.assertFalse((self.root / active / "docker").exists())
+        remaining = sorted(path.name for path in base.iterdir() if path.is_dir() and not path.is_symlink())
+        self.assertEqual(remaining, names[-4:])
+        self.assertEqual((outside / "secret").read_text(), "keep")
+        self.assertTrue(link.is_symlink())
+        self.assertEqual((base / "run.notadir").read_text(), "file")
 
     def test_remote_cleanup_requires_matching_process_marker(self):
         if not Path("/proc").exists():
