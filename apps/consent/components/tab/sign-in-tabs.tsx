@@ -13,7 +13,10 @@ function SignInTab({ login_challenge }: { login_challenge: string }) {
       <div
         data-testid="sign_in_with_email_btn"
         className={`flex justify-center items-center p-2 gap-3 ${!isPhoneLogin ? "bg-[var(--backgroundColor)]" : "bg-[var(--inputBackground)]"} rounded-lg cursor-pointer w-1/2`}
-        onClick={() => router.replace(`/login?login_challenge=${login_challenge}`)}
+        onClick={() => {
+          // Already on this tab: navigating to the same URL only re-renders the form
+          if (isPhoneLogin) router.replace(`/login?login_challenge=${login_challenge}`)
+        }}
       >
         <Image src="/logo/email.svg" alt="email" width={20} height={20} />
         <p className="font-semibold text-sm">Email</p>
@@ -21,7 +24,10 @@ function SignInTab({ login_challenge }: { login_challenge: string }) {
       <div
         data-testid="sign_in_with_phone_btn"
         className={`flex justify-center items-center p-2 gap-3 ${isPhoneLogin ? "bg-[var(--backgroundColor)]" : "bg-[var(--inputBackground)]"} rounded-lg cursor-pointer w-1/2`}
-        onClick={() => router.replace(`/login/phone?login_challenge=${login_challenge}`)}
+        onClick={() => {
+          if (!isPhoneLogin)
+            router.replace(`/login/phone?login_challenge=${login_challenge}`)
+        }}
       >
         <Image src="/logo/phone.svg" alt="phone" width={20} height={20} />
         <p className="font-semibold text-sm">Phone</p>
