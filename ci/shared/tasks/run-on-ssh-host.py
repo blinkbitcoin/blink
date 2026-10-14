@@ -67,7 +67,9 @@ def execute(environment, work=Path(".")):
             return run(ssh + [script], env=child_env, **kwargs)
 
         remote(f'test "$(hostname)" = {shlex.quote(name)} && test -f /var/lib/docker-host/ready && '
-               'docker info >/dev/null && nix store ping --store daemon')
+               'docker info >/dev/null && nix store ping --store daemon && '
+               'containerd config dump | grep -qxF \'root = "/var/lib/docker-host/containerd"\' && '
+               'test "$(findmnt -n -o TARGET --target /var/lib/docker-host/containerd)" = /var/lib/docker-host')
         run_dir = remote("umask 077; mkdir -p .ci-run; mktemp -d .ci-run/run.XXXXXXXX", capture=True)
         require(re.fullmatch(r"\.ci-run/run\.[A-Za-z0-9]{8}", run_dir), "Unexpected remote run directory")
         try:

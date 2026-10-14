@@ -60,6 +60,24 @@ jobs:
     params:
       add: #@ "qualified-" + str(i)
   #@ end
+#@ if data.values.recover_hosts:
+#@ for name in data.values.recover_hosts:
+#@ assert.equals(name in [h["docker_host_name"] for h in data.values.hosts], True)
+#@ end
+- name: recover-partial-admission
+  serial: true
+  plan:
+  #@ for i, name in enumerate(data.values.recover_hosts):
+  - put: #@ "recover-" + str(i)
+    resource: zrh1-pool
+    params:
+      claim: #@ name
+  - put: #@ "remove-" + str(i)
+    resource: zrh1-pool
+    params:
+      remove: #@ "recover-" + str(i)
+  #@ end
+#@ end
 resources:
 - name: pipeline-tasks
   type: git

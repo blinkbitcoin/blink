@@ -45,7 +45,14 @@ have a 45-minute remote limit and process-group cleanup.
 If qualification fails, leave core/apps on GCP. An empty pool can be retried.
 If admission partially succeeds, stop and reconcile actual claimed/unclaimed
 members before recovery: bootstrap deliberately refuses a nonempty pool.
-Do not remove members that may be in use. Preserve failed build evidence.
+Before either consumer has been migrated, list only the exact idle admitted
+names in the protected inventory's optional `recover_hosts` array, repipe, and
+trigger `recover-partial-admission`. That manual job claims each named lock
+through the pool resource before removing it. Verify an empty pool, remove
+`recover_hosts` from the inventory, repipe again, and rerun qualification.
+Never use recovery after consumer cutover or remove a lock in use. Preserve
+failed build evidence. If recovery fails, inspect the claimed entry before
+retrying; do not force-release it.
 
 ## Consumer deployment and rollback
 
