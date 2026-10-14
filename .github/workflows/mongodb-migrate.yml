@@ -13,6 +13,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+          df -i /
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v14
       - name: Run the Magic Nix Cache
@@ -20,3 +26,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run clean mongodb migration
         run: nix develop -c ./dev/bin/tilt-ci.sh mongodb-migrate
+      - name: Report disk usage
+        if: always()
+        continue-on-error: true
+        run: |
+          df -h
+          df -i
+          sudo du -xhd1 /nix /home/runner/work /var/lib/docker 2>/dev/null || true
