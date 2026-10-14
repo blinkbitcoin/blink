@@ -43,6 +43,20 @@ export const ChannelType = {
   Telegram: "telegram",
 } as const
 
+export const DevicePlatform = {
+  Android: "android",
+  Ios: "ios",
+  Web: "web",
+} as const
+
+export const USER_AGENT_MAX_LENGTH = 512
+
+export const normalizeUserAgent = (ua?: string): string | undefined => {
+  const trimmed = ua?.trim()
+  if (!trimmed) return undefined
+  return trimmed.slice(0, USER_AGENT_MAX_LENGTH)
+}
+
 const CHANNEL_CONFIG = {
   [ChannelType.Sms]: getSmsAuthUnsupportedCountries,
   [ChannelType.Whatsapp]: getWhatsAppAuthUnsupportedCountries,

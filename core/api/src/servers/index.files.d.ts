@@ -10,6 +10,7 @@ type GraphQLPublicContext = {
   logger: Logger
   loaders: Loaders
   ip: IpAddress | undefined
+  userAgent: string | undefined
   sessionId: SessionId | undefined
 }
 

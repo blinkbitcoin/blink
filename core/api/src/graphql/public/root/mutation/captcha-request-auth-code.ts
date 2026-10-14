@@ -38,7 +38,7 @@ const CaptchaRequestAuthCodeMutation = GT.Field<
   args: {
     input: { type: GT.NonNull(CaptchaRequestAuthCodeInput) },
   },
-  resolve: async (_, args, { ip }) => {
+  resolve: async (_, args, { ip, userAgent }) => {
     const {
       phone,
       challengeCode: geetestChallenge,
@@ -67,6 +67,7 @@ const CaptchaRequestAuthCodeMutation = GT.Field<
       geetestSeccode,
       ip,
       channel,
+      userAgent,
     })
 
     if (result instanceof Error) {

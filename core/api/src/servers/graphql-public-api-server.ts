@@ -76,6 +76,7 @@ const setGqlContext = async (
   const gqlContext = await sessionPublicContext({
     tokenPayload,
     ip,
+    userAgent: req.headers["user-agent"],
   })
 
   req.gqlContext = gqlContext

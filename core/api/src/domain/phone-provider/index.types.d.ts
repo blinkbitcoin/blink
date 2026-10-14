@@ -3,6 +3,9 @@ type UnknownPhoneProviderServiceError =
   import("@/domain/phone-provider").UnknownPhoneProviderServiceError
 type PhoneCodeInvalidError = import("./errors").PhoneCodeInvalidError
 
+type DevicePlatform =
+  (typeof import("./index").DevicePlatform)[keyof typeof import("./index").DevicePlatform]
+
 interface IPhoneProviderVerifyService {
   getCarrier(phone: PhoneNumber): Promise<PhoneMetadata | PhoneProviderServiceError>
   validateDestination(phone: PhoneNumber): Promise<true | PhoneProviderServiceError>
@@ -11,11 +14,15 @@ interface IPhoneProviderVerifyService {
     channel,
     phoneExists,
     ip,
+    userAgent,
+    devicePlatform,
   }: {
     to: PhoneNumber
     channel: ChannelType
     phoneExists: boolean
     ip: IpAddress
+    userAgent?: string
+    devicePlatform?: DevicePlatform
   }): Promise<true | PhoneProviderServiceError>
   validateVerify({
     to,

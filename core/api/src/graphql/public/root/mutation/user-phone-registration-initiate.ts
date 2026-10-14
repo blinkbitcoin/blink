@@ -33,7 +33,7 @@ const UserPhoneRegistrationInitiateMutation = GT.Field<
   args: {
     input: { type: GT.NonNull(UserPhoneRegistrationInitiateInput) },
   },
-  resolve: async (_, args, { ip, user }) => {
+  resolve: async (_, args, { ip, user, userAgent }) => {
     const { phone, channel } = args.input
 
     if (ip === undefined) {
@@ -51,6 +51,7 @@ const UserPhoneRegistrationInitiateMutation = GT.Field<
       ip,
       channel,
       user,
+      userAgent,
     })
 
     if (success instanceof Error) {

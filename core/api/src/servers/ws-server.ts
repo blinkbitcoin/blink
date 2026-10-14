@@ -92,6 +92,7 @@ const getContext = async (
       const context = await sessionPublicContext({
         tokenPayload,
         ip,
+        userAgent: ctx.extra?.request?.headers?.["user-agent"],
       })
 
       if (context instanceof Error) throw context

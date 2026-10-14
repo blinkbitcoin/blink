@@ -213,28 +213,28 @@ const resetCallHistory = () => {
   mockAddEventToCurrentSpan.mockClear()
 }
 
-describe("requestPhoneCodeWithCaptcha code-send caps", () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
-    buckets = new Map()
-    existingPhones = new Set()
+beforeEach(() => {
+  jest.clearAllMocks()
+  buckets = new Map()
+  existingPhones = new Set()
 
-    mockConfigState.unsecureDefaultLoginCode = false
-    mockConfigState.testAccounts = []
-    mockConfigState.twilioAccountSid = "AC_live"
-    mockCheckedToChannel.mockReturnValue("sms")
-    mockGeetestValidate.mockResolvedValue(true)
-    mockFindByPhone.mockImplementation(async (phone: string) =>
-      existingPhones.has(phone) ? { phone } : new Error("not found"),
-    )
-    mockConsumeLimiter.mockImplementation(fakeConsumeLimiter)
-    mockRewardLimiter.mockImplementation(fakeRewardLimiter)
-    mockInitiateVerify.mockResolvedValue(true)
-    mockGetPhoneProviderVerifyService.mockReturnValue({
-      initiateVerify: mockInitiateVerify,
-    })
+  mockConfigState.unsecureDefaultLoginCode = false
+  mockConfigState.testAccounts = []
+  mockConfigState.twilioAccountSid = "AC_live"
+  mockCheckedToChannel.mockReturnValue("sms")
+  mockGeetestValidate.mockResolvedValue(true)
+  mockFindByPhone.mockImplementation(async (phone: string) =>
+    existingPhones.has(phone) ? { phone } : new Error("not found"),
+  )
+  mockConsumeLimiter.mockImplementation(fakeConsumeLimiter)
+  mockRewardLimiter.mockImplementation(fakeRewardLimiter)
+  mockInitiateVerify.mockResolvedValue(true)
+  mockGetPhoneProviderVerifyService.mockReturnValue({
+    initiateVerify: mockInitiateVerify,
   })
+})
 
+describe("requestPhoneCodeWithCaptcha code-send caps", () => {
   it("sends a new number and consumes the ISO country then the global key", async () => {
     const result = await requestPhoneCodeWithCaptcha(captchaArgs("+50212345678"))
 
@@ -484,5 +484,37 @@ describe("requestPhoneCodeWithCaptcha code-send caps", () => {
     expect(result).toBe(true)
     expect(mockInitiateVerify).toHaveBeenCalledTimes(1)
     expect(cappedCalls()).toEqual([])
+  })
+})
+
+describe("request code fraud signals", () => {
+  const userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_6) Safari/605.1.15"
+
+  it("forwards user agent and platform on the captcha path", async () => {
+    const result = await requestPhoneCodeWithCaptcha({
+      ...captchaArgs("+50212345678"),
+      userAgent,
+      devicePlatform: "web",
+    })
+
+    expect(result).toBe(true)
+    expect(mockInitiateVerify).toHaveBeenCalledWith(
+      expect.objectContaining({ userAgent, devicePlatform: "web" }),
+    )
+  })
+
+  it("forwards user agent without platform on the AppCheck path", async () => {
+    const result = await requestPhoneCodeWithAppcheckJti({
+      phone: "+50212345678" as PhoneNumber,
+      ip: "127.0.0.1" as IpAddress,
+      channel: "sms",
+      appcheckJti: "jti",
+      userAgent,
+    })
+
+    expect(result).toBe(true)
+    const [args] = mockInitiateVerify.mock.calls[0]
+    expect(args).toEqual(expect.objectContaining({ userAgent }))
+    expect(args.devicePlatform).toBeUndefined()
   })
 })

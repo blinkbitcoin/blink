@@ -15,9 +15,11 @@ import { UsersRepository } from "@/services/mongoose"
 export const sessionPublicContext = async ({
   tokenPayload,
   ip,
+  userAgent,
 }: {
   tokenPayload: jsonwebtoken.JwtPayload
   ip: IpAddress | undefined
+  userAgent: string | undefined
 }): Promise<GraphQLPublicContext | GraphQLPublicContextAuth> => {
   const logger = baseLogger.child({ tokenPayload })
 
@@ -45,6 +47,7 @@ export const sessionPublicContext = async ({
       logger,
       loaders,
       ip,
+      userAgent,
       sessionId: undefined,
     }
     const userId = maybeUserId
@@ -106,6 +109,7 @@ export const sessionPublicContext = async ({
     user,
     domainAccount,
     ip,
+    userAgent,
     sessionId,
     scope,
     appId,
