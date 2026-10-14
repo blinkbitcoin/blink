@@ -59,6 +59,11 @@ export_file(
 )
 
 export_file(
+  name = "check_next_config.py",
+  visibility = ["PUBLIC"],
+)
+
+export_file(
   name = "graphql_codegen.py",
   visibility = ["PUBLIC"],
 )

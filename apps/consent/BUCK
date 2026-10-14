@@ -6,6 +6,7 @@ load("@toolchains//workspace-pnpm:macros.bzl",
   "next_build_bin",
   "eslint",
   "audit",
+  "next_config_check",
   "graphql_codegen",
   "dev_update_paths"
 )
@@ -99,6 +100,10 @@ audit(
     level = "critical",
 )
 
+next_config_check(
+    name = "next-config-check",
+)
+
 eslint(
     name = "lint",
     srcs = [":src"] + glob([".eslint*"]),
@@ -111,6 +116,7 @@ test_suite(
     name = "test",
     tests = [
         ":audit",
+        ":next-config-check",
         ":lint",
     ],
 )

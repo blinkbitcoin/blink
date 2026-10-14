@@ -7,6 +7,7 @@ load(
     "next_build_bin",
     "eslint",
     "audit",
+    "next_config_check",
 )
 
 dev_pnpm_task_binary(
@@ -101,6 +102,10 @@ audit(
     level="critical",
 )
 
+next_config_check(
+    name="next-config-check",
+)
+
 eslint(
     name="lint",
     srcs=[":src"] + glob([".eslint*"]),
@@ -113,6 +118,7 @@ test_suite(
     name="test",
     tests=[
         ":audit",
+        ":next-config-check",
         ":lint",
     ],
 )
