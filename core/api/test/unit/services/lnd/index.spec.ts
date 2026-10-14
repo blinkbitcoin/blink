@@ -13,6 +13,7 @@ jest.mock("@/services/redis/connection", () => ({
 
 jest.mock("@/config", () => ({
   getHistoricalLndPubkeys: jest.fn(),
+  LND_MAX_PAYMENT_PATHS: 1,
 }))
 
 jest.mock("@/services/lnd/config", () => ({
@@ -21,6 +22,11 @@ jest.mock("@/services/lnd/config", () => ({
   getActiveOnchainLnd: jest.fn(),
   getLndFromPubkey: jest.fn(),
   parseLndErrorDetails: jest.fn(),
+}))
+
+jest.mock("@/services/tracing", () => ({
+  ...jest.requireActual("@/services/tracing"),
+  addAttributesToCurrentSpan: jest.fn(),
 }))
 
 jest.mock("lightning", () => {
@@ -33,9 +39,13 @@ jest.mock("lightning", () => {
 
 import { payViaPaymentDetails } from "lightning"
 
-import { FeatureCompatibilityError } from "@/domain/bitcoin/lightning"
+import {
+  FeatureCompatibilityError,
+  LnPaymentPendingError,
+} from "@/domain/bitcoin/lightning"
 import { LndService } from "@/services/lnd"
 import { getHistoricalLndPubkeys } from "@/config"
+import { addAttributesToCurrentSpan } from "@/services/tracing"
 import { getLnds, getActiveLnd, parseLndErrorDetails } from "@/services/lnd/config"
 
 const mockGetHistoricalLndPubkeys = getHistoricalLndPubkeys as jest.MockedFunction<
@@ -79,6 +89,7 @@ const createMockLndConnect = (pubkey: Pubkey, active = true): LndConnect =>
 
 describe("LndService", () => {
   beforeEach(() => {
+    jest.restoreAllMocks()
     jest.clearAllMocks()
     mockGetActiveLnd.mockReturnValue(createMockLndConnect(PUBKEYS.active1))
   })
@@ -172,6 +183,105 @@ describe("LndService", () => {
       expect(lndService.isLocalOrHistorical(PUBKEYS.historical1)).toBe(true)
       expect(lndService.isLocalOrHistorical(PUBKEYS.external)).toBe(false)
     })
+  })
+
+  describe("payInvoiceViaPaymentDetails multipath payments", () => {
+    it.each([
+      [1, 25_000, 1, false],
+      [2, 30_000, 2, false],
+      [4, 40_000, 3, false],
+      [16, 40_000, 4, false],
+      [4, 40_000, 0, true],
+    ])(
+      "forwards max_paths %i with timeout %i and traces %i shards",
+      async (maxPaths, timeout, shards, pending) => {
+        jest.replaceProperty(
+          jest.requireMock("@/config"),
+          "LND_MAX_PAYMENT_PATHS",
+          maxPaths,
+        )
+        const lndConnect = createMockLndConnect(PUBKEYS.active1)
+        mockGetLnds.mockImplementation(({ active, type } = {}) => {
+          if (active === true && type === "offchain") return [lndConnect]
+          if (type === "offchain") return [lndConnect]
+          return []
+        })
+
+        mockPayViaPaymentDetails.mockImplementation((async () => ({
+          safe_fee: 0,
+          paths: Array.from({ length: shards }, () => ({})),
+          secret: "c".repeat(64),
+        })) as unknown as typeof payViaPaymentDetails)
+
+        if (pending) {
+          jest.useFakeTimers()
+          mockPayViaPaymentDetails.mockImplementation(() => new Promise(() => undefined))
+        }
+        const lndService = LndService()
+        if (lndService instanceof Error) throw lndService
+
+        const decodedInvoice = {
+          paymentHash: "a".repeat(64),
+          destination: PUBKEYS.external,
+          paymentRequest: "lnbc1test",
+          milliSatsAmount: 1000,
+          description: "test",
+          paymentSecret: "b".repeat(64),
+          cltvDelta: 40,
+          amount: 1,
+          paymentAmount: {
+            amount: 1n,
+            currency: "BTC",
+          },
+          features: [],
+          routeHints: [],
+          expiresAt: new Date(Date.now() + 60_000),
+          isExpired: false,
+        } as unknown as LnInvoice
+
+        const btcPaymentAmount = {
+          amount: 1n,
+          currency: "BTC",
+        } as BtcPaymentAmount
+
+        const resultPromise = lndService.payInvoiceViaPaymentDetails({
+          decodedInvoice,
+          btcPaymentAmount,
+          maxFeeAmount: undefined,
+        })
+
+        if (pending) await jest.advanceTimersByTimeAsync(45_000)
+        const result = await resultPromise
+        jest.useRealTimers()
+
+        expect(addAttributesToCurrentSpan).toHaveBeenCalledWith({
+          "lightning.payment.max_paths": maxPaths,
+          "lightning.payment.pathfinding_timeout_ms": timeout,
+        })
+        const pendingResult = expect.any(LnPaymentPendingError)
+        expect(result).toEqual(
+          pending
+            ? pendingResult
+            : {
+                roundedUpFee: 0,
+                revealedPreImage: "c".repeat(64),
+                sentFromPubkey: PUBKEYS.active1,
+              },
+        )
+        expect(jest.mocked(addAttributesToCurrentSpan).mock.calls).toEqual([
+          [
+            {
+              "lightning.payment.max_paths": maxPaths,
+              "lightning.payment.pathfinding_timeout_ms": timeout,
+            },
+          ],
+          ...(pending ? [] : [[{ "lightning.payment.shard_count": shards }]]),
+        ])
+        expect(mockPayViaPaymentDetails).toHaveBeenCalledWith(
+          expect.objectContaining({ max_paths: maxPaths, pathfinding_timeout: timeout }),
+        )
+      },
+    )
   })
 
   describe("payInvoiceViaPaymentDetails error mapping", () => {
