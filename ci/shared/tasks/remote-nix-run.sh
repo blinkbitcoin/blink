@@ -16,7 +16,7 @@ COMMAND
 setsid bash "$run_dir/command.sh" > "$run_dir/log" 2>&1 < /dev/null &
 runner=$!
 printf '%s\n' "$runner" > "$run_dir/runner.pid"
-# shellcheck disable=SC2329 # Invoked by the EXIT trap.
+# shellcheck disable=SC2317,SC2329 # Invoked by the EXIT trap.
 cleanup() {
   kill -TERM -- "-$runner" 2>/dev/null || true
   sleep 1
