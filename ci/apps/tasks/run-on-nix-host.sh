@@ -3,7 +3,7 @@
 set -eu
 
 if [ "$(jq -r '.transport // "gcp"' nix-host/metadata)" = ssh ]; then
-  exec python3 "$(dirname "$0")/../../shared/tasks/run-on-ssh-host.py"
+  exec bash "$(dirname "$0")/../../shared/tasks/run-on-ssh-host.sh"
 fi
 
 export PACKAGE_DIR="${PACKAGE_DIR:-.}"
