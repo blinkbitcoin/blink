@@ -21,7 +21,9 @@
     "handlebars": "^4.7.10",
     "shell-quote": "^1.11.0",
     "tar": "^7.5.19",
-    "proxy-addr": "^2.0.8"
+    "proxy-addr": "^2.0.8",
+    "eslint-config-next@15>@typescript-eslint/eslint-plugin": "^7.18.0",
+    "eslint-config-next@15>@typescript-eslint/parser": "^7.18.0"
   },
   "pnpm": {
     "packageExtensions": {

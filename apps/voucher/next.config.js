@@ -1,13 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    outputFileTracingRoot: require("path").join(__dirname, "../../"),
-    instrumentationHook: true,
-    serverComponentsExternalPackages: ["knex", "pg"],
-    outputFileTracingIncludes: {
-      "./": ["./services/db/migrations/**/*"],
-    },
+  outputFileTracingRoot: require("path").join(__dirname, "../../"),
+  outputFileTracingIncludes: {
+    "./": ["./services/db/migrations/**/*"],
   },
+  serverExternalPackages: ["knex", "pg"],
   output: "standalone",
   // Security: keep the Next.js image optimizer (/_next/image) disabled.
   // Every next/image source in this app is a static repo asset, so optimization
