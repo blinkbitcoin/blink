@@ -610,6 +610,40 @@ describe("evaluateWindDownCohortMatch with cohort flags on", () => {
     expect(mockPersistAssessment).not.toHaveBeenCalled()
   })
 
+  it("keeps an upgraded account in the cohort when its creation IP is strict, whatever the new phone says", async () => {
+    withUser(GT_PHONE)
+    mockFindEarliestByAccountId.mockResolvedValue({ metadata: { isoCode: "FJ" } })
+    const account = makeAccount({ level: 1 as AccountLevel })
+
+    const result = await evaluateWindDownCohortMatch({ account })
+
+    expect(result).toEqual({ matched: true, matchedCountry: "FJ" })
+    expect(mockPersistAssessment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        matched: true,
+        assignedCountry: "FJ",
+        rule: "strict-list",
+      }),
+    )
+  })
+
+  it("releases an upgraded account whose creation IP is affected but not strict when the new phone is not", async () => {
+    withUser(GT_PHONE)
+    mockFindEarliestByAccountId.mockResolvedValue({ metadata: { isoCode: "AR" } })
+    const account = makeAccount({ level: 1 as AccountLevel })
+
+    const result = await evaluateWindDownCohortMatch({ account })
+
+    expect(result).toEqual({ matched: false })
+    expect(mockPersistAssessment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        matched: false,
+        assignedCountry: "GT",
+        rule: "hierarchy",
+      }),
+    )
+  })
+
   it("never touches the assessment repository while the flag is off", async () => {
     mockGetWindDownConfig.mockReturnValue(flagsConfig({ usePersistedCohortFlag: false }))
     withUser(MX_PHONE)

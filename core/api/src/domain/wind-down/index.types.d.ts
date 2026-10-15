@@ -67,6 +67,13 @@ interface IWindDownCohortAssessmentsRepository {
   persist(
     args: PersistWindDownCohortAssessmentArgs,
   ): Promise<WindDownCohortAssessment | RepositoryError>
+  deleteByAccountId(accountId: AccountId): Promise<true | RepositoryError>
+}
+
+type ResolveWindDownRegionArgs = {
+  matchedCountry: CohortCountry | undefined
+  level: AccountLevel | undefined
+  regions: WindDownRegionConfig[]
 }
 
 type DeriveWindDownStateArgs = {
