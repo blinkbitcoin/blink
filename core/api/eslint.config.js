@@ -13,6 +13,7 @@ const ignores = [
   "**/*.pb.js",
   "**/jest.config.js",
   "**/jest.setup.js",
+  "test/integration/progress-reporter.js",
   "src/migrations/migrate-mongo-config.js",
   "src/migrations/**/*.ts",
   "**/services/price/grpc.ts",
