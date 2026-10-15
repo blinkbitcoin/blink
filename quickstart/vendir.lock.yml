@@ -2,24 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat: enable multipath payments for lightning payouts (#707)...'
-      sha: 0e394cac0ec0b5762f90d42e34f17ef885861011
+      commitTitle: 'feat(api): send user agent and web platform signals to prelude
+        (#932)...'
+      sha: 3dd452cb8258c405cbef2515b519632f11e933db
       tags:
-      - 0.22.71-8-g0e394cac0
+      - 0.22.72-1-g3dd452cb8
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat: enable multipath payments for lightning payouts (#707)...'
-      sha: 0e394cac0ec0b5762f90d42e34f17ef885861011
+      commitTitle: 'feat(api): send user agent and web platform signals to prelude
+        (#932)...'
+      sha: 3dd452cb8258c405cbef2515b519632f11e933db
       tags:
-      - 0.22.71-8-g0e394cac0
+      - 0.22.72-1-g3dd452cb8
     path: schemas
   - git:
-      commitTitle: 'feat: enable multipath payments for lightning payouts (#707)...'
-      sha: 0e394cac0ec0b5762f90d42e34f17ef885861011
+      commitTitle: 'feat(api): send user agent and web platform signals to prelude
+        (#932)...'
+      sha: 3dd452cb8258c405cbef2515b519632f11e933db
       tags:
-      - 0.22.71-8-g0e394cac0
+      - 0.22.72-1-g3dd452cb8
     path: gql
   path: graphql
 kind: LockConfig
