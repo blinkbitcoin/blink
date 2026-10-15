@@ -1,6 +1,6 @@
 import Prelude from "@prelude.so/sdk"
 
-import { wrapAsyncFunctionsToRunInSpan } from "../tracing"
+import { addAttributesToCurrentSpan, wrapAsyncFunctionsToRunInSpan } from "../tracing"
 
 import { PRELUDE_API_KEY } from "@/config"
 import {
@@ -41,11 +41,15 @@ export const PreludeClient = ():
     channel,
     phoneExists,
     ip,
+    userAgent,
+    devicePlatform,
   }: {
     to: PhoneNumber
     channel: ChannelType
     phoneExists: boolean
     ip: IpAddress
+    userAgent?: UserAgent
+    devicePlatform?: DevicePlatform
   }): Promise<true | PhoneProviderServiceError> => {
     try {
       if (!phoneExists) {
@@ -55,6 +59,10 @@ export const PreludeClient = ():
         }
       }
 
+      addAttributesToCurrentSpan({
+        "prelude.signals.devicePlatform": devicePlatform,
+        "prelude.signals.userAgent": userAgent,
+      })
       const response = await client.verification.create({
         target: {
           type: "phone_number",
@@ -65,6 +73,8 @@ export const PreludeClient = ():
         },
         signals: {
           ip,
+          ...(devicePlatform ? { device_platform: devicePlatform } : {}),
+          ...(userAgent ? { user_agent: userAgent } : {}),
         },
       })
 

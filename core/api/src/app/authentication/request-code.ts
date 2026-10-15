@@ -45,6 +45,8 @@ export const requestPhoneCodeWithCaptcha = async ({
   geetestSeccode,
   ip,
   channel,
+  userAgent,
+  devicePlatform,
 }: {
   phone: PhoneNumber
   geetestChallenge: string
@@ -52,6 +54,8 @@ export const requestPhoneCodeWithCaptcha = async ({
   geetestSeccode: string
   ip: IpAddress
   channel: string
+  userAgent?: UserAgent
+  devicePlatform?: DevicePlatform
 }): Promise<true | ApplicationError> => {
   const geeTestConfig = getGeetestConfig()
   const geetest = Geetest(geeTestConfig)
@@ -126,6 +130,8 @@ export const requestPhoneCodeWithCaptcha = async ({
     channel: checkedChannel,
     phoneExists,
     ip,
+    userAgent,
+    devicePlatform,
   })
 }
 
@@ -134,11 +140,15 @@ export const requestPhoneCodeForAuthedUser = async ({
   ip,
   channel,
   user,
+  userAgent,
+  devicePlatform,
 }: {
   phone: PhoneNumber
   ip: IpAddress
   channel: string
   user: User
+  userAgent?: UserAgent
+  devicePlatform?: DevicePlatform
 }): Promise<true | PhoneProviderServiceError> => {
   {
     const limitOk = await checkRequestCodeAttemptPerIpLimits(ip)
@@ -182,6 +192,8 @@ export const requestPhoneCodeForAuthedUser = async ({
     channel: checkedChannel,
     phoneExists: false,
     ip,
+    userAgent,
+    devicePlatform,
   })
 }
 
@@ -190,11 +202,15 @@ export const requestPhoneCodeWithAppcheckJti = async ({
   ip,
   channel,
   appcheckJti,
+  userAgent,
+  devicePlatform,
 }: {
   phone: PhoneNumber
   ip: IpAddress
   channel: string
   appcheckJti: string
+  userAgent?: UserAgent
+  devicePlatform?: DevicePlatform
 }): Promise<true | PhoneProviderServiceError> => {
   {
     const limitOk = await checkRequestCodeAttemptPerIpLimits(ip)
@@ -244,6 +260,8 @@ export const requestPhoneCodeWithAppcheckJti = async ({
     channel: checkedChannel,
     phoneExists,
     ip,
+    userAgent,
+    devicePlatform,
   })
 }
 

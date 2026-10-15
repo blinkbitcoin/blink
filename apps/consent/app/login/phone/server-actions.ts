@@ -164,6 +164,7 @@ export const sendPhoneCode = async (
   const customHeaders = {
     "x-real-ip": headersList.get("x-real-ip"),
     "x-forwarded-for": headersList.get("x-forwarded-for"),
+    "user-agent": headersList.get("user-agent"),
   }
   const login_challenge = formData.login_challenge
   const phone = formData.phone
