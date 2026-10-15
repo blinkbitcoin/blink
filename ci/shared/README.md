@@ -92,8 +92,11 @@ shellcheck ci/shared/tasks/*.sh ci/shared/repipe-qualification
 
 The runtime tasks use Bash, jq, OpenSSL, curl and GNU coreutils (including
 `timeout`); no Python interpreter is required by the transport or its remote
-helpers. Python is used only by the test harness. Linux exercises the real process supervisor. macOS
-skips that fixture; a Linux container or GitHub Actions runs it. Subprocess
+helpers. The task image includes OpenSSL. When running an older image, the
+transport loads OpenSSL with Nix using the task source's locked nixpkgs input,
+before accessing the host. Python is used only by the test harness. Linux
+exercises the real process supervisor. macOS skips that fixture; a Linux
+container or GitHub Actions runs it. Subprocess
 fixtures exercise the Bash transport, cover every external-command failure
 boundary, and verify credential cleanup/redaction.
 Live qualification remains required for private routing, SSH, registry and Nix integration.

@@ -363,6 +363,7 @@
                   gh
                   gh-token
                   openssh
+                  openssl
                   rsync
                   git-cliff
                   unixtools.xxd

@@ -50,6 +50,8 @@ if name == "ssh" and "mktemp" in args[-1]:
     print(os.environ.get("DIRECTORY", ".ci-run/run.12345678"))
 if name == "gcloud":
     sys.exit(9)
+if name == "nix":
+    print(os.environ["OPENSSL_PACKAGE"])
 if name == "curl":
     out = pathlib.Path(args[args.index("--output") + 1])
     out.write_text(json.dumps({"access_token": os.environ.get("TOKEN", "TOKEN-FIXTURE")}))
@@ -142,6 +144,38 @@ class Transport(unittest.TestCase):
         rsync = next(c for c in calls if c["name"] == "rsync")
         ssh_args = shlex.split(rsync["args"][rsync["args"].index("-e") + 1])
         self.assertEqual(ssh_args, ["ssh", *calls[0]["args"][:-2]])
+
+    def test_old_image_loads_locked_openssl_before_remote_access(self):
+        # Deliberately omit OpenSSL from PATH; host-installed tools must not
+        # conceal a missing executable in the task image.
+        binary = self.root / "bin"
+        for name in ["bash", "python3", "jq", "timeout", "dirname", "mktemp",
+                     "rm", "grep", "cat", "date", "tr"]:
+            (binary / name).symlink_to(shutil.which(name))
+        nix = binary / "nix"
+        nix.write_text(STUB)
+        nix.chmod(0o755)
+        package = self.root / "openssl-package"
+        (package / "bin").mkdir(parents=True)
+        (package / "bin/openssl").symlink_to(shutil.which("openssl"))
+        self.env.update(PATH=str(binary), OPENSSL_PACKAGE=str(package))
+
+        result = self.invoke()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.calls()[0]["name"], "nix")
+        self.assertEqual(self.calls()[0]["args"], [
+            "build", "--no-link", "--print-out-paths", "--no-write-lock-file",
+            "--inputs-from", str(TASKS) + "/../../..", "nixpkgs#openssl.bin",
+        ])
+        self.assertTrue(any(c["name"] == "curl" for c in self.calls()))
+
+        for updates, error in [({"FAIL": "0"}, "could not load OpenSSL"),
+                               ({"OPENSSL_PACKAGE": str(self.root / "missing")}, "OpenSSL executable missing")]:
+            with self.subTest(updates=updates):
+                result = self.invoke(**updates)
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertIn(error, result.stderr)
+                self.assertEqual([c["name"] for c in self.calls()], ["nix"])
 
     def test_every_external_failure_cleans_up_and_preserves_status(self):
         self.assertEqual(self.invoke().returncode, 0)
