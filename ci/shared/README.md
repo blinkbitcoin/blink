@@ -92,9 +92,11 @@ shellcheck ci/shared/tasks/*.sh ci/shared/repipe-qualification
 
 The runtime tasks use Bash, jq, OpenSSL, curl and GNU coreutils (including
 `timeout`); no Python interpreter is required by the transport or its remote
-helpers. The task image includes OpenSSL. When running an older image, the
-transport loads OpenSSL with Nix using the task source's locked nixpkgs input,
-before accessing the host. Python is used only by the test harness. Linux
+helpers. The task image includes OpenSSL and curl. If either is missing, the
+transport refuses before host access. Rebuild `galoy-dev` with the core
+`build-galoy-dev-image` job before running consumers. The image-definition
+resource follows the task-source branch override so dependency changes can
+be deployed together with the scripts. Python is used only by the test harness. Linux
 exercises the real process supervisor. macOS skips that fixture; a Linux
 container or GitHub Actions runs it. Subprocess
 fixtures exercise the Bash transport, cover every external-command failure

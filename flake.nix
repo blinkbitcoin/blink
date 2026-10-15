@@ -364,6 +364,7 @@
                   gh-token
                   openssh
                   openssl
+                  curl
                   rsync
                   git-cliff
                   unixtools.xxd

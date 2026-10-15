@@ -406,7 +406,7 @@ resources:
     source:
       paths: [flake.*]
       uri: #@ data.values.git_uri
-      branch: #@ data.values.git_branch
+      branch: #@ data.values.pipeline_tasks_git_branch or data.values.git_branch
       private_key: #@ data.values.github_private_key
 
   - name: galoy-dev-image

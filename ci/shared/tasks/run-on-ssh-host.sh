@@ -79,15 +79,10 @@ trap 'exit 143' TERM
 trap 'exit 130' INT
 trap 'exit 129' HUP
 
-# Older task images predate the scoped registry-token signer. Resolve its
-# dependency from the task source's lock file before making any remote changes.
-if ! command -v openssl >/dev/null 2>&1; then
-  bounded 300s nix build --no-link --print-out-paths --no-write-lock-file \
-    --inputs-from "$tasks/../../.." nixpkgs#openssl.bin > "$root/openssl-path" || fail 'could not load OpenSSL'
-  openssl_path=$(cat "$root/openssl-path")
-  [[ -x $openssl_path/bin/openssl ]] || fail 'OpenSSL executable missing'
-  export PATH="$openssl_path/bin:$PATH"
-fi
+# Fail before host access when the worker image predates registry-token signing.
+for dependency in openssl curl; do
+  command -v "$dependency" >/dev/null 2>&1 || fail "task image is missing $dependency; rebuild galoy-dev"
+done
 
 printf '%s\n' "$private_key" > "$root/key"
 printf '%s\n' "$google_credentials" > "$root/google.json"
