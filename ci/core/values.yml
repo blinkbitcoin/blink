@@ -2,6 +2,7 @@
 ---
 git_uri: git@github.com:blinkbitcoin/blink.git
 git_branch: main
+pipeline_tasks_git_branch: ""
 git_charts_uri: git@github.com:blinkbitcoin/charts.git
 git_stablesats_uri: git@github.com:blinkbitcoin/stablesats-rs.git
 git_price_realtime_uri: git@github.com:blinkbitcoin/price.git
