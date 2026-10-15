@@ -1,7 +1,6 @@
 "use client"
 
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward"
-import { useFormState } from "react-dom"
 import CopyIcon from "@mui/icons-material/CopyAll"
 
 import {
@@ -19,7 +18,7 @@ import Link from "next/link"
 
 import { QRCode } from "react-qrcode-logo"
 
-import { useState } from "react"
+import { useActionState, useState } from "react"
 
 import { totpRegisterValidateServerAction } from "../server-actions"
 
@@ -49,7 +48,7 @@ export default function VerifyTwoFactorAuth({
   totpIdentifier,
 }: VerifyTwoFactorAuth) {
   const [copied, setCopied] = useState(false)
-  const [state, formAction] = useFormState<TotpValidateResponse, FormData>(
+  const [state, formAction] = useActionState<TotpValidateResponse, FormData>(
     totpRegisterValidateServerAction,
     {
       error: false,

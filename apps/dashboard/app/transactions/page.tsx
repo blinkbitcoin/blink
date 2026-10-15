@@ -21,9 +21,9 @@ interface TransactionDetailsSearchParams {
 export default async function page({
   searchParams,
 }: {
-  searchParams: TransactionDetailsSearchParams
+  searchParams: Promise<TransactionDetailsSearchParams>
 }) {
-  const { cursor, direction } = searchParams
+  const { cursor, direction } = await searchParams
   const session = await getServerSession(authOptions)
   const token = session?.accessToken
   if (!token || typeof token !== "string") {
