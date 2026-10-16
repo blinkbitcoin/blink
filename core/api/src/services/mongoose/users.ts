@@ -8,7 +8,7 @@ export const translateToUser = (user: UserRecord): User => {
   const phoneMetadata = user.phoneMetadata
   const phone = user.phone as PhoneNumber | undefined
   const deletedPhones = user.deletedPhones as PhoneNumber[] | undefined
-  const createdAt = user.createdAt
+  const createdAt = user.createdAt || new Date(0)
   const deviceId = user.deviceId as DeviceId | undefined
   const deletedEmails = user.deletedEmails as EmailAddress[] | undefined
 
