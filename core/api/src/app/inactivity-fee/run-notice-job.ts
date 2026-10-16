@@ -40,6 +40,8 @@ import {
   recordExceptionInCurrentSpan,
 } from "@/services/tracing"
 
+import { forEachConcurrent } from "@/utils"
+
 // The monthly notice run: every account whose last activity is 12 calendar months before
 // asOf gets one evaluation in its own child span. A per-account failure is that account's
 // outcome and the scan continues; only a failure of the scan itself aborts the run — and the
@@ -99,6 +101,7 @@ const runNoticeJobUnlocked = async ({
     "inactivityfee.run.cutoff": cutoff.toISOString(),
     "inactivityfee.run.mode": mode,
     "inactivityfee.run.forcedDry": String(forcedDry),
+    "inactivityfee.run.concurrency": String(config.runConcurrency),
   })
 
   // informational only: an unreadable count is left out and the scan still runs
@@ -113,6 +116,7 @@ const runNoticeJobUnlocked = async ({
     counts,
     onOutcome,
     signal,
+    concurrency: config.runConcurrency,
     evaluate: (account) =>
       evaluateAccountInSpan({ account, asOf, dryRun, config, windDownConfig, signal }),
   })
@@ -165,27 +169,41 @@ const scanDormantAccounts = async ({
   counts,
   onOutcome,
   signal,
+  concurrency,
   evaluate,
 }: {
   cutoff: Date
   counts: InactivityFeeRunCounts
   onOutcome: RunNoticeJobArgs["onOutcome"]
   signal?: InactivityFeeRunAbortSignal
+  concurrency: number
   evaluate: (account: Account) => Promise<InactivityFeeNoticeOutcomeRecord>
 }): Promise<true | Error> => {
+  let sinkFailed = false
   try {
-    for await (const account of AccountsRepository().listDormantAccounts({ cutoff })) {
-      counts.scanned += 1
-      const record = await evaluate(account)
-      counts.byOutcome[record.outcome] = (counts.byOutcome[record.outcome] ?? 0) + 1
-      if (record.outcome === InactivityFeeNoticeOutcome.Skipped && record.reason) {
-        counts.bySkipReason[record.reason] = (counts.bySkipReason[record.reason] ?? 0) + 1
-      }
-      if (onOutcome) await onOutcome(record)
-      // the run lock lapsed: the account in flight is accounted for, the next one is not started
-      if (signal?.aborted)
-        return new ResourceExpiredLockServiceError(signal.error?.message)
-    }
+    await forEachConcurrent({
+      items: AccountsRepository().listDormantAccounts({ cutoff }),
+      concurrency,
+      // the run lock lapsed: no further account is started
+      shouldStop: () => signal?.aborted === true,
+      process: evaluate,
+      onResult: async (record) => {
+        counts.scanned += 1
+        counts.byOutcome[record.outcome] = (counts.byOutcome[record.outcome] ?? 0) + 1
+        if (record.outcome === InactivityFeeNoticeOutcome.Skipped && record.reason) {
+          counts.bySkipReason[record.reason] =
+            (counts.bySkipReason[record.reason] ?? 0) + 1
+        }
+        if (!onOutcome || sinkFailed) return
+        try {
+          await onOutcome(record)
+        } catch (err) {
+          sinkFailed = true
+          throw err
+        }
+      },
+    })
+    if (signal?.aborted) return new ResourceExpiredLockServiceError(signal.error?.message)
     return true
   } catch (err) {
     return parseErrorFromUnknown(err)

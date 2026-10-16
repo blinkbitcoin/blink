@@ -123,6 +123,7 @@ describe("config.ts", () => {
         level0Deadline: new Date("2026-10-31T22:59:59Z"),
         reactivationLockWaitMs: 1500,
         reactivationBudgetMs: 5000,
+        runConcurrency: 4,
       })
     })
 
@@ -170,6 +171,8 @@ describe("config.ts", () => {
       ["reactivationLockWaitMs", 10001],
       ["reactivationBudgetMs", 99],
       ["reactivationBudgetMs", 30001],
+      ["runConcurrency", 0],
+      ["runConcurrency", 17],
     ])("refuses %s = %i at startup", (key, value) => {
       expect(() =>
         withCustomYaml({ inactivityFee: { [key]: value } }, () => {

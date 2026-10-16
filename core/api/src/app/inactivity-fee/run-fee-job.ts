@@ -1,5 +1,5 @@
 import { alertFailedRefund } from "./alert-failed-refund"
-import { chargeWallet } from "./charge-wallet"
+import { chargeWallet, DisplayRatioCache } from "./charge-wallet"
 import { loadChargeAccount } from "./load-charge-context"
 import { loadEligibilityContext } from "./load-eligibility-context"
 import { pinRate } from "./pin-rate"
@@ -34,6 +34,8 @@ import {
   asyncRunInSpan,
   recordExceptionInCurrentSpan,
 } from "@/services/tracing"
+
+import { forEachConcurrent } from "@/utils"
 
 // The monthly fee run: one dealer mid-rate pinned at the start (any rate error aborts before
 // any lock or debit), then every account with an active notice old enough to charge gets one
@@ -102,6 +104,7 @@ const runFeeJobUnlocked = async ({
     "inactivityfee.run.cutoff": cutoff.toISOString(),
     "inactivityfee.run.mode": mode,
     "inactivityfee.run.forcedDry": String(forcedDry),
+    "inactivityfee.run.concurrency": String(config.runConcurrency),
   })
 
   let error: Error | undefined
@@ -113,11 +116,12 @@ const runFeeJobUnlocked = async ({
       "inactivityfee.run.rate": String(pinned.rate),
       "inactivityfee.run.rateSource": pinned.rateSource,
     })
-    const displayRatios = new Map()
+    const displayRatios: DisplayRatioCache = new Map()
     const scanned = await scanNoticedAccounts({
       cutoff,
       tally,
       onOutcome,
+      concurrency: config.runConcurrency,
       evaluate: (accountId) =>
         evaluateAccountInSpan({
           accountId,
@@ -192,23 +196,33 @@ const scanNoticedAccounts = async ({
   cutoff,
   tally,
   onOutcome,
+  concurrency,
   evaluate,
 }: {
   cutoff: Date
   tally: RunTally
   onOutcome: RunFeeJobArgs["onOutcome"]
+  concurrency: number
   evaluate: (accountId: AccountId) => Promise<InactivityFeeChargeOutcomeRecord[]>
 }): Promise<true | Error> => {
+  let sinkFailed = false
   try {
-    const notices = InactivityFeeNoticesRepository()
-    for await (const notice of notices.listActiveIssuedBefore({ cutoff })) {
-      tally.counts.scanned += 1
-      const records = await evaluate(notice.accountId)
-      for (const record of records) {
-        count(tally, record)
-        if (onOutcome) await onOutcome(record)
-      }
-    }
+    await forEachConcurrent({
+      items: InactivityFeeNoticesRepository().listActiveIssuedBefore({ cutoff }),
+      concurrency,
+      process: (notice) => evaluate(notice.accountId),
+      onResult: async (records) => {
+        tally.counts.scanned += 1
+        for (const record of records) count(tally, record)
+        if (!onOutcome || sinkFailed) return
+        try {
+          for (const record of records) await onOutcome(record)
+        } catch (err) {
+          sinkFailed = true
+          throw err
+        }
+      },
+    })
     return true
   } catch (err) {
     return parseErrorFromUnknown(err)
@@ -226,9 +240,9 @@ const count = (tally: RunTally, record: InactivityFeeChargeOutcomeRecord) => {
     if (record.currency === WalletCurrency.Btc) debited.sats += record.amount ?? 0
     else debited.cents += record.amount ?? 0
   }
-  // The first and last charge key this run produced, in scan order — a sample for eyeballing a
-  // report, not an ordered range and not a selector: `runId`, stamped on every row, is what
-  // picks out a run's debits.
+  // The first and last charge key this run produced, in completion order — a sample for
+  // eyeballing a report, not an ordered range and not a selector: `runId`, stamped on every
+  // row, is what picks out a run's debits.
   if (
     record.externalId !== undefined &&
     (record.outcome === InactivityFeeChargeOutcome.Charged ||
@@ -248,10 +262,7 @@ type AccountArgs = {
   config: InactivityFeeConfig
   windDownConfig: WindDownConfig
   runId: string
-  displayRatios: Map<
-    DisplayCurrency,
-    DisplayPriceRatio<"BTC", DisplayCurrency> | ApplicationError
-  >
+  displayRatios: DisplayRatioCache
 }
 
 // one child span per account (span events are capped per span, a six-figure run would drop
