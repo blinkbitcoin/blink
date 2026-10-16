@@ -17,6 +17,7 @@ import {
 import {
   addAttributesToCurrentSpan,
   recordExceptionInCurrentSpan,
+  shutdownTracing,
   wrapAsyncToRunInSpan,
 } from "@/services/tracing"
 import {
@@ -82,7 +83,10 @@ export const inactivityFeeNoticeJob = async () => {
     dryRun: false,
     runId: noticeRunId({ asOf }),
   })
-  if (result instanceof Error) throw result
+  if (result instanceof Error) {
+    recordRunFailure(result)
+    return
+  }
   warnOnRunErrors({
     runId: result.runId,
     errors: result.counts.byOutcome[InactivityFeeNoticeOutcome.Error],
@@ -101,6 +105,9 @@ const warnOnRunErrors = ({ runId, errors }: { runId: string; errors?: number }) 
   })
 }
 
+const recordRunFailure = (error: Error) =>
+  recordExceptionInCurrentSpan({ error, level: ErrorLevel.Critical })
+
 // Monthly, from the daily container: the UTC-15th gate lives here. Dry until the CCO switch
 // (inactivityFee.liveCharging) is on; a 15th missed or run dry is never charged for later.
 export const inactivityFeeFeeJob = async () => {
@@ -114,7 +121,10 @@ export const inactivityFeeFeeJob = async () => {
     dryRun: !getInactivityFeeConfig().liveCharging,
     runId: feeRunId({ asOf }),
   })
-  if (result instanceof Error) throw result
+  if (result instanceof Error) {
+    recordRunFailure(result)
+    return
+  }
   warnOnRunErrors({
     runId: result.runId,
     errors: result.counts.byOutcome[InactivityFeeChargeOutcome.Error],
@@ -226,6 +236,8 @@ const main = async () => {
   }
 
   await mongoose.connection.close()
+
+  await shutdownTracing().catch((err) => logger.warn({ err }, "tracing flush failed"))
 
   process.exit(results.every((r) => r) ? 0 : 99)
 }

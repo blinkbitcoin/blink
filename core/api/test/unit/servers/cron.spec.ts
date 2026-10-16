@@ -20,6 +20,7 @@ jest.mock("@/config", () => ({
 jest.mock("@/services/tracing", () => ({
   addAttributesToCurrentSpan: jest.fn(),
   recordExceptionInCurrentSpan: jest.fn(),
+  shutdownTracing: jest.fn(),
   wrapAsyncToRunInSpan: jest.fn(),
 }))
 jest.mock("@/services/lnd/utils", () => ({
@@ -101,12 +102,18 @@ describe("cron inactivityFeeNoticeJob", () => {
     })
   })
 
-  it("throws when the run returns an error so the cron marks the task failed", async () => {
+  it("records a Critical without failing the task when the run returns an error", async () => {
     jest.useFakeTimers().setSystemTime(new Date("2026-10-01T02:00:00Z"))
     const aborted = new InactivityFeeRunAbortedError("cursor died")
     mockRunNoticeJob.mockResolvedValue(aborted)
 
-    await expect(inactivityFeeNoticeJob()).rejects.toBe(aborted)
+    await expect(inactivityFeeNoticeJob()).resolves.toBeUndefined()
+
+    expect(mockRecordException).toHaveBeenCalledTimes(1)
+    expect(mockRecordException).toHaveBeenCalledWith({
+      error: aborted,
+      level: ErrorLevel.Critical,
+    })
   })
 
   it("warns on the task span, without failing it, when accounts ended in error", async () => {
@@ -189,12 +196,18 @@ describe("cron inactivityFeeFeeJob", () => {
     })
   })
 
-  it("throws when the run returns an error so the cron marks the task failed", async () => {
+  it("records a Critical without failing the task when the run returns an error", async () => {
     jest.useFakeTimers().setSystemTime(new Date("2026-10-15T02:00:00Z"))
     const aborted = new InactivityFeeRunAbortedError("dealer down")
     mockRunFeeJob.mockResolvedValue(aborted)
 
-    await expect(inactivityFeeFeeJob()).rejects.toBe(aborted)
+    await expect(inactivityFeeFeeJob()).resolves.toBeUndefined()
+
+    expect(mockRecordException).toHaveBeenCalledTimes(1)
+    expect(mockRecordException).toHaveBeenCalledWith({
+      error: aborted,
+      level: ErrorLevel.Critical,
+    })
   })
 
   it("warns on the task span, without failing it, when wallets ended in error", async () => {
