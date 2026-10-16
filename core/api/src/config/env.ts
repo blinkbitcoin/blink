@@ -110,6 +110,15 @@ export const env = createEnv({
     // LND PRIMARY
     LND_PRIORITY: z.enum(["lnd1", "lnd2"]).default("lnd1"),
 
+    // Keep single-path payments by default; opt into MPP with e.g. 4.
+    // Set to 1 and restart the service to disable MPP without a code change.
+    LND_MAX_PAYMENT_PATHS: z
+      .number()
+      .min(1)
+      .or(z.string())
+      .pipe(z.coerce.number().int().min(1).max(16))
+      .default(1),
+
     LND1_PUBKEY: z
       .string()
       .regex(/^[a-f0-9]{66}$/i)
@@ -251,6 +260,7 @@ export const env = createEnv({
     REDIS_2_PORT: process.env.REDIS_2_PORT,
 
     LND_PRIORITY: process.env.LND_PRIORITY,
+    LND_MAX_PAYMENT_PATHS: process.env.LND_MAX_PAYMENT_PATHS,
 
     LND1_PUBKEY: process.env.LND1_PUBKEY,
     LND1_TLS: process.env.LND1_TLS,

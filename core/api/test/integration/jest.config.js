@@ -1,6 +1,10 @@
 const swcConfig = require("../swc-config.json")
 
 module.exports = {
+  // Shared-state suites stay serial, but the worker can recycle between files.
+  // --runInBand disables recycling; keep it off both integration entry points.
+  maxWorkers: 1,
+  workerIdleMemoryLimit: "512MB",
   moduleFileExtensions: ["js", "json", "ts", "cjs", "mjs"],
   rootDir: "../../",
   roots: ["<rootDir>/test/integration"],
@@ -13,5 +17,5 @@ module.exports = {
   moduleNameMapper: {
     "^@/(.*)$": ["<rootDir>/src/$1"],
     "^test/(.*)$": ["<rootDir>/test/$1"],
-  }
+  },
 }
