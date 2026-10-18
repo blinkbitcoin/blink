@@ -174,6 +174,27 @@ export const OnChainService = (): IOnChainService => {
     return getWalletBalance(briaConfig.receiveWalletName)
   }
 
+  const getReceiveWalletAvailableBalance = async (): Promise<
+    BtcPaymentAmount | OnChainServiceError
+  > => {
+    try {
+      const request = new GetWalletBalanceSummaryRequest()
+      request.setWalletName(briaConfig.receiveWalletName)
+      const response = await getWalletBalanceSummary(request, metadata)
+
+      // Submitted payouts reserve funds before they reduce the settled balance.
+      return paymentAmountFromNumber({
+        amount: Math.max(
+          0,
+          response.getEffectiveSettled() - response.getEffectiveEncumberedOutgoing(),
+        ),
+        currency: WalletCurrency.Btc,
+      })
+    } catch (error) {
+      return new UnknownOnChainServiceError(error)
+    }
+  }
+
   const getWithdrawalWalletBalance = async (): Promise<
     BtcPaymentAmount | OnChainServiceError
   > => {
@@ -470,6 +491,7 @@ export const OnChainService = (): IOnChainService => {
     fns: {
       getHotBalance,
       getReceiveWalletBalance,
+      getReceiveWalletAvailableBalance,
       getWithdrawalWalletBalance,
       getWalletBalance,
       getColdBalance,
