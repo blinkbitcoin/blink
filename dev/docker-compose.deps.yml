@@ -88,6 +88,8 @@ services:
     extra_hosts:
       - "bats-tests:host-gateway"
     command: serve -c /home/ory/oathkeeper.yml --sqa-opt-out
+    environment:
+      LOG_LEVEL: ${OATHKEEPER_LOG_LEVEL:-info}
     volumes:
       - ${HOST_PROJECT_PATH:-.}/config/ory:/home/ory
     depends_on:
@@ -142,6 +144,8 @@ services:
     command: '"kratos migrate sql up -y -e && kratos serve -c /home/ory/kratos.yml --sqa-opt-out"'
     environment:
       DSN: postgres://dbuser:secret@kratos-pg:5432/default?sslmode=disable
+      LOG_LEVEL: ${KRATOS_LOG_LEVEL:-info}
+      LOG_LEAK_SENSITIVE_VALUES: ${KRATOS_LOG_LEAK_SENSITIVE_VALUES:-false}
     depends_on:
       - kratos-pg
     volumes:

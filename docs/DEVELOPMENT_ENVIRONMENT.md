@@ -123,6 +123,32 @@ There are two primary options to do so:
 2. Otherwise, you can execute `nix develop` to enter the environment, `nix develop --command <command>` to
    execute a command, or use the environment in whatever way you prefer.
 
+## Ory Logging
+
+Kratos and Oathkeeper default to `info` logging, and Kratos masks sensitive
+values. To enable debug logging for local development, set these overrides
+when starting Tilt from the Nix environment:
+
+```bash
+KRATOS_LOG_LEVEL=debug OATHKEEPER_LOG_LEVEL=debug buck2 run dev:up
+```
+
+If debugging requires unmasked Kratos values, opt in separately for that local
+run:
+
+```bash
+KRATOS_LOG_LEVEL=debug OATHKEEPER_LOG_LEVEL=debug \
+  KRATOS_LOG_LEAK_SENSITIVE_VALUES=true buck2 run dev:up
+```
+
+Use sensitive-value logging only with disposable local test data; it can expose
+credentials and personal data in logs. Restart Tilt without these overrides to
+restore the defaults (and unset them first if you exported them in your shell).
+
+Quickstart receives these settings through its CI regeneration from `dev/`.
+After that regeneration, the same variables can prefix `docker compose up -d`
+from `quickstart/`. Rerun Compose without the overrides to restore the defaults.
+
 ## Troubleshooting Potential Service Conflicts
 
 Galoy uses external services in conjunction with its native components.

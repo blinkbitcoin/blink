@@ -121,9 +121,9 @@ selfservice:
             - hook: session
 
 log:
-  level: debug
+  level: info
   format: json
-  leak_sensitive_values: true
+  leak_sensitive_values: false
 
 secrets:
   cookie:
