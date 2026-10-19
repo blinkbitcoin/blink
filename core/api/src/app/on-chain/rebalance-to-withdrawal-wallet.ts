@@ -44,7 +44,7 @@ export const rebalanceToWithdrawalWallet = async (): Promise<true | ApplicationE
     if (amount instanceof Error) return amount
 
     if (signal.aborted) {
-      return new ResourceExpiredLockServiceError()
+      return new ResourceExpiredLockServiceError(signal.error?.message)
     }
 
     const payoutId = await onChainService.rebalanceToWithdrawalWallet({ amount })

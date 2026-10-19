@@ -1,6 +1,8 @@
 const mockBalance = jest.fn()
 const mockSubmit = jest.fn()
 const mockUsing = jest.fn()
+const mockPersistEvent = jest.fn()
+const mockSettle = jest.fn()
 
 jest.mock("@/config", () => {
   const config = {
@@ -25,14 +27,31 @@ jest.mock("@/services/bria/grpc-client", () => ({
   getWalletBalanceSummary: (...args: unknown[]) => mockBalance(...args),
   submitPayout: (...args: unknown[]) => mockSubmit(...args),
 }))
-jest.mock("@/services/bria/event-handler", () => ({}))
-jest.mock("@/services/bria/event-repository", () => ({}))
-jest.mock("@/services/logger", () => ({ baseLogger: {} }))
+jest.mock("@/services/bria/event-repository", () => ({
+  BriaEventRepo: () => ({
+    persistEvent: (...args: unknown[]) => mockPersistEvent(...args),
+  }),
+}))
+jest.mock("@/app", () => ({
+  Wallets: { addSettledTransaction: (...args: unknown[]) => mockSettle(...args) },
+  OnChain: {
+    rebalanceToWithdrawalWallet: () =>
+      jest
+        .requireActual("@/app/on-chain/rebalance-to-withdrawal-wallet")
+        .rebalanceToWithdrawalWallet(),
+  },
+}))
+jest.mock("@/services/ledger/facade", () => ({}))
+jest.mock("@/services/api-keys", () => ({ ApiKeysService: () => ({}) }))
+jest.mock("@/services/logger", () => ({
+  baseLogger: { info: jest.fn(), error: jest.fn() },
+}))
 jest.mock("@/utils", () => ({ GrpcStreamClient: {} }))
 jest.mock("@/services/redis", () => ({ redis: {} }))
 jest.mock("@/services/tracing", () => ({
   wrapAsyncFunctionsToRunInSpan: ({ fns }: { fns: unknown }) => fns,
   addAttributesToCurrentSpan: jest.fn(),
+  recordExceptionInCurrentSpan: jest.fn(),
 }))
 jest.mock("redlock", () => {
   class ExecutionError extends Error {}
@@ -57,22 +76,44 @@ import {
 } from "@/domain/lock"
 import { BigIntFloatConversionError } from "@/domain/shared"
 import { OnChainService } from "@/services/bria"
+import { eventDataHandler } from "@/services/bria/event-handler"
+import { briaEventHandler } from "@/servers/event-handlers/bria"
 import {
+  BriaEvent as RawBriaEvent,
+  EventAugmentation,
   GetWalletBalanceSummaryResponse,
+  SubscribeAllRequest,
   SubmitPayoutRequest,
   SubmitPayoutResponse,
+  UtxoSettled,
+  WalletAddress,
 } from "@/services/bria/proto/bria_pb"
 
 const mockConfig = getBriaConfig()
 let settled: number
 let reserved: number
-let signal: { aborted: boolean }
+let signal: { aborted: boolean; error?: Error }
+
+const settledEvent = (sequence: number) => {
+  const address = new WalletAddress().setAddress("bcrt1qtestaddress")
+  return new RawBriaEvent()
+    .setSequence(sequence)
+    .setAugmentation(new EventAugmentation().setAddressInfo(address))
+    .setUtxoSettled(new UtxoSettled().setSatoshis(6_000_000))
+}
+
+const testStream = () => {
+  const stream = { request: new SubscribeAllRequest(), reconnect: jest.fn() }
+  return stream as typeof stream & Stream<RawBriaEvent, SubscribeAllRequest>
+}
 
 beforeEach(() => {
   jest.clearAllMocks()
   settled = 10_000_000
   reserved = 0
   signal = { aborted: false }
+  mockPersistEvent.mockReset().mockResolvedValue(true)
+  mockSettle.mockReset().mockResolvedValue(true)
   mockConfig.withdrawalWalletName = "withdrawal"
   mockConfig.rebalances.receiveToWithdrawal.minBalance = 200_000 as Satoshis
   mockBalance.mockReset().mockImplementation(async () => {
@@ -153,6 +194,20 @@ it("keeps the settled-balance API independent of outgoing reservations", async (
     amount: 200_000n,
     currency: "BTC",
   })
+})
+
+it("does not subtract pending payouts or fees already reflected in settled funds", async () => {
+  const response = new GetWalletBalanceSummaryResponse()
+    .setEffectiveSettled(8_000_000)
+    .setEffectiveEncumberedOutgoing(2_000_000)
+    .setEffectivePendingOutgoing(3_000_000)
+    .setFeesPending(1_000)
+    .setFeesEncumbered(2_000)
+  mockBalance.mockResolvedValueOnce(
+    GetWalletBalanceSummaryResponse.deserializeBinary(response.serializeBinary()),
+  )
+  expect(await rebalanceToWithdrawalWallet()).toBe(true)
+  expect(mockSubmit.mock.calls[0][0].getSatoshis()).toBe(5_800_000)
 })
 
 it("holds the wallet lock through submission before another caller reads its balance", async () => {
@@ -241,18 +296,22 @@ it("does not resubmit if a timed-out submission has already reserved the funds",
   expect(mockSubmit).toHaveBeenCalledTimes(1)
 })
 
-it("does not submit after losing the lock during the balance read", async () => {
-  mockBalance.mockImplementationOnce(async () => {
-    signal.aborted = true
-    const response = new GetWalletBalanceSummaryResponse()
-    response.setEffectiveSettled(settled)
-    return response
-  })
-  expect(await rebalanceToWithdrawalWallet()).toBeInstanceOf(
-    ResourceExpiredLockServiceError,
-  )
-  expect(mockSubmit).not.toHaveBeenCalled()
-})
+it.each([undefined, new Error("Redis lock extension failed")])(
+  "preserves the abort reason and does not submit after losing the lock: %s",
+  async (error) => {
+    mockBalance.mockImplementationOnce(async () => {
+      signal.aborted = true
+      signal.error = error
+      const response = new GetWalletBalanceSummaryResponse()
+      response.setEffectiveSettled(settled)
+      return response
+    })
+    const result = await rebalanceToWithdrawalWallet()
+    expect(result).toBeInstanceOf(ResourceExpiredLockServiceError)
+    expect(result).toEqual(new ResourceExpiredLockServiceError(error?.message))
+    expect(mockSubmit).not.toHaveBeenCalled()
+  },
+)
 
 it("does not read or submit if the lock cannot be acquired", async () => {
   mockUsing.mockRejectedValueOnce(new ExecutionError("held", []))
@@ -261,4 +320,82 @@ it("does not read or submit if the lock cannot be acquired", async () => {
   )
   expect(mockBalance).not.toHaveBeenCalled()
   expect(mockSubmit).not.toHaveBeenCalled()
+})
+
+it("replays a settled event after finite lock acquisition fails during another submission", async () => {
+  let release!: () => void
+  const submitted = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  let entered!: () => void
+  const submitting = new Promise<void>((resolve) => {
+    entered = resolve
+  })
+  mockSubmit.mockImplementationOnce(async (request: SubmitPayoutRequest) => {
+    entered()
+    await submitted
+    reserved += request.getSatoshis()
+    return new SubmitPayoutResponse()
+  })
+
+  const handler = eventDataHandler(briaEventHandler)
+  const stream = testStream()
+  const first = handler(stream, settledEvent(1))
+  await submitting
+  settled += 6_000_000
+  // Redlock reports ExecutionError when its finite acquisition retries exhaust.
+  // Unlike the default mutex double, this attempt never waits for the first call.
+  mockUsing.mockRejectedValueOnce(new ExecutionError("acquisition retries exhausted", []))
+  const laterEvent = settledEvent(2)
+  await handler(stream, laterEvent)
+  expect(mockPersistEvent).not.toHaveBeenCalled()
+  expect(stream.request.getAfterSequence()).toBe(1)
+  expect(stream.reconnect).toHaveBeenCalledTimes(1)
+  expect(mockBalance).toHaveBeenCalledTimes(1)
+
+  release()
+  await first
+  expect(mockPersistEvent.mock.calls.map(([event]) => event.sequence)).toEqual([1])
+  // Reconnection replays the unacknowledged event without needing a new deposit.
+  await handler(stream, laterEvent)
+  expect(mockPersistEvent.mock.calls.map(([event]) => event.sequence)).toEqual([1, 2])
+  expect(mockSubmit.mock.calls.map(([request]) => request.getSatoshis())).toEqual([
+    9_800_000, 6_000_000,
+  ])
+})
+
+it("replays lock loss during submission without duplicating a committed payout", async () => {
+  mockUsing.mockImplementationOnce(async (_resources, _ttl, routine) => {
+    const result = await routine(signal)
+    expect(result).toBe(true)
+    // Redlock's release fails after the lease was lost while the RPC was in flight.
+    throw new ExecutionError("lock was lost", [])
+  })
+  mockSubmit.mockImplementationOnce(async (request: SubmitPayoutRequest) => {
+    signal.aborted = true
+    signal.error = new Error("lock extension failed during submission")
+    await Promise.resolve()
+    reserved += request.getSatoshis()
+    return new SubmitPayoutResponse()
+  })
+  const handler = eventDataHandler(briaEventHandler)
+  const stream = testStream()
+  const event = settledEvent(1)
+  await handler(stream, event)
+  expect(mockPersistEvent).not.toHaveBeenCalled()
+  expect(stream.request.getAfterSequence()).toBe(0)
+  expect(stream.reconnect).toHaveBeenCalledTimes(1)
+
+  signal = { aborted: false }
+  await handler(stream, event)
+  expect(mockPersistEvent).toHaveBeenCalledTimes(1)
+  expect(mockSubmit).toHaveBeenCalledTimes(1)
+})
+
+it("still acknowledges settlement when a non-lock rebalance error is reported", async () => {
+  mockBalance.mockRejectedValueOnce(new Error("balance RPC unavailable"))
+  const stream = testStream()
+  await eventDataHandler(briaEventHandler)(stream, settledEvent(1))
+  expect(mockPersistEvent).toHaveBeenCalledTimes(1)
+  expect(stream.reconnect).not.toHaveBeenCalled()
 })

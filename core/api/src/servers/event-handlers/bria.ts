@@ -6,6 +6,7 @@ import {
   LessThanDustThresholdError,
   NoTransactionToUpdateError,
 } from "@/domain/errors"
+import { LockServiceError } from "@/domain/lock"
 
 import {
   recordExceptionInCurrentSpan,
@@ -62,6 +63,9 @@ export const briaEventHandler = async (event: BriaEvent): Promise<true | DomainE
       }
 
       const rebalanceResult = await OnChain.rebalanceToWithdrawalWallet()
+      // Leave this event unacknowledged so the subscriber retries after contention
+      // or lock loss instead of waiting for another deposit to trigger a rebalance.
+      if (rebalanceResult instanceof LockServiceError) return rebalanceResult
       if (rebalanceResult instanceof Error) {
         recordExceptionInCurrentSpan({ error: rebalanceResult })
       }
