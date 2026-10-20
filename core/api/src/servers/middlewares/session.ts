@@ -28,7 +28,7 @@ export const sessionPublicContext = async ({
 
   // client_credentials tokens carry sub === client_id; that subject is the client, not a user
   if (isClientCredentialsSubject(tokenPayload)) {
-    addAttributesToCurrentSpan({ "token.clientCredentialsSubject": "true" })
+    addAttributesToCurrentSpan({ "token.clientCredentialsSubject": true })
     logger.warn(
       { clientId: tokenPayload?.client_id },
       "client_credentials token used as user subject, treating as anonymous",

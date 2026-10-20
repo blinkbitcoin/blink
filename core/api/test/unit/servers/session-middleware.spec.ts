@@ -77,7 +77,7 @@ describe("sessionPublicContext", () => {
     expect(Accounts.updateAccountIPsInfo).not.toHaveBeenCalled()
     expect(mongooseMocks.findUserById).not.toHaveBeenCalled()
     expect(addAttributesToCurrentSpan).toHaveBeenCalledWith({
-      "token.clientCredentialsSubject": "true",
+      "token.clientCredentialsSubject": true,
     })
   })
 
@@ -88,7 +88,7 @@ describe("sessionPublicContext", () => {
     expect(Accounts.getAccountFromUserId).not.toHaveBeenCalled()
     expect(recordExceptionInCurrentSpan).not.toHaveBeenCalled()
     expect(addAttributesToCurrentSpan).toHaveBeenCalledWith({
-      "token.clientCredentialsSubject": "true",
+      "token.clientCredentialsSubject": true,
     })
   })
 

@@ -106,5 +106,9 @@ mod tests {
         assert!(!is_client_credentials_subject("user-id", ""));
         assert!(!is_client_credentials_subject("", ""));
         assert!(!is_client_credentials_subject("anon", ""));
+        assert!(!is_client_credentials_subject("user-id", "<no value>"));
+        assert!(!is_client_credentials_subject("anon", "<no value>"));
+        assert!(!is_client_credentials_subject("user-id", "<nil>"));
+        assert!(!is_client_credentials_subject("anon", "<nil>"));
     }
 }
