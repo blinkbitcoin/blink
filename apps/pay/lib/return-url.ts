@@ -1,4 +1,3 @@
-// Returns a normalized return URL only for absolute https URLs without credentials; null otherwise.
 export const safeReturnUrl = (value: string | null | undefined): string | null => {
   if (!value) return null
   try {
