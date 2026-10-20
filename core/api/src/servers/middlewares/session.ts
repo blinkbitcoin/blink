@@ -3,7 +3,10 @@ import DataLoader from "dataloader"
 import jsonwebtoken from "jsonwebtoken"
 
 import { Accounts, InactivityFee, Transactions } from "@/app"
-import { recordExceptionInCurrentSpan } from "@/services/tracing"
+import {
+  addAttributesToCurrentSpan,
+  recordExceptionInCurrentSpan,
+} from "@/services/tracing"
 
 import { maybeExtendSession } from "@/app/authentication"
 import { checkedToUserId } from "@/domain/accounts"
@@ -22,6 +25,16 @@ export const sessionPublicContext = async ({
   userAgent: UserAgent | undefined
 }): Promise<GraphQLPublicContext | GraphQLPublicContextAuth> => {
   const logger = baseLogger.child({ tokenPayload })
+
+  // client_credentials tokens carry sub === client_id; that subject is the client, not a user
+  if (isClientCredentialsSubject(tokenPayload)) {
+    addAttributesToCurrentSpan({ "token.clientCredentialsSubject": "true" })
+    logger.warn(
+      { clientId: tokenPayload?.client_id },
+      "client_credentials token used as user subject, treating as anonymous",
+    )
+    return { logger, loaders, ip, userAgent, sessionId: undefined }
+  }
 
   let domainAccount: Account | undefined
   let user: User | undefined
@@ -115,6 +128,13 @@ export const sessionPublicContext = async ({
     appId,
     apiKeyId,
   }
+}
+
+export const isClientCredentialsSubject = (
+  tokenPayload: jsonwebtoken.JwtPayload | undefined,
+): boolean => {
+  const clientId = tokenPayload?.client_id
+  return typeof clientId === "string" && clientId !== "" && clientId === tokenPayload?.sub
 }
 
 const loaders = {

@@ -99,9 +99,13 @@ async fn check_handler(
 
 pub async fn graphql_handler(
     schema: Extension<Schema<graphql::Query, graphql::Mutation, EmptySubscription>>,
+    headers: HeaderMap,
     Claims(jwt_claims): Claims<JwtClaims>,
     req: GraphQLRequest,
 ) -> GraphQLResponse {
+    if crate::scope::is_client_credentials_subject(&jwt_claims.sub, &jwt_claims.client_id) {
+        return refuse_client_credentials_subject(&headers, &jwt_claims.client_id);
+    }
     let req = req.into_inner();
     let can_manage_keys = crate::scope::can_manage_keys(
         &jwt_claims.scope,
@@ -115,6 +119,17 @@ pub async fn graphql_handler(
         }))
         .await
         .into()
+}
+
+#[instrument(
+    name = "api-keys.server.graphql.client_credentials_subject",
+    skip_all,
+    fields(client_id = %client_id, token.clientCredentialsSubject = true)
+)]
+fn refuse_client_credentials_subject(headers: &HeaderMap, client_id: &str) -> GraphQLResponse {
+    tracing::http::extract_tracing(headers);
+    tracing::warn!("client_credentials token used as user subject, refusing");
+    async_graphql::Response::from_errors(vec![ServerError::new("Permission denied", None)]).into()
 }
 
 async fn playground() -> impl axum::response::IntoResponse {

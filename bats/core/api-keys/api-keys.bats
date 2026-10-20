@@ -734,14 +734,14 @@ expect_key_authenticates() {
   [[ "${revoked}" = "false" ]] || exit 1
 }
 
-@test "api-keys: oauth token needs write scope to manage keys" {
+@test "api-keys: client_credentials token is refused as a user subject" {
   _create_admin_client_and_token "read write" "oauth-rw.token"
   _create_admin_client_and_token "read" "oauth-r.token"
 
   variables="{\"input\":{\"name\":\"$(new_key_name)\"}}"
   exec_graphql 'oauth-rw.token' 'api-key-create' "$variables"
-  secret="$(graphql_output '.data.apiKeyCreate.apiKeySecret')"
-  [[ -n "${secret}" && "${secret}" != "null" ]] || exit 1
+  expect_permission_denied
+  [[ "$(graphql_output '.data.apiKeyCreate')" == "null" ]] || exit 1
 
   exec_graphql 'oauth-r.token' 'api-key-create' "$variables"
   expect_permission_denied

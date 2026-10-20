@@ -4,7 +4,9 @@ mod jwks;
 use async_graphql::*;
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::{routing::get, Extension, Router};
+use axum_extra::headers::HeaderMap;
 use serde::{Deserialize, Serialize};
+use tracing::instrument;
 
 use std::sync::Arc;
 
@@ -21,6 +23,8 @@ pub struct JwtClaims {
     scope: String,
     #[serde(default)]
     session_id: String,
+    #[serde(default)]
+    client_id: String,
 }
 
 pub async fn run_server(
@@ -55,9 +59,13 @@ pub async fn run_server(
 
 pub async fn graphql_handler(
     schema: Extension<Schema<graphql::Query, graphql::Mutation, EmptySubscription>>,
+    headers: HeaderMap,
     Claims(jwt_claims): Claims<JwtClaims>,
     req: GraphQLRequest,
 ) -> GraphQLResponse {
+    if is_client_credentials_subject(&jwt_claims.sub, &jwt_claims.client_id) {
+        return refuse_client_credentials_subject(&headers, &jwt_claims.client_id);
+    }
     let req = req.into_inner();
     let can_write = can_write(&jwt_claims.scope, &jwt_claims.session_id);
     schema
@@ -67,6 +75,17 @@ pub async fn graphql_handler(
         }))
         .await
         .into()
+}
+
+#[instrument(
+    name = "notifications.server.graphql.client_credentials_subject",
+    skip_all,
+    fields(client_id = %client_id, token.clientCredentialsSubject = true)
+)]
+fn refuse_client_credentials_subject(headers: &HeaderMap, client_id: &str) -> GraphQLResponse {
+    tracing::http::extract_tracing(headers);
+    tracing::warn!("client_credentials token used as user subject, refusing");
+    async_graphql::Response::from_errors(vec![ServerError::new("Permission denied", None)]).into()
 }
 
 async fn playground() -> impl axum::response::IntoResponse {
@@ -81,9 +100,14 @@ pub fn can_write(scope: &str, session_id: &str) -> bool {
     scope.split(' ').any(|s| s == WRITE_SCOPE) || (scope.is_empty() && !session_id.is_empty())
 }
 
+/// client_credentials tokens carry `sub == client_id`: the subject is the client, not a user.
+pub fn is_client_credentials_subject(sub: &str, client_id: &str) -> bool {
+    !client_id.is_empty() && client_id == sub
+}
+
 #[cfg(test)]
 mod tests {
-    use super::can_write;
+    use super::{can_write, is_client_credentials_subject};
 
     #[test]
     fn empty_scope_needs_session() {
@@ -96,5 +120,17 @@ mod tests {
         assert!(can_write("read write", ""));
         assert!(!can_write("read", ""));
         assert!(!can_write("receive", ""));
+    }
+
+    #[test]
+    fn client_credentials_subject_is_refused() {
+        assert!(is_client_credentials_subject("client", "client"));
+    }
+
+    #[test]
+    fn user_subjects_are_not_refused() {
+        assert!(!is_client_credentials_subject("user-id", "app-client"));
+        assert!(!is_client_credentials_subject("user-id", ""));
+        assert!(!is_client_credentials_subject("", ""));
     }
 }
