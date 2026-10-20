@@ -3,14 +3,18 @@
 import { useRouter } from "next/navigation"
 
 import styles from "./index.module.css"
+
 import { type ReturnInvoiceButtonProps } from "./index.types"
+
+import { safeReturnUrl } from "@/lib/return-url"
 
 function ReturnInvoiceButton({ returnUrl, type, children }: ReturnInvoiceButtonProps) {
   const router = useRouter()
 
   const cancelHandler = () => {
-    if (returnUrl) {
-      router.push(returnUrl)
+    const target = safeReturnUrl(returnUrl)
+    if (target) {
+      router.push(target)
       return
     }
     window.history.back()

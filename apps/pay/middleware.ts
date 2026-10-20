@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { NextRequestWithAuth, withAuth } from "next-auth/middleware"
 
+import { safeReturnUrl } from "@/lib/return-url"
+
 export const config = {
   matcher: [
     "/:username",
@@ -51,8 +53,9 @@ async function checkoutMiddleware(request: NextRequest) {
   returnUrl = returnUrl || request.referrer
 
   const response = NextResponse.next({ request })
-  if (returnUrl !== "about:client") {
-    response.headers.set("x-return-url", returnUrl)
+  const safeUrl = safeReturnUrl(returnUrl)
+  if (safeUrl) {
+    response.headers.set("x-return-url", safeUrl)
   }
   return response
 }
