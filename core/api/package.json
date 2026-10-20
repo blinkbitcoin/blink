@@ -18,7 +18,7 @@
     "test": "export JEST_JUNIT_OUTPUT_DIR=\"./artifacts\" && jest --ci --reporters=default --reporters=jest-junit",
     "test:unit": "jest --config ./test/unit/jest.config.js --bail --verbose $TEST",
     "test:watch-unit": "LOGLEVEL=warn jest --config ./test/unit/jest.config.js --bail --verbose --watch $TEST",
-    "test:integration": "jest --config ./test/integration/jest.config.js --bail --runInBand --verbose $TEST",
+    "test:integration": "jest --config ./test/integration/jest.config.js --bail --verbose $TEST",
     "fix-yaml": "prettier --write '**/*.(yaml|yml)'",
     "gen-test-jwt": "tsx dev/bin/gen-test-jwt.ts",
     "dev:api": "tsx src/servers/graphql-main-server.ts",

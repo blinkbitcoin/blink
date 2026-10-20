@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { NextRequestWithAuth, withAuth } from "next-auth/middleware"
 
+import { safeReturnUrl } from "@/lib/return-url"
+
 export const config = {
   matcher: [
     "/:username",
@@ -31,28 +33,13 @@ export function middleware(request: NextRequest) {
   return NextResponse.next({ request: { headers: requestHeaders } })
 }
 
-async function checkoutMiddleware(request: NextRequest) {
-  let returnUrl
-
-  const searchParams = request.nextUrl.searchParams
-  returnUrl = searchParams.get("returnUrl")
-  if (!returnUrl && request.method === "POST") {
-    try {
-      const formData = await request.formData()
-      returnUrl = formData.get("returnUrl")?.toString()
-    } catch (error) {}
-
-    try {
-      const data = await request.json()
-      returnUrl = data.returnUrl
-    } catch (error) {}
-  }
-
-  returnUrl = returnUrl || request.referrer
+function checkoutMiddleware(request: NextRequest) {
+  const returnUrl = request.nextUrl.searchParams.get("returnUrl") || request.referrer
 
   const response = NextResponse.next({ request })
-  if (returnUrl !== "about:client") {
-    response.headers.set("x-return-url", returnUrl)
+  const safeUrl = safeReturnUrl(returnUrl)
+  if (safeUrl) {
+    response.headers.set("x-return-url", safeUrl)
   }
   return response
 }

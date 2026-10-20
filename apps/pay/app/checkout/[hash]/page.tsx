@@ -12,10 +12,11 @@ import CheckoutLayoutContainer from "@/components/layouts/checkout-layout"
 import { InvoiceStatusProvider } from "@/context/invoice-status-context"
 
 import { baseLogger } from "@/lib/logger"
+import { safeReturnUrl } from "@/lib/return-url"
 
 const CheckoutPage = async (context: { params: { hash: string } }) => {
   const headersList = headers()
-  const returnUrl = headersList.get("x-return-url")
+  const returnUrl = safeReturnUrl(headersList.get("x-return-url"))
 
   const { hash } = context.params
   const invoice = await fetchInvoiceByHash({ hash })
