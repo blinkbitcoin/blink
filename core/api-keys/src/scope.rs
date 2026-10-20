@@ -43,7 +43,7 @@ pub fn can_manage_keys(scope: &str, session_id: &str, client_id: &str) -> bool {
     !client_id.is_empty() && scope.split(' ').any(|s| s == WRITE_SCOPE)
 }
 
-/// client_credentials tokens carry `sub == client_id`: the subject is the client, not a user.
+/// client_credentials token: sub is the client, not a user.
 pub fn is_client_credentials_subject(sub: &str, client_id: &str) -> bool {
     !client_id.is_empty() && client_id == sub
 }

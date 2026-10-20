@@ -26,7 +26,7 @@ export const sessionPublicContext = async ({
 }): Promise<GraphQLPublicContext | GraphQLPublicContextAuth> => {
   const logger = baseLogger.child({ tokenPayload })
 
-  // client_credentials tokens carry sub === client_id; that subject is the client, not a user
+  // client_credentials token: sub is the client, not a user
   if (isClientCredentialsSubject(tokenPayload)) {
     addAttributesToCurrentSpan({ "token.clientCredentialsSubject": true })
     logger.warn(
