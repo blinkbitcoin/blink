@@ -23,6 +23,7 @@ _create_admin_client_and_token() {
 
   client_id=$(echo "$client" | jq -r '.client_id')
   client_secret=$(echo "$client" | jq -r '.client_secret')
+  [[ -z "$custom_client_id" || "$client_id" == "$custom_client_id" ]] || exit 1
 
   token=$(curl -s -X POST $HYDRA_PUBLIC_API/oauth2/token \
   -H 'Content-Type: application/x-www-form-urlencoded' \
