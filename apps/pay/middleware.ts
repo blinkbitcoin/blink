@@ -31,24 +31,8 @@ export function middleware(request: NextRequest) {
   return NextResponse.next({ request: { headers: requestHeaders } })
 }
 
-async function checkoutMiddleware(request: NextRequest) {
-  let returnUrl
-
-  const searchParams = request.nextUrl.searchParams
-  returnUrl = searchParams.get("returnUrl")
-  if (!returnUrl && request.method === "POST") {
-    try {
-      const formData = await request.formData()
-      returnUrl = formData.get("returnUrl")?.toString()
-    } catch (error) {}
-
-    try {
-      const data = await request.json()
-      returnUrl = data.returnUrl
-    } catch (error) {}
-  }
-
-  returnUrl = returnUrl || request.referrer
+function checkoutMiddleware(request: NextRequest) {
+  const returnUrl = request.nextUrl.searchParams.get("returnUrl") || request.referrer
 
   const response = NextResponse.next({ request })
   if (returnUrl !== "about:client") {
