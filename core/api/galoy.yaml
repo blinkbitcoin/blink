@@ -314,6 +314,7 @@ paymentNetworks:
     send:
       feeStrategies:
         - zero_fee
+      maxPaths: 1
       skipFeeProbe:
         pubkeys: []
         chanIds: []

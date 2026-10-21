@@ -147,6 +147,7 @@ type SkipFeeProbeInput = {
 }
 
 type LightningSendInput = {
+  maxPaths: number
   feeStrategies: string[]
   skipFeeProbe: SkipFeeProbeInput
   skipFeeReimbursement: boolean
