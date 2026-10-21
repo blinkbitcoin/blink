@@ -25,7 +25,7 @@ jest.mock("@/services/tracing", () => ({
 
 import { Accounts, InactivityFee } from "@/app"
 import { CouldNotFindAccountFromKratosIdError } from "@/domain/errors"
-import { sessionPublicContext } from "@/servers/middlewares/session"
+import { sessionPublicContext, tokenUserId } from "@/servers/middlewares/session"
 import {
   addAttributesToCurrentSpan,
   recordExceptionInCurrentSpan,
@@ -127,5 +127,16 @@ describe("sessionPublicContext", () => {
     expect("user" in ctx && ctx.user).toBeFalsy()
     expect(Accounts.getAccountFromUserId).not.toHaveBeenCalled()
     expect(addAttributesToCurrentSpan).not.toHaveBeenCalled()
+  })
+})
+
+describe("tokenUserId", () => {
+  it("omits the user id for a client_credentials subject", () => {
+    expect(tokenUserId({ sub: USER_ID, client_id: USER_ID })).toBeUndefined()
+  })
+
+  it("keeps the user id for user tokens", () => {
+    expect(tokenUserId({ sub: USER_ID, client_id: "app-client" })).toBe(USER_ID)
+    expect(tokenUserId({ sub: USER_ID })).toBe(USER_ID)
   })
 })

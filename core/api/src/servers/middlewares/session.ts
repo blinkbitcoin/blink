@@ -137,6 +137,11 @@ export const isClientCredentialsSubject = (
   return typeof clientId === "string" && clientId !== "" && clientId === tokenPayload?.sub
 }
 
+export const tokenUserId = (
+  tokenPayload: jsonwebtoken.JwtPayload | undefined,
+): string | undefined =>
+  isClientCredentialsSubject(tokenPayload) ? undefined : tokenPayload?.sub
+
 const loaders = {
   txnMetadata: new DataLoader(async (keys) => {
     const txnMetadata = await Transactions.getTransactionsMetadataByIds(

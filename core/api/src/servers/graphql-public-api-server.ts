@@ -10,7 +10,7 @@ import { startApolloServer } from "./graphql-server"
 
 import { walletIdMiddleware } from "./middlewares/wallet-id"
 
-import { sessionPublicContext } from "./middlewares/session"
+import { sessionPublicContext, tokenUserId } from "./middlewares/session"
 
 import { scopeMiddleware } from "./middlewares/scope"
 
@@ -94,8 +94,8 @@ const setGqlContext = async (
       [SemanticAttributes.HTTP_CLIENT_IP]: ip,
       [SemanticAttributes.HTTP_USER_AGENT]: req.headers["user-agent"],
       [ACCOUNT_USERNAME]: username,
-      [SemanticAttributes.USER_ID]: tokenPayload?.sub,
-      [SemanticAttributes.ENDUSER_ID]: tokenPayload?.sub,
+      [SemanticAttributes.USER_ID]: tokenUserId(tokenPayload),
+      [SemanticAttributes.ENDUSER_ID]: tokenUserId(tokenPayload),
     },
     next,
   )
