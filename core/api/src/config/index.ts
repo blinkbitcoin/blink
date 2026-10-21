@@ -4,6 +4,7 @@ import {
   getBriaPartialConfigFromYaml,
   MEMO_SHARING_CENTS_THRESHOLD,
   MEMO_SHARING_SATS_THRESHOLD,
+  yamlConfig,
 } from "./yaml"
 import { env } from "./env"
 
@@ -190,7 +191,8 @@ export const REDIS_1_PORT = env.REDIS_1_PORT
 export const REDIS_2_DNS = env.REDIS_2_DNS
 export const REDIS_2_PORT = env.REDIS_2_PORT
 export const LND_PRIORITY = env.LND_PRIORITY
-export const LND_MAX_PAYMENT_PATHS = env.LND_MAX_PAYMENT_PATHS
+export const LND_MAX_PAYMENT_PATHS =
+  env.LND_MAX_PAYMENT_PATHS ?? yamlConfig.paymentNetworks.lightning.send.maxPaths
 export const LND1_PUBKEY = env.LND1_PUBKEY as Pubkey
 export const LND1_TLS = env.LND1_TLS
 export const LND1_MACAROON = env.LND1_MACAROON as Macaroon

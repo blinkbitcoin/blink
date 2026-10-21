@@ -379,6 +379,14 @@ const paymentNetworksSchema = {
               items: { type: "string" },
               uniqueItems: true,
             },
+            maxPaths: {
+              type: "integer",
+              minimum: 1,
+              maximum: 16,
+              default: 1,
+              description:
+                "Maximum payment parts (LND max_parts). 1 keeps single-path payments; LND_MAX_PAYMENT_PATHS overrides this setting. Requires a restart.",
+            },
             skipFeeProbe: {
               type: "object",
               properties: {
@@ -532,6 +540,7 @@ const paymentNetworksSchema = {
       },
       send: {
         feeStrategies: ["zero_fee"],
+        maxPaths: 1,
         skipFeeProbe: {
           pubkeys: [],
           chanIds: [],

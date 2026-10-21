@@ -110,14 +110,14 @@ export const env = createEnv({
     // LND PRIMARY
     LND_PRIORITY: z.enum(["lnd1", "lnd2"]).default("lnd1"),
 
-    // Keep single-path payments by default; opt into MPP with e.g. 4.
+    // Optional override of paymentNetworks.lightning.send.maxPaths in YAML.
     // Set to 1 and restart the service to disable MPP without a code change.
     LND_MAX_PAYMENT_PATHS: z
       .number()
       .min(1)
       .or(z.string())
       .pipe(z.coerce.number().int().min(1).max(16))
-      .default(1),
+      .optional(),
 
     LND1_PUBKEY: z
       .string()
