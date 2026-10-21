@@ -43,6 +43,11 @@ pub fn can_manage_keys(scope: &str, session_id: &str, client_id: &str) -> bool {
     !client_id.is_empty() && scope.split(' ').any(|s| s == WRITE_SCOPE)
 }
 
+/// client_credentials token: sub is the client, not a user.
+pub fn is_client_credentials_subject(sub: &str, client_id: &str) -> bool {
+    !client_id.is_empty() && client_id == sub
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -84,5 +89,26 @@ mod tests {
     #[test]
     fn anonymous() {
         assert!(!can_manage_keys("", "", ""));
+    }
+
+    #[test]
+    fn client_credentials_subject() {
+        assert!(is_client_credentials_subject(CLIENT, CLIENT));
+    }
+
+    #[test]
+    fn authorization_code_subject() {
+        assert!(!is_client_credentials_subject("user-id", CLIENT));
+    }
+
+    #[test]
+    fn session_api_key_or_anonymous_subject() {
+        assert!(!is_client_credentials_subject("user-id", ""));
+        assert!(!is_client_credentials_subject("", ""));
+        assert!(!is_client_credentials_subject("anon", ""));
+        assert!(!is_client_credentials_subject("user-id", "<no value>"));
+        assert!(!is_client_credentials_subject("anon", "<no value>"));
+        assert!(!is_client_credentials_subject("user-id", "<nil>"));
+        assert!(!is_client_credentials_subject("anon", "<nil>"));
     }
 }
