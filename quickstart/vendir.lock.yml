@@ -2,27 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat(api): send user agent and web platform signals to prelude
-        (#932)...'
-      sha: 3dd452cb8258c405cbef2515b519632f11e933db
+      commitTitle: 'fix(auth): reject client_credentials tokens as a user subject
+        (#943)'
+      sha: 5edeb70f27ce30e1e58758ee6fd87c8c90462703
       tags:
-      - 0.22.72-1-g3dd452cb8
+      - 0.22.73-3-g5edeb70f2
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat(api): send user agent and web platform signals to prelude
-        (#932)...'
-      sha: 3dd452cb8258c405cbef2515b519632f11e933db
+      commitTitle: 'fix(auth): reject client_credentials tokens as a user subject
+        (#943)'
+      sha: 5edeb70f27ce30e1e58758ee6fd87c8c90462703
       tags:
-      - 0.22.72-1-g3dd452cb8
+      - 0.22.73-3-g5edeb70f2
     path: schemas
   - git:
-      commitTitle: 'feat(api): send user agent and web platform signals to prelude
-        (#932)...'
-      sha: 3dd452cb8258c405cbef2515b519632f11e933db
+      commitTitle: 'fix(auth): reject client_credentials tokens as a user subject
+        (#943)'
+      sha: 5edeb70f27ce30e1e58758ee6fd87c8c90462703
       tags:
-      - 0.22.72-1-g3dd452cb8
+      - 0.22.73-3-g5edeb70f2
     path: gql
   path: graphql
 kind: LockConfig
