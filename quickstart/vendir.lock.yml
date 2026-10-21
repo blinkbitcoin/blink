@@ -2,27 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix(auth): reject client_credentials tokens as a user subject
-        (#943)'
-      sha: 5edeb70f27ce30e1e58758ee6fd87c8c90462703
+      commitTitle: 'feat(config): expose Lightning payment path limit in YAML (#945)'
+      sha: 3c695b47b80fba1eb59c2112cb17302592a5be0e
       tags:
-      - 0.22.73-3-g5edeb70f2
+      - 0.22.74-1-g3c695b47b
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'fix(auth): reject client_credentials tokens as a user subject
-        (#943)'
-      sha: 5edeb70f27ce30e1e58758ee6fd87c8c90462703
+      commitTitle: 'feat(config): expose Lightning payment path limit in YAML (#945)'
+      sha: 3c695b47b80fba1eb59c2112cb17302592a5be0e
       tags:
-      - 0.22.73-3-g5edeb70f2
+      - 0.22.74-1-g3c695b47b
     path: schemas
   - git:
-      commitTitle: 'fix(auth): reject client_credentials tokens as a user subject
-        (#943)'
-      sha: 5edeb70f27ce30e1e58758ee6fd87c8c90462703
+      commitTitle: 'feat(config): expose Lightning payment path limit in YAML (#945)'
+      sha: 3c695b47b80fba1eb59c2112cb17302592a5be0e
       tags:
-      - 0.22.73-3-g5edeb70f2
+      - 0.22.74-1-g3c695b47b
     path: gql
   path: graphql
 kind: LockConfig
