@@ -6,14 +6,16 @@ HYDRA_ADMIN_API="http://localhost:4445"
 _create_admin_client_and_token() {
   local scopes="$1"
   local token_cache_key="$2"
+  local custom_client_id="${3:-}"
 
   # Create the JSON payload properly
   local json_payload=$(jq -n \
     --arg scopes "$scopes" \
+    --arg client_id "$custom_client_id" \
     '{
       "grant_types": ["client_credentials"],
       "scope": $scopes
-    }')
+    } + (if $client_id != "" then {"client_id": $client_id} else {} end)')
 
   client=$(curl -L -s -X POST $HYDRA_ADMIN_API/admin/clients \
     -H 'Content-Type: application/json' \
@@ -21,6 +23,7 @@ _create_admin_client_and_token() {
 
   client_id=$(echo "$client" | jq -r '.client_id')
   client_secret=$(echo "$client" | jq -r '.client_secret')
+  [[ -z "$custom_client_id" || "$client_id" == "$custom_client_id" ]] || exit 1
 
   token=$(curl -s -X POST $HYDRA_PUBLIC_API/oauth2/token \
   -H 'Content-Type: application/x-www-form-urlencoded' \

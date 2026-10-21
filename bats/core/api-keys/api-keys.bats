@@ -734,15 +734,41 @@ expect_key_authenticates() {
   [[ "${revoked}" = "false" ]] || exit 1
 }
 
-@test "api-keys: oauth token needs write scope to manage keys" {
+@test "api-keys: client_credentials token is refused as a user subject" {
   _create_admin_client_and_token "read write" "oauth-rw.token"
   _create_admin_client_and_token "read" "oauth-r.token"
 
   variables="{\"input\":{\"name\":\"$(new_key_name)\"}}"
   exec_graphql 'oauth-rw.token' 'api-key-create' "$variables"
-  secret="$(graphql_output '.data.apiKeyCreate.apiKeySecret')"
-  [[ -n "${secret}" && "${secret}" != "null" ]] || exit 1
+  expect_permission_denied
+  [[ "$(graphql_output '.data == null or .data.apiKeyCreate == null')" == "true" ]] || exit 1
 
   exec_graphql 'oauth-r.token' 'api-key-create' "$variables"
+  expect_permission_denied
+}
+
+@test "api-keys: client_credentials client named after a user cannot act as that user" {
+  exec_graphql 'alice' 'identity'
+  alice_id="$(graphql_output '.data.me.id')"
+  [[ -n "${alice_id}" && "${alice_id}" != "null" ]] || exit 1
+
+  exec_graphql 'alice' 'api-keys'
+  initial_length="$(graphql_output '.data.me.apiKeys | length')"
+
+  _create_admin_client_and_token "read write" "oauth-as-alice.token" "${alice_id}"
+
+  exec_graphql 'oauth-as-alice.token' 'identity'
+  [[ "$(graphql_output '.data.me')" == "null" ]] || exit 1
+  [[ "$(graphql_output '.errors[0].message')" == "Not authorized" ]] || exit 1
+
+  variables="{\"input\":{\"name\":\"$(new_key_name)\"}}"
+  exec_graphql 'oauth-as-alice.token' 'api-key-create' "$variables"
+  expect_permission_denied
+
+  exec_graphql 'alice' 'api-keys'
+  [[ "$(graphql_output '.data.me.apiKeys | length')" -eq "${initial_length}" ]] || exit 1
+
+  variables="{\"input\":{\"notificationId\":\"$(random_uuid)\"}}"
+  exec_graphql 'oauth-as-alice.token' 'acknowledge-notification' "$variables"
   expect_permission_denied
 }
