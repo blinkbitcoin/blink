@@ -290,6 +290,6 @@ const handleCommonErrors = (err: Error | string | unknown) => {
   }
 }
 export const KnownSvixErrorMessages = {
-  InvalidHttpsUrl: /endpoint_https_only/,
+  InvalidHttpsUrl: /endpoint_https_only|must be https/,
   InvalidUrlProtocol: /must be http or https/,
 } as const

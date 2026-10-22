@@ -1,22 +1,20 @@
-import { z } from "zod"
-
-import { getCallbackServiceConfig } from "@/config"
-import { InvalidUrlError } from "@/domain/callback/errors"
+import { getCallbackServiceConfig, UNSECURE_CALLBACK_ENDPOINT_URLS } from "@/config"
+import { checkedToCallbackEndpointUrl } from "@/domain/callback"
 import { CallbackService } from "@/services/svix"
 import { UnknownSvixError } from "@/services/svix/errors"
 import { checkedToAccountId } from "@/domain/accounts"
 
 export const addEndpoint = async ({
   accountId: accountIdRaw,
-  url,
+  url: urlRaw,
 }: {
   accountId: string
   url: string
 }) => {
-  const validationResult = z.string().url().safeParse(url)
-  if (!validationResult.success) {
-    return new InvalidUrlError(`${url} is invalid`)
-  }
+  const url = UNSECURE_CALLBACK_ENDPOINT_URLS
+    ? urlRaw
+    : checkedToCallbackEndpointUrl(urlRaw)
+  if (url instanceof Error) return url
 
   const accountId = checkedToAccountId(accountIdRaw)
   if (accountId instanceof Error) return accountId
