@@ -2,7 +2,7 @@ import { lookup } from "node:dns/promises"
 import https from "node:https"
 import { isIP, type LookupFunction } from "node:net"
 
-import ipaddr from "ipaddr.js"
+import { isPublicUnicastIp } from "@/domain/accounts-ips"
 
 const MAX_REDIRECTS = 3
 const MAX_BODY_BYTES = 1024 * 1024
@@ -13,17 +13,8 @@ type Address = { address: string; family: number }
 
 const failure = () => new Error("LNURL service unreachable or not allowed")
 
-const isPublicAddress = ({ address, family }: Address): boolean => {
-  if (isIP(address) !== family) return false
-  const parsed = ipaddr.process(address)
-  if (parsed.range() !== "unicast") return false
-  // Restrict IPv6 to global unicast and exclude the newer documentation range.
-  return (
-    parsed.kind() === "ipv4" ||
-    (parsed.match(ipaddr.parseCIDR("2000::/3")) &&
-      !parsed.match(ipaddr.parseCIDR("3fff::/20")))
-  )
-}
+const isPublicAddress = ({ address, family }: Address): boolean =>
+  isIP(address) === family && isPublicUnicastIp(address)
 
 const resolvePublicAddresses = async (hostname: string): Promise<Address[]> => {
   const family = isIP(hostname)

@@ -23,6 +23,10 @@ export const env = createEnv({
       .or(z.string())
       .pipe(z.coerce.boolean())
       .default(false),
+    UNSECURE_CALLBACK_ENDPOINT_URLS: z
+      .enum(["true", "false"])
+      .default("false")
+      .transform((value) => value === "true"),
 
     TELEGRAM_BOT_API_TOKEN: z.string().optional(),
     TELEGRAM_PASSPORT_PRIVATE_KEY: z.string().optional(),
@@ -196,6 +200,7 @@ export const env = createEnv({
 
     UNSECURE_DEFAULT_LOGIN_CODE: process.env.UNSECURE_DEFAULT_LOGIN_CODE,
     UNSECURE_IP_FROM_REQUEST_OBJECT: process.env.UNSECURE_IP_FROM_REQUEST_OBJECT,
+    UNSECURE_CALLBACK_ENDPOINT_URLS: process.env.UNSECURE_CALLBACK_ENDPOINT_URLS,
 
     TELEGRAM_BOT_API_TOKEN: process.env.TELEGRAM_BOT_API_TOKEN,
     TELEGRAM_PASSPORT_PRIVATE_KEY: process.env.TELEGRAM_PASSPORT_PRIVATE_KEY,
