@@ -2,24 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix(api): validate callback endpoint destinations (#947)'
-      sha: 39d4cecb0ca7f824f0d858a9e06a0f89e3dec0be
+      commitTitle: 'fix(core): reject expired and canceled invoices on intraledger
+        payment (#952)'
+      sha: 004756e4d4298629abde2a2b69071d8a6519fb56
       tags:
-      - 0.22.75-2-g39d4cecb0
+      - 0.22.76-1-g004756e4d
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'fix(api): validate callback endpoint destinations (#947)'
-      sha: 39d4cecb0ca7f824f0d858a9e06a0f89e3dec0be
+      commitTitle: 'fix(core): reject expired and canceled invoices on intraledger
+        payment (#952)'
+      sha: 004756e4d4298629abde2a2b69071d8a6519fb56
       tags:
-      - 0.22.75-2-g39d4cecb0
+      - 0.22.76-1-g004756e4d
     path: schemas
   - git:
-      commitTitle: 'fix(api): validate callback endpoint destinations (#947)'
-      sha: 39d4cecb0ca7f824f0d858a9e06a0f89e3dec0be
+      commitTitle: 'fix(core): reject expired and canceled invoices on intraledger
+        payment (#952)'
+      sha: 004756e4d4298629abde2a2b69071d8a6519fb56
       tags:
-      - 0.22.75-2-g39d4cecb0
+      - 0.22.76-1-g004756e4d
     path: gql
   path: graphql
 kind: LockConfig
