@@ -34,3 +34,16 @@ export const isPrivateIp = (ip: string): boolean => {
   const range = ipaddr.IPv4.parse(convertedToV4).range()
   return range === "private" || range === "loopback"
 }
+
+const GLOBAL_UNICAST_V6 = ipaddr.parseCIDR("2000::/3")
+const DOCUMENTATION_V6 = ipaddr.parseCIDR("3fff::/20")
+
+export const isPublicUnicastIp = (ip: string): boolean => {
+  if (!ipaddr.isValid(ip)) return false
+  const parsed = ipaddr.process(ip)
+  if (parsed.range() !== "unicast") return false
+  return (
+    parsed.kind() === "ipv4" ||
+    (parsed.match(GLOBAL_UNICAST_V6) && !parsed.match(DOCUMENTATION_V6))
+  )
+}

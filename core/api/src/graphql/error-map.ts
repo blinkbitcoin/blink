@@ -102,6 +102,10 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       message = error.message || "Invalid API key ID"
       return new ValidationInternalError({ message, logger: baseLogger })
 
+    case "InvalidUrlError":
+      message = error.message
+      return new ValidationInternalError({ message, logger: baseLogger })
+
     case "AlreadyPaidError":
       message = "Invoice is already paid"
       return new LightningPaymentError({ message, logger: baseLogger })
@@ -947,7 +951,9 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "CouldNotFindAccountIpError":
     case "InvalidFlowId":
     case "CallbackError":
-    case "InvalidUrlError":
+    case "DnsError":
+    case "DnsServiceError":
+    case "DnsLookupError":
     case "SvixEventError":
     case "UnknownSvixError":
     case "UnauthorizedPhoneError":

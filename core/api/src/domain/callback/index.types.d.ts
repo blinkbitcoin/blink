@@ -1,10 +1,12 @@
 type CallbackServiceError = import("./errors").CallbackServiceError
+type InvalidUrlError = import("./errors").InvalidUrlError
 
 type CallbackEventType =
   (typeof import("./index").CallbackEventType)[keyof typeof import("./index").CallbackEventType]
 
 type AccountCallbackId = string & { readonly brand: unique symbol }
 type InvoiceCallbackId = string & { readonly brand: unique symbol }
+type CallbackEndpointUrl = string & { readonly brand: unique symbol }
 
 interface ICallbackService {
   sendMessage: (args: {
