@@ -2,24 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat(config): expose Lightning payment path limit in YAML (#945)'
-      sha: 3c695b47b80fba1eb59c2112cb17302592a5be0e
+      commitTitle: 'fix(api): validate callback endpoint destinations (#947)'
+      sha: 39d4cecb0ca7f824f0d858a9e06a0f89e3dec0be
       tags:
-      - 0.22.74-1-g3c695b47b
+      - 0.22.75-2-g39d4cecb0
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat(config): expose Lightning payment path limit in YAML (#945)'
-      sha: 3c695b47b80fba1eb59c2112cb17302592a5be0e
+      commitTitle: 'fix(api): validate callback endpoint destinations (#947)'
+      sha: 39d4cecb0ca7f824f0d858a9e06a0f89e3dec0be
       tags:
-      - 0.22.74-1-g3c695b47b
+      - 0.22.75-2-g39d4cecb0
     path: schemas
   - git:
-      commitTitle: 'feat(config): expose Lightning payment path limit in YAML (#945)'
-      sha: 3c695b47b80fba1eb59c2112cb17302592a5be0e
+      commitTitle: 'fix(api): validate callback endpoint destinations (#947)'
+      sha: 39d4cecb0ca7f824f0d858a9e06a0f89e3dec0be
       tags:
-      - 0.22.74-1-g3c695b47b
+      - 0.22.75-2-g39d4cecb0
     path: gql
   path: graphql
 kind: LockConfig
