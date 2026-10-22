@@ -3,7 +3,7 @@ import * as ConfigImpl from "@/config"
 import { SettlementMethod, PaymentInitiationMethod } from "@/domain/wallets"
 import { FEECAP_BASIS_POINTS } from "@/domain/bitcoin"
 import { decodeInvoice } from "@/domain/bitcoin/lightning"
-import { SelfPaymentError } from "@/domain/errors"
+import { InvoiceExpiredError, SelfPaymentError } from "@/domain/errors"
 import {
   LightningPaymentFlowBuilder,
   LnFees,
@@ -884,6 +884,7 @@ describe("LightningPaymentFlowBuilder", () => {
           const withUsdRecipientBuilder = withBtcWalletBuilder.withRecipientWallet({
             ...recipientUsdArgs,
             usdPaymentAmount,
+            usdQuoteExpiresAt: new Date(Date.now() + 60_000),
           })
 
           // @ts-ignore-next-line no-implicit-any error
@@ -996,6 +997,7 @@ describe("LightningPaymentFlowBuilder", () => {
           const withUsdRecipientBuilder = withUsdWalletBuilder.withRecipientWallet({
             ...recipientUsdArgs,
             usdPaymentAmount,
+            usdQuoteExpiresAt: new Date(Date.now() + 60_000),
           })
 
           // @ts-ignore-next-line no-implicit-any error
@@ -1889,6 +1891,7 @@ describe("LightningPaymentFlowBuilder", () => {
           .withRecipientWallet({
             ...senderUsdAsRecipientArgs,
             usdPaymentAmount: { amount: 1000n, currency: WalletCurrency.Usd },
+            usdQuoteExpiresAt: new Date(Date.now() + 60_000),
           })
           .withConversion({
             mid,
@@ -1898,6 +1901,33 @@ describe("LightningPaymentFlowBuilder", () => {
           .withoutRoute()
 
         expect(payment).toBeInstanceOf(InvalidLightningPaymentFlowBuilderStateError)
+      })
+    })
+
+    describe("recipient usd amount comes from a stale dealer quote", () => {
+      it("returns InvoiceExpiredError", async () => {
+        const payment = await LightningPaymentFlowBuilder({
+          localNodeIds: [invoiceWithAmount.destination],
+          skipProbe,
+        })
+          .withInvoice(invoiceWithAmount)
+          .withSenderWalletAndAccount({
+            wallet: senderBtcWalletDescriptor,
+            account: senderAccount,
+          })
+          .withRecipientWallet({
+            ...senderUsdAsRecipientArgs,
+            usdPaymentAmount: { amount: 1000n, currency: WalletCurrency.Usd },
+            usdQuoteExpiresAt: new Date(Date.now() - 1000),
+          })
+          .withConversion({
+            mid,
+            hedgeBuyUsd,
+            hedgeSellUsd,
+          })
+          .withoutRoute()
+
+        expect(payment).toBeInstanceOf(InvoiceExpiredError)
       })
     })
 

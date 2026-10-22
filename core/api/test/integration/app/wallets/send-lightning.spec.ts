@@ -1,5 +1,8 @@
 import { randomUUID } from "crypto"
 
+import { createSignedRequest, createUnsignedRequest } from "invoices"
+import * as ecc from "tiny-secp256k1"
+
 import { Accounts, Payments } from "@/app"
 
 import { AccountStatus } from "@/domain/accounts"
@@ -22,6 +25,8 @@ import {
   TradeIntraAccountLimitsExceededError,
   WithdrawalLimitsExceededError,
   CouldNotFindLightningPaymentFlowError,
+  InvoiceCanceledError,
+  InvoiceExpiredError,
 } from "@/domain/errors"
 import { ReceiveDisabledError } from "@/domain/wind-down"
 import { AmountCalculator, WalletCurrency } from "@/domain/shared"
@@ -36,6 +41,7 @@ import {
   WalletInvoicesRepository,
 } from "@/services/mongoose"
 import { LedgerService } from "@/services/ledger"
+import { LockService } from "@/services/lock"
 import { getBankOwnerWalletId } from "@/services/ledger/caching"
 import { Transaction, TransactionMetadata } from "@/services/ledger/schema"
 import { WalletInvoice } from "@/services/mongoose/schema"
@@ -86,13 +92,48 @@ const armedUsCohortConfig = {
   ],
 }
 
+// The fixture request is long expired; re-sign it with a fresh expiry
+const fixtureNodePrivateKey = Buffer.alloc(32, 7)
+const fixtureNodePubkey = Buffer.from(
+  ecc.pointFromScalar(fixtureNodePrivateKey, true) as Uint8Array,
+).toString("hex")
+
+const decodeFreshInvoice = (request: string): LnInvoice => {
+  const invoice = decodeInvoice(request)
+  if (invoice instanceof Error) throw invoice
+
+  const unsigned = createUnsignedRequest({
+    cltv_delta: invoice.cltvDelta ?? undefined,
+    description: invoice.description,
+    destination: fixtureNodePubkey,
+    expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    features: invoice.features.map(({ bit }) => ({ bit })),
+    id: invoice.paymentHash,
+    ...(invoice.amount ? { mtokens: `${invoice.milliSatsAmount}` } : {}),
+    network: "regtest",
+    payment: invoice.paymentSecret,
+  })
+  const signature = Buffer.from(
+    ecc.sign(Buffer.from(unsigned.hash, "hex"), fixtureNodePrivateKey),
+  ).toString("hex")
+  const { request: freshRequest } = createSignedRequest({
+    destination: fixtureNodePubkey,
+    hrp: unsigned.hrp,
+    signature,
+    tags: unsigned.tags,
+  })
+
+  const freshInvoice = decodeInvoice(freshRequest)
+  if (freshInvoice instanceof Error) throw freshInvoice
+  return freshInvoice
+}
+
 beforeAll(async () => {
   await createMandatoryUsers()
 
   const randomRequest =
     "lnbcrt10n1p39jatkpp5djwv295kunhe5e0e4whj3dcjzwy7cmcxk8cl2a4dquyrp3dqydesdqqcqzpuxqr23ssp56u5m680x7resnvcelmsngc64ljm7g5q9r26zw0qyq5fenuqlcfzq9qyyssqxv4kvltas2qshhmqnjctnqkjpdfzu89e428ga6yk9jsp8rf382f3t03ex4e6x3a4sxkl7ruj6lsfpkuu9u9ee5kgr5zdyj7x2nwdljgq74025p"
-  const invoice = decodeInvoice(randomRequest)
-  if (invoice instanceof Error) throw invoice
+  const invoice = decodeFreshInvoice(randomRequest)
   lnInvoice = invoice
 
   const randomNoAmountRequest =
@@ -1371,6 +1412,133 @@ describe("initiated via lightning", () => {
           memoPayer: lnurlComment,
         }),
       )
+    })
+
+    describe("rejects invoices that are no longer payable", () => {
+      const setupSelfPayToUsdInvoice = async () => {
+        const { LndService: LnServiceOrig } = jest.requireActual("@/services/lnd")
+        jest.spyOn(LndImpl, "LndService").mockReturnValue({
+          ...LnServiceOrig(),
+          listAllPubkeys: () => [lnInvoice.destination],
+          lookupInvoice: () =>
+            Promise.resolve(lndInvoiceLookupFor({ invoice: lnInvoice, description: "" })),
+          cancelInvoice: () => true,
+        })
+
+        const { btcWalletDescriptor, usdWalletDescriptor } =
+          await createRandomUserAndWallets()
+        const account = await AccountsRepository().findById(btcWalletDescriptor.accountId)
+        if (account instanceof Error) throw account
+
+        const externalId = randomLedgerExternalId()
+        if (externalId instanceof Error) throw externalId
+
+        const persisted = await WalletInvoicesRepository().persistNew({
+          paymentHash: lnInvoice.paymentHash,
+          secret: "secret" as SecretPreImage,
+          selfGenerated: true,
+          pubkey: lnInvoice.destination,
+          recipientWalletDescriptor: usdWalletDescriptor,
+          usdAmount: { amount: 1n, currency: WalletCurrency.Usd },
+          paid: false,
+          lnInvoice,
+          processingCompleted: false,
+          externalId,
+        })
+        if (persisted instanceof Error) throw persisted
+
+        const receive = await recordReceiveLnPayment({
+          walletDescriptor: btcWalletDescriptor,
+          paymentAmount: receiveAmounts,
+          bankFee: receiveBankFee,
+          displayAmounts: receiveDisplayAmounts,
+          memo,
+        })
+        if (receive instanceof Error) throw receive
+
+        return { btcWalletDescriptor, account }
+      }
+
+      const closeUsdQuoteWindow = () =>
+        WalletInvoice.updateOne(
+          { _id: lnInvoice.paymentHash },
+          {
+            timestamp: new Date(Date.now() - (defaultTimeToExpiryInSeconds + 60) * 1000),
+          },
+        )
+
+      it("fails to pay a usd invoice after its quote window closed", async () => {
+        const recordIntraledgerSpy = jest.spyOn(LedgerFacadeImpl, "recordIntraledger")
+        const { btcWalletDescriptor, account } = await setupSelfPayToUsdInvoice()
+        await closeUsdQuoteWindow()
+
+        const res = await Payments.payInvoiceByWalletId({
+          senderWalletId: btcWalletDescriptor.id,
+          senderAccount: account,
+          uncheckedPaymentRequest: lnInvoice.paymentRequest,
+          memo,
+        })
+        expect(res).toBeInstanceOf(InvoiceExpiredError)
+        expect(recordIntraledgerSpy).not.toHaveBeenCalled()
+      })
+
+      it("fails to pay with a probed flow after the quote window closed", async () => {
+        const recordIntraledgerSpy = jest.spyOn(LedgerFacadeImpl, "recordIntraledger")
+        const { btcWalletDescriptor, account } = await setupSelfPayToUsdInvoice()
+
+        const probe = await Payments.getLightningFeeEstimationForBtcWallet({
+          walletId: btcWalletDescriptor.id,
+          uncheckedPaymentRequest: lnInvoice.paymentRequest,
+        })
+        expect(probe.error).toBeUndefined()
+        const persistedFlow = await PaymentFlowStateRepository(
+          defaultTimeToExpiryInSeconds,
+        ).findLightningPaymentFlow({
+          walletId: btcWalletDescriptor.id,
+          paymentHash: lnInvoice.paymentHash,
+          inputAmount: BigInt(lnInvoice.amount || 0),
+        })
+        expect(persistedFlow).not.toBeInstanceOf(Error)
+
+        await closeUsdQuoteWindow()
+
+        const res = await Payments.payInvoiceByWalletId({
+          senderWalletId: btcWalletDescriptor.id,
+          senderAccount: account,
+          uncheckedPaymentRequest: lnInvoice.paymentRequest,
+          memo,
+        })
+        expect(res).toBeInstanceOf(InvoiceExpiredError)
+        expect(recordIntraledgerSpy).not.toHaveBeenCalled()
+      })
+
+      it("fails when the invoice is canceled while the payment waits for its lock", async () => {
+        const recordIntraledgerSpy = jest.spyOn(LedgerFacadeImpl, "recordIntraledger")
+        const { btcWalletDescriptor, account } = await setupSelfPayToUsdInvoice()
+
+        // Hold the payment-hash lock the way cancelInvoiceForWallet does
+        let payment: ReturnType<typeof Payments.payInvoiceByWalletId> | undefined
+        const locked = await LockService().lockPaymentHash(
+          lnInvoice.paymentHash,
+          async () => {
+            payment = Payments.payInvoiceByWalletId({
+              senderWalletId: btcWalletDescriptor.id,
+              senderAccount: account,
+              uncheckedPaymentRequest: lnInvoice.paymentRequest,
+              memo,
+            })
+            await new Promise((resolve) => setTimeout(resolve, 300))
+            return WalletInvoicesRepository().markAsProcessingCompleted(
+              lnInvoice.paymentHash,
+            )
+          },
+        )
+        if (locked instanceof Error) throw locked
+
+        const res = await payment
+        expect(res).toBeInstanceOf(InvoiceCanceledError)
+        expect(recordIntraledgerSpy).not.toHaveBeenCalled()
+      })
     })
   })
 

@@ -45,6 +45,7 @@ import {
   PaymentInitiationMethod,
   SettlementMethod,
 } from "@/domain/wallets"
+import { checkWalletInvoiceIsPayable } from "@/domain/wallet-invoices"
 
 import { LndService } from "@/services/lnd"
 import {
@@ -541,21 +542,25 @@ const executePaymentViaIntraledger = async <
     apiKeyId,
     btcPaymentAmount: paymentFlow.btcPaymentAmount,
     execute: async () => {
+      // Payment-hash lock serializes with invoice cancel and other payers
       const paymentSendAttemptResult = await LockService().lockWalletId(
         senderWalletId,
         async (signal) =>
-          lockedPaymentViaIntraledgerSteps({
-            signal,
+          LockService().lockPaymentHash(paymentHash, async (paymentHashSignal) =>
+            lockedPaymentViaIntraledgerSteps({
+              signal,
+              paymentHashSignal,
 
-            paymentHash,
-            paymentFlow,
-            senderDisplayCurrency: senderAccount.displayCurrency,
-            senderUsername: senderAccount.username,
-            recipientDisplayCurrency: recipientAccount.displayCurrency,
-            recipientUsername: recipientAccount.username,
+              paymentHash,
+              paymentFlow,
+              senderDisplayCurrency: senderAccount.displayCurrency,
+              senderUsername: senderAccount.username,
+              recipientDisplayCurrency: recipientAccount.displayCurrency,
+              recipientUsername: recipientAccount.username,
 
-            memo,
-          }),
+              memo,
+            }),
+          ),
       )
       if (paymentSendAttemptResult instanceof Error) {
         return reverseSettlement({ result: paymentSendAttemptResult })
@@ -620,6 +625,7 @@ const executePaymentViaIntraledger = async <
 
 const lockedPaymentViaIntraledgerSteps = async ({
   signal,
+  paymentHashSignal,
 
   paymentHash,
   paymentFlow,
@@ -631,6 +637,7 @@ const lockedPaymentViaIntraledgerSteps = async ({
   memo,
 }: {
   signal: WalletIdAbortSignal
+  paymentHashSignal: PaymentHashAbortSignal
 
   paymentHash: PaymentHash
   paymentFlow: PaymentFlow<WalletCurrency, WalletCurrency>
@@ -660,6 +667,15 @@ const lockedPaymentViaIntraledgerSteps = async ({
   if (recorded) {
     return IntraLedgerSendAttemptResult.alreadyPaid()
   }
+
+  const walletInvoice = await WalletInvoicesRepository().findByPaymentHash(paymentHash)
+  if (walletInvoice instanceof Error) {
+    return IntraLedgerSendAttemptResult.err(walletInvoice)
+  }
+
+  // A flow persisted by a fee probe skipped the recipient checks
+  const payable = checkWalletInvoiceIsPayable(walletInvoice)
+  if (payable instanceof Error) return IntraLedgerSendAttemptResult.err(payable)
 
   const balance = await ledgerService.getWalletBalanceAmount(senderWalletDescriptor)
   if (balance instanceof Error) return IntraLedgerSendAttemptResult.err(balance)
@@ -757,9 +773,12 @@ const lockedPaymentViaIntraledgerSteps = async ({
     }))
   }
 
-  const walletInvoice = await WalletInvoicesRepository().findByPaymentHash(paymentHash)
-  if (walletInvoice instanceof Error) {
-    return IntraLedgerSendAttemptResult.err(walletInvoice)
+  // The payment-hash lock keeps cancel and other payers out until markAsPaid
+  const abortedSignal = [signal, paymentHashSignal].find((s) => s.aborted)
+  if (abortedSignal) {
+    return IntraLedgerSendAttemptResult.err(
+      new ResourceExpiredLockServiceError(abortedSignal.error?.message),
+    )
   }
 
   const journal = await LedgerFacade.recordIntraledger({

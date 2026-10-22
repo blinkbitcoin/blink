@@ -1,4 +1,4 @@
-import { WalletInvoiceStatus } from "./index"
+import { WalletInvoiceStatus } from "./wallet-invoice-status"
 
 export const WalletInvoiceStatusChecker = (
   walletInvoice: WalletInvoice,
