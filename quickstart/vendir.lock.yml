@@ -2,27 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix(core): reject expired and canceled invoices on intraledger
-        payment (#952)'
-      sha: 004756e4d4298629abde2a2b69071d8a6519fb56
+      commitTitle: 'test: update lnd to v0.21.5-beta.rc1 (#950)'
+      sha: a34d01852b1bc667b100e4ebfef7e595d0fbed57
       tags:
-      - 0.22.76-1-g004756e4d
+      - 0.22.77-1-ga34d01852
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'fix(core): reject expired and canceled invoices on intraledger
-        payment (#952)'
-      sha: 004756e4d4298629abde2a2b69071d8a6519fb56
+      commitTitle: 'test: update lnd to v0.21.5-beta.rc1 (#950)'
+      sha: a34d01852b1bc667b100e4ebfef7e595d0fbed57
       tags:
-      - 0.22.76-1-g004756e4d
+      - 0.22.77-1-ga34d01852
     path: schemas
   - git:
-      commitTitle: 'fix(core): reject expired and canceled invoices on intraledger
-        payment (#952)'
-      sha: 004756e4d4298629abde2a2b69071d8a6519fb56
+      commitTitle: 'test: update lnd to v0.21.5-beta.rc1 (#950)'
+      sha: a34d01852b1bc667b100e4ebfef7e595d0fbed57
       tags:
-      - 0.22.76-1-g004756e4d
+      - 0.22.77-1-ga34d01852
     path: gql
   path: graphql
 kind: LockConfig
