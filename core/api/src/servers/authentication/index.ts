@@ -9,6 +9,7 @@ import { UNSECURE_IP_FROM_REQUEST_OBJECT } from "@/config"
 
 import { Authentication } from "@/app"
 import { registerCaptchaGeetest } from "@/app/captcha"
+import { CaptchaServiceUnavailableError } from "@/domain/captcha/errors"
 
 import { mapError } from "@/graphql/error-map"
 
@@ -248,19 +249,27 @@ authRouter.post("/totp/validate", async (req: Request, res: Response) => {
 
 authRouter.post("/phone/captcha", async (req: Request, res: Response) => {
   const result = await registerCaptchaGeetest()
+  if (result instanceof CaptchaServiceUnavailableError) {
+    // Not recorded here: sendRequest already recorded the underlying transport
+    // exception (and register() logged a span event), so recording again per
+    // request would double-report a geetest outage.
+    return res.status(503).json({ error: "captcha provider unavailable, retry later" })
+  }
   if (result instanceof Error) {
     recordExceptionInCurrentSpan({ error: result, level: ErrorLevel.Critical })
     return res.status(500).json({ error: "error creating challenge" })
   }
 
-  const { success, gt, challenge, newCaptcha } = result
+  const { gt, challenge, newCaptcha } = result
 
   return res.send({
     result: {
       id: gt,
       challengeCode: challenge,
       newCaptcha,
-      failbackMode: success === 0,
+      // register() now fails closed instead of minting an offline challenge, so
+      // clients are never asked to enter failback mode. Retained for wire compat.
+      failbackMode: false,
     },
   })
 })
@@ -295,6 +304,9 @@ authRouter.post("/phone/code", async (req: Request, res: Response) => {
     devicePlatform: DevicePlatform.Web,
   })
 
+  if (result instanceof CaptchaServiceUnavailableError) {
+    return res.status(503).json({ error: "captcha provider unavailable, retry later" })
+  }
   if (result instanceof Error) return res.status(400).json({ error: result })
 
   return res.json({

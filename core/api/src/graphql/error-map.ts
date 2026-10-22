@@ -6,6 +6,7 @@ import {
   InsufficientBalanceError,
   DbError,
   UnknownClientError,
+  CaptchaUnavailableError,
   InvoiceDecodeError,
   ValidationInternalError,
   TooManyRequestError,
@@ -519,6 +520,10 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       message =
         "Payment failed due to an insufficient fee, please try again later or contact support if the problem persists."
       return new ValidationInternalError({ message, logger: baseLogger })
+
+    case "CaptchaServiceUnavailableError":
+      message = "Captcha provider is unavailable. Please try again later."
+      return new CaptchaUnavailableError({ message, logger: baseLogger })
 
     case "CaptchaUserFailToPassError":
       message = "Captcha validation failed."

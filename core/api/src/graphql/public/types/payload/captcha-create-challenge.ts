@@ -16,6 +16,10 @@ const CaptchaCreateChallengeResult = GT.Object({
     },
     failbackMode: {
       type: GT.NonNull(GT.Boolean),
+      deprecationReason:
+        "Always false. Registration now fails closed while the captcha provider " +
+        "is degraded rather than minting an offline challenge the server would " +
+        "later reject, so clients are never asked to enter failback mode.",
     },
   }),
 })

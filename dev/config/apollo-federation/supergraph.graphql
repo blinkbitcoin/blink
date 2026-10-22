@@ -470,7 +470,7 @@ type CaptchaCreateChallengeResult
   @join__type(graph: PUBLIC)
 {
   challengeCode: String!
-  failbackMode: Boolean!
+  failbackMode: Boolean! @deprecated(reason: "Always false. Registration now fails closed while the captcha provider is degraded rather than minting an offline challenge the server would later reject, so clients are never asked to enter failback mode.")
   id: String!
   newCaptcha: Boolean!
 }
