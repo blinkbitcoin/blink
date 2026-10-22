@@ -1,13 +1,3 @@
-import fs from "fs"
-import path from "path"
-
-const dummyEnv: Record<string, string> = JSON.parse(
-  fs.readFileSync(
-    path.resolve(__dirname, "../../../../dev/core-bundle/dummy-env.json"),
-    "utf8",
-  ),
-)
-
 const loadFlag = (): boolean => {
   let flag = false
   jest.isolateModules(() => {
@@ -21,7 +11,7 @@ describe("UNSECURE_CALLBACK_ENDPOINT_URLS", () => {
   const originalEnv = process.env
 
   beforeEach(() => {
-    process.env = { ...dummyEnv, ...originalEnv }
+    process.env = { ...originalEnv }
     delete process.env.UNSECURE_CALLBACK_ENDPOINT_URLS
   })
 
