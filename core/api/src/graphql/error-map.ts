@@ -951,9 +951,6 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
     case "CouldNotFindAccountIpError":
     case "InvalidFlowId":
     case "CallbackError":
-    case "DnsError":
-    case "DnsServiceError":
-    case "DnsLookupError":
     case "SvixEventError":
     case "UnknownSvixError":
     case "UnauthorizedPhoneError":
