@@ -1,8 +1,8 @@
 import { btcFromUsdMidPriceFn, usdFromBtcMidPriceFn } from "@/app/prices"
 import { getValuesToSkipProbe, MIN_SATS_FOR_PRICE_RATIO_PRECISION } from "@/config"
-import { AlreadyPaidError } from "@/domain/errors"
 import { LightningPaymentFlowBuilder, WalletPriceRatio } from "@/domain/payments"
 import { WalletCurrency } from "@/domain/shared"
+import { checkWalletInvoiceIsPayable, usdQuoteExpiresAt } from "@/domain/wallet-invoices"
 import { LndService } from "@/services/lnd"
 import {
   AccountsRepository,
@@ -84,6 +84,7 @@ const recipientDetailsFromInvoice = async <R extends WalletCurrency>(
       recipientWalletDescriptors: AccountWalletDescriptors
       pubkey: Pubkey
       usdPaymentAmount: UsdPaymentAmount | undefined
+      usdQuoteExpiresAt: Date
       username: Username | undefined
       userId: UserId
     }
@@ -93,7 +94,8 @@ const recipientDetailsFromInvoice = async <R extends WalletCurrency>(
   const walletInvoice = await invoicesRepo.findByPaymentHash(invoice.paymentHash)
   if (walletInvoice instanceof Error) return walletInvoice
 
-  if (walletInvoice.paid) return new AlreadyPaidError(walletInvoice.paymentHash)
+  const payable = checkWalletInvoiceIsPayable(walletInvoice)
+  if (payable instanceof Error) return payable
 
   const {
     recipientWalletDescriptor: {
@@ -121,6 +123,7 @@ const recipientDetailsFromInvoice = async <R extends WalletCurrency>(
     recipientWalletDescriptors: accountWallets,
     pubkey: recipientPubkey,
     usdPaymentAmount,
+    usdQuoteExpiresAt: usdQuoteExpiresAt(walletInvoice),
     username: recipientUsername,
     userId: recipientUserId,
   }

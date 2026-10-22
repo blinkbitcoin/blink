@@ -20,7 +20,7 @@ import {
   checkedToUsdPaymentAmount,
   checkedToBtcPaymentAmount,
 } from "@/domain/shared"
-import { SelfPaymentError } from "@/domain/errors"
+import { InvoiceExpiredError, SelfPaymentError } from "@/domain/errors"
 import { PaymentInitiationMethod, SettlementMethod } from "@/domain/wallets"
 import { WithdrawalFeeCalculator } from "@/domain/fees"
 
@@ -293,9 +293,18 @@ const LPFBWithSenderWallet = <S extends WalletCurrency>(
     recipientWalletDescriptors,
     pubkey: recipientPubkey,
     usdPaymentAmount,
+    usdQuoteExpiresAt,
     username: recipientUsername,
     userId: recipientUserId,
   }: LPFBWithRecipientArgs<R>): LPFBWithRecipientWallet<S, R> | LPFBWithError => {
+    // A stored USD amount is a locked dealer quote; never reuse it once stale
+    if (
+      usdPaymentAmount &&
+      !(usdQuoteExpiresAt && usdQuoteExpiresAt.getTime() >= Date.now())
+    ) {
+      return LPFBWithError(new InvoiceExpiredError())
+    }
+
     const { id: recipientWalletId, accountId: recipientAccountId } =
       recipientWalletDescriptors[recipientWalletCurrency]
     if (recipientWalletId === state.senderWalletId) {

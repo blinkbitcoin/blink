@@ -186,6 +186,7 @@ type LPFBWithRecipientArgs<R extends WalletCurrency> = {
   userId: UserId
   pubkey?: Pubkey
   usdPaymentAmount?: UsdPaymentAmount
+  usdQuoteExpiresAt?: Date // required with usdPaymentAmount
   username?: Username
 }
 
