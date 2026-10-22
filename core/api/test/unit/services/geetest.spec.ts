@@ -32,6 +32,7 @@ import {
 } from "@/domain/captcha/errors"
 import { LocalCacheService } from "@/services/cache/local-cache"
 import Geetest from "@/services/geetest"
+import { addEventToCurrentSpan } from "@/services/tracing"
 
 const {
   __mockRegister: mockRegister,
@@ -80,6 +81,21 @@ const bypassUnreachable = () => {
   mock.onGet(BYPASS_URL).networkError()
 }
 const bypassProbeCount = () => mock.history.get.filter((r) => r.url === BYPASS_URL).length
+
+// Holds the probe open until released, so a test can pile up concurrent callers
+// on a cold cache before the first probe settles.
+const bypassRespondsWhenReleased = (status: string) => {
+  mock.reset()
+  let release: () => void = () => undefined
+  const released = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  mock.onGet(BYPASS_URL).reply(async () => {
+    await released
+    return [200, { status }]
+  })
+  return release
+}
 
 describe("Geetest.register", () => {
   it("registers against the geetest API while bypass status is healthy", async () => {
@@ -180,6 +196,9 @@ describe("Geetest.validate", () => {
 
     expect(res).toBeInstanceOf(CaptchaServiceUnavailableError)
     expect(res).not.toBe(true)
+    // The SDK swallows the transport error, so this event is the only trace of
+    // the outage beyond the 503.
+    expect(addEventToCurrentSpan).toHaveBeenCalledWith("geetestValidateOutage")
   })
 
   it("keeps reporting a genuine seccode rejection as a user failure", async () => {
@@ -188,6 +207,7 @@ describe("Geetest.validate", () => {
     expect(await geetest().validate("c", "v", "s")).toBeInstanceOf(
       CaptchaUserFailToPassError,
     )
+    expect(addEventToCurrentSpan).not.toHaveBeenCalledWith("geetestValidateOutage")
   })
 
   it("returns UnknownCaptchaError when the SDK throws", async () => {
@@ -216,6 +236,54 @@ describe("Geetest bypass-status caching", () => {
     expect(await geetest().register()).toBeInstanceOf(CaptchaServiceUnavailableError)
 
     expect(bypassProbeCount()).toBe(1)
+  })
+
+  it("shares one probe between concurrent registrations on a cold cache", async () => {
+    // getOrSet only writes the cache once the probe settles, so without sharing
+    // the pending probe every request in the burst would miss and probe itself —
+    // during an outage, each holding the full timeout.
+    const release = bypassRespondsWhenReleased("success")
+
+    const pending = Promise.all(Array.from({ length: 5 }, () => geetest().register()))
+    // Let every caller reach the probe before it answers.
+    await new Promise((resolve) => setImmediate(resolve))
+    expect(bypassProbeCount()).toBe(1)
+
+    release()
+    const results = await pending
+
+    results.forEach((res) => expect(res).not.toBeInstanceOf(Error))
+    expect(bypassProbeCount()).toBe(1)
+    expect(mockRegister).toHaveBeenCalledTimes(5)
+  })
+
+  it("probes again once the window expires, recovering from a cached degraded verdict", async () => {
+    const start = Date.now()
+    const now = jest.spyOn(Date, "now").mockReturnValue(start)
+    try {
+      bypassResponds("fail")
+      expect(await geetest().register()).toBeInstanceOf(CaptchaServiceUnavailableError)
+      expect(bypassProbeCount()).toBe(1)
+
+      // Geetest has recovered, but the degraded verdict still holds for the
+      // rest of the window. (bypassResponds also resets the probe history.)
+      bypassResponds("success")
+      now.mockReturnValue(start + 9_000)
+      expect(await geetest().register()).toBeInstanceOf(CaptchaServiceUnavailableError)
+      expect(bypassProbeCount()).toBe(0)
+
+      now.mockReturnValue(start + 10_001)
+      expect(await geetest().register()).not.toBeInstanceOf(Error)
+      expect(bypassProbeCount()).toBe(1)
+
+      // The refreshed verdict is cached for a new window.
+      now.mockReturnValue(start + 15_000)
+      expect(await geetest().register()).not.toBeInstanceOf(Error)
+      expect(bypassProbeCount()).toBe(1)
+      expect(mockRegister).toHaveBeenCalledTimes(2)
+    } finally {
+      now.mockRestore()
+    }
   })
 })
 

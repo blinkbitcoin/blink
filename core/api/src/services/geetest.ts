@@ -26,6 +26,10 @@ import { LocalCacheService } from "@/services/cache/local-cache"
 // cache collapses that to one probe per window per pod while keeping the
 // fail-closed behaviour. Failures are cached too: that is the point, it bounds
 // the added latency during an outage instead of retrying on every request.
+//
+// The cache key and the in-flight probe below are process-global, which assumes
+// one geetest configuration per process (true of every deployment today). Key
+// both by captcha id before supporting more than one.
 const BYPASS_STATUS_CACHE_TTL_SECS = 10 as Seconds
 
 // Distinct from a status the endpoint actually reported: a timeout or DNS
@@ -34,6 +38,12 @@ const BYPASS_STATUS_CACHE_TTL_SECS = 10 as Seconds
 const BYPASS_UNREACHABLE = "unreachable"
 
 const localCache = LocalCacheService()
+
+// getOrSet only stores the result after the probe settles, so on a cold or
+// expired key every concurrent caller would miss and probe on its own — during
+// an outage each holding the full timeout. Sharing the pending probe keeps it to
+// one outbound request per window no matter how many requests arrive together.
+let inFlightBypassProbe: Promise<string> | undefined
 
 const sendRequest = async (params: { gt: string }): Promise<string> => {
   const requestUrl = "https://bypass.geetest.com/v1/bypass_status.php"
@@ -58,7 +68,7 @@ const sendRequest = async (params: { gt: string }): Promise<string> => {
 }
 
 const Geetest = (config: { id: string; key: string }): GeetestType => {
-  const getBypassStatus = async (): Promise<string> => {
+  const readBypassStatus = async (): Promise<string> => {
     // getOrSet is generic over the *return type* of getForCaching, so an async
     // producer types as Promise<Promise<string>>; await collapses it.
     const status = await localCache.getOrSet({
@@ -67,6 +77,17 @@ const Geetest = (config: { id: string; key: string }): GeetestType => {
       getForCaching: () => sendRequest({ gt: config.id }),
     })
     return status
+  }
+
+  const getBypassStatus = (): Promise<string> => {
+    // getOrSet writes the cache before it resolves, so once this clears, later
+    // callers inside the window are served from the cache instead.
+    if (!inFlightBypassProbe) {
+      inFlightBypassProbe = readBypassStatus().finally(() => {
+        inFlightBypassProbe = undefined
+      })
+    }
+    return inFlightBypassProbe
   }
 
   const register = async (): Promise<CaptchaError | GeetestRegister> => {
@@ -127,6 +148,10 @@ const Geetest = (config: { id: string; key: string }): GeetestType => {
         // provider outage, not the user failing the captcha — the vendored SDK
         // flags it with a sentinel msg so the two are not conflated.
         if (result.msg === VALIDATE_REQUEST_FAILED_MSG) {
+          // The SDK swallows the transport error and production gtlog is off, so
+          // without this the outage only shows up as a 503. A span event rather
+          // than a recorded exception: it fires per request during an outage.
+          addEventToCurrentSpan("geetestValidateOutage")
           return new CaptchaServiceUnavailableError()
         }
         return new CaptchaUserFailToPassError()
