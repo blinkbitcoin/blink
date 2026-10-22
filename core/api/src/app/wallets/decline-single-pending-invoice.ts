@@ -11,6 +11,7 @@ import { InvalidNonHodlInvoiceError } from "@/domain/errors"
 import { addAttributesToCurrentSpan, wrapAsyncToRunInSpan } from "@/services/tracing"
 import { WalletInvoicesRepository } from "@/services/mongoose"
 import { LndService } from "@/services/lnd"
+import { LockService } from "@/services/lock"
 
 import { elapsedSinceTimestamp } from "@/utils"
 
@@ -38,33 +39,36 @@ export const declineHeldInvoice = wrapAsyncToRunInSpan({
       onUs: false,
     })
 
-    const result = await processPendingInvoiceForDecline({
-      walletInvoice,
-      logger: pendingInvoiceLogger,
+    // Same lock as intraledger send and cancel
+    return LockService().lockPaymentHash(paymentHash, async () => {
+      const result = await processPendingInvoiceForDecline({
+        walletInvoice,
+        logger: pendingInvoiceLogger,
+      })
+
+      const walletInvoices = WalletInvoicesRepository()
+      let marked: WalletInvoiceWithOptionalLnInvoice | RepositoryError
+      switch (result.type) {
+        case ProcessPendingInvoiceResultType.MarkProcessedAsCanceledOrExpired:
+          marked = await walletInvoices.markAsProcessingCompleted(paymentHash)
+          if (marked instanceof Error) {
+            pendingInvoiceLogger.error("Unable to mark invoice as processingCompleted")
+            return marked
+          }
+          return true
+
+        case ProcessPendingInvoiceResultType.Error:
+          return result.error
+
+        case ProcessPendingInvoiceResultType.MarkProcessedAsPaid:
+        case ProcessPendingInvoiceResultType.MarkProcessedAsPaidWithError:
+        case ProcessPendingInvoiceResultType.ReasonInvoiceNotPaidYet:
+          return true
+
+        default:
+          return assertUnreachable(result)
+      }
     })
-
-    const walletInvoices = WalletInvoicesRepository()
-    let marked: WalletInvoiceWithOptionalLnInvoice | RepositoryError
-    switch (result.type) {
-      case ProcessPendingInvoiceResultType.MarkProcessedAsCanceledOrExpired:
-        marked = await walletInvoices.markAsProcessingCompleted(paymentHash)
-        if (marked instanceof Error) {
-          pendingInvoiceLogger.error("Unable to mark invoice as processingCompleted")
-          return marked
-        }
-        return true
-
-      case ProcessPendingInvoiceResultType.Error:
-        return result.error
-
-      case ProcessPendingInvoiceResultType.MarkProcessedAsPaid:
-      case ProcessPendingInvoiceResultType.MarkProcessedAsPaidWithError:
-      case ProcessPendingInvoiceResultType.ReasonInvoiceNotPaidYet:
-        return true
-
-      default:
-        return assertUnreachable(result)
-    }
   },
 })
 

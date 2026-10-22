@@ -1,10 +1,6 @@
 export * from "./wallet-invoice-checker"
-
-export const WalletInvoiceStatus = {
-  Pending: "Pending",
-  Paid: "Paid",
-  Expired: "Expired",
-} as const
+export * from "./wallet-invoice-payable-checker"
+export * from "./wallet-invoice-status"
 
 export const WalletInvoiceWebhookStatus = {
   Pending: "pending",

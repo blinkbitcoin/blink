@@ -9,15 +9,21 @@ import * as DeclinePendingInvoiceImpl from "@/app/wallets/decline-single-pending
 import * as UpdatePendingInvoiceImpl from "@/app/wallets/update-single-pending-invoice"
 
 import { handleHeldInvoices } from "@/app/wallets"
+import { declineHeldInvoice } from "@/app/wallets/decline-single-pending-invoice"
 import { updatePendingInvoice } from "@/app/wallets/update-single-pending-invoice"
 
 import { toMilliSatsFromNumber, toSats } from "@/domain/bitcoin"
-import { decodeInvoice, getSecretAndPaymentHash } from "@/domain/bitcoin/lightning"
+import {
+  decodeInvoice,
+  getSecretAndPaymentHash,
+  InvoiceNotFoundError,
+} from "@/domain/bitcoin/lightning"
 import { INVOICE_EXPIRATIONS } from "@/domain/bitcoin/lightning/invoice-expiration"
 import { LedgerTransactionType } from "@/domain/ledger"
 import { WalletCurrency } from "@/domain/shared"
 import * as DisplayAmountsConverterImpl from "@/domain/fiat"
 
+import { LockService } from "@/services/lock"
 import { baseLogger } from "@/services/logger"
 import { WalletInvoicesRepository } from "@/services/mongoose"
 import { WalletInvoice } from "@/services/mongoose/schema"
@@ -164,6 +170,80 @@ describe("update pending invoices", () => {
       // Restore system state
       declineHeldInvoiceSpy.mockRestore()
       updatePendingInvoiceSpy.mockRestore()
+    })
+  })
+
+  // Marking canceled/expired must wait for the payment-hash lock
+  describe("marks canceled/expired invoices under the payment-hash lock", () => {
+    const persistPendingInvoice = async () => {
+      const { paymentHash } = getSecretAndPaymentHash()
+      const externalId = randomLedgerExternalId()
+      if (externalId instanceof Error) throw externalId
+
+      const persisted = await WalletInvoicesRepository().persistNew({
+        paymentHash,
+        secret: "secretPreImage" as SecretPreImage,
+        selfGenerated: true,
+        pubkey: DEFAULT_PUBKEY,
+        recipientWalletDescriptor: {
+          id: randomUUID() as WalletId,
+          currency: WalletCurrency.Usd,
+          accountId: randomUUID() as AccountId,
+        },
+        paid: false,
+        lnInvoice: mockLnInvoice,
+        processingCompleted: false,
+        externalId,
+      })
+      if (persisted instanceof Error) throw persisted
+      return persisted
+    }
+
+    const mockLndInvoiceNotFound = () => {
+      const { LndService: LnServiceOrig } = jest.requireActual("@/services/lnd")
+      jest.spyOn(LndImpl, "LndService").mockReturnValue({
+        ...LnServiceOrig(),
+        lookupInvoice: () => Promise.resolve(new InvoiceNotFoundError()),
+      })
+    }
+
+    const expectMarkWaitsForLock = async (
+      walletInvoice: WalletInvoiceWithOptionalLnInvoice,
+      run: () => Promise<unknown>,
+    ) => {
+      const { paymentHash } = walletInvoice
+      let pending: Promise<unknown> | undefined
+      const locked = await LockService().lockPaymentHash(paymentHash, async () => {
+        pending = run()
+        await new Promise((resolve) => setTimeout(resolve, 300))
+        return WalletInvoicesRepository().findByPaymentHash(paymentHash)
+      })
+      if (locked instanceof Error) throw locked
+      // Still open while the lock was held
+      expect(locked.processingCompleted).toBe(false)
+
+      expect(await pending).toBe(true)
+      const after = await WalletInvoicesRepository().findByPaymentHash(paymentHash)
+      if (after instanceof Error) throw after
+      expect(after.processingCompleted).toBe(true)
+    }
+
+    it("declineHeldInvoice", async () => {
+      expect.assertions(3)
+      mockLndInvoiceNotFound()
+      const walletInvoice = await persistPendingInvoice()
+      await expectMarkWaitsForLock(walletInvoice, () =>
+        declineHeldInvoice({ walletInvoice, logger: baseLogger }),
+      )
+    })
+
+    it("updatePendingInvoice", async () => {
+      expect.assertions(3)
+      mockLndInvoiceNotFound()
+      const walletInvoice = await persistPendingInvoice()
+      await expectMarkWaitsForLock(walletInvoice, () =>
+        updatePendingInvoice({ walletInvoice, logger: baseLogger }),
+      )
     })
   })
 

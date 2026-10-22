@@ -72,11 +72,14 @@ export const updatePendingInvoice = wrapAsyncToRunInSpan({
     })
 
     const walletInvoices = WalletInvoicesRepository()
-    let marked: WalletInvoiceWithOptionalLnInvoice | RepositoryError
+    let marked: WalletInvoiceWithOptionalLnInvoice | RepositoryError | LockServiceError
     if (walletInvoiceBeforeProcessing.processingCompleted) return true
     switch (result.type) {
       case ProcessPendingInvoiceResultType.MarkProcessedAsCanceledOrExpired:
-        marked = await walletInvoices.markAsProcessingCompleted(paymentHash)
+        // Under the payment-hash lock, like intraledger send and cancel
+        marked = await LockService().lockPaymentHash(paymentHash, () =>
+          walletInvoices.markAsProcessingCompleted(paymentHash),
+        )
         if (marked instanceof Error) {
           pendingInvoiceLogger.error("Unable to mark invoice as processingCompleted")
           return marked
