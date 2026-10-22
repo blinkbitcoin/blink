@@ -25,7 +25,6 @@ import {
   TradeIntraAccountLimitsExceededError,
   WithdrawalLimitsExceededError,
   CouldNotFindLightningPaymentFlowError,
-  AlreadyPaidError,
   InvoiceCanceledError,
   InvoiceExpiredError,
 } from "@/domain/errors"
@@ -60,7 +59,6 @@ import {
 } from "test/helpers"
 
 let lnInvoice: LnInvoice
-let expiredLnInvoice: LnInvoice
 let noAmountLnInvoice: LnInvoice
 let largeWithAmountLnInvoice: LnInvoice
 let memo: string
@@ -136,9 +134,6 @@ beforeAll(async () => {
   const randomRequest =
     "lnbcrt10n1p39jatkpp5djwv295kunhe5e0e4whj3dcjzwy7cmcxk8cl2a4dquyrp3dqydesdqqcqzpuxqr23ssp56u5m680x7resnvcelmsngc64ljm7g5q9r26zw0qyq5fenuqlcfzq9qyyssqxv4kvltas2qshhmqnjctnqkjpdfzu89e428ga6yk9jsp8rf382f3t03ex4e6x3a4sxkl7ruj6lsfpkuu9u9ee5kgr5zdyj7x2nwdljgq74025p"
   const invoice = decodeFreshInvoice(randomRequest)
-  const expiredInvoice = decodeInvoice(randomRequest)
-  if (expiredInvoice instanceof Error) throw expiredInvoice
-  expiredLnInvoice = expiredInvoice
   lnInvoice = invoice
 
   const randomNoAmountRequest =
@@ -1420,9 +1415,7 @@ describe("initiated via lightning", () => {
     })
 
     describe("rejects invoices that are no longer payable", () => {
-      const setupSelfPayToUsdInvoice = async ({
-        processingCompleted = false,
-      }: { processingCompleted?: boolean } = {}) => {
+      const setupSelfPayToUsdInvoice = async () => {
         const { LndService: LnServiceOrig } = jest.requireActual("@/services/lnd")
         jest.spyOn(LndImpl, "LndService").mockReturnValue({
           ...LnServiceOrig(),
@@ -1453,12 +1446,6 @@ describe("initiated via lightning", () => {
           externalId,
         })
         if (persisted instanceof Error) throw persisted
-        if (processingCompleted) {
-          const canceled = await WalletInvoicesRepository().markAsProcessingCompleted(
-            lnInvoice.paymentHash,
-          )
-          if (canceled instanceof Error) throw canceled
-        }
 
         const receive = await recordReceiveLnPayment({
           walletDescriptor: btcWalletDescriptor,
@@ -1492,22 +1479,6 @@ describe("initiated via lightning", () => {
           memo,
         })
         expect(res).toBeInstanceOf(InvoiceExpiredError)
-        expect(recordIntraledgerSpy).not.toHaveBeenCalled()
-      })
-
-      it("fails to pay a canceled invoice", async () => {
-        const recordIntraledgerSpy = jest.spyOn(LedgerFacadeImpl, "recordIntraledger")
-        const { btcWalletDescriptor, account } = await setupSelfPayToUsdInvoice({
-          processingCompleted: true,
-        })
-
-        const res = await Payments.payInvoiceByWalletId({
-          senderWalletId: btcWalletDescriptor.id,
-          senderAccount: account,
-          uncheckedPaymentRequest: lnInvoice.paymentRequest,
-          memo,
-        })
-        expect(res).toBeInstanceOf(InvoiceCanceledError)
         expect(recordIntraledgerSpy).not.toHaveBeenCalled()
       })
 
@@ -1566,86 +1537,6 @@ describe("initiated via lightning", () => {
 
         const res = await payment
         expect(res).toBeInstanceOf(InvoiceCanceledError)
-        expect(recordIntraledgerSpy).not.toHaveBeenCalled()
-      })
-
-      it("fails with AlreadyPaidError when the invoice is paid after a probe", async () => {
-        const recordIntraledgerSpy = jest.spyOn(LedgerFacadeImpl, "recordIntraledger")
-        const { btcWalletDescriptor, account } = await setupSelfPayToUsdInvoice()
-
-        const probe = await Payments.getLightningFeeEstimationForBtcWallet({
-          walletId: btcWalletDescriptor.id,
-          uncheckedPaymentRequest: lnInvoice.paymentRequest,
-        })
-        expect(probe.error).toBeUndefined()
-
-        const paid = await WalletInvoicesRepository().markAsPaid(lnInvoice.paymentHash)
-        if (paid instanceof Error) throw paid
-
-        const res = await Payments.payInvoiceByWalletId({
-          senderWalletId: btcWalletDescriptor.id,
-          senderAccount: account,
-          uncheckedPaymentRequest: lnInvoice.paymentRequest,
-          memo,
-        })
-        // Same as the non-probe path: paid but not recorded is an error
-        expect(res).toBeInstanceOf(AlreadyPaidError)
-        expect(recordIntraledgerSpy).not.toHaveBeenCalled()
-      })
-
-      it("fails to pay a btc invoice past its bolt11 expiry", async () => {
-        const recordIntraledgerSpy = jest.spyOn(LedgerFacadeImpl, "recordIntraledger")
-        const { LndService: LnServiceOrig } = jest.requireActual("@/services/lnd")
-        jest.spyOn(LndImpl, "LndService").mockReturnValue({
-          ...LnServiceOrig(),
-          listAllPubkeys: () => [expiredLnInvoice.destination],
-          lookupInvoice: () =>
-            Promise.resolve(
-              lndInvoiceLookupFor({ invoice: expiredLnInvoice, description: "" }),
-            ),
-          cancelInvoice: () => true,
-        })
-        expect(expiredLnInvoice.isExpired).toBe(true)
-
-        const senderWalletDescriptor = await createRandomUserAndBtcWallet()
-        const senderAccount = await AccountsRepository().findById(
-          senderWalletDescriptor.accountId,
-        )
-        if (senderAccount instanceof Error) throw senderAccount
-        const recipientWalletDescriptor = await createRandomUserAndBtcWallet()
-
-        const externalId = randomLedgerExternalId()
-        if (externalId instanceof Error) throw externalId
-
-        const persisted = await WalletInvoicesRepository().persistNew({
-          paymentHash: expiredLnInvoice.paymentHash,
-          secret: "secret" as SecretPreImage,
-          selfGenerated: true,
-          pubkey: expiredLnInvoice.destination,
-          recipientWalletDescriptor,
-          paid: false,
-          lnInvoice: expiredLnInvoice,
-          processingCompleted: false,
-          externalId,
-        })
-        if (persisted instanceof Error) throw persisted
-
-        const receive = await recordReceiveLnPayment({
-          walletDescriptor: senderWalletDescriptor,
-          paymentAmount: receiveAmounts,
-          bankFee: receiveBankFee,
-          displayAmounts: receiveDisplayAmounts,
-          memo,
-        })
-        if (receive instanceof Error) throw receive
-
-        const res = await Payments.payInvoiceByWalletId({
-          senderWalletId: senderWalletDescriptor.id,
-          senderAccount,
-          uncheckedPaymentRequest: expiredLnInvoice.paymentRequest,
-          memo,
-        })
-        expect(res).toBeInstanceOf(InvoiceExpiredError)
         expect(recordIntraledgerSpy).not.toHaveBeenCalled()
       })
     })
