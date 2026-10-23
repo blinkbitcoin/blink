@@ -1,19 +1,14 @@
 import { GraphQLResolveInfo, GraphQLFieldResolver } from "graphql"
 
+import { TOTP_STEP_UP_MUTATIONS } from "./totp-step-up-mutations"
+
 import { Authentication } from "@/app"
 import { mapAndParseErrorForGqlResponse } from "@/graphql/error-map"
 import { TotpCodeRequiredError } from "@/domain/authentication/errors"
 import { TotpCodeInvalidError } from "@/domain/kratos"
 import { IdentityRepository, checkedToTotpCode } from "@/services/kratos"
 
-// mutations that need a fresh authenticator code when the identity has TOTP
-export const TOTP_STEP_UP_MUTATIONS = [
-  "userTotpDelete",
-  "userEmailDelete",
-  "userEmailRegistrationInitiate",
-  "userPhoneDelete",
-  "userPhoneRegistrationValidate",
-] as const
+export { TOTP_STEP_UP_MUTATIONS }
 
 type InputArgs = { input?: { totpCode?: unknown } }
 

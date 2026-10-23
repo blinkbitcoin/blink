@@ -1,10 +1,18 @@
-import { GraphQLInputObjectType, getNamedType } from "graphql"
+import { readFileSync } from "fs"
+import { join } from "path"
 
-import { gqlPublicSchema } from "@/graphql/public"
-import { TOTP_STEP_UP_MUTATIONS } from "@/servers/middlewares/totp-step-up"
+import { GraphQLInputObjectType, buildSchema, getNamedType } from "graphql"
+
+import { TOTP_STEP_UP_MUTATIONS } from "@/servers/middlewares/totp-step-up-mutations"
+
+// the committed SDL is kept equal to the code schema by the check-sdls diff
+const sdl = readFileSync(
+  join(__dirname, "../../../src/graphql/public/schema.graphql"),
+  "utf8",
+)
 
 describe("public schema - TOTP step-up inputs", () => {
-  const mutationFields = gqlPublicSchema.getMutationType()?.getFields() ?? {}
+  const mutationFields = buildSchema(sdl).getMutationType()?.getFields() ?? {}
 
   it.each(TOTP_STEP_UP_MUTATIONS)("%s accepts input.totpCode", (name) => {
     const field = mutationFields[name]
