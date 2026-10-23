@@ -26,6 +26,9 @@ import {
   PhoneAlreadyExistsError,
   EmailAlreadyExistsError,
   TotpAlreadyExistsError,
+  TotpCodeRequiredError,
+  TotpCodeInvalidError,
+  TotpRemovalBalanceTooHighError,
   SessionRefreshRequiredError,
   CodeExpiredError,
   UnauthorizedIPForOnboardingError,
@@ -401,6 +404,11 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
       message = "Too many place submissions, please wait for a while and try again."
       return new TooManyRequestError({ message, logger: baseLogger })
 
+    case "TotpVerifyAttemptPerUserRateLimiterExceededError":
+      message =
+        "Too many authenticator code attempts, please wait for a while and try again."
+      return new TooManyRequestError({ message, logger: baseLogger })
+
     case "CaptchaRequestCodePerCountryRateLimiterExceededError":
     case "CaptchaRequestCodeGlobalRateLimiterExceededError":
       message = "Too many requests, please try again later."
@@ -638,6 +646,15 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
 
     case "TotpAlreadyExistsError":
       return new TotpAlreadyExistsError({ logger: baseLogger })
+
+    case "TotpCodeRequiredError":
+      return new TotpCodeRequiredError({ logger: baseLogger })
+
+    case "TotpCodeInvalidError":
+      return new TotpCodeInvalidError({ logger: baseLogger })
+
+    case "TotpRemovalBalanceTooHighError":
+      return new TotpRemovalBalanceTooHighError({ logger: baseLogger })
 
     case "CodeExpiredKratosError":
       return new CodeExpiredError({ logger: baseLogger })

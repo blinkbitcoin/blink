@@ -1,28 +1,40 @@
 import { createHash } from "crypto"
 
-import { checkLoginAttemptPerLoginIdentifierLimits } from "./ratelimits"
+import {
+  checkLoginAttemptPerLoginIdentifierLimits,
+  checkTotpVerifyAttemptPerUserLimits,
+} from "./ratelimits"
 import { recordLoginActivity } from "./record-login-activity"
 
+import { getTotpRemovalBlockedBalance, getTotpStepUpEnabled } from "@/config"
+
+import { checkTotpRemovalBalance } from "@/domain/authentication"
 import {
   AuthTokenUserIdMismatchError,
   IdentifierNotFoundError,
+  TotpCodeRequiredError,
 } from "@/domain/authentication/errors"
-import { TotpAlreadyExistsError } from "@/domain/kratos"
+import { TotpAlreadyExistsError, TotpCodeInvalidError } from "@/domain/kratos"
+import { ErrorLevel } from "@/domain/shared"
 import {
   AuthWithEmailPasswordlessService,
   AuthWithPhonePasswordlessService,
   IdentityRepository,
+  checkedToTotpCode,
   kratosElevatingSessionWithTotp,
   kratosInitiateTotp,
   kratosRemoveTotp,
+  kratosRevokeSessionToken,
   kratosValidateTotp,
+  kratosVerifyTotpOnSession,
   logoutSessionByAuthToken,
   refreshToken,
   validateKratosToken,
 } from "@/services/kratos"
-import { kratosAdmin } from "@/services/kratos/private"
 
-import { UsersRepository } from "@/services/mongoose"
+import { LedgerService } from "@/services/ledger"
+import { UsersRepository, WalletsRepository } from "@/services/mongoose"
+import { recordExceptionInCurrentSpan } from "@/services/tracing"
 
 export const initiateTotpRegistration = async ({
   userId,
@@ -33,7 +45,7 @@ export const initiateTotpRegistration = async ({
   if (identity instanceof Error) return identity
   if (identity.totpEnabled) return new TotpAlreadyExistsError()
 
-  const authToken = await getAuthTokenFromUserId(userId)
+  const authToken = await getAuthTokenForIdentity(identity)
   if (authToken instanceof Error) {
     return authToken
   }
@@ -173,18 +185,94 @@ export const removeTotp = async ({
   return me
 }
 
+export const checkTotpStepUp = async ({
+  userId,
+  totpCode,
+}: {
+  userId: UserId
+  totpCode: unknown
+}): Promise<true | ApplicationError> => {
+  if (!getTotpStepUpEnabled()) return true
+
+  const identity = await IdentityRepository().getIdentity(userId)
+  if (identity instanceof Error) return identity
+  if (!identity.totpEnabled) return true
+
+  if (totpCode === undefined || totpCode === null || totpCode === "") {
+    return new TotpCodeRequiredError()
+  }
+  if (typeof totpCode !== "string") return new TotpCodeInvalidError()
+
+  const checkedCode = checkedToTotpCode(totpCode)
+  if (checkedCode instanceof Error) return new TotpCodeInvalidError()
+
+  return verifyTotpCode({ identity, totpCode: checkedCode })
+}
+
+const verifyTotpCode = async ({
+  identity,
+  totpCode,
+}: {
+  identity: AnyIdentity
+  totpCode: TotpCode
+}): Promise<true | ApplicationError> => {
+  const limitOk = await checkTotpVerifyAttemptPerUserLimits(identity.id)
+  if (limitOk instanceof Error) return limitOk
+
+  const authToken = await getAuthTokenForIdentity(identity)
+  if (authToken instanceof Error) return authToken
+
+  try {
+    return await kratosVerifyTotpOnSession({ authToken, totpCode })
+  } finally {
+    const revoked = await kratosRevokeSessionToken(authToken)
+    if (revoked instanceof Error) {
+      recordExceptionInCurrentSpan({ error: revoked, level: ErrorLevel.Warn })
+    }
+  }
+}
+
+export const checkTotpRemovalAllowed = async ({
+  accountId,
+}: {
+  accountId: AccountId
+}): Promise<true | ApplicationError> => {
+  if (!getTotpStepUpEnabled()) return true
+
+  const wallets = await WalletsRepository().listByAccountId(accountId)
+  if (wallets instanceof Error) return wallets
+
+  const balances: BalanceAmount<WalletCurrency>[] = []
+  for (const wallet of wallets) {
+    const balance = await LedgerService().getWalletBalanceAmount(wallet)
+    if (balance instanceof Error) return balance
+    balances.push(balance)
+  }
+
+  return checkTotpRemovalBalance({
+    balances,
+    blockedBalance: getTotpRemovalBlockedBalance(),
+  })
+}
+
 const getAuthTokenFromUserId = async (
   userId: UserId,
-): Promise<AuthToken | AuthenticationError> => {
-  const { data } = await kratosAdmin.getIdentity({ id: userId })
+): Promise<AuthToken | AuthenticationError | KratosError> => {
+  const identity = await IdentityRepository().getIdentity(userId)
+  if (identity instanceof Error) return identity
+
+  return getAuthTokenForIdentity(identity)
+}
+
+const getAuthTokenForIdentity = async ({
+  phone,
+  email,
+}: AnyIdentity): Promise<AuthToken | AuthenticationError | KratosError> => {
   let kratosResult:
     | IAuthWithEmailPasswordlessService
     | LoginWithPhoneNoPasswordSchemaResponse
     | KratosError
     | null = null
-
-  const phone = data?.traits?.phone
-  const email = data?.traits?.email
 
   if (phone) {
     const authService = AuthWithPhonePasswordlessService()

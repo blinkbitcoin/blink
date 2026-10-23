@@ -54,6 +54,7 @@ export const consumeLimiter = async ({
     | IpAddress
     | LoginIdentifier
     | AccountId
+    | UserId
     | AppcheckJti
     | CountryCode
     | RequestCodeCaptchaGlobalKey

@@ -7,6 +7,8 @@ import { UuidRegex } from "@/domain/shared"
 import { InvalidTelegramPassportNonceError } from "@/domain/errors"
 import { ChannelType, PhoneCodeInvalidError } from "@/domain/phone-provider"
 
+export * from "./check-totp-removal-balance"
+
 export const getSupportedCountries = ({
   allCountries,
   unsupportedSmsCountries,
@@ -52,7 +54,7 @@ export const checkedToEmailCode = (code: string): EmailCode | ApplicationError =
 }
 
 export const validOneTimeAuthCodeValue = (code: string) => {
-  if (code.match(/^[0-9]{6}/i)) {
+  if (code.match(/^[0-9]{6}$/)) {
     return code as PhoneCode
   }
   return new PhoneCodeInvalidError({ message: "Invalid value for OneTimeAuthCode" })

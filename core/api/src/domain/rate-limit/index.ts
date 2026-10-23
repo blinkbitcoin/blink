@@ -17,6 +17,7 @@ import {
   BtcMapPlaceSubmitPerAccountRateLimiterExceededError,
   CaptchaRequestCodePerCountryRateLimiterExceededError,
   CaptchaRequestCodeGlobalRateLimiterExceededError,
+  TotpVerifyAttemptPerUserRateLimiterExceededError,
 } from "./errors"
 
 import {
@@ -38,6 +39,7 @@ import {
   getBtcMapPlaceSubmitPerAccountLimits,
   getRequestCodeCaptchaPerCountryLimits,
   getRequestCodeCaptchaGlobalLimits,
+  getTotpVerifyAttemptPerUserLimits,
 } from "@/config"
 
 export const RateLimitPrefix = {
@@ -60,6 +62,7 @@ export const RateLimitPrefix = {
   addQuizAttemptPerPhone: "add_quiz_attempt_phone",
   regionCheckIpResolution: "region_check_ip_resolution",
   btcMapPlaceSubmitPerAccount: "btcmap_place_submit_account",
+  totpVerifyAttemptPerUser: "totp_verify_attempt_user",
 } as const
 
 type RateLimitPrefixKey = keyof typeof RateLimitPrefix
@@ -156,5 +159,10 @@ export const RateLimitConfig: { [key in RateLimitPrefixKey]: RateLimitConfig } =
     key: RateLimitPrefix.btcMapPlaceSubmitPerAccount,
     limits: getBtcMapPlaceSubmitPerAccountLimits(),
     error: BtcMapPlaceSubmitPerAccountRateLimiterExceededError,
+  },
+  totpVerifyAttemptPerUser: {
+    key: RateLimitPrefix.totpVerifyAttemptPerUser,
+    limits: getTotpVerifyAttemptPerUserLimits(),
+    error: TotpVerifyAttemptPerUserRateLimiterExceededError,
   },
 }
