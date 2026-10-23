@@ -5,6 +5,7 @@ import { mapAndParseErrorForGqlResponse } from "@/graphql/error-map"
 import Phone from "@/graphql/shared/types/scalar/phone"
 
 import OneTimeAuthCode from "@/graphql/shared/types/scalar/one-time-auth-code"
+import TotpCode from "@/graphql/public/types/scalar/totp-code"
 import UserPhoneRegistrationValidatePayload from "@/graphql/public/types/payload/user-phone-registration-validate"
 
 const UserPhoneRegistrationValidateInput = GT.Input({
@@ -12,6 +13,7 @@ const UserPhoneRegistrationValidateInput = GT.Input({
   fields: () => ({
     phone: { type: GT.NonNull(Phone) },
     code: { type: GT.NonNull(OneTimeAuthCode) },
+    totpCode: { type: TotpCode },
   }),
 })
 

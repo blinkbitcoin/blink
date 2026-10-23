@@ -424,6 +424,40 @@ export class TotpAlreadyExistsError extends CustomGraphQLError {
   }
 }
 
+export class TotpCodeRequiredError extends CustomGraphQLError {
+  constructor(errData: CustomGraphQLErrorData) {
+    super({
+      message: "An authenticator code is required for this action.",
+      forwardToClient: true,
+      code: "TOTP_CODE_REQUIRED",
+      ...errData,
+    })
+  }
+}
+
+export class TotpCodeInvalidError extends CustomGraphQLError {
+  constructor(errData: CustomGraphQLErrorData) {
+    super({
+      message: "The authenticator code is invalid.",
+      forwardToClient: true,
+      code: "TOTP_CODE_INVALID",
+      ...errData,
+    })
+  }
+}
+
+export class TotpRemovalBalanceTooHighError extends CustomGraphQLError {
+  constructor(errData: CustomGraphQLErrorData) {
+    super({
+      message:
+        "The authenticator cannot be removed while the account balance is this high. Please contact support.",
+      forwardToClient: true,
+      code: "TOTP_REMOVAL_BALANCE_TOO_HIGH",
+      ...errData,
+    })
+  }
+}
+
 export class CodeExpiredError extends CustomGraphQLError {
   constructor(errData: CustomGraphQLErrorData) {
     super({

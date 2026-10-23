@@ -17,6 +17,7 @@ import { checkedToScanDepth } from "@/domain/bitcoin/onchain"
 import { toCents } from "@/domain/fiat"
 
 import { toSeconds } from "@/domain/primitives"
+import { WalletCurrency } from "@/domain/shared"
 
 import {
   AccountLevel,
@@ -264,6 +265,22 @@ export const getRegionCheckIpResolutionLimits = () =>
 
 export const getBtcMapPlaceSubmitPerAccountLimits = () =>
   getRateLimits(yamlConfig.rateLimits.btcMapPlaceSubmitPerAccount)
+
+export const getTotpVerifyAttemptPerUserLimits = () =>
+  getRateLimits(yamlConfig.rateLimits.totpVerifyAttemptPerUser)
+
+export const getTotpStepUpEnabled = (): boolean => yamlConfig.twoFactor.stepUpEnabled
+
+export const getTotpRemovalBlockedBalance = (): {
+  btc: BtcPaymentAmount
+  usd: UsdPaymentAmount
+} => {
+  const { btc, usd } = yamlConfig.twoFactor.totpRemovalBlockedBalance
+  return {
+    btc: { amount: BigInt(btc), currency: WalletCurrency.Btc },
+    usd: { amount: BigInt(usd), currency: WalletCurrency.Usd },
+  }
+}
 
 export const getOnChainWalletConfig = () => ({
   dustThreshold: yamlConfig.paymentNetworks.onchain.dustThreshold,

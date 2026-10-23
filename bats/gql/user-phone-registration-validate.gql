@@ -2,6 +2,7 @@ mutation userPhoneRegistrationValidate($input: UserPhoneRegistrationValidateInpu
   userPhoneRegistrationValidate(input: $input) {
     errors {
       message
+      code
     }
     me {
       id

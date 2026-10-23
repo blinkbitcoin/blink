@@ -229,6 +229,7 @@ type YamlSchema = {
     addQuizPerPhone: RateLimitInput
     regionCheckIpResolution: RateLimitInput
     btcMapPlaceSubmitPerAccount: RateLimitInput
+    totpVerifyAttemptPerUser: RateLimitInput
   }
   accounts: {
     initialStatus: string
@@ -287,4 +288,11 @@ type YamlSchema = {
   windDown: WindDownYamlConfig
   inactivityFee: InactivityFeeYamlConfig
   regionRestrictions: RegionRestrictionsYamlConfig
+  twoFactor: {
+    stepUpEnabled: boolean
+    totpRemovalBlockedBalance: {
+      btc: number
+      usd: number
+    }
+  }
 }
