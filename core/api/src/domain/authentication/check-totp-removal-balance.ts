@@ -9,10 +9,17 @@ export const checkTotpRemovalBalance = ({
   balances: Amount<WalletCurrency>[]
   blockedBalance: { btc: BtcPaymentAmount; usd: UsdPaymentAmount }
 }): true | TotpRemovalBalanceTooHighError => {
-  for (const balance of balances) {
-    const blocked =
-      balance.currency === WalletCurrency.Btc ? blockedBalance.btc : blockedBalance.usd
-    if (balance.amount >= blocked.amount) return new TotpRemovalBalanceTooHighError()
+  const totals: Record<WalletCurrency, bigint> = {
+    [WalletCurrency.Btc]: 0n,
+    [WalletCurrency.Usd]: 0n,
+  }
+  for (const { amount, currency } of balances) totals[currency] += amount
+
+  if (
+    totals[WalletCurrency.Btc] >= blockedBalance.btc.amount ||
+    totals[WalletCurrency.Usd] >= blockedBalance.usd.amount
+  ) {
+    return new TotpRemovalBalanceTooHighError()
   }
 
   return true

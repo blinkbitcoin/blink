@@ -37,6 +37,17 @@ describe("checkTotpRemovalBalance", () => {
     ).toBeInstanceOf(TotpRemovalBalanceTooHighError)
   })
 
+  it("sums same-currency wallets before comparing", () => {
+    const twoBtcWallets = [
+      { amount: 3_000_000n, currency: WalletCurrency.Btc },
+      { amount: 2_000_000n, currency: WalletCurrency.Btc },
+      { amount: 0n, currency: WalletCurrency.Usd },
+    ]
+    expect(
+      checkTotpRemovalBalance({ balances: twoBtcWallets, blockedBalance }),
+    ).toBeInstanceOf(TotpRemovalBalanceTooHighError)
+  })
+
   it("compares each balance against its own currency's threshold", () => {
     expect(
       checkTotpRemovalBalance({ balances: balances(500_000n, 0n), blockedBalance }),
