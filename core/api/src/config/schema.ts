@@ -705,6 +705,7 @@ export const configSchema = {
         addQuizPerPhone: rateLimitConfigSchema,
         regionCheckIpResolution: rateLimitConfigSchema,
         btcMapPlaceSubmitPerAccount: rateLimitConfigSchema,
+        totpVerifyAttemptPerUser: rateLimitConfigSchema,
       },
       required: [
         "requestCodePerEmail",
@@ -725,6 +726,7 @@ export const configSchema = {
         "addQuizPerPhone",
         "regionCheckIpResolution",
         "btcMapPlaceSubmitPerAccount",
+        "totpVerifyAttemptPerUser",
       ],
       additionalProperties: false,
       default: {
@@ -818,6 +820,11 @@ export const configSchema = {
           points: 20,
           duration: 86400,
           blockDuration: 86400,
+        },
+        totpVerifyAttemptPerUser: {
+          points: 8,
+          duration: 3600,
+          blockDuration: 3600,
         },
       },
     },
@@ -1418,6 +1425,26 @@ export const configSchema = {
         custodialTransferBlockedCountries: [],
       },
     },
+    twoFactor: {
+      type: "object",
+      properties: {
+        totpRemovalBlockedBalance: {
+          type: "object",
+          properties: {
+            btc: { type: "integer", minimum: 0 },
+            usd: { type: "integer", minimum: 0 },
+          },
+          required: ["btc", "usd"],
+          additionalProperties: false,
+        },
+      },
+      required: ["totpRemovalBlockedBalance"],
+      additionalProperties: false,
+      default: {
+        // tier 3: BTC in sats, USD in cents
+        totpRemovalBlockedBalance: { btc: 5000000, usd: 500000 },
+      },
+    },
   },
   required: [
     "locale",
@@ -1446,6 +1473,7 @@ export const configSchema = {
     "windDown",
     "inactivityFee",
     "regionRestrictions",
+    "twoFactor",
   ],
   additionalProperties: false,
   allOf: [

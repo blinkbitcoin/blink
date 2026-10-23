@@ -27,3 +27,4 @@ export class RegionCheckIpResolutionBudgetExceededError extends RateLimiterExcee
 export class BtcMapPlaceSubmitPerAccountRateLimiterExceededError extends RateLimiterExceededError {}
 export class CaptchaRequestCodePerCountryRateLimiterExceededError extends RateLimiterExceededError {}
 export class CaptchaRequestCodeGlobalRateLimiterExceededError extends RateLimiterExceededError {}
+export class TotpVerifyAttemptPerUserRateLimiterExceededError extends RateLimiterExceededError {}

@@ -243,6 +243,7 @@ generateTotpCode() {
 
   totpSecret="$(graphql_output '.data.userTotpRegistrationInitiate.totpSecret')"
   [ -n "$totpSecret" ] || exit 1
+  cache_value 'totp.secret' "$totpSecret"
 
   # Validate TOTP Registration
   totpCode=$(generateTotpCode "$totpSecret")
@@ -279,6 +280,7 @@ generateTotpCode() {
   totpRequired="$(curl_output '.result.totpRequired')"
   [ "$totpRequired" == "true" ] || exit 1
 
+  totpSecret=$(read_value 'totp.secret')
   totpCode=$(generateTotpCode "$totpSecret")
   variables="{\"totpCode\": \"$totpCode\", \"authToken\": \"$authToken\"}"
   curl_request "http://${GALOY_ENDPOINT}/auth/totp/validate" "$variables"
@@ -287,8 +289,34 @@ generateTotpCode() {
   [[ "$(graphql_output '.data.me.totpEnabled')" = "true" ]] || exit 1
 }
 
-@test "auth: removing totp" {
+@test "auth: removing totp without a code is refused" {
   exec_graphql 'charlie' 'user-totp-delete'
+  [[ "$(graphql_output '.data.userTotpDelete.errors[0].code')" = "TOTP_CODE_REQUIRED" ]] || exit 1
+
+  exec_graphql 'charlie' 'identity'
+  [[ "$(graphql_output '.data.me.totpEnabled')" = "true" ]] || exit 1
+}
+
+@test "auth: removing totp with a wrong code is refused" {
+  totpSecret=$(read_value 'totp.secret')
+  totpCode=$(generateTotpCode "$totpSecret")
+  # shift the last digit so the code is always wrong
+  wrongCode="${totpCode:0:5}$(( (${totpCode:5:1} + 1) % 10 ))"
+
+  variables="{\"input\": {\"totpCode\": \"$wrongCode\"}}"
+  exec_graphql 'charlie' 'user-totp-delete' "$variables"
+  [[ "$(graphql_output '.data.userTotpDelete.errors[0].code')" = "TOTP_CODE_INVALID" ]] || exit 1
+
+  exec_graphql 'charlie' 'identity'
+  [[ "$(graphql_output '.data.me.totpEnabled')" = "true" ]] || exit 1
+}
+
+@test "auth: removing totp" {
+  totpSecret=$(read_value 'totp.secret')
+  totpCode=$(generateTotpCode "$totpSecret")
+
+  variables="{\"input\": {\"totpCode\": \"$totpCode\"}}"
+  exec_graphql 'charlie' 'user-totp-delete' "$variables"
   [[ "$(graphql_output '.data.userTotpDelete.me.totpEnabled')" = "false" ]] || exit 1
 }
 

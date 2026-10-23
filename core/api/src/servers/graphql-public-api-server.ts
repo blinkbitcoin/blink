@@ -13,6 +13,7 @@ import { walletIdMiddleware } from "./middlewares/wallet-id"
 import { sessionPublicContext, tokenUserId } from "./middlewares/session"
 
 import { scopeMiddleware } from "./middlewares/scope"
+import { totpStepUpMiddleware } from "./middlewares/totp-step-up"
 
 import { GALOY_API_PORT, UNSECURE_IP_FROM_REQUEST_OBJECT } from "@/config"
 
@@ -136,6 +137,7 @@ export async function startApolloServerForCoreSchema() {
     permissions,
     walletIdMiddleware,
     scopeMiddleware,
+    totpStepUpMiddleware,
   )
 
   return startApolloServer({

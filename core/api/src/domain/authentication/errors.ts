@@ -19,6 +19,9 @@ export class WaitingDataTelegramPassportError extends AuthenticationError {}
 
 export class IdentifierNotFoundError extends AuthenticationError {}
 
+export class TotpCodeRequiredError extends AuthenticationError {}
+export class TotpRemovalBalanceTooHighError extends AuthenticationError {}
+
 export class EmailValidationSubmittedTooOftenError extends AuthenticationError {}
 
 export class AuthTokenUserIdMismatchError extends AuthenticationError {

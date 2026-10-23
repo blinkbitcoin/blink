@@ -1,28 +1,41 @@
 import { createHash } from "crypto"
 
-import { checkLoginAttemptPerLoginIdentifierLimits } from "./ratelimits"
+import {
+  checkLoginAttemptPerLoginIdentifierLimits,
+  checkTotpVerifyAttemptPerUserLimits,
+} from "./ratelimits"
 import { recordLoginActivity } from "./record-login-activity"
+
+import { getTotpRemovalBlockedBalance } from "@/config"
+
+import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
 
 import {
   AuthTokenUserIdMismatchError,
   IdentifierNotFoundError,
+  TotpRemovalBalanceTooHighError,
 } from "@/domain/authentication/errors"
 import { TotpAlreadyExistsError } from "@/domain/kratos"
+import { ErrorLevel, WalletCurrency } from "@/domain/shared"
 import {
   AuthWithEmailPasswordlessService,
   AuthWithPhonePasswordlessService,
   IdentityRepository,
+  handleKratosErrors,
   kratosElevatingSessionWithTotp,
   kratosInitiateTotp,
   kratosRemoveTotp,
+  kratosRevokeSessionToken,
   kratosValidateTotp,
+  kratosVerifyTotpOnSession,
   logoutSessionByAuthToken,
   refreshToken,
   validateKratosToken,
 } from "@/services/kratos"
 import { kratosAdmin } from "@/services/kratos/private"
 
-import { UsersRepository } from "@/services/mongoose"
+import { UsersRepository, WalletsRepository } from "@/services/mongoose"
+import { recordExceptionInCurrentSpan } from "@/services/tracing"
 
 export const initiateTotpRegistration = async ({
   userId,
@@ -171,6 +184,56 @@ export const removeTotp = async ({
   if (me instanceof Error) return me
 
   return me
+}
+
+// checks a code on a throwaway session so the caller's session and login activity are untouched
+export const verifyTotpCode = async ({
+  userId,
+  totpCode,
+}: {
+  userId: UserId
+  totpCode: TotpCode
+}): Promise<true | ApplicationError> => {
+  const limitOk = await checkTotpVerifyAttemptPerUserLimits(userId)
+  if (limitOk instanceof Error) return limitOk
+
+  let authToken: AuthToken | AuthenticationError
+  try {
+    authToken = await getAuthTokenFromUserId(userId)
+  } catch (err) {
+    return handleKratosErrors(err)
+  }
+  if (authToken instanceof Error) return authToken
+
+  try {
+    return await kratosVerifyTotpOnSession({ authToken, totpCode })
+  } finally {
+    const revoked = await kratosRevokeSessionToken(authToken)
+    if (revoked instanceof Error) {
+      recordExceptionInCurrentSpan({ error: revoked, level: ErrorLevel.Warn })
+    }
+  }
+}
+
+export const checkTotpRemovalAllowed = async ({
+  accountId,
+}: {
+  accountId: AccountId
+}): Promise<true | ApplicationError> => {
+  const blocked = getTotpRemovalBlockedBalance()
+
+  const wallets = await WalletsRepository().listByAccountId(accountId)
+  if (wallets instanceof Error) return wallets
+
+  for (const wallet of wallets) {
+    const balance = await getBalanceForWallet({ walletId: wallet.id })
+    if (balance instanceof Error) return balance
+
+    const threshold = wallet.currency === WalletCurrency.Btc ? blocked.btc : blocked.usd
+    if (balance >= threshold) return new TotpRemovalBalanceTooHighError()
+  }
+
+  return true
 }
 
 const getAuthTokenFromUserId = async (

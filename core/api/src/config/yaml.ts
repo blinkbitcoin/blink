@@ -13,6 +13,7 @@ import { configSchema } from "./schema"
 import { ConfigError } from "./error"
 
 import { baseLogger } from "@/services/logger"
+import { toSats } from "@/domain/bitcoin"
 import { checkedToScanDepth } from "@/domain/bitcoin/onchain"
 import { toCents } from "@/domain/fiat"
 
@@ -264,6 +265,14 @@ export const getRegionCheckIpResolutionLimits = () =>
 
 export const getBtcMapPlaceSubmitPerAccountLimits = () =>
   getRateLimits(yamlConfig.rateLimits.btcMapPlaceSubmitPerAccount)
+
+export const getTotpVerifyAttemptPerUserLimits = () =>
+  getRateLimits(yamlConfig.rateLimits.totpVerifyAttemptPerUser)
+
+export const getTotpRemovalBlockedBalance = (): { btc: Satoshis; usd: UsdCents } => {
+  const { btc, usd } = yamlConfig.twoFactor.totpRemovalBlockedBalance
+  return { btc: toSats(btc), usd: toCents(usd) }
+}
 
 export const getOnChainWalletConfig = () => ({
   dustThreshold: yamlConfig.paymentNetworks.onchain.dustThreshold,

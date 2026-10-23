@@ -103,6 +103,10 @@ rateLimits:
     points: 20
     duration: 86400
     blockDuration: 86400
+  totpVerifyAttemptPerUser:
+    points: 8
+    duration: 3600
+    blockDuration: 3600
 accounts:
   initialStatus: active
   initialWallets:
@@ -381,3 +385,7 @@ regionRestrictions:
   custodialDollarBalanceBlockedCountries:
     - NL
   custodialTransferBlockedCountries: []
+twoFactor:
+  totpRemovalBlockedBalance:
+    btc: 5000000
+    usd: 500000

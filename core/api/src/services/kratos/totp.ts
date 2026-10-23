@@ -7,7 +7,7 @@ import { handleKratosErrors } from "./errors"
 import { kratosAdmin, kratosPublic, toDomainSession } from "./private"
 
 import { LikelyBadCoreError } from "@/domain/authentication/errors"
-import { MissingTotpKratosError } from "@/domain/kratos"
+import { MissingTotpKratosError, TotpCodeInvalidError } from "@/domain/kratos"
 
 export const kratosInitiateTotp = async (token: AuthToken) => {
   try {
@@ -81,6 +81,58 @@ export const kratosElevatingSessionWithTotp = async ({
       xSessionToken: authToken,
     })
     return toDomainSession(data.session).identity.id
+  } catch (err) {
+    return handleKratosErrors(err)
+  }
+}
+
+// aal2 login flow on the given session; does not touch any other session
+export const kratosVerifyTotpOnSession = async ({
+  authToken,
+  totpCode,
+}: {
+  authToken: AuthToken
+  totpCode: TotpCode
+}): Promise<true | KratosError | AuthenticationError> => {
+  let flowId: string
+  try {
+    const flow = await kratosPublic.createNativeLoginFlow({
+      refresh: false,
+      aal: "aal2",
+      xSessionToken: authToken,
+    })
+    flowId = flow.data.id
+  } catch (err) {
+    return handleKratosErrors(err)
+  }
+
+  try {
+    await kratosPublic.updateLoginFlow({
+      flow: flowId,
+      updateLoginFlowBody: {
+        method: "totp",
+        totp_code: totpCode,
+      },
+      xSessionToken: authToken,
+    })
+    return true
+  } catch (err) {
+    if (isAxiosError(err) && err.response?.status === 400) {
+      return new TotpCodeInvalidError()
+    }
+    return handleKratosErrors(err)
+  }
+}
+
+// native logout revokes the token without whoami, which refuses an aal1 session here
+export const kratosRevokeSessionToken = async (
+  authToken: AuthToken,
+): Promise<true | KratosError | AuthenticationError> => {
+  try {
+    await kratosPublic.performNativeLogout({
+      performNativeLogoutBody: { session_token: authToken },
+    })
+    return true
   } catch (err) {
     return handleKratosErrors(err)
   }

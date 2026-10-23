@@ -30,3 +30,11 @@ export const checkLoginAttemptPerLoginIdentifierLimits = async (
     rateLimitConfig: RateLimitConfig.loginAttemptPerLoginIdentifier,
     keyToConsume: loginIdentifier,
   })
+
+export const checkTotpVerifyAttemptPerUserLimits = async (
+  userId: UserId,
+): Promise<true | RateLimiterExceededError> =>
+  consumeLimiter({
+    rateLimitConfig: RateLimitConfig.totpVerifyAttemptPerUser,
+    keyToConsume: userId,
+  })

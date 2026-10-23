@@ -110,6 +110,44 @@ describe("config.ts", () => {
       expect(contentOrg).toEqual(contentNew)
     })
 
+    it("fills the TOTP step-up defaults under a partial rateLimits override", () => {
+      withCustomYaml(
+        {
+          rateLimits: {
+            loginAttemptPerLoginIdentifier: {
+              points: 5,
+              duration: 60,
+              blockDuration: 60,
+            },
+          },
+        },
+        () => {
+          const {
+            getTotpVerifyAttemptPerUserLimits,
+            getTotpRemovalBlockedBalance,
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+          } = require("@/config")
+          expect(getTotpVerifyAttemptPerUserLimits()).toEqual({
+            points: 8,
+            duration: 3600,
+            blockDuration: 3600,
+          })
+          expect(getTotpRemovalBlockedBalance()).toEqual({ btc: 5000000, usd: 500000 })
+        },
+      )
+    })
+
+    it("reads an overridden TOTP removal balance", () => {
+      withCustomYaml(
+        { twoFactor: { totpRemovalBlockedBalance: { btc: 100, usd: 200 } } },
+        () => {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const { getTotpRemovalBlockedBalance } = require("@/config")
+          expect(getTotpRemovalBlockedBalance()).toEqual({ btc: 100, usd: 200 })
+        },
+      )
+    })
+
     it("ships the inactivity fee inert: jobs off, no live charging, documented defaults", () => {
       expect(getCronConfig().inactivityFeeJobsEnabled).toBe(false)
       expect(getInactivityFeeConfig()).toEqual({
