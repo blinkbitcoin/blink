@@ -10,6 +10,11 @@
       "ghsa": "GHSA-2xp9-vwfh-vxw4",
       "reason": "next@14.x AVIF/libheif decode RCE in the image optimizer. The vulnerable sharp->libheif path exists only in admin-panel, whose matcher-less next-auth middleware gates every path incl. /_next/image behind OAuth + email allowlist; the other apps use the bundled WASM decoder. No app sets images.remotePatterns/domains and no public endpoint echoes user-controlled bytes, so no attacker-supplied AVIF can reach a decoder. FRAGILE: adding sharp to another app, adding remotePatterns/domains, adding a middleware matcher to admin-panel/dashboard, or adding a byte-serving GET endpoint breaks this waiver — re-assess or upgrade first.",
       "ref": "internal upgrade ticket (Next.js 15.5.24+, tracked in the team tracker)"
+    },
+    {
+      "ghsa": "GHSA-2464-fhr4-w9xw",
+      "reason": "next@14.x image optimizer RCE via an upstream image library used through sharp (SVG input). Every app sets images.unoptimized: true (#915), so /_next/image returns 404 before any decode (next-server handleNextImageRequest). Even with the optimizer on, no app sets images.remotePatterns/domains or dangerouslyAllowSVG, so no attacker-supplied image or SVG can reach a decoder, and sharp is only a dependency of admin-panel. No 14.x patch (fix line starts at next 15.5.28; sharp >= 0.35.5). FRAGILE: removing images.unoptimized from any app, adding remotePatterns/domains or dangerouslyAllowSVG breaks this waiver — re-assess or upgrade first.",
+      "ref": "internal upgrade ticket (Next.js 15.5.28+, tracked in the team tracker)"
     }
   ]
 }
