@@ -289,6 +289,31 @@ generateTotpCode() {
   [[ "$(graphql_output '.data.me.totpEnabled')" = "true" ]] || exit 1
 }
 
+@test "auth: phone changes need a totp code while totp is on" {
+  local phone="$(read_value 'charlie.phone')"
+
+  variables="{\"input\": {\"phone\": \"$phone\"}}"
+  exec_graphql 'charlie' 'user-phone-registration-initiate' "$variables"
+  [[ "$(graphql_output '.data.userPhoneRegistrationInitiate.success')" = "true" ]] || exit 1
+
+  variables="{\"input\": {\"phone\": \"$phone\", \"code\": \"000000\"}}"
+  exec_graphql 'charlie' 'user-phone-registration-validate' "$variables"
+  [[ "$(graphql_output '.data.userPhoneRegistrationValidate.errors[0].code')" = "TOTP_CODE_REQUIRED" ]] || exit 1
+
+  exec_graphql 'charlie' 'identity'
+  [[ "$(graphql_output '.data.me.phone')" = "null" ]] || exit 1
+
+  totpCode=$(generateTotpCode "$(read_value 'totp.secret')")
+  variables="{\"input\": {\"phone\": \"$phone\", \"code\": \"000000\", \"totpCode\": \"$totpCode\"}}"
+  exec_graphql 'charlie' 'user-phone-registration-validate' "$variables"
+  [[ "$(graphql_output '.data.userPhoneRegistrationValidate.me.phone')" = "$phone" ]] || exit 1
+
+  totpCode=$(generateTotpCode "$(read_value 'totp.secret')")
+  variables="{\"input\": {\"totpCode\": \"$totpCode\"}}"
+  exec_graphql 'charlie' 'user-phone-delete' "$variables"
+  [[ "$(graphql_output '.data.userPhoneDelete.me.phone')" = "null" ]] || exit 1
+}
+
 @test "auth: removing totp without a code is refused" {
   exec_graphql 'charlie' 'user-totp-delete'
   [[ "$(graphql_output '.data.userTotpDelete.errors[0].code')" = "TOTP_CODE_REQUIRED" ]] || exit 1
@@ -300,7 +325,6 @@ generateTotpCode() {
 @test "auth: removing totp with a wrong code is refused" {
   totpSecret=$(read_value 'totp.secret')
   totpCode=$(generateTotpCode "$totpSecret")
-  # shift the last digit so the code is always wrong
   wrongCode="${totpCode:0:5}$(( (${totpCode:5:1} + 1) % 10 ))"
 
   variables="{\"input\": {\"totpCode\": \"$wrongCode\"}}"

@@ -6,21 +6,21 @@ import {
 } from "./ratelimits"
 import { recordLoginActivity } from "./record-login-activity"
 
-import { getTotpRemovalBlockedBalance } from "@/config"
+import { getTotpRemovalBlockedBalance, getTotpStepUpEnabled } from "@/config"
 
-import { getBalanceForWallet } from "@/app/wallets/get-balance-for-wallet"
-
+import { checkTotpRemovalBalance } from "@/domain/authentication"
 import {
   AuthTokenUserIdMismatchError,
   IdentifierNotFoundError,
-  TotpRemovalBalanceTooHighError,
+  TotpCodeRequiredError,
 } from "@/domain/authentication/errors"
-import { TotpAlreadyExistsError } from "@/domain/kratos"
-import { ErrorLevel, WalletCurrency } from "@/domain/shared"
+import { TotpAlreadyExistsError, TotpCodeInvalidError } from "@/domain/kratos"
+import { ErrorLevel } from "@/domain/shared"
 import {
   AuthWithEmailPasswordlessService,
   AuthWithPhonePasswordlessService,
   IdentityRepository,
+  checkedToTotpCode,
   kratosElevatingSessionWithTotp,
   kratosInitiateTotp,
   kratosRemoveTotp,
@@ -32,6 +32,7 @@ import {
   validateKratosToken,
 } from "@/services/kratos"
 
+import { LedgerService } from "@/services/ledger"
 import { UsersRepository, WalletsRepository } from "@/services/mongoose"
 import { recordExceptionInCurrentSpan } from "@/services/tracing"
 
@@ -184,8 +185,31 @@ export const removeTotp = async ({
   return me
 }
 
-// checks a code on a throwaway session so the caller's session and login activity are untouched
-export const verifyTotpCode = async ({
+export const checkTotpStepUp = async ({
+  userId,
+  totpCode,
+}: {
+  userId: UserId
+  totpCode: unknown
+}): Promise<true | ApplicationError> => {
+  if (!getTotpStepUpEnabled()) return true
+
+  const identity = await IdentityRepository().getIdentity(userId)
+  if (identity instanceof Error) return identity
+  if (!identity.totpEnabled) return true
+
+  if (totpCode === undefined || totpCode === null || totpCode === "") {
+    return new TotpCodeRequiredError()
+  }
+  if (typeof totpCode !== "string") return new TotpCodeInvalidError()
+
+  const checkedCode = checkedToTotpCode(totpCode)
+  if (checkedCode instanceof Error) return new TotpCodeInvalidError()
+
+  return verifyTotpCode({ identity, totpCode: checkedCode })
+}
+
+const verifyTotpCode = async ({
   identity,
   totpCode,
 }: {
@@ -213,20 +237,22 @@ export const checkTotpRemovalAllowed = async ({
 }: {
   accountId: AccountId
 }): Promise<true | ApplicationError> => {
-  const blocked = getTotpRemovalBlockedBalance()
+  if (!getTotpStepUpEnabled()) return true
 
   const wallets = await WalletsRepository().listByAccountId(accountId)
   if (wallets instanceof Error) return wallets
 
+  const balances: BalanceAmount<WalletCurrency>[] = []
   for (const wallet of wallets) {
-    const balance = await getBalanceForWallet({ walletId: wallet.id })
+    const balance = await LedgerService().getWalletBalanceAmount(wallet)
     if (balance instanceof Error) return balance
-
-    const threshold = wallet.currency === WalletCurrency.Btc ? blocked.btc : blocked.usd
-    if (balance >= threshold) return new TotpRemovalBalanceTooHighError()
+    balances.push(balance)
   }
 
-  return true
+  return checkTotpRemovalBalance({
+    balances,
+    blockedBalance: getTotpRemovalBlockedBalance(),
+  })
 }
 
 const getAuthTokenFromUserId = async (

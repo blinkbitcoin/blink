@@ -17,6 +17,7 @@ import {
   getInactivityFeeConfig,
   yamlConfig,
   getOnchainNetworkConfig,
+  getTotpStepUpEnabled,
 } from "@/config"
 
 const ajv = addFormats(new Ajv({ discriminator: true, $data: true }))
@@ -110,6 +111,18 @@ describe("config.ts", () => {
       expect(contentOrg).toEqual(contentNew)
     })
 
+    it("enables the TOTP step-up by default", () => {
+      expect(getTotpStepUpEnabled()).toBe(true)
+    })
+
+    it("reads a disabled TOTP step-up flag", () => {
+      withCustomYaml({ twoFactor: { stepUpEnabled: false } }, () => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { getTotpStepUpEnabled: getConfiguredStepUpEnabled } = require("@/config")
+        expect(getConfiguredStepUpEnabled()).toBe(false)
+      })
+    })
+
     it("fills the TOTP step-up defaults under a partial rateLimits override", () => {
       withCustomYaml(
         {
@@ -132,7 +145,10 @@ describe("config.ts", () => {
             duration: 3600,
             blockDuration: 3600,
           })
-          expect(getTotpRemovalBlockedBalance()).toEqual({ btc: 5000000, usd: 500000 })
+          expect(getTotpRemovalBlockedBalance()).toEqual({
+            btc: { amount: 5000000n, currency: "BTC" },
+            usd: { amount: 500000n, currency: "USD" },
+          })
         },
       )
     })
@@ -141,9 +157,16 @@ describe("config.ts", () => {
       withCustomYaml(
         { twoFactor: { totpRemovalBlockedBalance: { btc: 100, usd: 200 } } },
         () => {
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          const { getTotpRemovalBlockedBalance } = require("@/config")
-          expect(getTotpRemovalBlockedBalance()).toEqual({ btc: 100, usd: 200 })
+          const {
+            getTotpRemovalBlockedBalance,
+            getTotpStepUpEnabled: getConfiguredStepUpEnabled,
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+          } = require("@/config")
+          expect(getTotpRemovalBlockedBalance()).toEqual({
+            btc: { amount: 100n, currency: "BTC" },
+            usd: { amount: 200n, currency: "USD" },
+          })
+          expect(getConfiguredStepUpEnabled()).toBe(true)
         },
       )
     })

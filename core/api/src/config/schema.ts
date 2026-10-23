@@ -1428,6 +1428,7 @@ export const configSchema = {
     twoFactor: {
       type: "object",
       properties: {
+        stepUpEnabled: { type: "boolean" },
         totpRemovalBlockedBalance: {
           type: "object",
           properties: {
@@ -1438,9 +1439,10 @@ export const configSchema = {
           additionalProperties: false,
         },
       },
-      required: ["totpRemovalBlockedBalance"],
+      required: ["stepUpEnabled", "totpRemovalBlockedBalance"],
       additionalProperties: false,
       default: {
+        stepUpEnabled: true,
         // tier 3: BTC in sats, USD in cents
         totpRemovalBlockedBalance: { btc: 5000000, usd: 500000 },
       },

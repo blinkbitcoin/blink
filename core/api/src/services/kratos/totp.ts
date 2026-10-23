@@ -86,7 +86,6 @@ export const kratosElevatingSessionWithTotp = async ({
   }
 }
 
-// aal2 login flow on the given session; does not touch any other session
 export const kratosVerifyTotpOnSession = async ({
   authToken,
   totpCode,

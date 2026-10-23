@@ -13,11 +13,11 @@ import { configSchema } from "./schema"
 import { ConfigError } from "./error"
 
 import { baseLogger } from "@/services/logger"
-import { toSats } from "@/domain/bitcoin"
 import { checkedToScanDepth } from "@/domain/bitcoin/onchain"
 import { toCents } from "@/domain/fiat"
 
 import { toSeconds } from "@/domain/primitives"
+import { WalletCurrency } from "@/domain/shared"
 
 import {
   AccountLevel,
@@ -269,9 +269,17 @@ export const getBtcMapPlaceSubmitPerAccountLimits = () =>
 export const getTotpVerifyAttemptPerUserLimits = () =>
   getRateLimits(yamlConfig.rateLimits.totpVerifyAttemptPerUser)
 
-export const getTotpRemovalBlockedBalance = (): { btc: Satoshis; usd: UsdCents } => {
+export const getTotpStepUpEnabled = (): boolean => yamlConfig.twoFactor.stepUpEnabled
+
+export const getTotpRemovalBlockedBalance = (): {
+  btc: BtcPaymentAmount
+  usd: UsdPaymentAmount
+} => {
   const { btc, usd } = yamlConfig.twoFactor.totpRemovalBlockedBalance
-  return { btc: toSats(btc), usd: toCents(usd) }
+  return {
+    btc: { amount: BigInt(btc), currency: WalletCurrency.Btc },
+    usd: { amount: BigInt(usd), currency: WalletCurrency.Usd },
+  }
 }
 
 export const getOnChainWalletConfig = () => ({

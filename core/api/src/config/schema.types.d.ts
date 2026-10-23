@@ -289,6 +289,7 @@ type YamlSchema = {
   inactivityFee: InactivityFeeYamlConfig
   regionRestrictions: RegionRestrictionsYamlConfig
   twoFactor: {
+    stepUpEnabled: boolean
     totpRemovalBlockedBalance: {
       btc: number
       usd: number

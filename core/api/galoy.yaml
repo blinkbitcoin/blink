@@ -386,6 +386,7 @@ regionRestrictions:
     - NL
   custodialTransferBlockedCountries: []
 twoFactor:
+  stepUpEnabled: true
   totpRemovalBlockedBalance:
     btc: 5000000
     usd: 500000

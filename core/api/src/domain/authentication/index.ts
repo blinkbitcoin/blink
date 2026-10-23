@@ -7,6 +7,8 @@ import { UuidRegex } from "@/domain/shared"
 import { InvalidTelegramPassportNonceError } from "@/domain/errors"
 import { ChannelType, PhoneCodeInvalidError } from "@/domain/phone-provider"
 
+export * from "./check-totp-removal-balance"
+
 export const getSupportedCountries = ({
   allCountries,
   unsupportedSmsCountries,

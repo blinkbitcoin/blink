@@ -4,17 +4,8 @@ import { TOTP_STEP_UP_MUTATIONS } from "./totp-step-up-mutations"
 
 import { Authentication } from "@/app"
 import { mapAndParseErrorForGqlResponse } from "@/graphql/error-map"
-import { TotpCodeRequiredError } from "@/domain/authentication/errors"
-import { TotpCodeInvalidError } from "@/domain/kratos"
-import { IdentityRepository, checkedToTotpCode } from "@/services/kratos"
-
-export { TOTP_STEP_UP_MUTATIONS }
 
 type InputArgs = { input?: { totpCode?: unknown } }
-
-const refuse = (err: ApplicationError) => ({
-  errors: [mapAndParseErrorForGqlResponse(err)],
-})
 
 const requireTotpStepUp = async (
   resolve: GraphQLFieldResolver<unknown, GraphQLPublicContextAuth>,
@@ -23,28 +14,15 @@ const requireTotpStepUp = async (
   context: GraphQLPublicContextAuth,
   info: GraphQLResolveInfo,
 ) => {
-  const userId = context.user.id
-
-  const identity = await IdentityRepository().getIdentity(userId)
-  if (identity instanceof Error) return refuse(identity)
-  if (!identity.totpEnabled) return resolve(parent, args, context, info)
-
-  const rawCode = (args as InputArgs)?.input?.totpCode
-  if (rawCode === undefined || rawCode === null || rawCode === "") {
-    return refuse(new TotpCodeRequiredError())
-  }
-  if (typeof rawCode !== "string") return refuse(new TotpCodeInvalidError())
-
-  const totpCode = checkedToTotpCode(rawCode)
-  if (totpCode instanceof Error) return refuse(new TotpCodeInvalidError())
-
-  const verified = await Authentication.verifyTotpCode({ identity, totpCode })
-  if (verified instanceof Error) return refuse(verified)
+  const stepUp = await Authentication.checkTotpStepUp({
+    userId: context.user.id,
+    totpCode: (args as InputArgs)?.input?.totpCode,
+  })
+  if (stepUp instanceof Error) return { errors: [mapAndParseErrorForGqlResponse(stepUp)] }
 
   return resolve(parent, args, context, info)
 }
 
-// Placed here because 'GraphQLFieldResolver' not working from .d.ts file
 type TotpStepUpFn = (
   resolve: GraphQLFieldResolver<unknown, GraphQLPublicContextAuth>,
   parent: unknown,
