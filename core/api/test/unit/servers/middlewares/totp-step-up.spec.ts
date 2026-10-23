@@ -104,7 +104,10 @@ describe("totpStepUpMiddleware", () => {
       const result = await run(field, { input: { totpCode: "000000" } })
 
       expect(codeOf(result)).toBe("TOTP_CODE_INVALID")
-      expect(mockVerify).toHaveBeenCalledWith({ userId, totpCode: "000000" })
+      expect(mockVerify).toHaveBeenCalledWith({
+        identity: { id: userId, totpEnabled: true },
+        totpCode: "000000",
+      })
       expect(resolve).not.toHaveBeenCalled()
     })
 

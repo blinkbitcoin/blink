@@ -38,7 +38,7 @@ const requireTotpStepUp = async (
   const totpCode = checkedToTotpCode(rawCode)
   if (totpCode instanceof Error) return refuse(new TotpCodeInvalidError())
 
-  const verified = await Authentication.verifyTotpCode({ userId, totpCode })
+  const verified = await Authentication.verifyTotpCode({ identity, totpCode })
   if (verified instanceof Error) return refuse(verified)
 
   return resolve(parent, args, context, info)

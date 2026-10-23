@@ -18,17 +18,13 @@ jest.mock("@/services/mongoose", () => ({
 }))
 
 const mockLoginToken = jest.fn()
-
-jest.mock("@/services/kratos/private", () => ({
-  kratosAdmin: {
-    getIdentity: jest.fn(async () => ({ data: { traits: { phone: "+15555550100" } } })),
-  },
-}))
+const mockEmailLoginToken = jest.fn()
+const mockGetIdentity = jest.fn()
 
 jest.mock("@/services/kratos", () => ({
   AuthWithPhonePasswordlessService: () => ({ loginToken: mockLoginToken }),
-  AuthWithEmailPasswordlessService: () => ({ loginToken: jest.fn() }),
-  handleKratosErrors: jest.fn((err) => err),
+  AuthWithEmailPasswordlessService: () => ({ loginToken: mockEmailLoginToken }),
+  IdentityRepository: () => ({ getIdentity: mockGetIdentity }),
   kratosVerifyTotpOnSession: jest.fn(),
   kratosRevokeSessionToken: jest.fn(async () => true),
   logoutSessionByAuthToken: jest.fn(async () => undefined),
@@ -51,7 +47,6 @@ import {
   kratosVerifyTotpOnSession,
   logoutSessionByAuthToken,
 } from "@/services/kratos"
-import { kratosAdmin } from "@/services/kratos/private"
 import { recordExceptionInCurrentSpan } from "@/services/tracing"
 
 const mockLimiter = checkTotpVerifyAttemptPerUserLimits as jest.MockedFunction<
@@ -68,6 +63,8 @@ const mockGetBalance = getBalanceForWallet as jest.MockedFunction<
 >
 
 const userId = "kratos-user-id" as UserId
+const phone = "+15555550100" as PhoneNumber
+const identity = { id: userId, phone, totpEnabled: true } as AnyIdentity
 const authToken = "ory_st_throwaway" as AuthToken
 const totpCode = "123456" as TotpCode
 
@@ -82,10 +79,12 @@ describe("verifyTotpCode", () => {
   it("accepts a valid code on a throwaway session and logs it out", async () => {
     mockVerify.mockResolvedValue(true)
 
-    const result = await verifyTotpCode({ userId, totpCode })
+    const result = await verifyTotpCode({ identity, totpCode })
 
     expect(result).toBe(true)
     expect(mockLimiter).toHaveBeenCalledWith(userId)
+    expect(mockGetIdentity).not.toHaveBeenCalled()
+    expect(mockLoginToken).toHaveBeenCalledWith({ phone })
     expect(mockVerify).toHaveBeenCalledWith({ authToken, totpCode })
     expect(mockRevoke).toHaveBeenCalledWith(authToken)
     expect(recordLoginActivity).not.toHaveBeenCalled()
@@ -94,7 +93,7 @@ describe("verifyTotpCode", () => {
   it("rejects an invalid code and still revokes the aal1 session without whoami", async () => {
     mockVerify.mockResolvedValue(new TotpCodeInvalidError())
 
-    const result = await verifyTotpCode({ userId, totpCode })
+    const result = await verifyTotpCode({ identity, totpCode })
 
     expect(result).toBeInstanceOf(TotpCodeInvalidError)
     expect(mockRevoke).toHaveBeenCalledWith(authToken)
@@ -107,7 +106,7 @@ describe("verifyTotpCode", () => {
     const revokeErr = new UnknownKratosError("revoke failed")
     mockRevoke.mockResolvedValue(revokeErr)
 
-    const result = await verifyTotpCode({ userId, totpCode })
+    const result = await verifyTotpCode({ identity, totpCode })
 
     expect(result).toBeInstanceOf(TotpCodeInvalidError)
     expect(recordExceptionInCurrentSpan).toHaveBeenCalledWith(
@@ -115,13 +114,27 @@ describe("verifyTotpCode", () => {
     )
   })
 
+  it("mints the throwaway session by email when the identity has no phone", async () => {
+    mockVerify.mockResolvedValue(true)
+    mockEmailLoginToken.mockResolvedValue({ authToken })
+    const email = "user@example.com" as EmailAddress
+
+    const result = await verifyTotpCode({
+      identity: { id: userId, email, totpEnabled: true } as AnyIdentity,
+      totpCode,
+    })
+
+    expect(result).toBe(true)
+    expect(mockEmailLoginToken).toHaveBeenCalledWith({ email })
+    expect(mockLoginToken).not.toHaveBeenCalled()
+  })
+
   it("refuses without calling Kratos once the per-user limit is hit", async () => {
     mockLimiter.mockResolvedValue(new TotpVerifyAttemptPerUserRateLimiterExceededError())
 
-    const result = await verifyTotpCode({ userId, totpCode })
+    const result = await verifyTotpCode({ identity, totpCode })
 
     expect(result).toBeInstanceOf(TotpVerifyAttemptPerUserRateLimiterExceededError)
-    expect(kratosAdmin.getIdentity).not.toHaveBeenCalled()
     expect(mockLoginToken).not.toHaveBeenCalled()
     expect(mockVerify).not.toHaveBeenCalled()
   })

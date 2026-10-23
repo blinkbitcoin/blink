@@ -21,7 +21,6 @@ import {
   AuthWithEmailPasswordlessService,
   AuthWithPhonePasswordlessService,
   IdentityRepository,
-  handleKratosErrors,
   kratosElevatingSessionWithTotp,
   kratosInitiateTotp,
   kratosRemoveTotp,
@@ -32,7 +31,6 @@ import {
   refreshToken,
   validateKratosToken,
 } from "@/services/kratos"
-import { kratosAdmin } from "@/services/kratos/private"
 
 import { UsersRepository, WalletsRepository } from "@/services/mongoose"
 import { recordExceptionInCurrentSpan } from "@/services/tracing"
@@ -46,7 +44,7 @@ export const initiateTotpRegistration = async ({
   if (identity instanceof Error) return identity
   if (identity.totpEnabled) return new TotpAlreadyExistsError()
 
-  const authToken = await getAuthTokenFromUserId(userId)
+  const authToken = await getAuthTokenForIdentity(identity)
   if (authToken instanceof Error) {
     return authToken
   }
@@ -188,21 +186,16 @@ export const removeTotp = async ({
 
 // checks a code on a throwaway session so the caller's session and login activity are untouched
 export const verifyTotpCode = async ({
-  userId,
+  identity,
   totpCode,
 }: {
-  userId: UserId
+  identity: AnyIdentity
   totpCode: TotpCode
 }): Promise<true | ApplicationError> => {
-  const limitOk = await checkTotpVerifyAttemptPerUserLimits(userId)
+  const limitOk = await checkTotpVerifyAttemptPerUserLimits(identity.id)
   if (limitOk instanceof Error) return limitOk
 
-  let authToken: AuthToken | AuthenticationError
-  try {
-    authToken = await getAuthTokenFromUserId(userId)
-  } catch (err) {
-    return handleKratosErrors(err)
-  }
+  const authToken = await getAuthTokenForIdentity(identity)
   if (authToken instanceof Error) return authToken
 
   try {
@@ -238,16 +231,22 @@ export const checkTotpRemovalAllowed = async ({
 
 const getAuthTokenFromUserId = async (
   userId: UserId,
-): Promise<AuthToken | AuthenticationError> => {
-  const { data } = await kratosAdmin.getIdentity({ id: userId })
+): Promise<AuthToken | AuthenticationError | KratosError> => {
+  const identity = await IdentityRepository().getIdentity(userId)
+  if (identity instanceof Error) return identity
+
+  return getAuthTokenForIdentity(identity)
+}
+
+const getAuthTokenForIdentity = async ({
+  phone,
+  email,
+}: AnyIdentity): Promise<AuthToken | AuthenticationError | KratosError> => {
   let kratosResult:
     | IAuthWithEmailPasswordlessService
     | LoginWithPhoneNoPasswordSchemaResponse
     | KratosError
     | null = null
-
-  const phone = data?.traits?.phone
-  const email = data?.traits?.email
 
   if (phone) {
     const authService = AuthWithPhonePasswordlessService()
