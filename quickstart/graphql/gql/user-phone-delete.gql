@@ -1,7 +1,8 @@
-mutation userPhoneDelete {
-  userPhoneDelete {
+mutation userPhoneDelete($input: UserPhoneDeleteInput) {
+  userPhoneDelete(input: $input) {
     errors {
       message
+      code
     }
     me {
       id

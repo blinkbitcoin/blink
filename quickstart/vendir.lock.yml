@@ -2,27 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix(auth): anchor the one-time code check to exactly six digits
-        (#951)...'
-      sha: 22923a8dce7b6a3c5e06a1dea0d748d47013ba5d
+      commitTitle: 'feat(core): require authenticator code to remove 2FA or change
+        email/phone (#953)'
+      sha: e96370392032468bf330e72a075b3772df97eb98
       tags:
-      - 0.22.78-1-g22923a8dc
+      - 0.22.78-3-ge96370392
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'fix(auth): anchor the one-time code check to exactly six digits
-        (#951)...'
-      sha: 22923a8dce7b6a3c5e06a1dea0d748d47013ba5d
+      commitTitle: 'feat(core): require authenticator code to remove 2FA or change
+        email/phone (#953)'
+      sha: e96370392032468bf330e72a075b3772df97eb98
       tags:
-      - 0.22.78-1-g22923a8dc
+      - 0.22.78-3-ge96370392
     path: schemas
   - git:
-      commitTitle: 'fix(auth): anchor the one-time code check to exactly six digits
-        (#951)...'
-      sha: 22923a8dce7b6a3c5e06a1dea0d748d47013ba5d
+      commitTitle: 'feat(core): require authenticator code to remove 2FA or change
+        email/phone (#953)'
+      sha: e96370392032468bf330e72a075b3772df97eb98
       tags:
-      - 0.22.78-1-g22923a8dc
+      - 0.22.78-3-ge96370392
     path: gql
   path: graphql
 kind: LockConfig

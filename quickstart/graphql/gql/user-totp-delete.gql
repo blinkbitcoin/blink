@@ -1,7 +1,8 @@
-mutation userTotpDelete {
-  userTotpDelete {
+mutation userTotpDelete($input: UserTotpDeleteInput) {
+  userTotpDelete(input: $input) {
     errors {
       message
+      code
     }
     me {
       totpEnabled
