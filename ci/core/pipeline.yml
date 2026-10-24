@@ -352,7 +352,7 @@ resources:
   - name: pipeline-tasks
     type: git
     source:
-      paths: [ci/core/*]
+      paths: [ci/core/*, ci/apps/tasks/buck-task.sh]
       uri: #@ data.values.git_uri
       branch: #@ data.values.git_branch
       private_key: #@ data.values.github_private_key
