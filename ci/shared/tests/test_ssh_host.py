@@ -146,7 +146,7 @@ class Transport(unittest.TestCase):
     def test_missing_signer_dependencies_refuse_before_remote_access(self):
         # Do not let tools installed on the test runner hide an incomplete image.
         binary = self.root / "bin"
-        for name in ["bash", "python3", "jq", "dirname", "mktemp", "rm"]:
+        for name in ["bash", "python3", "jq", "dirname", "mktemp", "rm", "mkdir"]:
             (binary / name).symlink_to(shutil.which(name))
         self.env["PATH"] = str(binary)
         result = self.invoke()
@@ -170,6 +170,39 @@ class Transport(unittest.TestCase):
                 self.assertEqual(result.returncode, 1 if index == count - 1 else 7, result.stderr)
                 if 2 <= index < count - 1:
                     self.assertEqual(self.calls()[-1]["input"], (TASKS / "remote-nix-cleanup.sh").read_text())
+
+    def test_cleanup_receipt_and_release_are_independent_of_workload_status(self):
+        self.assertEqual(self.invoke().returncode, 0)
+        count = len(self.calls())
+        for failures, releasable in [("", True), (str(count - 2), True),
+                                     (str(count - 1), False), ("0", False), ("1", False),
+                                     (f"{count - 2},{count - 1}", False)]:
+            with self.subTest(failures=failures):
+                # invoke reuses the directory, exercising stale receipt removal.
+                self.invoke(FAIL=failures)
+                gate = subprocess.run(["bash", str(TASKS / "check-host-cleanup.sh")],
+                                      cwd=self.root, capture_output=True, text=True)
+                self.assertEqual(gate.returncode == 0, releasable, gate.stderr)
+
+    def test_receipt_write_failure_retains_claim_and_removes_local_secrets(self):
+        copy = self.root / "bin/cp"
+        copy.write_text("#!/bin/sh\nexit 1\n")
+        copy.chmod(0o755)
+        result = self.invoke()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse((self.root / "host-cleanup/metadata").exists())
+
+    def test_process_listing_failure_does_not_confirm_cleanup(self):
+        run_dir = self.root / ".ci-run/run.12345678"
+        (run_dir / "docker").mkdir(parents=True)
+        (run_dir / "runner.pid").write_text("999999999")
+        ps = self.root / "bin/ps"
+        ps.write_text("#!/bin/sh\nexit 1\n")
+        ps.chmod(0o755)
+        result = subprocess.run(["bash", str(TASKS / "remote-nix-cleanup.sh"), ".ci-run/run.12345678"],
+                                env=self.env, cwd=self.root, capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse((run_dir / "docker").exists())
 
     def test_cleanup_failure_preserves_workload_failure(self):
         self.assertEqual(self.invoke().returncode, 0)
@@ -275,7 +308,7 @@ class Transport(unittest.TestCase):
     def test_remote_cleanup_without_live_pid(self):
         run_dir = self.root / ".ci-run/run.12345678"
         run_dir.mkdir(parents=True)
-        for pid in [None, "not-a-pid", "999999999"]:
+        for pid in [None, "999999999"]:
             (run_dir / "docker").mkdir()
             (run_dir / "docker/config.json").write_text("fixture-token")
             if pid is not None:
@@ -333,7 +366,7 @@ class Transport(unittest.TestCase):
                     (run_dir / "runner.pid").write_text(str(process.pid))
                     result = subprocess.run(["bash", str(TASKS / "remote-nix-cleanup.sh"), ".ci-run/run.12345678"],
                         text=True, cwd=self.root, env=dict(os.environ, HOME=str(self.root)), capture_output=True)
-                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(result.returncode, 0 if matching else 1, result.stderr)
                     self.assertFalse((run_dir / "docker").exists())
                     if matching:
                         self.assertEqual(process.wait(timeout=3), -15)
@@ -343,6 +376,108 @@ class Transport(unittest.TestCase):
                     if process.poll() is None:
                         process.terminate()
                     process.wait(timeout=3)
+
+    def test_remote_cleanup_rejects_invalid_pid_but_removes_credentials(self):
+        run_dir = self.root / ".ci-run/run.12345678"
+        (run_dir / "docker").mkdir(parents=True)
+        (run_dir / "runner.pid").write_text("not-a-pid")
+        result = subprocess.run(["bash", str(TASKS / "remote-nix-cleanup.sh"), ".ci-run/run.12345678"],
+                                cwd=self.root, capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse((run_dir / "docker").exists())
+
+    def test_remote_cleanup_escalates_term_resistant_group_and_fails_if_kill_fails(self):
+        if not Path("/proc").exists():
+            self.skipTest("Process-group cleanup requires Linux")
+        run_dir = self.root / ".ci-run/run.12345678"
+        run_dir.mkdir(parents=True)
+        for kill_fails in [False, True]:
+            with self.subTest(kill_fails=kill_fails):
+                ready = run_dir / "ready"
+                ready.unlink(missing_ok=True)
+                process = subprocess.Popen(["bash", "-c",
+                    'trap "" TERM; touch "$CI_RUN_DIR/ready"; while :; do sleep 1; done'],
+                    start_new_session=True, env=dict(os.environ, CI_RUN_DIR=str(run_dir)))
+                try:
+                    deadline = time.monotonic() + 3
+                    while not ready.exists() and time.monotonic() < deadline:
+                        time.sleep(0.01)
+                    self.assertTrue(ready.exists())
+                    (run_dir / "runner.pid").write_text(str(process.pid))
+                    (run_dir / "docker").mkdir()
+                    env = dict(os.environ, HOME=str(self.root))
+                    if kill_fails:
+                        stub = self.root / "kill-fails.sh"
+                        stub.write_text('kill() { return 1; }\n')
+                        env["BASH_ENV"] = str(stub)
+                    result = subprocess.run(["bash", str(TASKS / "remote-nix-cleanup.sh"), ".ci-run/run.12345678"],
+                        cwd=self.root, env=env, capture_output=True, text=True, timeout=10)
+                    self.assertEqual(result.returncode, 1 if kill_fails else 0, result.stderr)
+                    self.assertFalse((run_dir / "docker").exists())
+                    if kill_fails:
+                        self.assertIsNone(process.poll())
+                    else:
+                        self.assertEqual(process.wait(timeout=3), -signal.SIGKILL)
+                finally:
+                    if process.poll() is None:
+                        os.killpg(process.pid, signal.SIGKILL)
+                    process.wait(timeout=3)
+
+
+class ReleaseGate(unittest.TestCase):
+    def test_missing_mismatched_and_matching_receipt_and_legacy_transport(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "nix-host").mkdir()
+            metadata = root / "nix-host/metadata"
+            receipt = root / "host-cleanup/metadata"
+            def gate():
+                return subprocess.run(["bash", str(TASKS / "check-host-cleanup.sh")],
+                                      cwd=root, capture_output=True).returncode
+            self.assertNotEqual(gate(), 0)
+            metadata.write_text('{"transport":"ssh"}')
+            self.assertNotEqual(gate(), 0)
+            receipt.parent.mkdir()
+            receipt.write_text('{"transport":"ssh","host":"different"}')
+            self.assertNotEqual(gate(), 0)
+            receipt.write_text(metadata.read_text())
+            self.assertEqual(gate(), 0)
+            for transport, expected in [("gcp", 0), ("unknown", 1)]:
+                metadata.write_text(json.dumps({"transport": transport}))
+                self.assertEqual(gate(), expected)
+            metadata.write_text('{}')
+            self.assertEqual(gate(), 0)
+            metadata.write_text('invalid')
+            self.assertNotEqual(gate(), 0)
+
+    def test_all_rendered_host_consumers_gate_release_and_disable_retries(self):
+        if not shutil.which("ytt"):
+            self.skipTest("Pipeline rendering requires ytt")
+        repo = TASKS.parents[2]
+        for pipeline in ["core", "apps"]:
+            for branch in ["", "ci/zrh1-docker-transport"]:
+                rendered = json.loads(subprocess.check_output(["ytt", "-f", f"ci/{pipeline}",
+                    "--data-value", f"pipeline_tasks_git_branch={branch}", "-o", "json"], cwd=repo))
+                consumers = []
+                def visit(node):
+                    if isinstance(node, dict):
+                        if node.get("config", {}).get("run", {}).get("path", "").endswith("/run-on-nix-host.sh"):
+                            consumers.append(node)
+                        for value in node.values():
+                            visit(value)
+                    elif isinstance(node, list):
+                        for value in node:
+                            visit(value)
+                visit(rendered)
+                self.assertTrue(consumers)
+                for task in consumers:
+                    self.assertEqual(task["attempts"], 1)
+                    self.assertIn({"name": "host-cleanup"}, task["config"]["outputs"])
+                    gate, release = task["ensure"]["do"]
+                    self.assertEqual(gate["config"]["run"]["args"],
+                                     ["pipeline-tasks/ci/shared/tasks/check-host-cleanup.sh"])
+                    self.assertIn({"name": "host-cleanup", "optional": True}, gate["config"]["inputs"])
+                    self.assertEqual(release, {"put": "nix-host", "params": {"release": "nix-host"}})
 
 
 class Preflight(unittest.TestCase):

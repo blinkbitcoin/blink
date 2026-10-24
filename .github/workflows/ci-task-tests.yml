@@ -9,6 +9,8 @@ on:
       - ci/tests/**
       - .github/workflows/integration-test.yml
       - ci/shared/**
+      - ci/core/template.lib.yml
+      - ci/apps/app-template.lib.yml
       - ci/core/pipeline.yml
       - ci/apps/pipeline.yml
       - ci/core/tasks/run-on-nix-host.sh

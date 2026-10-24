@@ -47,6 +47,22 @@ normal or failing exit. Old `.ci-run` directories are then pruned to the four
 newest, matching the core GCP host transport. The active run directory is kept
 until that cleanup finishes. Loss of SSH may prevent cleanup; inspect that host
 before reuse. Workloads have a 45-minute remote limit and process-group cleanup.
+Fallback cleanup waits after TERM, escalates to KILL, and verifies that no
+non-zombie group members remain. An unverifiable process identity or failed
+termination makes cleanup fail while still attempting credential removal.
+
+Consumer tasks run once per claim, with no automatic retry. A separate ensure
+step releases an SSH host only after a successful cleanup receipt matching the
+claimed metadata. Workload failure with confirmed cleanup can release the host;
+failed cleanup, cancellation without a receipt, and missing task output retain
+the claim as quarantine. Failures before remote setup also retain the claim
+conservatively. GCP consumers retain their release behavior, but also run once.
+Do not retry a quarantined host or manually release its claim until an operator
+has verified the exact host/build, terminated remaining workloads, removed the
+run's Docker credentials, and confirmed cleanup. Preserve the failed build and
+run directory evidence, then recover the exact claim through the pool resource.
+Deploy pipeline definitions and task scripts together so the receipt output and
+release gate are both present.
 
 If qualification fails, leave core/apps on GCP. An empty pool can be retried.
 If admission partially succeeds, stop and reconcile actual claimed/unclaimed

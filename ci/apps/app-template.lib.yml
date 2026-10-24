@@ -66,9 +66,11 @@ plan:
     trigger: true
   - { get: pipeline-tasks }
 - task: #@ tilt_integration_test_name(app)
-  attempts: 2
+  attempts: 1
   timeout: 30m
   config:
+    outputs:
+    - name: host-cleanup
     platform: linux
     image_resource: #@ task_image_config()
     inputs:
@@ -80,9 +82,22 @@ plan:
     run:
       path: pipeline-tasks/ci/apps/tasks/run-on-nix-host.sh
   ensure:
-    put: nix-host
-    params:
-      release: nix-host
+    do:
+    - task: check-host-cleanup
+      config:
+        platform: linux
+        image_resource: #@ task_image_config()
+        inputs:
+        - name: pipeline-tasks
+        - name: nix-host
+        - name: host-cleanup
+          optional: true
+        run:
+          path: bash
+          args: [pipeline-tasks/ci/shared/tasks/check-host-cleanup.sh]
+    - put: nix-host
+      params:
+        release: nix-host
 #@ end
 
 #@ def build_edge_image(app):

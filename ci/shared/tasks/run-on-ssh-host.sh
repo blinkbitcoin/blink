@@ -3,12 +3,15 @@
 set +x
 set -euo pipefail
 umask 077
-
 # Remove credentials from every child environment, including validation tools.
 private_key=${SSH_PRIVATE_KEY:-}
 google_credentials=${GOOGLE_CREDENTIALS:-}
 export -n private_key google_credentials
 unset SSH_PRIVATE_KEY SSH_PUB_KEY GOOGLE_CREDENTIALS
+
+# A receipt belongs to this task attempt only. Missing output fails closed.
+mkdir -p host-cleanup
+rm -f host-cleanup/metadata host-cleanup/metadata.tmp
 
 fail() { echo "SSH Docker host task failed: $1" >&2; exit 1; }
 relative_path() {
@@ -69,6 +72,12 @@ cleanup() {
     if ! bounded 60s "${ssh[@]}" "bash -s -- $run_dir" < "$tasks/remote-nix-cleanup.sh"; then
       echo 'SSH Docker host cleanup failed; inspect host before reuse' >&2
       [[ $status != 0 ]] || status=1
+    else
+      if ! { cp nix-host/metadata host-cleanup/metadata.tmp &&
+             mv host-cleanup/metadata.tmp host-cleanup/metadata; }; then
+        echo 'Could not record SSH cleanup; retain host claim' >&2
+        [[ $status != 0 ]] || status=1
+      fi
     fi
   fi
   rm -rf -- "$root"
