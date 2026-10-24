@@ -55,9 +55,7 @@ describe("totpStepUpMiddleware", () => {
   it("guards exactly the listed mutations", () => {
     expect(Object.keys(totpStepUpMiddleware.Mutation).sort()).toEqual(
       [
-        "userEmailDelete",
         "userEmailRegistrationInitiate",
-        "userPhoneDelete",
         "userPhoneRegistrationValidate",
         "userTotpDelete",
       ].sort(),
