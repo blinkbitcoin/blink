@@ -289,7 +289,7 @@ generateTotpCode() {
   [[ "$(graphql_output '.data.me.totpEnabled')" = "true" ]] || exit 1
 }
 
-@test "auth: phone changes need a totp code while totp is on" {
+@test "auth: adding a phone needs a totp code while totp is on, removing it does not" {
   local phone="$(read_value 'charlie.phone')"
 
   variables="{\"input\": {\"phone\": \"$phone\"}}"
@@ -308,9 +308,7 @@ generateTotpCode() {
   exec_graphql 'charlie' 'user-phone-registration-validate' "$variables"
   [[ "$(graphql_output '.data.userPhoneRegistrationValidate.me.phone')" = "$phone" ]] || exit 1
 
-  totpCode=$(generateTotpCode "$(read_value 'totp.secret')")
-  variables="{\"input\": {\"totpCode\": \"$totpCode\"}}"
-  exec_graphql 'charlie' 'user-phone-delete' "$variables"
+  exec_graphql 'charlie' 'user-phone-delete'
   [[ "$(graphql_output '.data.userPhoneDelete.me.phone')" = "null" ]] || exit 1
 }
 
