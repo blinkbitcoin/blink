@@ -30,6 +30,9 @@ plan:
         trigger: true
       - { get: pipeline-tasks }
   - task: buck-test
+    #@ if component == "api":
+    timeout: 20m
+    #@ end
     config:
       platform: linux
       image_resource: #@ task_image_config()
@@ -37,11 +40,15 @@ plan:
         - name: pipeline-tasks
         - name: #@ component_src_resource_name(component)
           path: repo
+      #@ if component == "api":
+      caches:
+        - path: pnpm-store
+      #@ end
       params:
         BUCK_TARGET: #@ "//core/" + component + ":" + test_name
         BUCK_CMD: test
       run:
-        path: pipeline-tasks/ci/apps/tasks/buck-task.sh
+        path: #@ "pipeline-tasks/ci/core/tasks/test-api.sh" if component == "api" else "pipeline-tasks/ci/apps/tasks/buck-task.sh"
 #@ end
 
 #@ def component_bats_tests_name(component):

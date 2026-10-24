@@ -148,6 +148,8 @@ def build_workspace_node_modules_impl(ctx: AnalysisContext) -> list[DefaultInfo]
     else:
         cmd.add("--root-dir")
         cmd.add(package_dir)
+    if ctx.attrs.store_dir:
+        cmd.add("--store-dir", ctx.attrs.store_dir)
     cmd.add(out.as_output())
     cmd.hidden([ctx.attrs.pnpm_lock])
 
@@ -158,6 +160,7 @@ def build_workspace_node_modules_impl(ctx: AnalysisContext) -> list[DefaultInfo]
 build_workspace_node_modules = rule(
     impl = build_workspace_node_modules_impl,
     attrs = {
+        "store_dir": attrs.string(default = read_config("workspace_pnpm", "store_dir", "")),
         "pnpm_lock": attrs.source(
             default = "root//:pnpm-lock.yaml",
             doc = """Workspace Pnpm lock file""",
@@ -198,6 +201,8 @@ def build_node_modules_impl(ctx: AnalysisContext) -> list[DefaultInfo]:
         cmd.add("--prod-only")
         identifier += "--prod "
 
+    if ctx.attrs.store_dir:
+        cmd.add("--store-dir", ctx.attrs.store_dir)
     cmd.add(out.as_output())
     cmd.hidden([ctx.attrs.workspace])
 
@@ -208,6 +213,7 @@ def build_node_modules_impl(ctx: AnalysisContext) -> list[DefaultInfo]:
 build_node_modules = rule(
     impl = build_node_modules_impl,
     attrs = {
+        "store_dir": attrs.string(default = read_config("workspace_pnpm", "store_dir", "")),
         "turbo_bin": attrs.dep(
             providers = [RunInfo],
             default = "root//third-party/node/turbo:turbo_bin",
