@@ -2,26 +2,13 @@ import { GT } from "@/graphql/index"
 
 import { Authentication } from "@/app"
 import { mapAndParseErrorForGqlResponse } from "@/graphql/error-map"
-import TotpCode from "@/graphql/public/types/scalar/totp-code"
 import UserPhoneDeletePayload from "@/graphql/public/types/payload/user-phone-delete"
-
-const UserPhoneDeleteInput = GT.Input({
-  name: "UserPhoneDeleteInput",
-  fields: () => ({
-    totpCode: {
-      type: TotpCode,
-    },
-  }),
-})
 
 const UserPhoneDeleteMutation = GT.Field<null, GraphQLPublicContextAuth>({
   extensions: {
     complexity: 120,
   },
   type: GT.NonNull(UserPhoneDeletePayload),
-  args: {
-    input: { type: UserPhoneDeleteInput },
-  },
   resolve: async (_, args, { user }) => {
     const me = await Authentication.removePhoneFromIdentity({
       userId: user.id,
