@@ -269,6 +269,9 @@ export const getBtcMapPlaceSubmitPerAccountLimits = () =>
 export const getTotpVerifyAttemptPerUserLimits = () =>
   getRateLimits(yamlConfig.rateLimits.totpVerifyAttemptPerUser)
 
+export const getAnonPhoneLookupGlobalLimits = () =>
+  getRateLimits(yamlConfig.rateLimits.anonPhoneLookupGlobal)
+
 export const getTotpStepUpEnabled = (): boolean => yamlConfig.twoFactor.stepUpEnabled
 
 export const getTotpRemovalBlockedBalance = (): {

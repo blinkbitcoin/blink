@@ -706,6 +706,7 @@ export const configSchema = {
         regionCheckIpResolution: rateLimitConfigSchema,
         btcMapPlaceSubmitPerAccount: rateLimitConfigSchema,
         totpVerifyAttemptPerUser: rateLimitConfigSchema,
+        anonPhoneLookupGlobal: rateLimitConfigSchema,
       },
       required: [
         "requestCodePerEmail",
@@ -727,6 +728,7 @@ export const configSchema = {
         "regionCheckIpResolution",
         "btcMapPlaceSubmitPerAccount",
         "totpVerifyAttemptPerUser",
+        "anonPhoneLookupGlobal",
       ],
       additionalProperties: false,
       default: {
@@ -823,6 +825,11 @@ export const configSchema = {
         },
         totpVerifyAttemptPerUser: {
           points: 8,
+          duration: 3600,
+          blockDuration: 3600,
+        },
+        anonPhoneLookupGlobal: {
+          points: 60,
           duration: 3600,
           blockDuration: 3600,
         },

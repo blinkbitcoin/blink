@@ -28,3 +28,4 @@ export class BtcMapPlaceSubmitPerAccountRateLimiterExceededError extends RateLim
 export class CaptchaRequestCodePerCountryRateLimiterExceededError extends RateLimiterExceededError {}
 export class CaptchaRequestCodeGlobalRateLimiterExceededError extends RateLimiterExceededError {}
 export class TotpVerifyAttemptPerUserRateLimiterExceededError extends RateLimiterExceededError {}
+export class AnonPhoneLookupGlobalRateLimiterExceededError extends RateLimiterExceededError {}

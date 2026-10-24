@@ -107,6 +107,10 @@ rateLimits:
     points: 8
     duration: 3600
     blockDuration: 3600
+  anonPhoneLookupGlobal:
+    points: 60
+    duration: 3600
+    blockDuration: 3600
 accounts:
   initialStatus: active
   initialWallets:
