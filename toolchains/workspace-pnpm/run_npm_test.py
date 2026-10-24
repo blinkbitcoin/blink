@@ -5,10 +5,12 @@ Runs a program in a directory.
 import argparse
 import json
 import os
+import signal
 import subprocess
 import sys
+import time
 
-if __name__ == "__main__":
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--cwd",
@@ -28,7 +30,7 @@ if __name__ == "__main__":
         nargs=argparse.REMAINDER,
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     env = os.environ.copy()
     if (args.env_json):
@@ -41,6 +43,25 @@ if __name__ == "__main__":
         bin_args.append(env.get("TEST"))
     cmd = [os.path.abspath(args.bin), *bin_args]
 
+    started = time.monotonic()
     exit_code = subprocess.call(cmd, cwd=args.cwd, env=env)
+    elapsed = time.monotonic() - started
+    # Never print command arguments or environment values: either can contain
+    # secrets. Preserve the distinction between a signal and a normal exit.
+    if exit_code < 0:
+        signum = -exit_code
+        try:
+            signal_name = signal.Signals(signum).name
+        except ValueError:
+            # Intermediate Linux realtime signals need not have enum names.
+            signal_name = "signal"
+        print(f"Test subprocess terminated by {signal_name} "
+              f"({signum}) after {elapsed:.1f}s", file=sys.stderr, flush=True)
+        return 128 + signum
+    if exit_code:
+        print(f"Test subprocess exited with code {exit_code} after {elapsed:.1f}s",
+              file=sys.stderr, flush=True)
+    return exit_code
 
-    sys.exit(exit_code)
+if __name__ == "__main__":
+    sys.exit(main())
