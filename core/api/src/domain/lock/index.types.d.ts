@@ -5,6 +5,7 @@ type LockServiceError = import("./errors").LockServiceError
 type WalletIdAbortSignal = RedlockAbortSignal & { readonly brand: unique symbol }
 type PaymentHashAbortSignal = RedlockAbortSignal & { readonly brand: unique symbol }
 type OnChainTxAbortSignal = RedlockAbortSignal & { readonly brand: unique symbol }
+type OnChainRebalanceAbortSignal = RedlockAbortSignal & { readonly brand: unique symbol }
 type IdempotencyKeyAbortSignal = RedlockAbortSignal & { readonly brand: unique symbol }
 type BtcMapSubmissionAbortSignal = RedlockAbortSignal & { readonly brand: unique symbol }
 type InactivityFeeAccountAbortSignal = RedlockAbortSignal & {
@@ -20,6 +21,10 @@ type LockRetrySettings = {
 }
 
 interface ILockService {
+  lockOnChainRebalance<Res>(
+    walletName: string,
+    f: (signal: OnChainRebalanceAbortSignal) => Promise<Res>,
+  ): Promise<Res | LockServiceError>
   lockWalletId<Res>(
     walletId: WalletId,
     f: (signal: WalletIdAbortSignal) => Promise<Res>,
