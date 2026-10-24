@@ -2,27 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat(core): require authenticator code to remove 2FA or change
-        email/phone (#953)'
-      sha: e96370392032468bf330e72a075b3772df97eb98
+      commitTitle: 'fix(core): only require the authenticator code when adding a login
+        method (#955)...'
+      sha: 531e5e2e0a6497febba2de83ea618d5b294b10f6
       tags:
-      - 0.22.78-3-ge96370392
+      - 0.22.79-1-g531e5e2e0
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat(core): require authenticator code to remove 2FA or change
-        email/phone (#953)'
-      sha: e96370392032468bf330e72a075b3772df97eb98
+      commitTitle: 'fix(core): only require the authenticator code when adding a login
+        method (#955)...'
+      sha: 531e5e2e0a6497febba2de83ea618d5b294b10f6
       tags:
-      - 0.22.78-3-ge96370392
+      - 0.22.79-1-g531e5e2e0
     path: schemas
   - git:
-      commitTitle: 'feat(core): require authenticator code to remove 2FA or change
-        email/phone (#953)'
-      sha: e96370392032468bf330e72a075b3772df97eb98
+      commitTitle: 'fix(core): only require the authenticator code when adding a login
+        method (#955)...'
+      sha: 531e5e2e0a6497febba2de83ea618d5b294b10f6
       tags:
-      - 0.22.78-3-ge96370392
+      - 0.22.79-1-g531e5e2e0
     path: gql
   path: graphql
 kind: LockConfig
