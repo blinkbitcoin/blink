@@ -15,7 +15,7 @@ const DEFAULT_LAT = 8.046367244910527
 const DEFAULT_LNG = -45.043000891414344
 
 export default function MapComponent({ mapData, googleMapsApiKey }: MapComponentProps) {
-  const mapRef = useRef<google.maps.Map>()
+  const mapRef = useRef<google.maps.Map | undefined>(undefined)
   const [selectedMarker, setSelectedMarker] = useState<
     BusinessMapMarkersQuery["businessMapMarkers"][number] | null
   >(null)
