@@ -289,7 +289,7 @@ generateTotpCode() {
   [[ "$(graphql_output '.data.me.totpEnabled')" = "true" ]] || exit 1
 }
 
-@test "auth: adding a phone needs a totp code while totp is on, removing it does not" {
+@test "auth: adding a phone needs a totp code while totp is on" {
   local phone="$(read_value 'charlie.phone')"
 
   variables="{\"input\": {\"phone\": \"$phone\"}}"
@@ -307,6 +307,36 @@ generateTotpCode() {
   variables="{\"input\": {\"phone\": \"$phone\", \"code\": \"000000\", \"totpCode\": \"$totpCode\"}}"
   exec_graphql 'charlie' 'user-phone-registration-validate' "$variables"
   [[ "$(graphql_output '.data.userPhoneRegistrationValidate.me.phone')" = "$phone" ]] || exit 1
+}
+
+@test "auth: adding an email needs a totp code while totp is on, removing it does not" {
+  local phone="$(read_value 'charlie.phone')"
+  local email="$(read_value 'charlie.email')"
+
+  exec_graphql 'charlie' 'user-email-delete'
+  [[ "$(graphql_output '.data.userEmailDelete.me.email.address')" = "null" ]] || exit 1
+
+  exec_graphql 'charlie' 'identity'
+  [[ "$(graphql_output '.data.me.phone')" = "$phone" ]] || exit 1
+  [[ "$(graphql_output '.data.me.totpEnabled')" = "true" ]] || exit 1
+
+  variables="{\"input\": {\"email\": \"$email\"}}"
+  exec_graphql 'charlie' 'user-email-registration-initiate' "$variables"
+  [[ "$(graphql_output '.data.userEmailRegistrationInitiate.errors[0].code')" = "TOTP_CODE_REQUIRED" ]] || exit 1
+
+  exec_graphql 'charlie' 'identity'
+  [[ "$(graphql_output '.data.me.email.address')" = "null" ]] || exit 1
+
+  totpCode=$(generateTotpCode "$(read_value 'totp.secret')")
+  variables="{\"input\": {\"email\": \"$email\", \"totpCode\": \"$totpCode\"}}"
+  exec_graphql 'charlie' 'user-email-registration-initiate' "$variables"
+  emailRegistrationId="$(graphql_output '.data.userEmailRegistrationInitiate.emailRegistrationId')"
+  [[ "$emailRegistrationId" != "null" ]] || exit 1
+
+  code=$(getEmailCode "$email")
+  variables="{\"input\": {\"code\": \"$code\", \"emailRegistrationId\": \"$emailRegistrationId\"}}"
+  exec_graphql 'charlie' 'user-email-registration-validate' "$variables"
+  [[ "$(graphql_output '.data.userEmailRegistrationValidate.me.email.verified')" = "true" ]] || exit 1
 
   exec_graphql 'charlie' 'user-phone-delete'
   [[ "$(graphql_output '.data.userPhoneDelete.me.phone')" = "null" ]] || exit 1
