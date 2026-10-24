@@ -1,9 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    outputFileTracingRoot: require("path").join(__dirname, "../../"),
-    instrumentationHook: true,
-  },
+  outputFileTracingRoot: require("path").join(__dirname, "../../"),
   output: "standalone",
   // Security: keep the Next.js image optimizer (/_next/image) disabled.
   // Every next/image source in this app is a static repo asset, so optimization
