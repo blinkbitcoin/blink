@@ -5,6 +5,9 @@ on:
     paths:
       - ci/core/tasks/bump-image-digest.sh
       - ci/core/tasks/open-charts-pr.sh
+      - ci/core/tasks/test-api.sh
+      - ci/core/*.yml
+      - core/api/BUCK
       - ci/core/tasks/tests/**
       - ci/tests/**
       - .github/workflows/integration-test.yml
@@ -23,6 +26,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: carvel-dev/setup-action@v2
+        with:
+          only: ytt
       - name: Check integration artifact upload conditions
         run: python3 -m unittest discover -s ci/tests -v
 
@@ -39,4 +45,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Test pnpm subprocess handling
-        run: python3 -m unittest discover -s toolchains/workspace-pnpm -p test_build_node_modules.py -v
+        run: python3 -m unittest discover -s toolchains/workspace-pnpm -p 'test_*.py' -v

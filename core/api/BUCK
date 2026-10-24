@@ -215,6 +215,8 @@ dev_pnpm_task_test(
 
 jest_test(
     name = "unit-tests",
+    # Avoid spawning one Jest worker per host CPU on shared CI workers.
+    run_serially = True,
     srcs = [":src"] + [":test_src"] + glob(["galoy.yaml"]),
     config_file = "test/unit/jest.config.js",
     env_json = "//dev:dummy_env",
