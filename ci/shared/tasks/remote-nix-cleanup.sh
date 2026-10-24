@@ -36,6 +36,10 @@ if test -f "$run_dir/runner.pid"; then
       status=1
     fi
   fi
+elif test -f "$run_dir/command.sh"; then
+  # The supervisor writes command.sh before setsid. Without a published PID,
+  # a detached workload may exist but cannot be identified safely.
+  status=1
 fi
 # Credential cleanup finishes before any directory is removed.
 rm -rf -- "$run_dir/docker"

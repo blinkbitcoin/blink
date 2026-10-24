@@ -44,6 +44,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install ytt for consumer pipeline assertions
+        run: |
+          curl --fail --silent --show-error --location --retry 3 \
+            https://github.com/carvel-dev/ytt/releases/download/v0.55.4/ytt-linux-amd64 \
+            --output "$RUNNER_TEMP/ytt"
+          echo '214138d930f5865d561b62f3acba79207afb02c1d87814eb2a2693ea8a33fb9d  '"$RUNNER_TEMP/ytt" | sha256sum --check
+          sudo install -m 0755 "$RUNNER_TEMP/ytt" /usr/local/bin/ytt
+          ytt version
       - run: python3 -m unittest discover -s ci/shared/tests -v
       - run: shellcheck ci/shared/tasks/*.sh ci/shared/repipe-qualification
 

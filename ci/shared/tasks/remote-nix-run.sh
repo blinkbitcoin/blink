@@ -4,6 +4,8 @@ set -euo pipefail
 run_dir="$HOME/$1"
 export CI_RUN_DIR="$run_dir" REPO_PATH="$HOME/$2" PACKAGE_DIR="$3" CMD="$4"
 export DOCKER_CONFIG="$run_dir/docker"
+# Also serves as the launch-attempt marker for fallback cleanup. Keep this
+# before setsid so interruption before runner.pid publication fails closed.
 cat > "$run_dir/command.sh" <<'COMMAND'
 #!/usr/bin/env bash
 set +e

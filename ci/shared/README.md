@@ -50,6 +50,9 @@ before reuse. Workloads have a 45-minute remote limit and process-group cleanup.
 Fallback cleanup waits after TERM, escalates to KILL, and verifies that no
 non-zombie group members remain. An unverifiable process identity or failed
 termination makes cleanup fail while still attempting credential removal.
+The command file records a launch attempt before the detached workload starts.
+If startup is interrupted before a valid PID is recorded, cleanup fails and
+retains the claim even though the process cannot be identified safely.
 
 Consumer tasks run once per claim, with no automatic retry. A separate ensure
 step releases an SSH host only after a successful cleanup receipt matching the
@@ -117,4 +120,7 @@ exercises the real process supervisor. macOS skips that fixture; a Linux
 container or GitHub Actions runs it. Subprocess
 fixtures exercise the Bash transport, cover every external-command failure
 boundary, and verify credential cleanup/redaction.
+Install ytt to exercise the core/apps release-gate assertions for both default
+and overridden task branches. GitHub Actions installs a pinned ytt and fails
+the suite if it is missing, rather than skipping those assertions.
 Live qualification remains required for private routing, SSH, registry and Nix integration.

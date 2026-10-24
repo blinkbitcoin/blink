@@ -348,6 +348,40 @@ class Transport(unittest.TestCase):
         self.assertTrue(link.is_symlink())
         self.assertEqual((base / "run.notadir").read_text(), "file")
 
+    def test_remote_cleanup_rejects_unpublished_pid_after_launch_attempt(self):
+        run_dir = self.root / ".ci-run/run.12345678"
+        run_dir.mkdir(parents=True)
+        # command.sh exists before setsid can start the workload. Even an
+        # empty file means startup may have been interrupted before PID write.
+        command = run_dir / "command.sh"
+        command.write_text('trap "" TERM; touch "$CI_RUN_DIR/ready"; while :; do sleep 1; done\n')
+        process = subprocess.Popen(["bash", str(command)], start_new_session=True,
+            env=dict(os.environ, CI_RUN_DIR=str(run_dir)))
+        try:
+            deadline = time.monotonic() + 3
+            while not (run_dir / "ready").exists() and time.monotonic() < deadline:
+                time.sleep(0.01)
+            self.assertTrue((run_dir / "ready").exists())
+            for pid, marker in [(None, command.read_text()), (None, ""), ("", ""), ("not-a-pid", "")]:
+                with self.subTest(pid=pid, empty_marker=not marker):
+                    command.write_text(marker)
+                    (run_dir / "runner.pid").unlink(missing_ok=True)
+                    (run_dir / "docker").mkdir()
+                    (run_dir / "docker/config.json").write_text("fixture-token")
+                    if pid is not None:
+                        (run_dir / "runner.pid").write_text(pid)
+                    result = subprocess.run(["bash", str(TASKS / "remote-nix-cleanup.sh"),
+                        ".ci-run/run.12345678"], cwd=self.root,
+                        env=dict(os.environ, HOME=str(self.root)), capture_output=True, text=True, timeout=5)
+                    self.assertEqual(result.returncode, 1, result.stderr)
+                    self.assertIn("termination could not be confirmed", result.stderr)
+                    self.assertIsNone(process.poll(), "untracked workload must not be guessed at")
+                    self.assertFalse((run_dir / "docker").exists())
+                    self.assertTrue(command.exists(), "retain launch evidence")
+        finally:
+            os.killpg(process.pid, signal.SIGKILL)
+            process.wait(timeout=3)
+
     def test_remote_cleanup_requires_matching_process_marker(self):
         if not Path("/proc").exists():
             self.skipTest("Remote cleanup fixture requires Linux")
@@ -451,6 +485,8 @@ class ReleaseGate(unittest.TestCase):
             self.assertNotEqual(gate(), 0)
 
     def test_all_rendered_host_consumers_gate_release_and_disable_retries(self):
+        if os.environ.get("GITHUB_ACTIONS") == "true":
+            self.assertIsNotNone(shutil.which("ytt"), "CI must install ytt to verify consumer release gates")
         if not shutil.which("ytt"):
             self.skipTest("Pipeline rendering requires ytt")
         repo = TASKS.parents[2]
