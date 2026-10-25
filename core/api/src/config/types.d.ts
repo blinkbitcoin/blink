@@ -78,6 +78,7 @@ type InactivityFeeYamlConfig = {
   level0Deadline: string
   reactivationLockWaitMs: number
   reactivationBudgetMs: number
+  runConcurrency: number
 }
 
 type InactivityFeeConfig = {
@@ -92,6 +93,7 @@ type InactivityFeeConfig = {
   level0Deadline: Date
   reactivationLockWaitMs: number
   reactivationBudgetMs: number
+  runConcurrency: number
 }
 
 type RegionRestrictionsYamlConfig = {

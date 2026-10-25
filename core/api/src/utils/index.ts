@@ -67,6 +67,80 @@ export const runInParallel = <U, T extends AsyncGenerator<U>>({
   return Promise.allSettled(jobWorkers)
 }
 
+// at most `concurrency` in flight, results one at a time; on error or stop, drains then rethrows
+export const forEachConcurrent = async <T, R>({
+  items,
+  concurrency,
+  shouldStop = () => false,
+  process: processItem,
+  onResult,
+}: {
+  items: AsyncIterable<T>
+  concurrency: number
+  shouldStop?: () => boolean
+  process: (item: T) => Promise<R>
+  onResult: (result: R, item: T) => void | Promise<void>
+}): Promise<void> => {
+  const limit = Number.isFinite(concurrency) ? Math.max(1, Math.floor(concurrency)) : 1
+  const inFlight = new Set<Promise<void>>()
+  let failure: { error: unknown } | undefined
+  const fail = (error: unknown) => {
+    failure ??= { error }
+  }
+  let delivered: Promise<void> = Promise.resolve()
+
+  const start = (item: T) => {
+    const task: Promise<void> = (async () => {
+      let result: R
+      try {
+        result = await processItem(item)
+      } catch (err) {
+        return fail(err)
+      }
+      delivered = delivered.then(() => onResult(result, item)).catch(fail)
+      await delivered
+    })().finally(() => inFlight.delete(task))
+    inFlight.add(task)
+  }
+
+  const iterator = items[Symbol.asyncIterator]()
+  let exhausted = false
+  try {
+    while (failure === undefined && !shouldStop()) {
+      if (inFlight.size >= limit) {
+        await Promise.race(inFlight)
+        continue
+      }
+      let next: IteratorResult<T>
+      try {
+        next = await iterator.next()
+      } catch (err) {
+        exhausted = true
+        throw err
+      }
+      if (next.done) {
+        exhausted = true
+        break
+      }
+      if (failure !== undefined || shouldStop()) break
+      start(next.value)
+    }
+  } catch (err) {
+    fail(err)
+  }
+  if (!exhausted) {
+    try {
+      await iterator.return?.()
+    } catch (err) {
+      fail(err)
+    }
+  }
+
+  await Promise.all(inFlight)
+  await delivered
+  if (failure !== undefined) throw failure.error
+}
+
 export const mapObj = <T, R>(
   obj: T,
   fn: (arg: T[keyof T]) => R,
