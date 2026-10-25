@@ -83,6 +83,7 @@ describe("inactivity-fee-run-job CLI", () => {
       level0Deadline: new Date("2026-10-31T22:59:59Z"),
       reactivationLockWaitMs: 1500,
       reactivationBudgetMs: 5000,
+      runConcurrency: 1,
     })
     consoleLog = jest.spyOn(console, "log").mockImplementation(() => undefined)
   })
