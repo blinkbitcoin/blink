@@ -411,6 +411,7 @@ export const mapError = (error: ApplicationError): CustomGraphQLError => {
 
     case "CaptchaRequestCodePerCountryRateLimiterExceededError":
     case "CaptchaRequestCodeGlobalRateLimiterExceededError":
+    case "AnonPhoneLookupGlobalRateLimiterExceededError":
       message = "Too many requests, please try again later."
       return new TooManyRequestError({ message, logger: baseLogger })
 

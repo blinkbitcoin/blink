@@ -230,6 +230,7 @@ type YamlSchema = {
     regionCheckIpResolution: RateLimitInput
     btcMapPlaceSubmitPerAccount: RateLimitInput
     totpVerifyAttemptPerUser: RateLimitInput
+    anonPhoneLookupGlobal: RateLimitInput
   }
   accounts: {
     initialStatus: string

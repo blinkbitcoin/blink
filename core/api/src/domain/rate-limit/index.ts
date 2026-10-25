@@ -18,6 +18,7 @@ import {
   CaptchaRequestCodePerCountryRateLimiterExceededError,
   CaptchaRequestCodeGlobalRateLimiterExceededError,
   TotpVerifyAttemptPerUserRateLimiterExceededError,
+  AnonPhoneLookupGlobalRateLimiterExceededError,
 } from "./errors"
 
 import {
@@ -40,6 +41,7 @@ import {
   getRequestCodeCaptchaPerCountryLimits,
   getRequestCodeCaptchaGlobalLimits,
   getTotpVerifyAttemptPerUserLimits,
+  getAnonPhoneLookupGlobalLimits,
 } from "@/config"
 
 export const RateLimitPrefix = {
@@ -63,11 +65,14 @@ export const RateLimitPrefix = {
   regionCheckIpResolution: "region_check_ip_resolution",
   btcMapPlaceSubmitPerAccount: "btcmap_place_submit_account",
   totpVerifyAttemptPerUser: "totp_verify_attempt_user",
+  anonPhoneLookupGlobal: "anon_phone_lookup_global",
 } as const
 
 type RateLimitPrefixKey = keyof typeof RateLimitPrefix
 
 export const REQUEST_CODE_CAPTCHA_GLOBAL_KEY = "all" as RequestCodeCaptchaGlobalKey
+
+export const ANON_PHONE_LOOKUP_GLOBAL_KEY = "all" as AnonPhoneLookupGlobalKey
 
 export const RateLimitConfig: { [key in RateLimitPrefixKey]: RateLimitConfig } = {
   requestCodeAttemptPerEmail: {
@@ -164,5 +169,10 @@ export const RateLimitConfig: { [key in RateLimitPrefixKey]: RateLimitConfig } =
     key: RateLimitPrefix.totpVerifyAttemptPerUser,
     limits: getTotpVerifyAttemptPerUserLimits(),
     error: TotpVerifyAttemptPerUserRateLimiterExceededError,
+  },
+  anonPhoneLookupGlobal: {
+    key: RateLimitPrefix.anonPhoneLookupGlobal,
+    limits: getAnonPhoneLookupGlobalLimits(),
+    error: AnonPhoneLookupGlobalRateLimiterExceededError,
   },
 }

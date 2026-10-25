@@ -11,6 +11,8 @@ type RateLimitConfig = {
 
 type RequestCodeCaptchaGlobalKey = string & { readonly brand: unique symbol }
 
+type AnonPhoneLookupGlobalKey = string & { readonly brand: unique symbol }
+
 type RateLimitOptions = {
   points: number
   duration: Seconds

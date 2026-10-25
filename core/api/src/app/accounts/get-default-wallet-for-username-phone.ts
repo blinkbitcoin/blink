@@ -7,12 +7,21 @@ import {
 } from "@/domain/errors"
 import { checkedToUsername } from "@/domain/accounts"
 import { checkedToPhoneNumber } from "@/domain/users"
+import { ANON_PHONE_LOOKUP_GLOBAL_KEY, RateLimitConfig } from "@/domain/rate-limit"
+import { RateLimiterExceededError } from "@/domain/rate-limit/errors"
 import { AccountsRepository, UsersRepository } from "@/services/mongoose"
+import { consumeLimiter } from "@/services/rate-limit"
+import { addEventToCurrentSpan } from "@/services/tracing"
 
-export const getDefaultWalletByUsernameOrPhone = async (
-  usernameOrPhone: Username | PhoneNumber,
-  walletCurrency?: WalletCurrency,
-): Promise<Wallet | ApplicationError> => {
+export const getDefaultWalletByUsernameOrPhone = async ({
+  usernameOrPhone,
+  walletCurrency,
+  isAuthenticated,
+}: {
+  usernameOrPhone: Username | PhoneNumber
+  walletCurrency?: WalletCurrency
+  isAuthenticated: boolean
+}): Promise<Wallet | ApplicationError> => {
   let wallet: Wallet | ApplicationError | undefined = undefined
   const username = checkedToUsername(usernameOrPhone)
   if (!(username instanceof Error)) {
@@ -27,7 +36,27 @@ export const getDefaultWalletByUsernameOrPhone = async (
     return new CouldNotFindWalletFromUsernameAndCurrencyError(usernameOrPhone)
   }
 
+  if (!isAuthenticated) {
+    const limitOk = await checkAnonPhoneLookupGlobalLimits()
+    if (limitOk instanceof Error) return limitOk
+  }
+
   return getWalletByPhone(phone, walletCurrency)
+}
+
+const checkAnonPhoneLookupGlobalLimits = async (): Promise<
+  true | RateLimiterExceededError
+> => {
+  const limitOk = await consumeLimiter({
+    rateLimitConfig: RateLimitConfig.anonPhoneLookupGlobal,
+    keyToConsume: ANON_PHONE_LOOKUP_GLOBAL_KEY,
+  })
+  if (limitOk instanceof Error) {
+    addEventToCurrentSpan("anonPhoneLookupCapExceeded", {
+      "phoneLookup.cap.scope": "global",
+    })
+  }
+  return limitOk
 }
 
 const getWalletByUsername = async (

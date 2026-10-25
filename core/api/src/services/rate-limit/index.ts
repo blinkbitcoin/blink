@@ -58,6 +58,7 @@ export const consumeLimiter = async ({
     | AppcheckJti
     | CountryCode
     | RequestCodeCaptchaGlobalKey
+    | AnonPhoneLookupGlobalKey
     | ""
 }) => {
   const limiter = RedisRateLimitService({
