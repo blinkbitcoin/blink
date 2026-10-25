@@ -2,27 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat(inactivity-fee): bounded concurrency for the notice and fee
-        runs (#889)'
-      sha: d39aa9efb82d9d93d8f94d5ff1c26fe2bb7b09aa
+      commitTitle: 'fix(core): cap anonymous phone lookups in accountDefaultWallet
+        (#958)'
+      sha: 4d368ab441c62a70a2927353cc6585316d8d5ab9
       tags:
-      - 0.22.80-1-gd39aa9efb
+      - 0.22.81-1-g4d368ab44
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'feat(inactivity-fee): bounded concurrency for the notice and fee
-        runs (#889)'
-      sha: d39aa9efb82d9d93d8f94d5ff1c26fe2bb7b09aa
+      commitTitle: 'fix(core): cap anonymous phone lookups in accountDefaultWallet
+        (#958)'
+      sha: 4d368ab441c62a70a2927353cc6585316d8d5ab9
       tags:
-      - 0.22.80-1-gd39aa9efb
+      - 0.22.81-1-g4d368ab44
     path: schemas
   - git:
-      commitTitle: 'feat(inactivity-fee): bounded concurrency for the notice and fee
-        runs (#889)'
-      sha: d39aa9efb82d9d93d8f94d5ff1c26fe2bb7b09aa
+      commitTitle: 'fix(core): cap anonymous phone lookups in accountDefaultWallet
+        (#958)'
+      sha: 4d368ab441c62a70a2927353cc6585316d8d5ab9
       tags:
-      - 0.22.80-1-gd39aa9efb
+      - 0.22.81-1-g4d368ab44
     path: gql
   path: graphql
 kind: LockConfig
