@@ -2,27 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix(core): only require the authenticator code when adding a login
-        method (#955)...'
-      sha: 531e5e2e0a6497febba2de83ea618d5b294b10f6
+      commitTitle: 'feat(inactivity-fee): bounded concurrency for the notice and fee
+        runs (#889)'
+      sha: d39aa9efb82d9d93d8f94d5ff1c26fe2bb7b09aa
       tags:
-      - 0.22.79-1-g531e5e2e0
+      - 0.22.80-1-gd39aa9efb
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'fix(core): only require the authenticator code when adding a login
-        method (#955)...'
-      sha: 531e5e2e0a6497febba2de83ea618d5b294b10f6
+      commitTitle: 'feat(inactivity-fee): bounded concurrency for the notice and fee
+        runs (#889)'
+      sha: d39aa9efb82d9d93d8f94d5ff1c26fe2bb7b09aa
       tags:
-      - 0.22.79-1-g531e5e2e0
+      - 0.22.80-1-gd39aa9efb
     path: schemas
   - git:
-      commitTitle: 'fix(core): only require the authenticator code when adding a login
-        method (#955)...'
-      sha: 531e5e2e0a6497febba2de83ea618d5b294b10f6
+      commitTitle: 'feat(inactivity-fee): bounded concurrency for the notice and fee
+        runs (#889)'
+      sha: d39aa9efb82d9d93d8f94d5ff1c26fe2bb7b09aa
       tags:
-      - 0.22.79-1-g531e5e2e0
+      - 0.22.80-1-gd39aa9efb
     path: gql
   path: graphql
 kind: LockConfig
