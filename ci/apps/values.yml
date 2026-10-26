@@ -2,6 +2,7 @@
 ---
 git_uri: git@github.com:blinkbitcoin/blink.git
 git_branch: main
+pipeline_tasks_git_branch: ""
 gh_repository: blink
 github_private_key: ((github-blinkbitcoin.private_key))
 docker_registry: us.gcr.io/galoy-org
