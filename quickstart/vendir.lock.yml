@@ -2,27 +2,27 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix(core): cap anonymous phone lookups in accountDefaultWallet
-        (#958)'
-      sha: 4d368ab441c62a70a2927353cc6585316d8d5ab9
+      commitTitle: 'fix(core): return kratos error when totp elevation flow creation
+        fails (#963)'
+      sha: a7d56e76085b3bf4613fd824370cce79c13e15e7
       tags:
-      - 0.22.81-1-g4d368ab44
+      - 0.22.82-1-ga7d56e760
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'fix(core): cap anonymous phone lookups in accountDefaultWallet
-        (#958)'
-      sha: 4d368ab441c62a70a2927353cc6585316d8d5ab9
+      commitTitle: 'fix(core): return kratos error when totp elevation flow creation
+        fails (#963)'
+      sha: a7d56e76085b3bf4613fd824370cce79c13e15e7
       tags:
-      - 0.22.81-1-g4d368ab44
+      - 0.22.83
     path: schemas
   - git:
-      commitTitle: 'fix(core): cap anonymous phone lookups in accountDefaultWallet
-        (#958)'
-      sha: 4d368ab441c62a70a2927353cc6585316d8d5ab9
+      commitTitle: 'fix(core): return kratos error when totp elevation flow creation
+        fails (#963)'
+      sha: a7d56e76085b3bf4613fd824370cce79c13e15e7
       tags:
-      - 0.22.81-1-g4d368ab44
+      - 0.22.83
     path: gql
   path: graphql
 kind: LockConfig
