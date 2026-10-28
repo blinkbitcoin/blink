@@ -63,17 +63,23 @@ export const kratosElevatingSessionWithTotp = async ({
   authToken: AuthToken
   totpCode: TotpCode
 }): Promise<UserId | KratosError> => {
-  const flow = await kratosPublic.createNativeLoginFlow({
-    refresh: false,
-    aal: "aal2",
-    xSessionToken: authToken,
-  })
+  let flowId: string
+  try {
+    const flow = await kratosPublic.createNativeLoginFlow({
+      refresh: false,
+      aal: "aal2",
+      xSessionToken: authToken,
+    })
+    flowId = flow.data.id
+  } catch (err) {
+    return handleKratosErrors(err)
+  }
 
   const method = "totp"
 
   try {
     const { data } = await kratosPublic.updateLoginFlow({
-      flow: flow.data.id,
+      flow: flowId,
       updateLoginFlowBody: {
         method,
         totp_code: totpCode,
