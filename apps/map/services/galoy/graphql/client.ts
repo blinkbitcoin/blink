@@ -5,8 +5,8 @@ import { headers } from "next/headers"
 import { addAttributesToCurrentSpan } from "@/app/tracing"
 
 export const apolloClient = {
-  UnAuthed: () => {
-    const headersList = headers()
+  UnAuthed: async () => {
+    const headersList = await headers()
     const ipHeaders: { [key: string]: string } = {}
 
     const realIP = headersList.get("x-real-ip")

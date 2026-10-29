@@ -30,7 +30,7 @@ export async function merchantMapSuggest(input: {
   title: string
   username: string
 }): Promise<MerchantMapSuggestMutation["merchantMapSuggest"] | Error> {
-  const client = apolloClient.UnAuthed()
+  const client = await apolloClient.UnAuthed()
   try {
     const response = await client.mutate<MerchantMapSuggestMutation>({
       mutation: MerchantMapSuggestDocument,
