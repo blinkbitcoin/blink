@@ -8,8 +8,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "../sheet"
-import { useFormState } from "react-dom"
-import { useState } from "react"
+import { useActionState, useState } from "react"
 
 type formProps = {
   latitude: number
@@ -23,7 +22,7 @@ export function SuggestMapFormSheet({ latitude, longitude }: formProps) {
     longitude: longitude,
   })
 
-  const [state, formAction] = useFormState<
+  const [state, formAction] = useActionState<
     {
       error: boolean
       message: string
