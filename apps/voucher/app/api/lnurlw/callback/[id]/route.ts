@@ -14,9 +14,12 @@ import { lnInvoicePaymentSend } from "@/services/galoy/mutation/ln-invoice-payme
 
 const QUOTE_EXPIRATION_MS = 2 * 60 * 1000 // 2 minutes
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const searchParams = request.nextUrl.searchParams
-  const { id } = params
+  const { id } = await params
   const k1 = searchParams.get("k1")
   const pr = searchParams.get("pr")
 
