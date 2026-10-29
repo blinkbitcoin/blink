@@ -218,6 +218,7 @@ jest_test(
     # Avoid spawning one Jest worker per host CPU on shared CI workers.
     run_serially = True,
     srcs = [":src"] + [":test_src"] + glob(["galoy.yaml"]),
+    prod_deps_srcs = prod_deps_srcs,
     config_file = "test/unit/jest.config.js",
     env_json = "//dev:dummy_env",
     env = {

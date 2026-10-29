@@ -50,6 +50,17 @@ export class UnexpectedClientError extends CustomGraphQLError {
   }
 }
 
+// Its own code rather than UNKNOWN_CLIENT_ERROR: this is a known, expected,
+// retryable provider outage, and a client that cannot tell it apart from an
+// unclassified failure cannot offer the "try again shortly" the fail-closed
+// captcha change exists to enable. The REST route answers 503 for the same
+// condition.
+export class CaptchaUnavailableError extends CustomGraphQLError {
+  constructor(errData: CustomGraphQLErrorData) {
+    super({ code: "CAPTCHA_UNAVAILABLE", forwardToClient: true, ...errData })
+  }
+}
+
 export class InsufficientBalanceError extends CustomGraphQLError {
   constructor(errData: CustomGraphQLErrorData) {
     super({

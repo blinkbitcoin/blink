@@ -19,7 +19,7 @@ const CaptchaCreateChallengeMutation = GT.Field({
       }
     }
 
-    const { success, gt, challenge, newCaptcha } = res
+    const { gt, challenge, newCaptcha } = res
 
     return {
       errors: [],
@@ -27,7 +27,9 @@ const CaptchaCreateChallengeMutation = GT.Field({
         id: gt,
         challengeCode: challenge,
         newCaptcha,
-        failbackMode: success === 0,
+        // register() fails closed while geetest is degraded rather than minting
+        // an offline challenge, so failback mode is never advertised.
+        failbackMode: false,
       },
     }
   },
