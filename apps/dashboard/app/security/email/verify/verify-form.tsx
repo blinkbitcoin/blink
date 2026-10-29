@@ -1,7 +1,7 @@
 "use client"
 
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward"
-import { useFormState } from "react-dom"
+import { useActionState } from "react"
 
 import {
   Box,
@@ -29,7 +29,7 @@ export default function VerifyEmailForm({
   emailRegistrationId,
   email,
 }: VerifyEmailFormProps) {
-  const [state, formAction] = useFormState<VerifyEmailResponse, FormData>(
+  const [state, formAction] = useActionState<VerifyEmailResponse, FormData>(
     emailRegisterValidateServerAction,
     {
       error: false,

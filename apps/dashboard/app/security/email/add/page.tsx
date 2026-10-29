@@ -1,7 +1,7 @@
 "use client"
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward"
 
-import { useFormState } from "react-dom"
+import { useActionState } from "react"
 
 import {
   Box,
@@ -22,7 +22,7 @@ import { AddEmailResponse } from "../email.types"
 import FormSubmitButton from "@/components/form-submit-button"
 
 export default function AddEmail() {
-  const [state, formAction] = useFormState<AddEmailResponse, FormData>(
+  const [state, formAction] = useActionState<AddEmailResponse, FormData>(
     emailRegisterInitiateServerAction,
     {
       error: false,
