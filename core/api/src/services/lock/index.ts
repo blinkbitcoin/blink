@@ -138,6 +138,13 @@ export const timelock = async ({
 }
 
 export const LockService = (): ILockService => {
+  const lockOnChainRebalance = async <Res>(
+    walletName: string,
+    asyncFn: (signal: OnChainRebalanceAbortSignal) => Promise<Res>,
+  ): Promise<Res | LockServiceError> => {
+    return redlock({ path: `locks:onchainrebalance:${walletName}`, asyncFn })
+  }
+
   const lockWalletId = async <Res>(
     walletId: WalletId,
     asyncFn: (signal: WalletIdAbortSignal) => Promise<Res>,
@@ -227,6 +234,7 @@ export const LockService = (): ILockService => {
   return wrapAsyncFunctionsToRunInSpan({
     namespace: "services.lock",
     fns: {
+      lockOnChainRebalance,
       lockWalletId,
       lockPaymentHash,
       lockOnChainTxHash,
