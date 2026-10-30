@@ -2,27 +2,24 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix(core): return kratos error when totp elevation flow creation
-        fails (#963)'
-      sha: a7d56e76085b3bf4613fd824370cce79c13e15e7
+      commitTitle: 'chore(dashboard): upgrade to Next 15.5.27 and React 19 (#919)...'
+      sha: 1525aff2e27c0f0fa6c83c5827845d81ddf3cac4
       tags:
-      - 0.22.82-1-ga7d56e760
+      - 0.22.83-4-g1525aff2e
     path: .
   path: dev
 - contents:
   - git:
-      commitTitle: 'fix(core): return kratos error when totp elevation flow creation
-        fails (#963)'
-      sha: a7d56e76085b3bf4613fd824370cce79c13e15e7
+      commitTitle: 'chore(dashboard): upgrade to Next 15.5.27 and React 19 (#919)...'
+      sha: 1525aff2e27c0f0fa6c83c5827845d81ddf3cac4
       tags:
-      - 0.22.83
+      - 0.22.83-4-g1525aff2e
     path: schemas
   - git:
-      commitTitle: 'fix(core): return kratos error when totp elevation flow creation
-        fails (#963)'
-      sha: a7d56e76085b3bf4613fd824370cce79c13e15e7
+      commitTitle: 'chore(dashboard): upgrade to Next 15.5.27 and React 19 (#919)...'
+      sha: 1525aff2e27c0f0fa6c83c5827845d81ddf3cac4
       tags:
-      - 0.22.83
+      - 0.22.83-4-g1525aff2e
     path: gql
   path: graphql
 kind: LockConfig
